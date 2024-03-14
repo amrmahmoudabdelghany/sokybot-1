@@ -1,0 +1,28 @@
+<configuration debug="true">
+
+	<appender name="STDOUT"
+		class="ch.qos.logback.core.ConsoleAppender">
+		<!-- encoders are assigned the type ch.qos.logback.classic.encoder.PatternLayoutEncoder 
+			by default -->
+		<encoder>
+			<pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
+
+	<appender name="WRAPPER"
+		class="org.sokybot.app.logger.AppenderWrapper" />
+
+
+	<logger name="org.sokybot" level="INFO">
+		<appender-ref ref="WRAPPER" />
+
+	</logger>
+
+	<root level="DEBUG">
+		<!-- <appender-ref ref="WRAPPER" /> -->
+		<appender-ref ref="STDOUT" />
+
+	</root>
+
+</configuration>

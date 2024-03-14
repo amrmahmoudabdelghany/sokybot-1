@@ -1,0 +1,140 @@
+package org.sokybot.machinegroup.gamemodel.geo;
+
+import java.awt.geom.Point2D;
+import java.util.Objects;
+
+/**
+ * 2D vector class implementation.
+ * 
+ * @author Johannes Diemke
+ */
+public class Vector2D implements Cloneable {
+
+    public double x;
+    public double y;
+
+    
+    
+    public Vector2D() {
+    	this.x = 0 ; 
+    	this.y = 0 ; 
+    }
+    /**
+     * Constructor of the 2D vector class used to create new vector instances.
+     * 
+     * @param x
+     *            The x coordinate of the new vector
+     * @param y
+     *            The y coordinate of the new vector
+     */
+    public Vector2D(double x, double y) {
+        this.x = x;
+        this.y = y;
+    }
+
+    public Vector2D(Vector2D other) { 
+    	this.x = other.x ; 
+    	this.y = other.y ; 
+    }
+    /**
+     * Subtracts the given vector from this.
+     * 
+     * @param vector
+     *            The vector to be subtracted from this
+     * @return A new instance holding the result of the vector subtraction
+     */
+    public Vector2D sub(Vector2D vector) {
+        return new Vector2D(this.x - vector.x, this.y - vector.y);
+    }
+
+    /**
+     * Adds the given vector to this.
+     * 
+     * @param vector
+     *            The vector to be added to this
+     * @return A new instance holding the result of the vector addition
+     */
+    public Vector2D add(Vector2D vector) {
+        return new Vector2D(this.x + vector.x, this.y + vector.y);
+    }
+
+    /**
+     * Multiplies this by the given scalar.
+     * 
+     * @param scalar
+     *            The scalar to be multiplied by this
+     * @return A new instance holding the result of the multiplication
+     */
+    public Vector2D mult(double scalar) {
+        return new Vector2D(this.x * scalar, this.y * scalar);
+    }
+
+    /**
+     * Computes the magnitude or length of this.
+     * 
+     * @return The magnitude of this
+     */
+    public double mag() {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+    }
+
+    /**
+     * Computes the dot product of this and the given vector.
+     * 
+     * @param vector
+     *            The vector to be multiplied by this
+     * @return A new instance holding the result of the multiplication
+     */
+    public double dot(Vector2D vector) {
+        return this.x * vector.x + this.y * vector.y;
+    }
+
+    /**
+     * Computes the 2D pseudo cross product Dot(Perp(this), vector) of this and
+     * the given vector.
+     * 
+     * @param vector
+     *            The vector to be multiplied to the perpendicular vector of
+     *            this
+     * @return A new instance holding the result of the pseudo cross product
+     */
+    public double cross(Vector2D vector) {
+        return this.y * vector.x - this.x * vector.y;
+    }
+
+    public boolean equals(Vector2D other) { 
+    	return this.x == other.x && this.y == other.y ; 
+    }
+    
+    
+    @Override
+    public Vector2D clone()  {
+    	return new Vector2D(x, y) ; 
+    }
+    @Override
+	public int hashCode() {
+		return Objects.hash(x, y);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Vector2D other = (Vector2D) obj;
+		return Double.doubleToLongBits(x) == Double.doubleToLongBits(other.x)
+				&& Double.doubleToLongBits(y) == Double.doubleToLongBits(other.y);
+	}
+
+	@Override
+    public String toString() {
+        return "Vector2D[" + x + ", " + y + "]";
+    }
+	public Point2D toFloat() {
+	    return new Point2D.Float((float)this.x,(float) this.y) ;
+	}
+
+}

@@ -1,0 +1,1 @@
+Most of these files is 32-bit , however in order to work with launch4j  you must convert them to 24-bit

@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>io.github.sokybot</groupId>
+	<artifactId>sokybot</artifactId>
+	<version>1.0-SNAPSHOT</version>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<maven.compiler.source>11</maven.compiler.source>
+		<maven.compiler.target>11</maven.compiler.target>
+
+		<jna.version>5.12.1</jna.version>
+		<swingx-all.version>1.6.5-1</swingx-all.version>
+		<mydoggy.version>1.5.2</mydoggy.version>
+		<junit-jupiter-engine.version>5.9.0-M1</junit-jupiter-engine.version>
+		<dependency.mockito-core.version>4.8.0</dependency.mockito-core.version>
+		<dependency.mockito-junit-jupter.version>4.8.0</dependency.mockito-junit-jupter.version>
+		<dependency.gc4s.version>1.6.0</dependency.gc4s.version>
+		<dependency.felix.version>7.0.5</dependency.felix.version>
+		<vavr.version>0.10.4</vavr.version>
+		<commons-lang3.version>3.12.0</commons-lang3.version>
+		<commons-io.version>2.11.0</commons-io.version>
+		<commons-csv.version>1.9.0</commons-csv.version>
+		<dependency.logback-classic.version>1.2.11</dependency.logback-classic.version>
+		<dependency.logback-core.version>1.2.11</dependency.logback-core.version>
+		<dependency.slf4j-api.version>1.7.36</dependency.slf4j-api.version>
+		<lombok.version>1.18.24</lombok.version>
+		<nitrite.version>4.1.0-SNAPSHOT</nitrite.version>
+		<nitrite-jackson-mapper.version>4.1.0-SNAPSHOT</nitrite-jackson-mapper.version>
+		<nitrite-mvstore-adapter.version>4.1.0-SNAPSHOT</nitrite-mvstore-adapter.version>
+
+		<dependency.ehcache.version>3.8.1</dependency.ehcache.version>
+
+
+		<plugin.bundle.version>5.1.8</plugin.bundle.version>
+
+	</properties>
+
+
+	<modules>
+		<module>${project.artifactId}-api</module>
+		<module>${project.artifactId}-core</module>
+		<module>${project.artifactId}-pk2</module>
+		<module>${project.artifactId}-security</module>
+
+		<module>${project.artifactId}-game-loader</module>
+		<module>${project.artifactId}-packet-sniffer</module>
+
+
+
+	<!--	<module>sokybot-dds</module> -->
+	</modules>
+	<packaging>pom</packaging>
+
+
+	<repositories>
+		<repository>
+			<id>sing-repository</id>
+			<name>SING repository</name>
+			<url>http://maven.sing-group.org/repository/maven/</url>
+		</repository>
+		<!-- 
+		<repository>
+			<id>sokybot-local-repo</id>
+			<name>sokybot repo</name>
+			<url>file://${maven.multiModuleProjectDirectory}/sokybot-static-resources/sokybot-local-repo</url>
+		</repository>
+		-->
+	</repositories>
+
+
+	<dependencyManagement>
+
+		<dependencies>
+
+
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>sokybot-api</artifactId>
+				<version>${project.version}</version>
+				<scope>provided</scope>
+
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>sokybot-security</artifactId>
+				<version>${project.version}</version>
+				<scope>provided</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>sokybot-pk2</artifactId>
+				<version>${project.version}</version>
+				<scope>provided</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>sokybot-pk2-extractor</artifactId>
+				<version>${project.version}</version>
+				<scope>provided</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>sokybot-game-loader</artifactId>
+				<version>${project.version}</version>
+				<scope>provided</scope>
+			</dependency>
+
+<!--
+
+			<dependency>
+				<groupId>${project.groupId}</groupId>
+				<artifactId>sokybot-dds</artifactId>
+				<version>${project.version}</version>
+				<scope>provided</scope>
+			</dependency>
+-->
+			<!-- https://mvnrepository.com/artifact/org.ehcache/ehcache -->
+
+			<dependency>
+				<groupId>org.dizitart</groupId>
+				<artifactId>nitrite</artifactId>
+				<version>${nitrite.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.dizitart</groupId>
+				<artifactId>nitrite-jackson-mapper</artifactId>
+				<version>${nitrite-jackson-mapper.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.dizitart</groupId>
+				<artifactId>nitrite-mvstore-adapter</artifactId>
+				<version>${nitrite-mvstore-adapter.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.vavr</groupId>
+				<artifactId>vavr</artifactId>
+				<version>${vavr.version}</version>
+				<scope>provided</scope>
+			</dependency>
+
+
+			<dependency>
+				<groupId>org.swinglabs.swingx</groupId>
+				<artifactId>swingx-all</artifactId>
+				<version>${swingx-all.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.github.sokybot.mydoggy</groupId>
+				<artifactId>mydoggy-plaf</artifactId>
+				<version>${mydoggy.version}</version>
+			</dependency>
+
+			<!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine -->
+
+
+		</dependencies>
+	</dependencyManagement>
+
+	<build>
+
+		<plugins>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.3</version>
+				<configuration>
+					<source>11</source>
+					<target>11</target>
+				</configuration>
+			</plugin>
+
+			<!-- This plugin is responsible to build bundle modules -->
+			<plugin>
+				<groupId>org.apache.felix</groupId>
+				<artifactId>maven-bundle-plugin</artifactId>
+				<version>${plugin.bundle.version}</version>
+
+				<configuration>
+					<instructions>
+						<Embed-Dependency>
+							*;scope=compile;inline=true
+						</Embed-Dependency>
+						<Embed-Transitive>
+							true
+						</Embed-Transitive>
+					</instructions>
+				</configuration>
+			</plugin>
+
+		</plugins>
+
+	</build>
+
+	<profiles>
+		<profile>
+
+			<id>dev</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<maven.test.skip>true</maven.test.skip>
+			</properties>
+			<build>
+
+				<plugins>
+
+					<plugin>
+						<groupId>org.apache.felix</groupId>
+						<artifactId>maven-bundle-plugin</artifactId>
+						<extensions>true</extensions>
+					</plugin>
+				</plugins>
+
+
+			</build>
+
+
+		</profile>
+		<profile>
+			<id>prod</id>
+			<modules>
+				<module>${project.artifactId}-api</module>
+				<module>${project.artifactId}-core</module>
+				<module>${project.artifactId}-security</module>
+				<module>${project.artifactId}-game-loader</module>
+				<module>${project.artifactId}-pk2</module>
+				<module>${project.artifactId}-packet-sniffer</module>
+
+			</modules>
+
+			<build>
+
+
+				<plugins>
+
+
+					<plugin>
+						<groupId>org.apache.felix</groupId>
+						<artifactId>maven-bundle-plugin</artifactId>
+						<inherited>true</inherited>
+						<extensions>true</extensions>
+						<configuration>
+
+							<buildDirectory>
+								${maven.multiModuleProjectDirectory}/Sokybot-${project.version}/system
+							</buildDirectory>
+
+						</configuration>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>3.3.0</version>
+						<executions>
+							<execution>
+								<id>copy-resources</id>
+								<phase>install</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${basedir}/Sokybot-${project.version}/system</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${basedir}/sokybot-static-resources/sokybot-osgi-platform</directory>
+											<exclude>org.apache.felix.fileinstall-3.6.4.jar</exclude>
+											<filtering>true</filtering>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
+
+
+	<dependencies>
+
+		<dependency>
+			<groupId>javax.activation</groupId>
+			<artifactId>activation</artifactId>
+			<version>1.1.1</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/javax.activation/activation -->
+		<!-- 
+
+		<dependency>
+			<groupId>jakarta.activation</groupId>
+			<artifactId>jakarta.activation-api</artifactId>
+			<scope>provided</scope>
+
+		</dependency>
+		
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-core</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+-->
+
+		<!-- platform provided dependencies -->
+
+		<dependency>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna</artifactId>
+			<version>${jna.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/net.java.dev.jna/jna-platform -->
+		<dependency>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna-platform</artifactId>
+			<version>${jna.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons-io.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>${commons-lang3.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+
+		<!-- remove this -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-csv</artifactId>
+			<version>${commons-csv.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>3.5</version>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.osgi/org.osgi.service.cm -->
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.service.cm</artifactId>
+			<version>1.6.1</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.osgi/org.osgi.service.metatype -->
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.service.metatype</artifactId>
+			<version>1.4.1</version>
+			<scope>provided</scope>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.framework</artifactId>
+			<version>7.0.5</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.service.component</artifactId>
+			<version>1.5.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<!-- https://mvnrepository.com/artifact/org.apache.felix/org.apache.felix.scr -->
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.scr</artifactId>
+			<version>2.2.4</version>
+			<scope>provided</scope>
+
+		</dependency>
+
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.service.component.annotations</artifactId>
+			<version>1.5.0</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.log</artifactId>
+			<version>1.2.6</version>
+			<scope>provided</scope>
+		</dependency>
+
+
+		<!-- <dependency> <groupId>org.osgi</groupId> <artifactId>org.osgi.service.metatype.annotations</artifactId> 
+			<version>1.3.0</version> </dependency> -->
+
+
+		<!-- test dependencies -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-engine</artifactId>
+			<version>${junit-jupiter-engine.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-core</artifactId>
+			<version>${dependency.mockito-core.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-junit-jupiter</artifactId>
+			<version>${dependency.mockito-junit-jupter.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- logging -->
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>${dependency.logback-classic.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>${dependency.logback-core.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>${dependency.slf4j-api.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>${lombok.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+	</dependencies>
+
+</project>
