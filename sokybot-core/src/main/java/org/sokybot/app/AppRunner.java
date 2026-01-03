@@ -1,197 +1,119 @@
 package org.sokybot.app;
 
-import com.formdev.flatlaf.extras.FlatInspector;
-import com.formdev.flatlaf.extras.FlatUIDefaultsInspector;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.ServiceLoader;
 
-import ch.qos.logback.classic.Level;
-import ch.qos.logback.classic.Logger;
-import ch.qos.logback.classic.LoggerContext;
-import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.Appender;
-import lombok.extern.slf4j.Slf4j;
-
-import org.jdesktop.swingx.JXFrame;
-import org.jdesktop.swingx.JXRootPane;
-import org.noos.xing.mydoggy.ToolWindowManager;
-import org.slf4j.LoggerFactory;
-import org.sokybot.ISokybotContext;
-import org.sokybot.app.logger.AppenderWrapper;
-import org.sokybot.app.mainframe.WindowPreparedEvent;
-import org.sokybot.app.service.IGameLoaderService;
-import org.sokybot.app.service.IPluginService;
-import org.sokybot.common.GuiAppender;
-import org.sokybot.service.IMainFrameConfigurator;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.apache.felix.framework.Felix;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.Constants;
+import org.osgi.framework.FrameworkEvent;
+import org.osgi.framework.launch.Framework;
+import org.osgi.framework.launch.FrameworkFactory;
+import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
-import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
-import javax.swing.*;
-import java.awt.*;
+@Component
+public class AppRunner implements ApplicationRunner {
 
-@Configuration
-@Slf4j
-public class AppRunner {
+    private Framework framework;
 
-	@Autowired
-	ApplicationContext ctx;
+    @Override
+    public void run(ApplicationArguments args) throws Exception {
+        System.out.println("Initializing OSGi Framework...");
 
-//
-//    ApplicationRunner loadPerspective(ToolWindowManager toolWindowManager) {
-//        return args -> {
-//
-//            toolWindowManager.getPersistenceDelegate() ;
-//            if(Files.exists(Paths.get(""))) {
-//                toolWindowManager.getPersistenceDelegate().
-//            }
-//        } ;
-//    }
-	
-	
-	
-	@Bean
-	@Order(0)
-	ApplicationRunner checkLoaders(ApplicationContext ctx) {
-		return (args) -> {
-			 
-			System.out.println("Avilable Loaders : " + 
-			ctx.getBean(IGameLoaderService.class).listAvailables()) ; 
+        Map<String, String> config = new HashMap<>();
+        config.put(Constants.FRAMEWORK_STORAGE_CLEAN, Constants.FRAMEWORK_STORAGE_CLEAN_ONFIRSTINIT);
+        config.put(Constants.FRAMEWORK_STORAGE, "felix-cache");
+        
+        // Export packages from System Bundle (Host) to Bundles
+         config.put(Constants.FRAMEWORK_SYSTEMPACKAGES_EXTRA, 
+             "org.slf4j;version=1.7.36,org.slf4j.helpers;version=1.7.36,org.slf4j.spi;version=1.7.36," +
+             "org.springframework.context;version=5.3.27,org.springframework.context.annotation;version=5.3.27," +
+             "org.springframework.beans.factory.annotation;version=5.3.27,org.springframework.stereotype;version=5.3.27," +
+             "org.springframework.util;version=5.3.27,org.springframework.core.io;version=5.3.27," + 
+             "javax.annotation;version=1.3.2," +
+             "com.sun.jna;version=5.12.1,com.sun.jna.win32;version=5.12.1," +
+             "com.sun.jna.platform;version=5.12.1,com.sun.jna.platform.win32;version=5.12.1," +
+             "com.sun.jna.ptr;version=5.12.1,com.sun.jna.structure;version=5.12.1,com.sun.jna.win32.core;version=5.12.1"
+         );
 
-		};
+        // Add Shutdown Hook to see WHO is killing the JVM
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.err.println("CRITICAL: SHUTDOWN HOOK TRIGGERED!");
+            try {
+                for (Thread t : Thread.getAllStackTraces().keySet()) {
+                    if (t.isAlive()) {
+                        System.err.println("SHUTDOWN HOOK: Alive Thread: " + t.getName() + " (Daemon: " + t.isDaemon() + ")");
+                    }
+                }
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }));
 
-	}
-
-	
-
-	@Bean
-	@Order(1)
-	ApplicationRunner deployAppCtx() { 
-		return args->{
-			
-			log.debug("Deploy app context");
-			ISokybotContext appCtx = this.ctx.getBean(ISokybotContext.class) ; 
-			this.ctx.getBean(IPluginService.class).deployService(ISokybotContext.class, appCtx);
-		};
-	}
-	@Bean
-	@Order(2)
-	ApplicationRunner redirectAppLogger() {
-		return args -> {
-
-			
-			log.debug("Confguring root logger");
-			LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
-			Logger root = loggerContext.getLogger("org.sokybot");
-
-			AppenderWrapper wrapper = (AppenderWrapper) root.getAppender("WRAPPER");
-
-			Appender<ILoggingEvent> appender = ctx.getBean(GuiAppender.class);
-			appender.setContext(loggerContext);
-
-			wrapper.origin(appender);
-			root.setLevel(Level.INFO);
-			root.setAdditive(false);
-
-		};
-	}
-
-//	@Bean
-//	@Order(2)
-//	ApplicationRunner launchOsgiContainer() {
-//		return args -> {
-//
-//			log.debug("deploying service to osgi container");
-//
-//			Bundle bundle = ctx.getBean(Bundle.class);
-//
-//			BundleContext bndCtx = bundle.getBundleContext();
-//			JMenuBar menuBar = ctx.getBean(JMenuBar.class);
-//			bndCtx.registerService(JMenuBar.class.getName(), menuBar, null);
-//
-//			IMainFrameConfigurator mainFrameConfigurator = ctx.getBean(IMainFrameConfigurator.class);
-//			bndCtx.registerService(IMainFrameConfigurator.class.getName(), mainFrameConfigurator, null);
-//
-//			log.debug("Starting system bundle ");
-//			bundle.start();
-//		};
-//
-//	}
-
-	@Profile({"dev" , "test"})
-	@Bean
-	ApplicationRunner addSomeToolWindows(@Qualifier("feed")Icon logIcon ) {
-		return args -> {
-			log.info("adding console and log tool windows");
-			JPanel panel = new JPanel(new BorderLayout());
-			panel.add(new JScrollPane(new JTextArea()), BorderLayout.CENTER);
-
-			this.ctx.getBean(IMainFrameConfigurator.class)
-					.addExtraWindow("Console", "Sokybot console", logIcon, panel);
-
-		};
-	}
-
-	
-
-
-	// very last operation
-	@Bean
-	ApplicationRunner displayFrame(ApplicationContext ctx) {
-
-		return (args) -> {
-
-			log.debug("assembling frame components");
-			JXFrame mainFrame = ctx.getBean(JXFrame.class);
-
-			JXRootPane rootPane = mainFrame.getRootPaneExt();
-			JToolBar toolBar = ctx.getBean(JToolBar.class);
-			rootPane.setToolBar(toolBar);
-
-			JMenuBar menuBar = getMenuBar(ctx);
-
-			rootPane.setJMenuBar(menuBar);
-
-			ToolWindowManager toolWindowManager = ctx.getBean(ToolWindowManager.class);
-
-			if (toolWindowManager instanceof Component) {
-				// rootPane.getCont((Container) toolWindowManager );
-				rootPane.getContentPane().add((Component) toolWindowManager);
-			} else {
-				System.exit(0);
-			}
-
-			mainFrame.pack();
-			ctx.publishEvent(new WindowPreparedEvent(this, mainFrame, toolBar, menuBar));
-
-			// GraphicsEnvironment.getLocalGraphicsEnvironment()
-			// .getScreenDevices()[0].setFullScreenWindow(mainFrame);
-
-		//	FlatDarkLaf.setup();
-		//	FlatDarkLaf.updateUI();
-			mainFrame.setVisible(true);
-			
-		};
-
-	}
-
-	private JMenuBar getMenuBar(ApplicationContext ctx) {
-		JMenuBar menuBar = ctx.getBean(JMenuBar.class);
-		menuBar.setHelpMenu(ctx.getBean("helpMenu", JMenu.class));
-
-		return menuBar;
-	}
-
-	@Bean
-	@Profile("dev")
-	ApplicationRunner installWindowInspector() {
-		return args -> {
-			FlatInspector.install("alt shift 3");
-			FlatUIDefaultsInspector.install("alt shift 4");
-		};
-	}
-
+        FrameworkFactory factory = ServiceLoader.load(FrameworkFactory.class).iterator().next();
+        framework = factory.newFramework(config);
+        
+        framework.init();
+        
+        BundleContext ctx = framework.getBundleContext();
+        System.out.println("OSGi Framework Started. Bundle Context: " + ctx);
+        
+        // Define module paths - when using -Pprod profile, bundles are in system directory
+        String[] modules = {
+             "../Sokybot-1.0-SNAPSHOT/system/sokybot-security-1.0-SNAPSHOT.jar",
+             "../Sokybot-1.0-SNAPSHOT/system/sokybot-pk2-1.0-SNAPSHOT.jar",
+            "../Sokybot-1.0-SNAPSHOT/system/sokybot-api-1.0-SNAPSHOT.jar",
+            "../sokybot-engine/target/sokybot-engine-1.0-SNAPSHOT.jar",
+            "../Sokybot-1.0-SNAPSHOT/system/sokybot-ui-1.0-SNAPSHOT.jar",
+            "../sokybot-map-debug/target/sokybot-map-debug-1.0-SNAPSHOT.jar"
+        };
+        
+        for (String modulePath : modules) {
+            try {
+                String fileUrl = "file:/" + java.nio.file.Paths.get(modulePath).toAbsolutePath().toString().replace("\\", "/");
+                 System.out.println("Installing bundle: " + fileUrl);
+                Bundle b = ctx.installBundle(fileUrl);
+                b.start();
+                System.out.println("Started bundle: " + b.getSymbolicName());
+            } catch (Exception e) {
+                System.err.println("Failed to install/start module: " + modulePath);
+                e.printStackTrace();
+            }
+        }
+        
+        framework.start();
+        
+        // Keep the application running until the framework is stopped
+        // This prevents the JVM from exiting after bundle initialization
+        System.out.println("Application started successfully. Waiting for shutdown...");
+        
+        // Add listener to see when/why framework stops
+        framework.getBundleContext().addFrameworkListener(event -> {
+            System.out.println("Framework event: " + event.getType() + " - " + event);
+            if (event.getThrowable() != null) {
+                System.err.println("Framework event has error:");
+                event.getThrowable().printStackTrace();
+            }
+        });
+        
+        System.out.println("Framework state before wait: " + framework.getState());
+        
+        // AGGRESSIVE BLOCKING: Don't just rely on non-daemon thread, block the main thread too.
+        System.out.println("BLOCKING MAIN THREAD INDEFINITELY...");
+        try {
+            while (framework.getState() == Bundle.ACTIVE) {
+                Thread.sleep(10000);
+                System.out.println("MAIN THREAD TICK: Framework is still ACTIVE (" + new java.util.Date() + ")");
+            }
+        } catch (InterruptedException e) {
+            System.err.println("Main runner thread interrupted.");
+            Thread.currentThread().interrupt();
+        }
+        
+        System.out.println("Main runner thread exiting. Framework state: " + framework.getState());
+    }
 }

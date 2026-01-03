@@ -10,12 +10,13 @@
 	</appender>
 
 
-	<appender name="WRAPPER"
-		class="org.sokybot.app.logger.AppenderWrapper" />
+	<!-- <appender name="WRAPPER"
+		class="org.sokybot.app.logger.AppenderWrapper" /> -->
 
 
 	<logger name="org.sokybot" level="INFO">
-		<appender-ref ref="WRAPPER" />
+		<!-- <appender-ref ref="WRAPPER" /> -->
+
 
 	</logger>
 

@@ -58,3 +58,15 @@ sokybot-static-resources/sokybot-osgi-platform
 *.data
 *.mv
 *.trace
+
+### Generated/Cache files ###
+felix-cache/
+build_output.txt
+debug_output.txt
+cp.txt
+resources/
+
+### Common generated extensions ###
+*.log
+*.launch
+*.dat

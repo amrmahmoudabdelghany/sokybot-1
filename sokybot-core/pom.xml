@@ -39,17 +39,47 @@
 			<scope>import</scope>
 		</dependency>
 -->
+		<!-- Logging dependencies - needed at runtime for @Slf4j -->
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+			<version>1.7.36</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-classic</artifactId>
+			<version>1.2.11</version>
+		</dependency>
+		<dependency>
+			<groupId>ch.qos.logback</groupId>
+			<artifactId>logback-core</artifactId>
+			<version>1.2.11</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot</artifactId>
 			<version>${spring-boot.version}</version>
 
-			<exclusions>
+            <exclusions>
 				<exclusion>
 					<groupId>org.slf4j</groupId>
 					<artifactId>slf4j-api</artifactId>
 				</exclusion>
 			</exclusions>
+		</dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+
+        <dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>${lombok.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -159,16 +189,7 @@
 			<optional>true</optional>
 		</dependency>
 
-		<dependency>
-			<groupId>org.swinglabs.swingx</groupId>
-			<artifactId>swingx-all</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>com.formdev</groupId>
-			<artifactId>flatlaf-swingx</artifactId>
-			<version>${dependency.flatlaf-swingx.version}</version>
-		</dependency>
+		<!-- SwingX removed - only needed in UI bundle -->
 
 		<dependency>
 			<groupId>com.formdev</groupId>
@@ -182,15 +203,25 @@
 			<version>2.5</version>
 		</dependency>
 		<dependency>
+			<groupId>tablelayout</groupId>
+			<artifactId>TableLayout</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>jakarta.xml.bind</groupId>
 			<artifactId>jakarta.xml.bind-api</artifactId>
 			<version>2.3.2</version>
 		</dependency>
 
 		<dependency>
-			<groupId>org.glassfish.jaxb</groupId>
-			<artifactId>jaxb-runtime</artifactId>
-			<version>2.3.2</version>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna</artifactId>
+			<version>${jna.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna-platform</artifactId>
+			<version>${jna.version}</version>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
@@ -243,16 +274,14 @@
 		<!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-core -->
 
 
-		<dependency>
-			<groupId>io.github.sokybot.mydoggy</groupId>
-			<artifactId>mydoggy-plaf</artifactId>
-		</dependency>
+		<!-- MyDoggy removed - only needed in UI bundle -->
 
 
 		<!-- system bundles -->
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-security</artifactId>
+			<scope>compile</scope>
 		</dependency>
 
 <!--
@@ -265,16 +294,13 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-api</artifactId>
+			<scope>compile</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>${project.parent.artifactId}-pk2</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>${project.parent.artifactId}-pk2-extractor</artifactId>
+			<scope>compile</scope>
 		</dependency>
 
 
@@ -283,6 +309,13 @@
 		<dependency>
 			<groupId>io.vavr</groupId>
 			<artifactId>vavr</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.framework</artifactId>
+			<version>7.0.5</version>
+			<scope>compile</scope>
 		</dependency>
 
 		<!-- OSGI Libs -->
@@ -319,7 +352,7 @@
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>${project.parent.artifactId}-game-loader</artifactId>
-			<scope>provided</scope>
+			<scope>compile</scope>
 		</dependency>
 
 
@@ -333,9 +366,8 @@
 			</activation>
 			<id>dev</id>
 			<dependencies>
-
-
 				<!-- https://mvnrepository.com/artifact/org.apache.felix/org.apache.felix.gogo.runtime -->
+				<!--
 				<dependency>
 					<groupId>org.apache.felix</groupId>
 					<artifactId>org.apache.felix.gogo.runtime</artifactId>
@@ -343,18 +375,17 @@
 					<scope>provided</scope>
 				</dependency>
 
-				<!-- https://mvnrepository.com/artifact/org.apache.felix/org.apache.felix.gogo.command -->
 				<dependency>
 					<groupId>org.apache.felix</groupId>
 					<artifactId>org.apache.felix.gogo.command</artifactId>
 					<version>1.1.2</version>
 				</dependency>
-				<!-- https://mvnrepository.com/artifact/org.apache.felix/org.apache.felix.gogo.jline -->
 				<dependency>
 					<groupId>org.apache.felix</groupId>
 					<artifactId>org.apache.felix.gogo.jline</artifactId>
 					<version>1.1.8</version>
 				</dependency>
+				-->
 
 			</dependencies>
 		</profile>

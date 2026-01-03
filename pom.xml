@@ -14,7 +14,7 @@
 
 		<jna.version>5.12.1</jna.version>
 		<swingx-all.version>1.6.5-1</swingx-all.version>
-		<mydoggy.version>1.5.2</mydoggy.version>
+		<mydoggy.version>1.5.0</mydoggy.version>
 		<junit-jupiter-engine.version>5.9.0-M1</junit-jupiter-engine.version>
 		<dependency.mockito-core.version>4.8.0</dependency.mockito-core.version>
 		<dependency.mockito-junit-jupter.version>4.8.0</dependency.mockito-junit-jupter.version>
@@ -27,7 +27,7 @@
 		<dependency.logback-classic.version>1.2.11</dependency.logback-classic.version>
 		<dependency.logback-core.version>1.2.11</dependency.logback-core.version>
 		<dependency.slf4j-api.version>1.7.36</dependency.slf4j-api.version>
-		<lombok.version>1.18.24</lombok.version>
+		<lombok.version>1.18.30</lombok.version>
 		<nitrite.version>4.1.0-SNAPSHOT</nitrite.version>
 		<nitrite-jackson-mapper.version>4.1.0-SNAPSHOT</nitrite-jackson-mapper.version>
 		<nitrite-mvstore-adapter.version>4.1.0-SNAPSHOT</nitrite-mvstore-adapter.version>
@@ -49,6 +49,11 @@
 		<module>${project.artifactId}-game-loader</module>
 		<module>${project.artifactId}-packet-sniffer</module>
 
+		<module>${project.artifactId}-engine</module>
+		<module>${project.artifactId}-ui</module>
+		<module>${project.artifactId}-map-debug</module>
+
+
 
 
 	<!--	<module>sokybot-dds</module> -->
@@ -60,15 +65,13 @@
 		<repository>
 			<id>sing-repository</id>
 			<name>SING repository</name>
-			<url>http://maven.sing-group.org/repository/maven/</url>
+			<url>https://maven.sing-group.org/repository/maven/</url>
 		</repository>
-		<!-- 
 		<repository>
 			<id>sokybot-local-repo</id>
 			<name>sokybot repo</name>
 			<url>file://${maven.multiModuleProjectDirectory}/sokybot-static-resources/sokybot-local-repo</url>
 		</repository>
-		-->
 	</repositories>
 
 
@@ -96,13 +99,6 @@
 			<dependency>
 				<groupId>${project.groupId}</groupId>
 				<artifactId>sokybot-pk2</artifactId>
-				<version>${project.version}</version>
-				<scope>provided</scope>
-			</dependency>
-
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>sokybot-pk2-extractor</artifactId>
 				<version>${project.version}</version>
 				<scope>provided</scope>
 			</dependency>
@@ -163,6 +159,24 @@
 				<version>${mydoggy.version}</version>
 			</dependency>
 
+			<dependency>
+				<groupId>io.github.sokybot.mydoggy</groupId>
+				<artifactId>mydoggy-api</artifactId>
+				<version>${mydoggy.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.github.sokybot.mydoggy</groupId>
+				<artifactId>mydoggy-res</artifactId>
+				<version>${mydoggy.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>tablelayout</groupId>
+				<artifactId>TableLayout</artifactId>
+				<version>20050920</version>
+			</dependency>
+
 			<!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine -->
 
 
@@ -176,7 +190,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.3</version>
+				<version>3.11.0</version>
 				<configuration>
 					<source>11</source>
 					<target>11</target>
