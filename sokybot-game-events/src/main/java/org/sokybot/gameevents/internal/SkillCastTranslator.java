@@ -9,6 +9,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
 /**
  * Translates skill cast started packets (opcode 0x3844) to SkillCastEvent.
  * Based on EnvironmentHandler.onSkillCastStarted() pattern.
+ * Uses IGameDataLookup to enrich event with skill name.
  */
 public class SkillCastTranslator extends AbstractTranslator {
     
@@ -38,7 +39,15 @@ public class SkillCastTranslator extends AbstractTranslator {
                 reader.getInt(); // Skip unknown int
                 int targetId = reader.getInt();
                 
-                return new SkillCastEvent(machineFullName, true, skillId, casterId, targetId);
+                // Lookup skill name from skill data
+                String skillName = null;
+                if (lookup != null) {
+                    skillName = lookup.findSkill(skillId)
+                        .map(skill -> skill.getName())
+                        .orElse(null);
+                }
+                
+                return new SkillCastEvent(machineFullName, true, skillId, skillName, casterId, targetId);
             } else {
                 // Skill cast failed - return event with success=false
                 return new SkillCastEvent(machineFullName, false, null, null, null);
@@ -49,3 +58,4 @@ public class SkillCastTranslator extends AbstractTranslator {
         }
     }
 }
+

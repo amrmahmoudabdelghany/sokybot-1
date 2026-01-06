@@ -9,6 +9,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
 /**
  * Translates mastery level up packets (opcode 0x70B5) to MasteryLevelUpEvent.
  * Based on TrainerHandler.masteryLevelUp() pattern.
+ * Uses IGameDataLookup to enrich event with mastery name.
  */
 public class MasteryLevelUpTranslator extends AbstractTranslator {
     
@@ -35,7 +36,13 @@ public class MasteryLevelUpTranslator extends AbstractTranslator {
                 int masteryId = reader.getInt();
                 int newLevel = reader.getByte() & 0xFF;
                 
-                return new MasteryLevelUpEvent(machineFullName, true, masteryId, newLevel);
+                // Lookup mastery name
+                String masteryName = null;
+                if (lookup != null) {
+                    masteryName = lookup.findMasteryName(masteryId).orElse(null);
+                }
+                
+                return new MasteryLevelUpEvent(machineFullName, true, masteryId, masteryName, newLevel);
             } else {
                 return new MasteryLevelUpEvent(machineFullName, false, 0, 0);
             }
@@ -45,3 +52,4 @@ public class MasteryLevelUpTranslator extends AbstractTranslator {
         }
     }
 }
+

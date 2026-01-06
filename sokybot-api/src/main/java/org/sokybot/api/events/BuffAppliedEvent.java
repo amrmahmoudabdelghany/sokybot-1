@@ -9,15 +9,22 @@ public class BuffAppliedEvent implements IGameEvent {
     private final String fullName;
     private final long timestamp;
     private final int buffId;
+    private final String buffName;  // Name from skill lookup
     private final int casterId;
     private final int duration; // in seconds, 0 = permanent
     
-    public BuffAppliedEvent(String machineFullName, int buffId, int casterId, int duration) {
+    public BuffAppliedEvent(String machineFullName, int buffId, String buffName, int casterId, int duration) {
         this.fullName = machineFullName;
         this.timestamp = System.currentTimeMillis();
         this.buffId = buffId;
+        this.buffName = buffName;
         this.casterId = casterId;
         this.duration = duration;
+    }
+    
+    // Legacy constructor for backward compatibility
+    public BuffAppliedEvent(String machineFullName, int buffId, int casterId, int duration) {
+        this(machineFullName, buffId, null, casterId, duration);
     }
     
     @Override
@@ -44,6 +51,10 @@ public class BuffAppliedEvent implements IGameEvent {
         return buffId;
     }
     
+    public String getBuffName() {
+        return buffName;
+    }
+    
     public int getCasterId() {
         return casterId;
     }
@@ -52,3 +63,4 @@ public class BuffAppliedEvent implements IGameEvent {
         return duration;
     }
 }
+

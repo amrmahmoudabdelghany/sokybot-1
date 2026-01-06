@@ -14,6 +14,7 @@ public class EntitySpawnEvent implements IGameEvent {
     // Entity identification
     private final int entityId;  // Server-assigned unique ID
     private final int refId;     // Static data reference ID
+    private final String entityName;  // Name from static data lookup
     
     // Position data
     private final int xSector;
@@ -26,7 +27,7 @@ public class EntitySpawnEvent implements IGameEvent {
     // World coordinates (computed from sector + offset)
     private final Position position;
     
-    public EntitySpawnEvent(String fullName, int entityId, int refId, 
+    public EntitySpawnEvent(String fullName, int entityId, int refId, String entityName,
                            int xSector, int ySector,
                            float xOffset, float yOffset, float zOffset,
                            short angle, Position position) {
@@ -34,6 +35,7 @@ public class EntitySpawnEvent implements IGameEvent {
         this.timestamp = System.currentTimeMillis();
         this.entityId = entityId;
         this.refId = refId;
+        this.entityName = entityName;
         this.xSector = xSector;
         this.ySector = ySector;
         this.xOffset = xOffset;
@@ -44,8 +46,16 @@ public class EntitySpawnEvent implements IGameEvent {
     }
     
     // Legacy constructor for backward compatibility
+    public EntitySpawnEvent(String fullName, int entityId, int refId, 
+                           int xSector, int ySector,
+                           float xOffset, float yOffset, float zOffset,
+                           short angle, Position position) {
+        this(fullName, entityId, refId, null, xSector, ySector, xOffset, yOffset, zOffset, angle, position);
+    }
+    
+    // Legacy constructor for backward compatibility
     public EntitySpawnEvent(String fullName, int entityId, int refId, Position position) {
-        this(fullName, entityId, refId, 0, 0, 
+        this(fullName, entityId, refId, null, 0, 0, 
              (float)position.getX(), (float)position.getY(), (float)position.getZ(),
              (short)0, position);
     }
@@ -58,6 +68,7 @@ public class EntitySpawnEvent implements IGameEvent {
     
     public int getEntityId() { return entityId; }
     public int getRefId() { return refId; }
+    public String getEntityName() { return entityName; }
     public int getXSector() { return xSector; }
     public int getYSector() { return ySector; }
     public float getXOffset() { return xOffset; }
@@ -68,8 +79,10 @@ public class EntitySpawnEvent implements IGameEvent {
     
     @Override
     public String toString() {
-        return String.format("EntitySpawnEvent[%s, entity=%d, ref=%d, sector=(%d,%d), angle=%d]",
-            fullName, entityId, refId, xSector, ySector, angle);
+        String name = entityName != null ? entityName : "ref=" + refId;
+        return String.format("EntitySpawnEvent[%s, entity=%d, %s, sector=(%d,%d), angle=%d]",
+            fullName, entityId, name, xSector, ySector, angle);
     }
 }
+
 

@@ -10,15 +10,23 @@ public class MasteryLevelUpEvent implements IGameEvent {
     private final long timestamp;
     private final boolean success;
     private final int masteryId;
+    private final String masteryName;  // Name from mastery lookup
     private final int newLevel;
     
     public MasteryLevelUpEvent(String machineFullName, boolean success, 
-                              int masteryId, int newLevel) {
+                              int masteryId, String masteryName, int newLevel) {
         this.fullName = machineFullName;
         this.timestamp = System.currentTimeMillis();
         this.success = success;
         this.masteryId = masteryId;
+        this.masteryName = masteryName;
         this.newLevel = newLevel;
+    }
+    
+    // Legacy constructor for backward compatibility
+    public MasteryLevelUpEvent(String machineFullName, boolean success, 
+                              int masteryId, int newLevel) {
+        this(machineFullName, success, masteryId, null, newLevel);
     }
     
     @Override
@@ -35,5 +43,7 @@ public class MasteryLevelUpEvent implements IGameEvent {
     
     public boolean isSuccess() { return success; }
     public int getMasteryId() { return masteryId; }
+    public String getMasteryName() { return masteryName; }
     public int getNewLevel() { return newLevel; }
 }
+

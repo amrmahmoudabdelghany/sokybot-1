@@ -10,6 +10,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
 /**
  * Translates entity spawn packets (opcode 0x3015) to EntitySpawnEvent.
  * Parsing logic based on engine's SpawnParser.readSpawnData() pattern.
+ * Uses IGameDataLookup to enrich event with entity name.
  */
 public class EntitySpawnTranslator extends AbstractTranslator {
     
@@ -48,14 +49,22 @@ public class EntitySpawnTranslator extends AbstractTranslator {
             short angle = reader.getShort();
             
             // 6. Compute world coordinates
-            // World X = xSector * 192 * 10 + xOffset  (simplified)
-            // World Y = ySector * 192 * 10 + yOffset
             float worldX = xSector * 1920 + xOffset;
             float worldY = ySector * 1920 + yOffset;
             
             Position position = new Position(worldX, worldY, zOffset);
             
-            return new EntitySpawnEvent(machineFullName, entityId, refId,
+            // 7. Lookup entity name from static data
+            String entityName = null;
+            if (lookup != null) {
+                entityName = lookup.findNPC(refId)
+                    .map(npc -> npc.getName())
+                    .orElseGet(() -> lookup.findItem(refId)
+                        .map(item -> item.getName())
+                        .orElse(null));
+            }
+            
+            return new EntitySpawnEvent(machineFullName, entityId, refId, entityName,
                                        xSector, ySector, xOffset, yOffset, zOffset,
                                        angle, position);
             
@@ -64,4 +73,5 @@ public class EntitySpawnTranslator extends AbstractTranslator {
         }
     }
 }
+
 

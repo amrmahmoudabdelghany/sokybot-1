@@ -9,6 +9,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
 /**
  * Translates buff added packets (opcode 0x30BD) to BuffAppliedEvent.
  * Based on CharacterDataReader.getBuff() pattern.
+ * Uses IGameDataLookup to enrich event with buff name.
  */
 public class BuffAppliedTranslator extends AbstractTranslator {
     
@@ -32,13 +33,19 @@ public class BuffAppliedTranslator extends AbstractTranslator {
             int buffRefId = reader.getInt();  // Buff/skill reference ID
             int duration = reader.getInt();   // Duration in seconds (0 = permanent)
             
-            // Note: CharacterDataReader also handles transferableBuff flag
-            // but that requires skill entity lookup - skip for basic event
+            // Lookup buff name from skill data
+            String buffName = null;
+            if (lookup != null) {
+                buffName = lookup.findSkill(buffRefId)
+                    .map(skill -> skill.getName())
+                    .orElse(null);
+            }
             
-            return new BuffAppliedEvent(machineFullName, buffRefId, targetId, duration);
+            return new BuffAppliedEvent(machineFullName, buffRefId, buffName, targetId, duration);
             
         } catch (Exception e) {
             return null;
         }
     }
 }
+
