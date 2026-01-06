@@ -8,6 +8,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates buff removed packets (opcode 0x30BE) to BuffRemovedEvent.
+ * Uses IGameDataLookup to enrich event with buff name.
  */
 public class BuffRemovedTranslator extends AbstractTranslator {
     
@@ -30,10 +31,19 @@ public class BuffRemovedTranslator extends AbstractTranslator {
             int targetId = reader.getInt();  // Entity losing the buff
             int buffRefId = reader.getInt(); // Buff/skill reference ID
             
-            return new BuffRemovedEvent(machineFullName, buffRefId);
+            // Lookup buff name from skill data
+            String buffName = null;
+            if (lookup != null) {
+                buffName = lookup.findSkill(buffRefId)
+                    .map(skill -> skill.getName())
+                    .orElse(null);
+            }
+            
+            return new BuffRemovedEvent(machineFullName, buffRefId, buffName);
             
         } catch (Exception e) {
             return null;
         }
     }
 }
+

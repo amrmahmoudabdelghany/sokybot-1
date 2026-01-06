@@ -10,12 +10,19 @@ public class SkillCastEndEvent implements IGameEvent {
     private final long timestamp;
     private final int casterId;
     private final int skillId;
+    private final String skillName;  // Name from skill lookup
     
-    public SkillCastEndEvent(String machineFullName, int casterId, int skillId) {
+    public SkillCastEndEvent(String machineFullName, int casterId, int skillId, String skillName) {
         this.fullName = machineFullName;
         this.timestamp = System.currentTimeMillis();
         this.casterId = casterId;
         this.skillId = skillId;
+        this.skillName = skillName;
+    }
+    
+    // Legacy constructor for backward compatibility
+    public SkillCastEndEvent(String machineFullName, int casterId, int skillId) {
+        this(machineFullName, casterId, skillId, null);
     }
     
     @Override
@@ -32,4 +39,6 @@ public class SkillCastEndEvent implements IGameEvent {
     
     public int getCasterId() { return casterId; }
     public int getSkillId() { return skillId; }
+    public String getSkillName() { return skillName; }
 }
+

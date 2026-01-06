@@ -9,6 +9,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
 /**
  * Translates skill level up packets (opcode 0x70B2) to SkillLevelUpEvent.
  * Based on TrainerHandler.skillLevelUp() pattern.
+ * Uses IGameDataLookup to enrich event with skill name.
  */
 public class SkillLevelUpTranslator extends AbstractTranslator {
     
@@ -32,7 +33,16 @@ public class SkillLevelUpTranslator extends AbstractTranslator {
             
             if (success) {
                 int skillId = reader.getInt();
-                return new SkillLevelUpEvent(machineFullName, true, skillId);
+                
+                // Lookup skill name
+                String skillName = null;
+                if (lookup != null) {
+                    skillName = lookup.findSkill(skillId)
+                        .map(skill -> skill.getName())
+                        .orElse(null);
+                }
+                
+                return new SkillLevelUpEvent(machineFullName, true, skillId, skillName);
             } else {
                 return new SkillLevelUpEvent(machineFullName, false, 0);
             }
@@ -42,3 +52,4 @@ public class SkillLevelUpTranslator extends AbstractTranslator {
         }
     }
 }
+

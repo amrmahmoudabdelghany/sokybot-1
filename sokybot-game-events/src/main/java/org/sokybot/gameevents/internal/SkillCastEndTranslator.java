@@ -10,6 +10,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
  * Translates skill cast ended packets (opcode 0xB071) to SkillCastEndEvent.
  * Based on ServerOpcode.SKILL_CAST_ENDED definition.
  * Fires when a skill finishes casting or is interrupted.
+ * Uses IGameDataLookup to enrich event with skill name.
  */
 public class SkillCastEndTranslator extends AbstractTranslator {
     
@@ -32,10 +33,19 @@ public class SkillCastEndTranslator extends AbstractTranslator {
             int casterId = reader.getInt();
             int skillId = reader.getInt();
             
-            return new SkillCastEndEvent(machineFullName, casterId, skillId);
+            // Lookup skill name
+            String skillName = null;
+            if (lookup != null) {
+                skillName = lookup.findSkill(skillId)
+                    .map(skill -> skill.getName())
+                    .orElse(null);
+            }
+            
+            return new SkillCastEndEvent(machineFullName, casterId, skillId, skillName);
             
         } catch (Exception e) {
             return null;
         }
     }
 }
+
