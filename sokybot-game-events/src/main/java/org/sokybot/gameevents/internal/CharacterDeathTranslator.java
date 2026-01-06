@@ -1,20 +1,23 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.CharacterDeathEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates character death packets (opcode 0x3053) to CharacterDeathEvent.
  * Based on TrainerHandler.onCharDie() pattern.
  * Critical event for bot safety and logic.
  */
-@Component(service = IPacketTranslator.class)
-public class CharacterDeathTranslator implements IPacketTranslator {
+public class CharacterDeathTranslator extends AbstractTranslator {
     
     private static final int CHAR_DIE_OPCODE = 0x3053;
+    
+    public CharacterDeathTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

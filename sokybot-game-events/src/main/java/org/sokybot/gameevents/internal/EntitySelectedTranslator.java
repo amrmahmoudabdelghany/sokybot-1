@@ -1,19 +1,22 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.EntitySelectedEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates entity selected packets (opcode 0x7045) to EntitySelectedEvent.
  * Based on EnvironmentHandler.onSpawnSelected() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class EntitySelectedTranslator implements IPacketTranslator {
+public class EntitySelectedTranslator extends AbstractTranslator {
     
     private static final int SPAWN_SELECTED_OPCODE = 0x7045;
+    
+    public EntitySelectedTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

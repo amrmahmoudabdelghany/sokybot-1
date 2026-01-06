@@ -1,19 +1,22 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.EntityHPMPUpdateEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates HP/MP update packets (opcode 0x3057) to EntityHPMPUpdateEvent.
  * Based on EnvironmentHandler.onHPMPUpdate() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class HPMPUpdateTranslator implements IPacketTranslator {
+public class HPMPUpdateTranslator extends AbstractTranslator {
     
     private static final int HPMP_UPDATE_OPCODE = 0x3057;
+    
+    public HPMPUpdateTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

@@ -1,19 +1,22 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.EntitySpeedUpdateEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates speed update packets (opcode 0x3916) to EntitySpeedUpdateEvent.
  * Based on EnvironmentHandler.speedUpdate() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class SpeedUpdateTranslator implements IPacketTranslator {
+public class SpeedUpdateTranslator extends AbstractTranslator {
     
     private static final int SPEED_UPDATE_OPCODE = 0x3916;
+    
+    public SpeedUpdateTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

@@ -1,20 +1,23 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.ChatMessageEvent;
 import org.sokybot.api.events.ChatMessageEvent.ChatType;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates chat update packets (opcode 0x3026) to ChatMessageEvent.
  * Based on ServerOpcode.CHAT_UPDATE definition.
  */
-@Component(service = IPacketTranslator.class)
-public class ChatMessageTranslator implements IPacketTranslator {
+public class ChatMessageTranslator extends AbstractTranslator {
     
     private static final int CHAT_UPDATE_OPCODE = 0x3026;
+    
+    public ChatMessageTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

@@ -1,19 +1,22 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.BuffAppliedEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates buff added packets (opcode 0x30BD) to BuffAppliedEvent.
  * Based on CharacterDataReader.getBuff() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class BuffAppliedTranslator implements IPacketTranslator {
+public class BuffAppliedTranslator extends AbstractTranslator {
     
     private static final int BUFF_ADDED_OPCODE = 0x30BD;
+    
+    public BuffAppliedTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

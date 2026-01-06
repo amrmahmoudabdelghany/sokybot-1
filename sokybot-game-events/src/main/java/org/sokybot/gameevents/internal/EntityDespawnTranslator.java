@@ -1,18 +1,21 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.EntityDespawnEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates entity despawn packets (opcode 0x3017) to EntityDespawnEvent.
  */
-@Component(service = IPacketTranslator.class)
-public class EntityDespawnTranslator implements IPacketTranslator {
+public class EntityDespawnTranslator extends AbstractTranslator {
     
     private static final int ENTITY_DESPAWN_OPCODE = 0x3017;
+    
+    public EntityDespawnTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

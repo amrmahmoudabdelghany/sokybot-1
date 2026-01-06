@@ -1,20 +1,23 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
 import org.sokybot.api.events.SkillCastConfirmEvent;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates skill cast confirm packets (opcode 0xB074) to SkillCastConfirmEvent.
  * Based on ServerOpcode.SKILL_CAST_CONFIRM - action confirmation event.
  * Indicates if skill was added to queue and queue position.
  */
-@Component(service = IPacketTranslator.class)
-public class SkillCastConfirmTranslator implements IPacketTranslator {
+public class SkillCastConfirmTranslator extends AbstractTranslator {
     
     private static final int SKILL_CAST_CONFIRM_OPCODE = 0xB074;
+    
+    public SkillCastConfirmTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

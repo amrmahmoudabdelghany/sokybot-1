@@ -1,19 +1,22 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
 import org.sokybot.api.events.MasteryLevelUpEvent;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates mastery level up packets (opcode 0x70B5) to MasteryLevelUpEvent.
  * Based on TrainerHandler.masteryLevelUp() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class MasteryLevelUpTranslator implements IPacketTranslator {
+public class MasteryLevelUpTranslator extends AbstractTranslator {
     
     private static final int CHAR_MASTERY_LVL_UP_OPCODE = 0x70B5;
+    
+    public MasteryLevelUpTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

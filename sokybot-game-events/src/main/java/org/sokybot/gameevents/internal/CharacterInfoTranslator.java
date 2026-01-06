@@ -1,20 +1,23 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.CharacterInfoEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates character info packets (opcode 0x3011) to CharacterInfoEvent.
  * Contains combat stats: ATK/DEF/Hit/Parry/MaxHP/MaxMP.
  * Based on TrainerHandler.parsingCharInfo() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class CharacterInfoTranslator implements IPacketTranslator {
+public class CharacterInfoTranslator extends AbstractTranslator {
     
     private static final int CHAR_INFO_OPCODE = 0x3011;
+    
+    public CharacterInfoTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

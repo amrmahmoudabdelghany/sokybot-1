@@ -1,21 +1,24 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.EntityMovementEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.entities.navmesh.Position;
+import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.utils.SilkroadUtils;
 
 /**
  * Translates spawn movement packets (opcode 0x3020) to EntityMovementEvent.
  * Based on EnvironmentHandler.onSpawnMove() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class EntityMovementTranslator implements IPacketTranslator {
+public class EntityMovementTranslator extends AbstractTranslator {
     
     private static final int SPAWN_MOVEMENT_OPCODE = 0x3020;
+    
+    public EntityMovementTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

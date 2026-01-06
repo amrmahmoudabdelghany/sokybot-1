@@ -1,19 +1,22 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
 import org.sokybot.api.events.SkillCastEvent;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates skill cast started packets (opcode 0x3844) to SkillCastEvent.
  * Based on EnvironmentHandler.onSkillCastStarted() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class SkillCastTranslator implements IPacketTranslator {
+public class SkillCastTranslator extends AbstractTranslator {
     
     private static final int SKILL_CAST_STARTED_OPCODE = 0x3844;
+    
+    public SkillCastTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

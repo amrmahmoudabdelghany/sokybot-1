@@ -1,20 +1,23 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
 import org.sokybot.api.events.SkillCastEndEvent;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates skill cast ended packets (opcode 0xB071) to SkillCastEndEvent.
  * Based on ServerOpcode.SKILL_CAST_ENDED definition.
  * Fires when a skill finishes casting or is interrupted.
  */
-@Component(service = IPacketTranslator.class)
-public class SkillCastEndTranslator implements IPacketTranslator {
+public class SkillCastEndTranslator extends AbstractTranslator {
     
     private static final int SKILL_CAST_ENDED_OPCODE = 0xB071;
+    
+    public SkillCastEndTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

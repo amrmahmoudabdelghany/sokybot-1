@@ -1,19 +1,22 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.GroupSpawnBeginEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates group spawn begin packets (opcode 0x3019) to GroupSpawnBeginEvent.
  * Based on EnvironmentHandler.onGroupSpawnBegin() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class GroupSpawnBeginTranslator implements IPacketTranslator {
+public class GroupSpawnBeginTranslator extends AbstractTranslator {
     
     private static final int GROUP_SPAWN_BEGIN_OPCODE = 0x3019;
+    
+    public GroupSpawnBeginTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

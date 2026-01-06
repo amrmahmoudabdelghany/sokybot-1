@@ -1,18 +1,21 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.BuffRemovedEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates buff removed packets (opcode 0x30BE) to BuffRemovedEvent.
  */
-@Component(service = IPacketTranslator.class)
-public class BuffRemovedTranslator implements IPacketTranslator {
+public class BuffRemovedTranslator extends AbstractTranslator {
     
     private static final int BUFF_REMOVED_OPCODE = 0x30BE;
+    
+    public BuffRemovedTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {
