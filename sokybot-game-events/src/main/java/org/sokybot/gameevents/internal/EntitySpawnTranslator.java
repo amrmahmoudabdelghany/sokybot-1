@@ -1,20 +1,23 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.EntitySpawnEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.entities.navmesh.Position;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates entity spawn packets (opcode 0x3015) to EntitySpawnEvent.
  * Parsing logic based on engine's SpawnParser.readSpawnData() pattern.
  */
-@Component(service = IPacketTranslator.class)
-public class EntitySpawnTranslator implements IPacketTranslator {
+public class EntitySpawnTranslator extends AbstractTranslator {
     
     private static final int ENTITY_SPAWN_OPCODE = 0x3015;
+    
+    public EntitySpawnTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {

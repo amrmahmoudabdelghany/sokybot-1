@@ -1,20 +1,23 @@
 package org.sokybot.gameevents.internal;
 
-import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.CharacterLoadedEvent;
 import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
  * Translates character data packets (opcode 0x3013) to CharacterLoadedEvent.
  * Complete parsing based on TrainerHandler.parsingCharData() pattern.
  * This is the most important translator - signals character is fully loaded.
  */
-@Component(service = IPacketTranslator.class)
-public class CharacterLoadedTranslator implements IPacketTranslator {
+public class CharacterLoadedTranslator extends AbstractTranslator {
     
     private static final int CHAR_DATA_OPCODE = 0x3013;
+    
+    public CharacterLoadedTranslator(IGameDataLookup lookup) {
+        super(lookup);
+    }
     
     @Override
     public int getOpcode() {
