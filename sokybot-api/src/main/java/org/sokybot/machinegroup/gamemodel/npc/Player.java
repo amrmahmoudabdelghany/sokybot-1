@@ -1,6 +1,7 @@
 package org.sokybot.machinegroup.gamemodel.npc;
 
 import org.sokybot.machinegroup.gamemodel.item.Inventory;
+import org.sokybot.persistence.entities.NPCEntity;
 
 import lombok.AccessLevel;
 import lombok.Data;
@@ -13,7 +14,6 @@ import lombok.experimental.Delegate;
 
 @Data
 @ToString
-@NoArgsConstructor
 @EqualsAndHashCode(callSuper = true)
 public class Player extends IFighter {
 
@@ -68,12 +68,29 @@ public class Player extends IFighter {
 		super(entity);
 	}
 	
+    // Explicit no-args constructor
+    public Player() {
+        super();
+    }
+	
 	
 
 	
 	public int getLevel() { 
 		return this.level ; 
 	}
+    
+    public void setLevel(byte level) {
+        this.level = level;
+    }
+    
+    public String getName() {
+        return this.name;
+    }
+    
+    public void setName(String name) {
+        this.name = name;
+    }
  
 	
 	

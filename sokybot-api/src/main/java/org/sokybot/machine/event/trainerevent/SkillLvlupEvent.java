@@ -1,7 +1,7 @@
 package org.sokybot.machine.event.trainerevent;
 
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
-import org.sokybot.machinegroup.gamemodel.skill.SkillEntity;
+import org.sokybot.persistence.entities.SkillEntity;
 import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.network.packet.ImmutablePacket;
 
@@ -16,6 +16,10 @@ public class SkillLvlupEvent  {
 	 this.skill = skill ; 
 	   
 	}
+	
+    public Skill getSkill() {
+        return this.skill;
+    }
 	
 	
 	

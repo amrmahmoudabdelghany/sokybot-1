@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineState;
 import org.sokybot.machine.model.ServerFeed;
-import org.sokybot.machine.network.NetworkAttributes;
 import org.sokybot.machinegroup.gamemodel.login.Action;
 import org.sokybot.machinegroup.gamemodel.npc.ACADEMY_MEMBER_CLASS;
 import org.sokybot.machinegroup.gamemodel.npc.GUILD_MEMBER_CLASS;

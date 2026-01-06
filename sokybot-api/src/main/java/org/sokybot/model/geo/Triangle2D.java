@@ -1,5 +1,7 @@
 package org.sokybot.model.geo;
 
+import org.sokybot.persistence.entities.geo.Vector2D;
+
 
 import java.util.Arrays;
 

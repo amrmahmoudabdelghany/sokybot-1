@@ -37,6 +37,10 @@ public class Quest {
 	public Quest(int refId) {
 		this.refID = refId ; 
 	}
+    
+    public int getRefID() {
+        return this.refID;
+    }
 	
 
 	public void addTaskRefObjId(int val) {

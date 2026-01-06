@@ -4,7 +4,7 @@ package org.sokybot.machinegroup.gamemodel.npc ;
 import java.util.List;
 
 import org.sokybot.machinegroup.gamemodel.item.Inventory;
-import org.sokybot.machinegroup.gamemodel.item.ItemEntity;
+import org.sokybot.persistence.entities.ItemEntity;
 
 import lombok.AccessLevel;
 import lombok.Data;
@@ -58,3 +58,4 @@ public class SelectableCharacter extends INPCObject {
 
 
 }
+

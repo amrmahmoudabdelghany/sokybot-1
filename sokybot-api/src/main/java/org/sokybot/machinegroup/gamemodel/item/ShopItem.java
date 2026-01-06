@@ -6,6 +6,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToOne;
+import org.sokybot.persistence.entities.ItemEntity;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -37,6 +38,8 @@ public class ShopItem {
 		this.slot = slot ; 
 		this.price = price ; 
 	}
+    
+    public int getRefId() { return entity.getRefId(); }
 	
 	
 }

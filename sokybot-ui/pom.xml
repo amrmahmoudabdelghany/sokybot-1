@@ -23,6 +23,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-swing</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <version>${lombok.version}</version>
@@ -70,10 +75,39 @@
             <version>20050920</version>
 		</dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-             <version>${spring-boot.version}</version>
+			<groupId>tablelayout</groupId>
+			<artifactId>TableLayout</artifactId>
+            <version>20050920</version>
+		</dependency>
+		
+		<!-- Persistence Bundle (OSGi Services) -->
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sokybot-persistence</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		
+        <!-- OSGi DS & Services -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.4.0</version>
+            <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.event</artifactId>
+            <version>1.4.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.cm</artifactId>
+            <version>1.6.0</version>
+            <scope>provided</scope>
+        </dependency>
+
          <dependency>
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf</artifactId>
@@ -83,6 +117,11 @@
             <groupId>com.formdev</groupId>
             <artifactId>flatlaf-extras</artifactId>
             <version>3.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.92.Final</version>
         </dependency>
     </dependencies>
 
@@ -104,7 +143,20 @@
                         <Export-Package>org.sokybot.ui.*</Export-Package>
                         <!-- Embed MyDoggy and SwingX to avoid classloader issues -->
                         <Embed-Dependency>*;scope=compile;inline=false</Embed-Dependency>
+                        <_dsannotations>*</_dsannotations>
                     </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>org/sokybot/app/repo/**</exclude>
+                        <exclude>org/sokybot/app/machinebuilder/**</exclude>
+                        <exclude>org/sokybot/machine/dashboard/**</exclude>
+                        <exclude>org/sokybot/app/gamegroupbuilder/**</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
         </plugins>

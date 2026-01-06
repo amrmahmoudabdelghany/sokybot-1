@@ -1,27 +1,17 @@
 package org.sokybot.app.mainframe;
 
+import java.util.EventObject;
 
-import lombok.Getter;
-import org.springframework.context.ApplicationEvent;
+/**
+ * Event published when the Main Window is fully initialized and visible.
+ * This event serves as a signal for other UI components to start their initialization
+ * that might depend on the Main Frame being ready.
+ */
+public class WindowPreparedEvent extends EventObject {
 
-import javax.swing.*;
+    private static final long serialVersionUID = 1L;
 
-
-//@Component
-//@Getter
-//@Builder
-
-@Getter
-public class WindowPreparedEvent  extends ApplicationEvent {
-
-    private JToolBar toolBar ;
-    private JMenuBar menuBar ;
-    private JFrame frame ;
-
-    public WindowPreparedEvent(Object source, JFrame frame , JToolBar toolBar, JMenuBar menuBar) {
+    public WindowPreparedEvent(Object source) {
         super(source);
-        this.toolBar = toolBar;
-        this.menuBar = menuBar;
-        this.frame = frame;
     }
 }

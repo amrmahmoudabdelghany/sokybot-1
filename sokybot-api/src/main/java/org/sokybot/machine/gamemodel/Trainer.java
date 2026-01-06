@@ -29,12 +29,12 @@ import org.sokybot.machine.event.trainerevent.TrainerSkillsUpdatedEvent;
 import org.sokybot.machine.event.userevent.UserUpdateSkillEvent;
 import org.sokybot.machinegroup.gamemodel.npc.FreePVP;
 import org.sokybot.machinegroup.gamemodel.npc.HotKey;
-import org.sokybot.machinegroup.gamemodel.npc.NPCEntity;
+import org.sokybot.persistence.entities.NPCEntity;
 import org.sokybot.machinegroup.gamemodel.npc.Player;
 import org.sokybot.machinegroup.gamemodel.quest.Quest;
 import org.sokybot.machinegroup.gamemodel.skill.Mastery;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
-import org.sokybot.machinegroup.gamemodel.skill.SkillEntity;
+import org.sokybot.persistence.entities.SkillEntity;
 import org.sokybot.utils.SilkroadUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -97,6 +97,9 @@ public class Trainer extends Player {
 	private short charStatPoint; // shared
 	private int charHP; // shared
 	private int charMP; // shared
+    
+    public int getCharHP() { return charHP; }
+    public int getCharMP() { return charMP; }
 
 	@Setter(value = AccessLevel.NONE)
 	@Getter(value = AccessLevel.NONE)

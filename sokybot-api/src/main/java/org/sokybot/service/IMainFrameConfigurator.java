@@ -7,6 +7,8 @@ public interface IMainFrameConfigurator {
 
     public void addExtraWindow(String id, String title , Icon icon , Component comp) ;
     public void addPage( String pageId ,Icon icon ,   String pageTitle , Component component) ;
+    public void addToolbarButton(JButton button);
+    public void displayDialog(JDialog dialog);
 
 
 }

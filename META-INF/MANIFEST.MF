@@ -1,0 +1,64 @@
+Manifest-Version: 1.0
+Created-By: Maven JAR Plugin 3.4.1
+Build-Jdk-Spec: 21
+Class-Path: dependency/slf4j-api-1.7.36.jar dependency/logback-classic-1
+ .2.11.jar dependency/logback-core-1.2.11.jar dependency/spring-boot-2.7
+ .13.jar dependency/spring-core-5.3.28.jar dependency/spring-jcl-5.3.28.
+ jar dependency/spring-context-5.3.28.jar dependency/spring-beans-5.3.28
+ .jar dependency/spring-expression-5.3.28.jar dependency/spring-boot-sta
+ rter-2.7.13.jar dependency/spring-boot-starter-logging-2.7.13.jar depen
+ dency/log4j-to-slf4j-2.17.2.jar dependency/log4j-api-2.17.2.jar depende
+ ncy/jul-to-slf4j-1.7.36.jar dependency/jakarta.annotation-api-1.3.5.jar
+  dependency/snakeyaml-1.30.jar dependency/spring-boot-starter-aop-2.7.1
+ 3.jar dependency/spring-aop-5.3.28.jar dependency/aspectjweaver-1.9.7.j
+ ar dependency/spring-statemachine-core-2.5.1.jar dependency/spring-tx-5
+ .3.18.jar dependency/spring-messaging-5.3.18.jar dependency/spring-boot
+ -autoconfigure-2.7.13.jar dependency/poly2tri-core-0.1.2.jar dependency
+ /spring-boot-starter-data-jpa-2.7.13.jar dependency/spring-boot-starter
+ -jdbc-2.7.13.jar dependency/HikariCP-4.0.3.jar dependency/spring-jdbc-5
+ .3.28.jar dependency/jakarta.transaction-api-1.3.3.jar dependency/jakar
+ ta.persistence-api-2.2.3.jar dependency/hibernate-core-5.6.15.Final.jar
+  dependency/jboss-logging-3.4.3.Final.jar dependency/antlr-2.7.7.jar de
+ pendency/jandex-2.4.2.Final.jar dependency/classmate-1.5.1.jar dependen
+ cy/hibernate-commons-annotations-5.1.2.Final.jar dependency/jaxb-runtim
+ e-2.3.1.jar dependency/txw2-2.3.1.jar dependency/istack-commons-runtime
+ -3.0.7.jar dependency/stax-ex-1.8.jar dependency/FastInfoset-1.2.15.jar
+  dependency/spring-data-jpa-2.7.13.jar dependency/spring-data-commons-2
+ .7.13.jar dependency/spring-orm-5.3.28.jar dependency/spring-aspects-5.
+ 3.28.jar dependency/spring-boot-starter-test-2.7.13.jar dependency/spri
+ ng-boot-test-2.7.13.jar dependency/spring-boot-test-autoconfigure-2.7.1
+ 3.jar dependency/json-path-2.7.0.jar dependency/json-smart-2.4.7.jar de
+ pendency/accessors-smart-2.4.7.jar dependency/asm-9.1.jar dependency/as
+ sertj-core-3.22.0.jar dependency/hamcrest-2.2.jar dependency/junit-jupi
+ ter-5.8.2.jar dependency/junit-jupiter-params-5.8.2.jar dependency/json
+ assert-1.5.1.jar dependency/android-json-0.0.20131108.vaadin1.jar depen
+ dency/spring-test-5.3.28.jar dependency/xmlunit-core-2.9.1.jar dependen
+ cy/h2-2.1.214.jar dependency/gc4s-1.6.0.jar dependency/swingx-all-1.6.5
+ -1.jar dependency/junit-4.12.jar dependency/hamcrest-core-1.3.jar depen
+ dency/netty-transport-4.1.85.Final.jar dependency/netty-common-4.1.85.F
+ inal.jar dependency/netty-buffer-4.1.85.Final.jar dependency/netty-reso
+ lver-4.1.85.Final.jar dependency/netty-handler-4.1.85.Final.jar depende
+ ncy/netty-transport-native-unix-common-4.1.85.Final.jar dependency/nett
+ y-codec-4.1.85.Final.jar dependency/javax.inject-1.jar dependency/javax
+ .annotation-api-1.3.2.jar dependency/flatlaf-2.3.jar dependency/flatlaf
+ -extras-2.5.jar dependency/svgSalamander-1.1.3.jar dependency/TableLayo
+ ut-20050920.jar dependency/jakarta.xml.bind-api-2.3.2.jar dependency/ja
+ karta.activation-api-1.2.1.jar dependency/jna-5.12.1.jar dependency/jna
+ -platform-5.12.1.jar dependency/picocli-spring-boot-starter-4.6.3.jar d
+ ependency/picocli-4.6.3.jar dependency/sokybot-security-1.0-SNAPSHOT.ja
+ r dependency/sokybot-api-1.0-SNAPSHOT.jar dependency/javax.persistence-
+ api-2.2.jar dependency/sokybot-pk2-1.0-SNAPSHOT.jar dependency/org.apac
+ he.felix.framework-7.0.5.jar dependency/animal-sniffer-annotations-1.9.
+ jar dependency/org.apache.felix.atomos-1.0.0.jar dependency/org.apache.
+ felix.fileinstall-3.7.4.jar dependency/org.apache.felix.scr-2.2.6.jar d
+ ependency/org.apache.felix.eventadmin-1.6.4.jar dependency/org.apache.f
+ elix.configadmin-1.9.26.jar dependency/org.osgi.util.pushstream-1.0.2.j
+ ar dependency/osgi.annotation-8.0.1.jar dependency/org.osgi.util.functi
+ on-1.1.0.jar dependency/org.osgi.util.promise-1.1.1.jar dependency/soky
+ bot-game-loader-1.0-SNAPSHOT.jar dependency/pecoff4j-0.3.2.jar dependen
+ cy/activation-1.1.1.jar dependency/commons-math3-3.5.jar dependency/ope
+ ntest4j-1.2.0.jar dependency/junit-platform-commons-1.9.0-M1.jar depend
+ ency/junit-jupiter-api-5.9.0-M1.jar dependency/apiguardian-api-1.1.2.ja
+ r dependency/byte-buddy-1.12.14.jar
+Main-Class: org.sokybot.Driver
+

@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import org.sokybot.model.geo.Vector2D;
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectGroundTriRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectLineRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
+import org.sokybot.persistence.entities.geo.Vector2D;
+import org.sokybot.persistence.entities.navmesh.ObjectGroundTriRef;
+import org.sokybot.persistence.entities.navmesh.ObjectLineRef;
+import org.sokybot.persistence.entities.navmesh.Position;
 
 import lombok.AllArgsConstructor;
 

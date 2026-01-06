@@ -2,7 +2,7 @@ package org.sokybot.machinegroup.gamemodel.npc;
 
 import java.util.Map;
 
-import org.sokybot.machinegroup.gamemodel.SilkroadEntity;
+import org.sokybot.persistence.entities.SilkroadEntity;
 import org.sokybot.machinegroup.gamemodel.item.ShopItem;
 
 import lombok.Singular;
@@ -40,3 +40,4 @@ public class ShopTab extends SilkroadEntity{
 
 
 }
+

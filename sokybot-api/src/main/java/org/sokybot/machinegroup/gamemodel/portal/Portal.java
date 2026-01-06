@@ -1,6 +1,7 @@
 package org.sokybot.machinegroup.gamemodel.portal;
 
 import org.sokybot.machinegroup.gamemodel.ISpawnable;
+import org.sokybot.persistence.entities.PortalEntity;
 
 import lombok.AccessLevel;
 import lombok.Data;

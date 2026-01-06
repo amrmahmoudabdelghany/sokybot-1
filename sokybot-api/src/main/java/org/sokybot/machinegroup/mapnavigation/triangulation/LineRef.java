@@ -27,6 +27,9 @@ public  class LineRef  {
 		this.aIndex = a ; 
 		this.bIndex = b ; 
 	}
+    
+    public short getAIndex() { return aIndex; }
+    public short getBIndex() { return bIndex; }
 	
 	
 

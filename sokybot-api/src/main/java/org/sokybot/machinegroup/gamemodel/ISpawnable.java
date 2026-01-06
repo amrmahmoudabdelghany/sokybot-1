@@ -3,14 +3,13 @@ package org.sokybot.machinegroup.gamemodel;
 import java.awt.Point;
 import java.awt.geom.Point2D;
 
-import org.sokybot.utils.SilkroadUtils;
+import org.sokybot.persistence.entities.SilkroadEntity;
 
 import lombok.AccessLevel;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.experimental.Delegate;
+import lombok.EqualsAndHashCode;
+import lombok.Data;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
@@ -30,15 +29,13 @@ public abstract class ISpawnable extends SilkroadEntity {
 	@Setter(value = AccessLevel.NONE)
 	protected Point position = new Point(0, 0);
 
-	
-
-	// public Position getPosition() {
-
-	// return (position == null) ?
-	// new Position(SilkroadUtils.getXCoord(xOffset, xSector),
-	// SilkroadUtils.getYCoord(yOffset, ySector)) :
-	// this.position ;
-	// }
+	public int getUniqueId() { return uniqueId; }
+	public short getXSector() { return xSector; }
+    public short getYSector() { return ySector; }
+    
+    public void setUniqueId(int uniqueId) { this.uniqueId = uniqueId; }
+    public void setXSector(short xSector) { this.xSector = xSector; }
+    public void setYSector(short ySector) { this.ySector = ySector; }
 
 	public int getX() {
 		return this.position.x;

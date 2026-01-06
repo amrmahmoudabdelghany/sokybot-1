@@ -1,5 +1,7 @@
 package org.sokybot.model.geo;
 
+import org.sokybot.persistence.entities.geo.Vector2D;
+
 /**
  * 2D edge class implementation.
  * 

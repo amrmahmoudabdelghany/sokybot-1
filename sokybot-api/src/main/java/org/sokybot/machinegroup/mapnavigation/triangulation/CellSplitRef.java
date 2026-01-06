@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.sokybot.model.geo.Triangle2D;
-import org.sokybot.model.geo.Vector2D;
+import org.sokybot.persistence.entities.geo.Vector2D;
 
 public class CellSplitRef {
 

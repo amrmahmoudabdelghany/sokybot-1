@@ -6,8 +6,8 @@ import static org.sokybot.utils.SilkroadUtils.getSectorYX;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectNavMesh;
-import org.sokybot.machinegroup.gamemodel.navmesh.SectorRef;
+import org.sokybot.persistence.entities.ObjectNavMesh;
+import org.sokybot.persistence.entities.SectorRef;
 import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplit;
 import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef;
 import org.sokybot.machinegroup.mapnavigation.triangulation.Triangulator;

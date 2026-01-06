@@ -2,15 +2,19 @@ package org.sokybot.machinegroup.mapnavigation.triangulation;
 
 import java.util.stream.Stream;
 
-import org.sokybot.model.geo.Vector2D;
+import org.sokybot.persistence.entities.geo.Vector2D;
 
 import lombok.AllArgsConstructor;
 
-@AllArgsConstructor
 public class Triangle {
 
 	private CellSplitRef cellSplitRef ; 
 	private TriangleRef triRef;
+
+    public Triangle(CellSplitRef cellSplitRef, TriangleRef triRef) {
+        this.cellSplitRef = cellSplitRef;
+        this.triRef = triRef;
+    }
 
 	
 	public Vector2D getPointA() {

@@ -1,6 +1,7 @@
 package org.sokybot.machinegroup.gamemodel.item;
 
 import java.io.Serializable;
+import org.sokybot.persistence.entities.ItemEntity;
 
 import lombok.AccessLevel;
 import lombok.Data;
@@ -37,6 +38,18 @@ public class Item  implements Serializable{
 		this.attributeAssimilationProbability = item.attributeAssimilationProbability ; 
 		this.rent = item.rent ; 
 	}
+    
+    public String getLongId() {
+        return itemEntity.getLongId();
+    }
+    
+    public byte getSlot() {
+        return this.slot;
+    }
+    
+    public void setSlot(byte slot) {
+        this.slot = slot;
+    }
 	
 	public Item(ItemEntity item) { 
 		this.itemEntity = item ; 

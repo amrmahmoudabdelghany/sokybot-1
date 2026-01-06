@@ -3,9 +3,9 @@ package org.sokybot.machinegroup.mapnavigation;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.sokybot.machinegroup.gamemodel.navmesh.NavObjectRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectNavMesh;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
+import org.sokybot.persistence.entities.navmesh.NavObjectRef;
+import org.sokybot.persistence.entities.ObjectNavMesh;
+import org.sokybot.persistence.entities.navmesh.Position;
 
 import lombok.AllArgsConstructor;
 

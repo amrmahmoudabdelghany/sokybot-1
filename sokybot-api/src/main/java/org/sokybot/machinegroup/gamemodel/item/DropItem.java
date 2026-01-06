@@ -1,6 +1,7 @@
 package org.sokybot.machinegroup.gamemodel.item;
 
 import org.sokybot.machinegroup.gamemodel.ISpawnable;
+import org.sokybot.persistence.entities.ItemEntity;
 
 import lombok.AccessLevel;
 import lombok.Data ;
@@ -36,3 +37,4 @@ public class DropItem extends ISpawnable{
 	
 	
 }
+

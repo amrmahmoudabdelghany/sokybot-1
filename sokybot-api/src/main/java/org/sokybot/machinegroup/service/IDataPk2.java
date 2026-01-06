@@ -3,8 +3,8 @@ package org.sokybot.machinegroup.service;
 import java.util.List;
 import java.util.Optional;
 
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectNavMesh;
-import org.sokybot.machinegroup.gamemodel.navmesh.SectorRef;
+import org.sokybot.persistence.entities.ObjectNavMesh;
+import org.sokybot.persistence.entities.SectorRef;
 import org.sokybot.machinegroup.mapnavigation.Sector;
 
 public interface IDataPk2 {

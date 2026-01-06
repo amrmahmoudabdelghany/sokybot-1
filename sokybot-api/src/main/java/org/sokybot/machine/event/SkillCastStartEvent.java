@@ -41,7 +41,17 @@ public class SkillCastStartEvent {
 		
 	}
 	
-	
+    public int getCasterId() {
+        return this.casterId;
+    }
+    
+    public int getSkillId() {
+        return this.skillId;
+    }
+    
+    public int getTargetId() {
+        return this.targetId;
+    }
 	
 	
 }

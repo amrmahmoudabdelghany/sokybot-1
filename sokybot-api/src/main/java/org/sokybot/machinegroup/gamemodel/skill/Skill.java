@@ -1,11 +1,11 @@
 package org.sokybot.machinegroup.gamemodel.skill;
 
 import java.io.Serializable;
-import java.util.Objects;
+
+import org.sokybot.persistence.entities.SkillEntity;
 
 import lombok.AccessLevel;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Delegate;
@@ -24,6 +24,10 @@ public class Skill implements Serializable {
 		this.skillEntity = skillEntity;
 
 	}
+    
+    public void setIsEnabled(byte isEnabled) {
+        this.isEnabled = isEnabled;
+    }
  
 	public boolean isEnabled() { 
 		return isEnabled == 0x1 ; 
@@ -34,5 +38,18 @@ public class Skill implements Serializable {
 		byte lvl = Byte.parseByte(longId.substring(lastPart ));
 		return lvl;
 	}
+    
+    // Manual delegates as fallback
+    public int getRefId() {
+        return skillEntity.getRefId();
+    }
+    
+    public String getName() {
+        return skillEntity.getName();
+    }
+
+    public int getCooldown() {
+        return skillEntity.getCooldown();
+    }
 
 }

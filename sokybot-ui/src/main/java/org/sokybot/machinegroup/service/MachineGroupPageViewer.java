@@ -1,65 +1,59 @@
 package org.sokybot.machinegroup.service;
 
-import javax.annotation.PostConstruct;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.sokybot.IPageViewer;
 import org.sokybot.app.AppConstants;
 import org.sokybot.machinegroup.PageContainer;
 import org.sokybot.machinegroup.navigationtree.INavTree;
 import org.sokybot.machinegroup.navigationtree.TreeNode;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import com.formdev.flatlaf.icons.FlatSearchIcon;
 
-
-
-@Component
+@Component(service = IPageViewer.class)
 public class MachineGroupPageViewer implements IPageViewer {
 
-	
-	@Autowired
-	private INavTree navTree;
+    private INavTree navTree;
+    private PageContainer pageContainer;
 
-	@Autowired
-	private PageContainer pageContainer;
+    @Reference
+    public void setNavTree(INavTree navTree) {
+        this.navTree = navTree;
+    }
 
-	
-	@Value("${" + AppConstants.GROUP_NAME + "}")
-	private String groupName ; 
+    @Reference
+    public void setPageContainer(PageContainer pageContainer) {
+        this.pageContainer = pageContainer;
+    }
 
-	
-	@PostConstruct
-	private void test() { 
-		System.out.println("MachinePageViewer :: GroupName :: " + this.groupName) ; 
-		
-	}
-	@Override
-	public void registerPage(String name, Icon icon, JComponent content) {
-	  
-		
-		String path = this.groupName + "." + name ; 
-		System.out.println("MachineGroupPageViewer :: Try to insert tree node at : " + path) ; 
-		System.out.println("MachineGroupPageViewer :: Where MachineGroup is : " + this.groupName ) ; 
-		navTree.putNode(this.groupName, TreeNode.makeTreeNode(name, new FlatSearchIcon()));
-		this.pageContainer.addPage(path, content);
-		
-	}
-	
-	@Override
-	public void registerPage(String parent, String name, Icon icon, JComponent content) {
-	 // check if parent exists
-		registerPage(parent + "." + name , icon , content) ; 
-	}
-	
-	@Override
-	public void removePage(String pageName) {
- 
-		//TODO implement this method
-		
-	}
-	
+    // Configurable group name
+    private String groupName = "SokyBot"; 
+
+    @Activate
+    private void start() { 
+        System.out.println("MachineGroupPageViewer :: Activated. GroupName: " + this.groupName);
+    }
+
+    @Override
+    public void registerPage(String name, Icon icon, JComponent content) {
+        String path = this.groupName + "." + name; 
+        System.out.println("MachineGroupPageViewer :: Registering Page: " + path); 
+        
+        navTree.putNode(this.groupName, TreeNode.makeTreeNode(name, new FlatSearchIcon()));
+        this.pageContainer.addPage(path, content);
+    }
+    
+    @Override
+    public void registerPage(String parent, String name, Icon icon, JComponent content) {
+        registerPage(parent + "." + name, icon, content);
+    }
+    
+    @Override
+    public void removePage(String pageName) {
+        // TODO implement this method
+    }
 }

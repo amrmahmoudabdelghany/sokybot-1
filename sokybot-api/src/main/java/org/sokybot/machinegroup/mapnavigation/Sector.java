@@ -3,11 +3,11 @@ package org.sokybot.machinegroup.mapnavigation;
 import java.util.List;
 import java.util.stream.Stream;
 
-import org.sokybot.machinegroup.gamemodel.navmesh.NavBorderRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavCellLinkRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavObjectRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
-import org.sokybot.machinegroup.gamemodel.navmesh.SectorRef;
+import org.sokybot.persistence.entities.navmesh.NavBorderRef;
+import org.sokybot.persistence.entities.navmesh.NavCellLinkRef;
+import org.sokybot.persistence.entities.navmesh.NavObjectRef;
+import org.sokybot.persistence.entities.navmesh.Position;
+import org.sokybot.persistence.entities.SectorRef;
 
 public class Sector {
 

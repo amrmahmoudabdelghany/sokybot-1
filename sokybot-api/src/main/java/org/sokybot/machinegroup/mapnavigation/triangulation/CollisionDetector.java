@@ -1,7 +1,7 @@
 package org.sokybot.machinegroup.mapnavigation.triangulation;
 
 import org.apache.commons.math3.util.Precision;
-import org.sokybot.model.geo.Vector2D;
+import org.sokybot.persistence.entities.geo.Vector2D;
 
 public class CollisionDetector {
 

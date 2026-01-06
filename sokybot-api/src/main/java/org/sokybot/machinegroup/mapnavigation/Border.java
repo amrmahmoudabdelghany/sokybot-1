@@ -1,8 +1,8 @@
 package org.sokybot.machinegroup.mapnavigation;
 
-import org.sokybot.model.geo.Vector2D;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavBorderRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
+import org.sokybot.persistence.entities.geo.Vector2D;
+import org.sokybot.persistence.entities.navmesh.NavBorderRef;
+import org.sokybot.persistence.entities.navmesh.Position;
 
 import lombok.AllArgsConstructor;
 

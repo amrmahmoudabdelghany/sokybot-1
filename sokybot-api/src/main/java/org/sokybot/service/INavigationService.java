@@ -1,7 +1,7 @@
 package org.sokybot.service;
 
 import java.util.List;
-import org.sokybot.model.geo.Vector2D;
+import org.sokybot.persistence.entities.geo.Vector2D;
 
 public interface INavigationService {
 

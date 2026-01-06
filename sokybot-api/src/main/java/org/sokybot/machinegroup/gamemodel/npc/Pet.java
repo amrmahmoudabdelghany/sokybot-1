@@ -3,6 +3,7 @@ package org.sokybot.machinegroup.gamemodel.npc;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
+import org.sokybot.persistence.entities.NPCEntity;
 
 @Data
 @EqualsAndHashCode(callSuper =  true)

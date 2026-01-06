@@ -5,12 +5,12 @@ import java.util.Optional;
 import org.sokybot.machinegroup.gamemodel.DivisionInfo;
 import org.sokybot.machinegroup.gamemodel.GameInfo;
 import org.sokybot.machinegroup.gamemodel.SilkroadType;
-import org.sokybot.machinegroup.gamemodel.item.ItemEntity;
-import org.sokybot.machinegroup.gamemodel.npc.NPCEntity;
-import org.sokybot.machinegroup.gamemodel.npc.ShopEntity;
-import org.sokybot.machinegroup.gamemodel.portal.PortalEntity;
-import org.sokybot.machinegroup.gamemodel.portal.TeleportEntity;
-import org.sokybot.machinegroup.gamemodel.skill.SkillEntity;
+import org.sokybot.persistence.entities.ItemEntity;
+import org.sokybot.persistence.entities.NPCEntity;
+import org.sokybot.persistence.entities.ShopEntity;
+import org.sokybot.persistence.entities.PortalEntity;
+import org.sokybot.persistence.entities.TeleportEntity;
+import org.sokybot.persistence.entities.SkillEntity;
 
 public interface IMediaPk2 {
 

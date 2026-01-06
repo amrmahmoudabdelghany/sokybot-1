@@ -4,11 +4,11 @@ package org.sokybot.machinegroup.mapnavigation;
 import java.awt.geom.Rectangle2D;
 import java.util.stream.Stream;
 
-import org.sokybot.model.geo.Vector2D;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavCellRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavObjectRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectNavMesh;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
+import org.sokybot.persistence.entities.geo.Vector2D;
+import org.sokybot.persistence.entities.navmesh.NavCellRef;
+import org.sokybot.persistence.entities.navmesh.NavObjectRef;
+import org.sokybot.persistence.entities.ObjectNavMesh;
+import org.sokybot.persistence.entities.navmesh.Position;
 
 import lombok.AllArgsConstructor;
 

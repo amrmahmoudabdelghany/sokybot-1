@@ -20,12 +20,12 @@ import javax.annotation.PostConstruct;
 
 import org.apache.commons.math3.util.Precision;
 
-import org.sokybot.model.geo.Vector2D;
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectLineRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavBorderRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavCellRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectNavMesh;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
+import org.sokybot.persistence.entities.geo.Vector2D;
+import org.sokybot.persistence.entities.navmesh.ObjectLineRef;
+import org.sokybot.persistence.entities.navmesh.NavBorderRef;
+import org.sokybot.persistence.entities.navmesh.NavCellRef;
+import org.sokybot.persistence.entities.ObjectNavMesh;
+import org.sokybot.persistence.entities.navmesh.Position;
 import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplit;
 import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef;
 import org.sokybot.machinegroup.mapnavigation.triangulation.LineRef;

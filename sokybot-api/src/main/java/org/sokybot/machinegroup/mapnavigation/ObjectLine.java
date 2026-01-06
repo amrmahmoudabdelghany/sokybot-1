@@ -4,19 +4,23 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.math3.util.Precision;
-import org.sokybot.model.geo.Vector2D;
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectLineRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
+import org.sokybot.persistence.entities.geo.Vector2D;
+import org.sokybot.persistence.entities.navmesh.ObjectLineRef;
+import org.sokybot.persistence.entities.navmesh.Position;
 
 import lombok.AllArgsConstructor;
 import lombok.ToString;
 
 @ToString
-@AllArgsConstructor
 public class ObjectLine {
 
 	private CellObject cellObject;
 	protected ObjectLineRef lineRef;
+
+    public ObjectLine(CellObject cellObject, ObjectLineRef lineRef) {
+        this.cellObject = cellObject;
+        this.lineRef = lineRef;
+    }
 
 	public CellObject getCellObject() {
 		return this.cellObject;

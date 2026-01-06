@@ -1,6 +1,7 @@
 package org.sokybot.machinegroup.gamemodel.npc;
 
 import org.sokybot.machinegroup.gamemodel.ISpawnable;
+import org.sokybot.persistence.entities.NPCEntity;
 
 import lombok.AccessLevel;
 import lombok.Data;
@@ -19,10 +20,12 @@ public abstract class INPCObject extends ISpawnable{
 	@Delegate
 	protected NPCEntity entity ; 
 
-	
-	//private String name; // shared
-	//private byte level; // shared -- Current charLvl
 	private int HP ; 
+
+	public int getHP() { return HP; }
+	public void setHP(int HP) { this.HP = HP; }
+	
+	public NPCEntity getEntity() { return entity; }
 
 	public INPCObject(NPCEntity entity) { 
 		this.entity = entity ; 

@@ -4,9 +4,9 @@ import java.awt.Image;
 import java.util.List;
 import java.util.Optional;
 
-import org.sokybot.model.geo.Vector2D;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
-import org.sokybot.machinegroup.gamemodel.npc.NPCEntity;
+import org.sokybot.persistence.entities.geo.Vector2D;
+import org.sokybot.persistence.entities.navmesh.Position;
+import org.sokybot.persistence.entities.NPCEntity;
 import org.sokybot.service.ISroDAO;
 
 public interface ISroMaterialDAO extends ISroDAO , IMediaPk2  , IDataPk2{

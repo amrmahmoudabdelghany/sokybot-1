@@ -2,17 +2,21 @@ package org.sokybot.machinegroup.mapnavigation.triangulation;
 
 import java.util.stream.Stream;
 
-import org.sokybot.model.geo.Vector2D;
+import org.sokybot.persistence.entities.geo.Vector2D;
 import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType;
 
 import lombok.AllArgsConstructor;
 
-@AllArgsConstructor
 public class Line {
 	
 	
 	private CellSplitRef cellSplitRef ; 
 	private LineRef lineRef ; 
+
+    public Line(CellSplitRef cellSplitRef, LineRef lineRef) {
+        this.cellSplitRef = cellSplitRef;
+        this.lineRef = lineRef;
+    }
 
 	
 	

@@ -57,159 +57,21 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot</artifactId>
-			<version>${spring-boot.version}</version>
-
-            <exclusions>
-				<exclusion>
-					<groupId>org.slf4j</groupId>
-					<artifactId>slf4j-api</artifactId>
-				</exclusion>
-			</exclusions>
-		</dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-            <version>${spring-boot.version}</version>
-        </dependency>
-
-        <dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<version>${lombok.version}</version>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-aop</artifactId>
-			<version>${spring-boot.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.statemachine</groupId>
-			<artifactId>spring-statemachine-core</artifactId>
-			<version>${dependency.spring-statemachine-core.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-autoconfigure</artifactId>
-			<version>${spring-boot.version}</version>
-		</dependency>
-
-		<!-- https://mvnrepository.com/artifact/org.orbisgis/poly2tri-core -->
-		<dependency>
-			<groupId>org.orbisgis</groupId>
-			<artifactId>poly2tri-core</artifactId>
-			<version>0.1.2</version>
-			
-		</dependency>
-
-
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-			<version>${spring-boot.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<version>${spring-boot.version}</version>
-		</dependency>
-
-
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>runtime</scope>
-			<version>${dependency.h2.version}</version>
-		</dependency>
-
-		<!--
-		<dependency>
-			<groupId>org.ehcache</groupId>
-			<artifactId>ehcache</artifactId>
-			<version>3.10.8</version>
-		</dependency>
--->
-		<dependency>
-			<groupId>org.sing_group</groupId>
-			<artifactId>gc4s</artifactId>
-			<version>${dependency.gc4s.version}</version>
-		</dependency>
-
-		<!-- dependency> <groupId>org.sing_group</groupId> <artifactId>gc4s</artifactId> 
-			</dependency -->
-
-		<!--
-		<dependency>
-			<groupId>org.hibernate.orm</groupId>
-			<artifactId>hibernate-community-dialects</artifactId>
-
-		</dependency>
-		
-		-->
-
-
-		<!-- <dependency> -->
-		<!-- <groupId>org.springframework.osgi</groupId> -->
-		<!-- <artifactId>spring-osgi-io</artifactId> -->
-		<!-- <version>${dependency.spring-osgi-io.version}</version> -->
-		<!-- <scope>compile</scope> -->
-		<!-- </dependency> -->
-		<!-- https://mvnrepository.com/artifact/org.springframework.statemachine/spring-statemachine-core -->
-
-		<!-- https://mvnrepository.com/artifact/io.netty/netty-transport -->
-		<dependency>
-			<groupId>io.netty</groupId>
-			<artifactId>netty-transport</artifactId>
-			<version>4.1.85.Final</version>
-		</dependency>
-		<!-- https://mvnrepository.com/artifact/io.netty/netty-handler -->
-		<dependency>
-			<groupId>io.netty</groupId>
-			<artifactId>netty-handler</artifactId>
-			<version>4.1.85.Final</version>
-		</dependency>
-
-
-		<dependency>
-			<groupId>javax.inject</groupId>
-			<artifactId>javax.inject</artifactId>
-			<version>1</version>
-			<optional>true</optional>
-		</dependency>
-
-		<dependency>
-			<groupId>javax.annotation</groupId>
-			<artifactId>javax.annotation-api</artifactId>
-			<version>1.3.2</version>
-			<optional>true</optional>
-		</dependency>
-
-		<!-- SwingX removed - only needed in UI bundle -->
 
 		<dependency>
 			<groupId>com.formdev</groupId>
 			<artifactId>flatlaf</artifactId>
 			<version>${dependency.flatlaf.version}</version>
-
 		</dependency>
 		<dependency>
 			<groupId>com.formdev</groupId>
 			<artifactId>flatlaf-extras</artifactId>
 			<version>2.5</version>
-		</dependency>
-		<dependency>
-			<groupId>tablelayout</groupId>
-			<artifactId>TableLayout</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>jakarta.xml.bind</groupId>
-			<artifactId>jakarta.xml.bind-api</artifactId>
-			<version>2.3.2</version>
 		</dependency>
 
 		<dependency>
@@ -224,52 +86,6 @@
 			<version>${jna.version}</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/com.h2database/h2 -->
-
-
-		<!-- https://mvnrepository.com/artifact/com.h2database/h2-mvstore -->
-		<!-- 
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2-mvstore</artifactId>
-			<version>${dependency.h2-mvstore.version}</version>
-		</dependency>
-
--->
-		<!--
-		<dependency>
-			<groupId>org.dizitart</groupId>
-			<artifactId>nitrite</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.dizitart</groupId>
-			<artifactId>nitrite-jackson-mapper</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>org.dizitart</groupId>
-			<artifactId>nitrite-mvstore-adapter</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>org.objenesis</groupId>
-			<artifactId>objenesis</artifactId>
-			<version>${dependency.objenesis.version}</version>
-		</dependency>
-
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-			<version>2.13.3</version>
-		</dependency>
-
--->
-		<dependency>
-			<groupId>info.picocli</groupId>
-			<artifactId>picocli-spring-boot-starter</artifactId>
-			<version>4.6.3</version>
-
-		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-core -->
 
@@ -334,11 +150,27 @@
 
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.apache.felix/org.apache.felix.atomos -->
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.atomos</artifactId>
 			<version>1.0.0</version>
+		</dependency>
+
+		<!-- OSGi Compendium Services -->
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.scr</artifactId>
+			<version>2.2.6</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.eventadmin</artifactId>
+			<version>1.6.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>org.apache.felix.configadmin</artifactId>
+			<version>1.9.26</version>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.osgi/org.osgi.util.pushstream -->
@@ -358,6 +190,37 @@
 
 	</dependencies>
 
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jar-plugin</artifactId>
+				<configuration>
+					<archive>
+						<manifest>
+							<addClasspath>true</addClasspath>
+							<classpathPrefix>dependency/</classpathPrefix>
+							<mainClass>org.sokybot.SokybotLauncher</mainClass>
+						</manifest>
+					</archive>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<version>3.6.0</version>
+				<executions>
+					<execution>
+						<id>copy-dependencies</id>
+						<phase>prepare-package</phase>
+						<goals>
+							<goal>copy-dependencies</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 
 	<profiles>
 		<profile>
@@ -365,53 +228,12 @@
 				<activeByDefault>true</activeByDefault>
 			</activation>
 			<id>dev</id>
-			<dependencies>
-				<!-- https://mvnrepository.com/artifact/org.apache.felix/org.apache.felix.gogo.runtime -->
-				<!--
-				<dependency>
-					<groupId>org.apache.felix</groupId>
-					<artifactId>org.apache.felix.gogo.runtime</artifactId>
-					<version>1.1.6</version>
-					<scope>provided</scope>
-				</dependency>
-
-				<dependency>
-					<groupId>org.apache.felix</groupId>
-					<artifactId>org.apache.felix.gogo.command</artifactId>
-					<version>1.1.2</version>
-				</dependency>
-				<dependency>
-					<groupId>org.apache.felix</groupId>
-					<artifactId>org.apache.felix.gogo.jline</artifactId>
-					<version>1.1.8</version>
-				</dependency>
-				-->
-
-			</dependencies>
 		</profile>
 		<profile>
-
 			<id>prod</id>
 			<build>
 				<finalName>sokybot</finalName>
 				<plugins>
-					<plugin>
-						<groupId>org.springframework.boot</groupId>
-						<artifactId>spring-boot-maven-plugin</artifactId>
-						<version>${spring-boot.version}</version>
-						<configuration>
-							<mainClass>org.sokybot.Driver</mainClass>
-
-						</configuration>
-						<executions>
-							<execution>
-								<goals>
-									<goal>repackage</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-
 					<plugin>
 						<groupId>com.akathist.maven.plugins.launch4j</groupId>
 						<artifactId>launch4j-maven-plugin</artifactId>
@@ -440,19 +262,9 @@
 									</singleInstance>
 									<jre>
 										<path>runtime/bin</path>
-										<!-- <bundledJre64Bit>false</bundledJre64Bit> -->
 										<bundledJreAsFallback>true</bundledJreAsFallback>
-										<!-- <minVersion>, <maxVersion> format - Java < 9 , The traditional 
-											version scheme supported by launch4j is 1.x.x[_xxx] and requires at least 
-											3 parts -->
 										<minVersion>11</minVersion>
-										<!-- <maxVersion>17</maxVersion> -->
-										<!-- <maxVersion>11</maxVersion> -->
-										<!-- <jdkPreference>jdkOnly</jdkPreference> -->
 										<runtimeBits>64/32</runtimeBits>
-										<!-- <opts> -->
-										<!-- <opt>-Djava.endorsed.dirs=./endorsed</opt> -->
-										<!-- </opts> -->
 									</jre>
 
 									<splash>
@@ -460,7 +272,6 @@
 										<waitForWindow>true</waitForWindow>
 										<timeout>300</timeout>
 										<timeoutErr>true</timeoutErr>
-
 									</splash>
 
 									<versionInfo>
@@ -478,11 +289,9 @@
 							</execution>
 						</executions>
 					</plugin>
-
 				</plugins>
 			</build>
 		</profile>
-
 	</profiles>
 
 

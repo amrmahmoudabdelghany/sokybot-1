@@ -1,5 +1,7 @@
 package org.sokybot.machinegroup.gamemodel.npc;
 
+import org.sokybot.persistence.entities.MonsterType;
+import org.sokybot.persistence.entities.NPCEntity;
 
 import lombok.AccessLevel;
 import lombok.Data;
@@ -12,10 +14,6 @@ import lombok.ToString;
 @ToString(callSuper =  true)
 public class Monster extends IFighter {
 
-	
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
 
 	private byte appearance ; 
@@ -31,6 +29,8 @@ public class Monster extends IFighter {
 		this.maxHP = entity.getHP()  ; 
 	}
 	
+	public MonsterType getMonsterType() { return monsterType; }
+	public String getName() { return getEntity().getName(); } // delegate manually if needed, or rely on lombok/inheritance if NPCEntity has getName
 	
 	public void setStrengthLevel(byte val) { 
 		
@@ -80,8 +80,5 @@ public class Monster extends IFighter {
 			this.monsterType = MonsterType.Elite ; 
 		
 		}
-		
-
 	}
-
 }

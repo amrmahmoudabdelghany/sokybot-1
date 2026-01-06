@@ -17,7 +17,7 @@ import javax.persistence.ManyToOne;
 
 import org.hibernate.annotations.Cascade;
 import org.hibernate.annotations.CascadeType;
-import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
+import org.sokybot.persistence.entities.MonsterType;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

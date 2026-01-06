@@ -25,7 +25,7 @@ import javax.persistence.OneToMany;
 import javax.persistence.OneToOne;
 
 import org.sokybot.machinegroup.gamemodel.npc.Monster;
-import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
+import org.sokybot.persistence.entities.MonsterType;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.springframework.context.annotation.Bean;
 

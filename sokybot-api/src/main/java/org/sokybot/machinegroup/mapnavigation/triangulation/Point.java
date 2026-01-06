@@ -40,6 +40,10 @@ public class Point  implements Serializable {
 		this.z = z;
 		this.y = y;
 	}
+    
+    public double getX() { return x; }
+    public double getY() { return y; }
+    public double getZ() { return z; }
 
 	
 	
