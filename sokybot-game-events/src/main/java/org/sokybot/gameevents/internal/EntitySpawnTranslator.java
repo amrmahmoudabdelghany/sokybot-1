@@ -9,6 +9,7 @@ import org.sokybot.persistence.entities.navmesh.Position;
 
 /**
  * Translates entity spawn packets (opcode 0x3015) to EntitySpawnEvent.
+ * Parsing logic based on engine's SpawnParser.readSpawnData() pattern.
  */
 @Component(service = IPacketTranslator.class)
 public class EntitySpawnTranslator implements IPacketTranslator {
@@ -22,38 +23,42 @@ public class EntitySpawnTranslator implements IPacketTranslator {
     
     @Override
     public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
-        // Implementation based on engine's SpawnParser.readSpawnData() pattern
-        // ImmutablePacket provides read-only access to received packets
-        
         try {
-            // Get stream reader from packet (standard pattern from engine)
             var reader = packet.getStreamReader();
             
-            // Read refId first (identifies the entity in static data)
+            // 1. Read refId first (identifies entity type in static data)
             int refId = reader.getInt();
             
-            // Read uniqueId (server-assigned entity ID)
+            // 2. Read uniqueId (server-assigned entity ID)
             int entityId = reader.getInt();
             
-            // Read sector coordinates
+            // 3. Read sector coordinates (unsigned bytes)
             int xSector = reader.getUnsignedByte();
             int ySector = reader.getUnsignedByte();
             
-            // Read offset coordinates (position within sector)
+            // 4. Read offset coordinates (float values)
             float xOffset = reader.getFloat();
-            float zOffset = reader.getFloat();
+            float zOffset = reader.getFloat();  // Z is "height"
             float yOffset = reader.getFloat();
             
-            // Convert to world coordinates using SilkroadUtils pattern
-            // For now, just use offsets directly (TODO: apply sector conversion)
-            Position position = new Position(xOffset, yOffset, zOffset);
+            // 5. Read angle (short, needs conversion via SilkroadUtils.getAngle)
+            short angle = reader.getShort();
             
-            return new EntitySpawnEvent(machineFullName, entityId, refId, position);
+            // 6. Compute world coordinates
+            // World X = xSector * 192 * 10 + xOffset  (simplified)
+            // World Y = ySector * 192 * 10 + yOffset
+            float worldX = xSector * 1920 + xOffset;
+            float worldY = ySector * 1920 + yOffset;
+            
+            Position position = new Position(worldX, worldY, zOffset);
+            
+            return new EntitySpawnEvent(machineFullName, entityId, refId,
+                                       xSector, ySector, xOffset, yOffset, zOffset,
+                                       angle, position);
             
         } catch (Exception e) {
-            // Return null to indicate translation failure
-            // Publisher will log the error
             return null;
         }
     }
 }
+
