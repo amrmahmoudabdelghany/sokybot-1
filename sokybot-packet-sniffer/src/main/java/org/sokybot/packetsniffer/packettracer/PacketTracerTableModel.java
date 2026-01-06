@@ -204,4 +204,8 @@ public class PacketTracerTableModel extends AbstractTableModel {
 
 	}
 
+	public List<PacketTracerModel> getTracers() {
+		return new ArrayList<>(this.data);
+	}
+
 }

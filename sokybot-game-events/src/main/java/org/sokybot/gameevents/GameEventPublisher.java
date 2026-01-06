@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.api.events.IPacketTranslator;
-import org.sokybot.network.packet.MutablePacket;
+import org.sokybot.network.packet.ImmutablePacket;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -68,9 +68,9 @@ public class GameEventPublisher {
      * Translates the packet to a domain event and publishes it via OSGi EventAdmin.
      * 
      * @param machineFullName The full name of the machine (groupName.machineName)
-     * @param packet The raw packet received
+     * @param packet The raw immutable packet received from proxy
      */
-    public void onPacketReceived(String machineFullName, MutablePacket packet) {
+    public void onPacketReceived(String machineFullName, ImmutablePacket packet) {
         int opcode = packet.getOpcode();
         IPacketTranslator translator = translators.get(opcode);
         

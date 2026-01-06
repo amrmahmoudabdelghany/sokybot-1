@@ -90,6 +90,9 @@
                         <Bundle-Activator>org.sokybot.persistence.PersistenceActivator</Bundle-Activator>
                         <Export-Package>
                             org.sokybot.persistence.service,
+                            org.sokybot.persistence.entities,
+                            org.sokybot.persistence.entities.geo,
+                            org.sokybot.persistence.entities.navmesh,
                             org.sokybot.app.domain
                         </Export-Package>
                         <Private-Package>

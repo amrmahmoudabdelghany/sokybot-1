@@ -4,7 +4,7 @@ import org.osgi.service.component.annotations.Component;
 import org.sokybot.api.events.EntitySpawnEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.api.events.IPacketTranslator;
-import org.sokybot.network.packet.MutablePacket;
+import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.entities.navmesh.Position;
 
 /**
@@ -21,10 +21,11 @@ public class EntitySpawnTranslator implements IPacketTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, MutablePacket packet) {
+    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
         // TODO: Implement actual packet reading based on Silkroad protocol
+        // ImmutablePacket is for RECEIVED packets (read-only)
+        // Use packet read methods to extract entity data
         // For now, return stub implementation to allow compilation
-        // The actual packet reading will be implemented when integrating with engine
         
         try {
             // Stub values - these should be read from packet.buffer

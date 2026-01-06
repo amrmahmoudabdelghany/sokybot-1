@@ -1,15 +1,18 @@
 package org.sokybot.packetsniffer.packettracer;
 
-import org.dizitart.no2.objects.Id;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.sokybot.network.NetworkPeer;
 
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PacketTracerModel {
 
 	
 	private NetworkPeer source ; 
 	private String name ; 
 	private boolean ignored ;
-	@Id
 	String id ; 
 	
 	private int opcode ; 

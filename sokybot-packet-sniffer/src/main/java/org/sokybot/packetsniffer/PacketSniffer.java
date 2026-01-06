@@ -13,9 +13,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 
-import org.dizitart.no2.Nitrite;
-import org.dizitart.no2.NitriteBuilder;
-import org.dizitart.no2.objects.ObjectRepository;
+import org.sokybot.packetsniffer.storage.JsonPacketStorage;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceEvent;
@@ -46,23 +44,18 @@ public class PacketSniffer extends JTabbedPane implements IPacketObserver {
 
 
 
-	private static final  Nitrite db   ;
-
+	private static final JsonPacketStorage storage;
  
 	static { 
-		
-		db= Nitrite.builder().filePath("./packet-data.data").openOrCreate();
-
+		storage = new JsonPacketStorage("./packet-data.json");
 	}
-
 
 	public PacketSniffer() {
 
 		add("Traffic Monitor ", monitor);
 		add("Packet Tracer ", packetTracer);
 
-		this.service = new PacketSnifferService(monitorModel, tracerModel, db
-				.getRepository(PacketTracerModel.class),
+		this.service = new PacketSnifferService(monitorModel, tracerModel, storage,
 				new ArrayList<>());
 		this.monitor.setHandler(new PacketMonitorHandler(service));
 		this.packetTracer.setHandler(new PacketTracerHandler(service));

@@ -1,6 +1,6 @@
 package org.sokybot.api.events;
 
-import org.sokybot.network.packet.MutablePacket;
+import org.sokybot.network.packet.ImmutablePacket;
 
 /**
  * Translates raw network packets to typed domain events.
@@ -21,5 +21,5 @@ public interface IPacketTranslator {
      * @param packet The raw packet data
      * @return The translated game event, or null if packet couldn't be translated
      */
-    IGameEvent translate(String machineFullName, MutablePacket packet);
+    IGameEvent translate(String machineFullName, ImmutablePacket packet);
 }

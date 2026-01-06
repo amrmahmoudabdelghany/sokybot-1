@@ -71,6 +71,31 @@
             <version>6.0.0</version>
             <scope>provided</scope>
         </dependency>
+        
+        <!-- pk2extractor dependencies -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-persistence</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-pk2</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-security</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.10.0</version>
+        </dependency>
 
     </dependencies>
 
@@ -86,7 +111,11 @@
                         <Import-Package>
                             *;resolution:=optional
                         </Import-Package>
-                        <Export-Package>org.sokybot.app.builders.*</Export-Package>
+                        <Export-Package>
+                            org.sokybot.app.builders,
+                            org.sokybot.app.builders.pk2extractor,
+                            org.sokybot.app.builders.pk2extractor.*
+                        </Export-Package>
                         <_dsannotations>*</_dsannotations>
                     </instructions>
                 </configuration>
