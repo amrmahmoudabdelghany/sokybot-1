@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>io.github.sokybot</groupId>
+        <artifactId>sokybot</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>sokybot-game-events</artifactId>
+    <packaging>bundle</packaging>
+    <name>sokybot-game-events</name>
+    <description>Translates network packets to domain game events using OSGi Event Admin</description>
+
+    <dependencies>
+        <!-- Sokybot API for event interfaces -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Sokybot Persistence for Position and entity types -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-persistence</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- OSGi Event Admin for event publishing -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.event</artifactId>
+            <version>1.4.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- OSGi Declarative Services annotations -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.5.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>1.7.36</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-Name>${project.name}</Bundle-Name>
+                        <Bundle-Version>${project.version}</Bundle-Version>
+                        <Export-Package>
+                            org.sokybot.gameevents
+                        </Export-Package>
+                        <Private-Package>
+                            org.sokybot.gameevents.internal.*
+                        </Private-Package>
+                        <Import-Package>
+                            org.sokybot.api.events,
+                            org.sokybot.network.packet,
+                            org.osgi.service.event,
+                            org.osgi.service.component.annotations,
+                            org.slf4j,
+                            *
+                        </Import-Package>
+                        <Service-Component>OSGI-INF/*.xml</Service-Component>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
