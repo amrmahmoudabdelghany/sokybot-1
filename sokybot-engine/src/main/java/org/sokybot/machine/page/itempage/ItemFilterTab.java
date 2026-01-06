@@ -30,7 +30,7 @@ import org.apache.commons.lang3.math.NumberUtils;
 import org.jdesktop.swingx.sort.RowFilters;
 import org.sokybot.machinegroup.gamemodel.Gender;
 import org.sokybot.machinegroup.gamemodel.Race;
-import org.sokybot.machinegroup.gamemodel.item.ItemEntity;
+import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.machinegroup.gamemodel.item.ItemType;
 import org.sokybot.machinegroup.pk2extractor.Pk2ExtractorUtils;
 import org.sokybot.machinegroup.pk2extractor.exception.Pk2MissedResourceException;

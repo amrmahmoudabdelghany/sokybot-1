@@ -1,0 +1,51 @@
+package org.sokybot.proxy.internal;
+
+import org.sokybot.network.NetworkPeer;
+import org.sokybot.proxy.ProxyConnection;
+
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.socket.SocketChannel;
+
+/**
+ * Initializes the pipeline for game client connections (client -> proxy).
+ */
+public class ClientChannelInitializer extends ChannelInitializer<SocketChannel> {
+    
+    private final ProxyConnection proxyConnection;
+    private final NetworkComponents networkComponents;
+    private final SimplePacketPublisher packetPublisher;
+    private final ChannelGroup channelGroup;
+    
+    public ClientChannelInitializer(ProxyConnection proxyConnection, 
+                                    NetworkComponents networkComponents,
+                                    SimplePacketPublisher packetPublisher,
+                                    ChannelGroup channelGroup) {
+        this.proxyConnection = proxyConnection;
+        this.networkComponents = networkComponents;
+        this.packetPublisher = packetPublisher;
+        this.channelGroup = channelGroup;
+    }
+    
+    @Override
+    protected void initChannel(SocketChannel ch) throws Exception {
+        // Close the server socket after first client connects
+        ch.parent().close().sync();
+        
+        System.out.println("Sokybot Proxy: Initializing client channel");
+        
+        ch.attr(NetworkAttributes.TRANSPORT).set(NetworkPeer.CLIENT);
+        
+        ch.pipeline()
+            .addLast(new PacketDecoder(networkComponents.getBlowfish()))
+            .addLast(new PacketEncoder(networkComponents))
+            .addLast(new ClientServerBridge(proxyConnection))
+            .addLast(packetPublisher)
+            .addLast(new ClientHandler(proxyConnection));
+        
+        channelGroup.add(ch);
+        
+        // Notify proxy that client connected
+        proxyConnection.onClientChannelActive(ch);
+    }
+}

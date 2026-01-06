@@ -20,7 +20,7 @@ import org.sokybot.machinegroup.gamemodel.npc.JobType;
 import org.sokybot.machinegroup.gamemodel.npc.LifeState;
 import org.sokybot.machinegroup.gamemodel.npc.MotionState;
 import org.sokybot.machinegroup.gamemodel.npc.MovementType;
-import org.sokybot.machinegroup.gamemodel.npc.NPCEntity;
+import org.sokybot.persistence.entities.NPCEntity;
 import org.sokybot.machinegroup.gamemodel.npc.NPCType;
 import org.sokybot.machinegroup.gamemodel.npc.PVPState;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;

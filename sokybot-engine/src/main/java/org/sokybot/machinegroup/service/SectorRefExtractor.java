@@ -12,12 +12,12 @@ import java.util.Optional;
 import java.util.Vector;
 import java.util.stream.Collectors;
 
-import org.sokybot.machinegroup.gamemodel.navmesh.NavBorderRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavCellRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavCellLinkRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.NavObjectRef;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
-import org.sokybot.machinegroup.gamemodel.navmesh.SectorRef;
+import org.sokybot.persistence.entities.navmesh.NavBorderRef;
+import org.sokybot.persistence.entities.navmesh.NavCellRef;
+import org.sokybot.persistence.entities.navmesh.NavCellLinkRef;
+import org.sokybot.persistence.entities.navmesh.NavObjectRef;
+import org.sokybot.persistence.entities.navmesh.Position;
+import org.sokybot.persistence.entities.navmesh.SectorRef;
 import org.sokybot.machinegroup.mapnavigation.NavMesh;
 import org.sokybot.machinegroup.mapnavigation.Sector;
 import org.sokybot.pk2.IPk2Driver;

@@ -21,37 +21,37 @@ import javax.imageio.ImageIO;
 import org.apache.commons.io.IOUtils;
 
 import org.sokybot.app.AppConstants;
-import org.sokybot.machinegroup.gamemodel.DivisionInfo;
-import org.sokybot.machinegroup.gamemodel.GameInfo;
-import org.sokybot.machinegroup.gamemodel.LvlEXP;
-import org.sokybot.machinegroup.gamemodel.MasteryData;
-import org.sokybot.machinegroup.gamemodel.SilkroadEntity;
-import org.sokybot.machinegroup.gamemodel.SilkroadType;
-import org.sokybot.model.geo.Vector2D;
-import org.sokybot.machinegroup.gamemodel.item.ItemEntity;
-import org.sokybot.machinegroup.gamemodel.navmesh.ObjectNavMesh;
-import org.sokybot.machinegroup.gamemodel.navmesh.Position;
-import org.sokybot.machinegroup.gamemodel.navmesh.SectorRef;
-import org.sokybot.machinegroup.gamemodel.npc.NPCEntity;
-import org.sokybot.machinegroup.gamemodel.npc.ShopEntity;
-import org.sokybot.machinegroup.gamemodel.portal.PortalEntity;
-import org.sokybot.machinegroup.gamemodel.portal.TeleportEntity;
-import org.sokybot.machinegroup.gamemodel.skill.SkillEntity;
+import org.sokybot.persistence.entities.DivisionInfo;
+import org.sokybot.persistence.entities.GameInfo;
+import org.sokybot.persistence.entities.LvlEXP;
+import org.sokybot.persistence.entities.MasteryData;
+import org.sokybot.persistence.entities.SilkroadEntity;
+import org.sokybot.persistence.entities.SilkroadType;
+import org.sokybot.persistence.entities.geo.Vector2D;
+import org.sokybot.persistence.entities.ItemEntity;
+import org.sokybot.persistence.entities.ObjectNavMesh;
+import org.sokybot.persistence.entities.navmesh.Position;
+import org.sokybot.persistence.entities.SectorRef;
+import org.sokybot.persistence.entities.NPCEntity;
+import org.sokybot.persistence.entities.ShopEntity;
+import org.sokybot.persistence.entities.PortalEntity;
+import org.sokybot.persistence.entities.TeleportEntity;
+import org.sokybot.persistence.entities.SkillEntity;
 import org.sokybot.machinegroup.mapnavigation.RuteFinder;
 import org.sokybot.machinegroup.mapnavigation.Sector;
-import org.sokybot.machinegroup.pk2extractor.IEntityExtractorFactory;
-import org.sokybot.machinegroup.pk2extractor.IPK2File;
-import org.sokybot.machinegroup.repo.GameInfoRepo;
-import org.sokybot.machinegroup.repo.ItemEntityRepo;
-import org.sokybot.machinegroup.repo.LvlDataRepo;
-import org.sokybot.machinegroup.repo.MasteryDataRepo;
-import org.sokybot.machinegroup.repo.NPCEntityRepo;
-import org.sokybot.machinegroup.repo.ObjectNavMeshRepo;
-import org.sokybot.machinegroup.repo.PortalEntityRepo;
-import org.sokybot.machinegroup.repo.SegmentRepo;
-import org.sokybot.machinegroup.repo.ShopEntityRepo;
-import org.sokybot.machinegroup.repo.SkillEntityRepo;
-import org.sokybot.machinegroup.repo.TeleportEntityRepo;
+// import org.sokybot.builders.extractor.IEntityExtractorFactory;
+// import org.sokybot.builders.extractor.IPK2File;
+import org.sokybot.persistence.service.GameInfoRepository;
+import org.sokybot.persistence.service.ItemEntityRepository;
+import org.sokybot.persistence.service.LvlEXPRepository;
+import org.sokybot.persistence.service.MasteryDataRepository;
+import org.sokybot.persistence.service.NPCEntityRepository;
+import org.sokybot.persistence.service.ObjectNavMeshRepository;
+import org.sokybot.persistence.service.PortalEntityRepository;
+import org.sokybot.persistence.service.SectorRefRepository;
+import org.sokybot.persistence.service.ShopEntityRepository;
+import org.sokybot.persistence.service.SkillEntityRepository;
+import org.sokybot.persistence.service.TeleportEntityRepository;
 import org.sokybot.pk2.IPk2Driver;
 import org.sokybot.utils.DDSReader;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -66,37 +66,37 @@ public class SroMaterialDAO implements ISroMaterialDAO {
 	ResourceLoader resourceLoader;
 
 	@Autowired
-	private NPCEntityRepo npcEntityRepo;
+	private NPCEntityRepository npcEntityRepo;
 
 	@Autowired
-	private SkillEntityRepo skillEntityRepo;
+	private SkillEntityRepository skillEntityRepo;
 
 	@Autowired
-	private ItemEntityRepo itemEntityRepo;
+	private ItemEntityRepository itemEntityRepo;
 
 	@Autowired
-	private TeleportEntityRepo teleportEntityRepo;
+	private TeleportEntityRepository teleportEntityRepo;
 
 	@Autowired
-	private ShopEntityRepo shopEntityRepo;
+	private ShopEntityRepository shopEntityRepo;
 
 	@Autowired
-	private PortalEntityRepo portalEntityRepo;
+	private PortalEntityRepository portalEntityRepo;
 
 	@Autowired
-	private GameInfoRepo gameInfoRepo;
+	private GameInfoRepository gameInfoRepo;
 
 	@Autowired
-	private MasteryDataRepo masteryInfoRepo;
+	private MasteryDataRepository masteryInfoRepo;
 
 	@Autowired
-	private LvlDataRepo lvlDataRepo;
+	private LvlEXPRepository lvlDataRepo;
 
 	@Autowired
-	private ObjectNavMeshRepo objectNavMeshRepo ;
+	private ObjectNavMeshRepository objectNavMeshRepo ;
 	
 	@Autowired
-	private SegmentRepo segmentRepo;
+	private SectorRefRepository segmentRepo;
 
 	@Autowired
 	private Executor executor;

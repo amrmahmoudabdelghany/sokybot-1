@@ -30,7 +30,7 @@ import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 import org.sokybot.machinegroup.gamemodel.skill.Mastery;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
-import org.sokybot.machinegroup.gamemodel.skill.SkillEntity;
+import org.sokybot.persistence.entities.SkillEntity;
 import org.sokybot.machinegroup.gamemodel.skill.SkillType;
 // import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.context.event.EventListener;

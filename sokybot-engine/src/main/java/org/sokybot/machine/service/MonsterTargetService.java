@@ -29,7 +29,7 @@ import org.sokybot.machine.gamemodel.ISpawnListener;
 import org.sokybot.machine.gamemodel.Trainer;
 import org.sokybot.machinegroup.gamemodel.ISpawnable;
 import org.sokybot.machinegroup.gamemodel.npc.Monster;
-import org.sokybot.machinegroup.gamemodel.npc.NPCEntity;
+import org.sokybot.persistence.entities.NPCEntity;
 import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 import org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings;

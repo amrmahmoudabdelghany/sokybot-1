@@ -19,7 +19,7 @@ import javax.swing.SpinnerNumberModel;
 
 import org.sokybot.machinegroup.gamemodel.Gender;
 import org.sokybot.machinegroup.gamemodel.Race;
-import org.sokybot.machinegroup.gamemodel.item.ItemEntity;
+import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.machinegroup.gamemodel.item.ItemType;
 // import org.springframework.stereotype.Component;
 

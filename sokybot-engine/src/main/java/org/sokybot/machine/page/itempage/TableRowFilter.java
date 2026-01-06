@@ -7,7 +7,7 @@ import javax.swing.table.TableModel;
 
 import org.sokybot.machinegroup.gamemodel.Gender;
 import org.sokybot.machinegroup.gamemodel.Race;
-import org.sokybot.machinegroup.gamemodel.item.ItemEntity;
+import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.machinegroup.gamemodel.item.ItemType;
 // import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.stereotype.Component;

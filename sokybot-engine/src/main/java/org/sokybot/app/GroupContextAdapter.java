@@ -19,7 +19,7 @@ import org.sokybot.app.domain.GroupInfo;
 import org.sokybot.app.domain.MachineInfo;
 import org.sokybot.exception.NameUniquenessConstraintViolationException;
 import org.sokybot.machinegroup.MachineGroupConfig;
-import org.sokybot.machinegroup.repo.SettingRepo;
+import org.sokybot.persistence.service.GameInfoRepository;
 import org.sokybot.persistence.service.MachineInfoRepository;
 import org.sokybot.service.ISroDAO;
 import org.springframework.boot.builder.SpringApplicationBuilder;
@@ -70,11 +70,8 @@ public class GroupContextAdapter implements IGroupContext {
 			String machineName = machine.getMachineName();
 			check(machineName);
 			
-			SettingRepo settingRepo = this.groupCtx.getBean(SettingRepo.class);
+			// Settings are now managed per-machine, not globally
 			List<String> opts = new ArrayList<>();
-			if (!settingRepo.existsById(this.groupInfo.getName() + "." + machineName)) {
-				opts.add("--" + AppConstants.MACHINE_PRIMARY_RESET);
-			}
 
 			IMachineContext ctx = this.groupCtx.getBean(IMachineContext.class, machine,
 					opts.toArray((n) -> new String[n]), this.groupCtx);
