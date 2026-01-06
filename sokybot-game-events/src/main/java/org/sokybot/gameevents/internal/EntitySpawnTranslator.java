@@ -22,24 +22,37 @@ public class EntitySpawnTranslator implements IPacketTranslator {
     
     @Override
     public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
-        // TODO: Implement actual packet reading based on Silkroad protocol
-        // ImmutablePacket is for RECEIVED packets (read-only)
-        // Use packet read methods to extract entity data
-        // For now, return stub implementation to allow compilation
+        // Implementation based on engine's SpawnParser.readSpawnData() pattern
+        // ImmutablePacket provides read-only access to received packets
         
         try {
-            // Stub values - these should be read from packet.buffer
-            int entityId = 0;  // packet.buffer.getInt()
-            int refId = 0;     // packet.buffer.getInt()
-            float x = 0.0f;    // packet.buffer.getFloat()
-            float y = 0.0f;    // packet.buffer.getFloat()  
-            float z = 0.0f;    // packet.buffer.getFloat()
+            // Get stream reader from packet (standard pattern from engine)
+            var reader = packet.getStreamReader();
             
-            Position position = new Position(x, y, z);
+            // Read refId first (identifies the entity in static data)
+            int refId = reader.getInt();
+            
+            // Read uniqueId (server-assigned entity ID)
+            int entityId = reader.getInt();
+            
+            // Read sector coordinates
+            int xSector = reader.getUnsignedByte();
+            int ySector = reader.getUnsignedByte();
+            
+            // Read offset coordinates (position within sector)
+            float xOffset = reader.getFloat();
+            float zOffset = reader.getFloat();
+            float yOffset = reader.getFloat();
+            
+            // Convert to world coordinates using SilkroadUtils pattern
+            // For now, just use offsets directly (TODO: apply sector conversion)
+            Position position = new Position(xOffset, yOffset, zOffset);
+            
             return new EntitySpawnEvent(machineFullName, entityId, refId, position);
             
         } catch (Exception e) {
-            // Log error and return null to indicate translation failure
+            // Return null to indicate translation failure
+            // Publisher will log the error
             return null;
         }
     }
