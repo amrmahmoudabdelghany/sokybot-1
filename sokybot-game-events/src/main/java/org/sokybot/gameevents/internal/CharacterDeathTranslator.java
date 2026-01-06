@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.CharacterDeathEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -25,7 +27,7 @@ public class CharacterDeathTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -35,13 +37,13 @@ public class CharacterDeathTranslator extends AbstractTranslator {
             if (flag == 0x04) {
                 // Killer ID not available in this packet
                 // Could be added from other sources if needed
-                return new CharacterDeathEvent(machineFullName, null);
+                return singleEvent(new CharacterDeathEvent(machineFullName, null));
             }
             
-            return null;
+            return noEvents();
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

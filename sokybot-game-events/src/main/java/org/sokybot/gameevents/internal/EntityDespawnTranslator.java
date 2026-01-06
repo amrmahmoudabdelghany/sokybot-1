@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.EntityDespawnEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -23,7 +25,7 @@ public class EntityDespawnTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         // Based on engine's EnvironmentHandler.onDespawn() pattern
         
         try {
@@ -32,10 +34,10 @@ public class EntityDespawnTranslator extends AbstractTranslator {
             // Despawn packet only contains the uniqueId of the entity to remove
             int entityId = reader.getInt();
             
-            return new EntityDespawnEvent(machineFullName, entityId);
+            return singleEvent(new EntityDespawnEvent(machineFullName, entityId));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

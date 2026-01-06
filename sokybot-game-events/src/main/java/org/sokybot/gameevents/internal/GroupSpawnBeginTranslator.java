@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.GroupSpawnBeginEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -24,17 +26,17 @@ public class GroupSpawnBeginTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
             byte spawnType = reader.getByte();  // 1 = spawn, 2 = despawn
             short count = reader.getShort();
             
-            return new GroupSpawnBeginEvent(machineFullName, spawnType, count);
+            return singleEvent(new GroupSpawnBeginEvent(machineFullName, spawnType, count));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

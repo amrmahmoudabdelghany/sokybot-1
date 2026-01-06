@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.BerserkConfirmEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -24,7 +26,7 @@ public class BerserkConfirmTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -35,10 +37,10 @@ public class BerserkConfirmTranslator extends AbstractTranslator {
                 berserkLevel = reader.getByte();
             }
             
-            return new BerserkConfirmEvent(machineFullName, success, berserkLevel);
+            return singleEvent(new BerserkConfirmEvent(machineFullName, success, berserkLevel));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

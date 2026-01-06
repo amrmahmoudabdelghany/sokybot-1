@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.EntitySelectedEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -24,7 +26,7 @@ public class EntitySelectedTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -40,14 +42,14 @@ public class EntitySelectedTranslator extends AbstractTranslator {
                     currentHP = reader.getInt();
                 }
                 
-                return new EntitySelectedEvent(machineFullName, selectedEntityId, currentHP);
+                return singleEvent(new EntitySelectedEvent(machineFullName, selectedEntityId, currentHP));
             }
             
-            // No selection - entity deselected (could return null or a special event)
-            return null;
+            // No selection - entity deselected
+            return noEvents();
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

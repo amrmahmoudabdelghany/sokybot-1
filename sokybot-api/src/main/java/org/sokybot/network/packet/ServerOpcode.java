@@ -5,6 +5,8 @@ public class ServerOpcode {
 	public static final int PATCH_RESPONSE =  0xA100;
 	public static final int CHAR_DIE = 0x3011 ; 
 	public static final int CHAR_DATA = 0x3013;
+	public static final int CHAR_DATA_BEGIN = 0x34A5;  // CharacterData transaction begin
+	public static final int CHAR_DATA_END = 0x34A6;    // CharacterData transaction end (triggers full parse)
 	public static final int CHAR_INFO = 0x303D; 
 	public static final int CHAR_MASTERY_LVL_UP = 0xB0A2 ; 
 	public static final int CHAR_SKILL_LVL_UP =  0xB0A1 ; 
@@ -31,5 +33,55 @@ public class ServerOpcode {
 	public static final int HPMP_UPDATE = 0x3057; 
 	public static final int BESERK_CONFIRM = 0xB0A7 ; 
 	
+	// Entity state updates
+	public static final int ENTITY_STATE_UPDATE = 0x30BF;  // Life/Motion/Body state
+	
+	// Inventory operations
+	public static final int INVENTORY_ITEM_UPDATE = 0x3040;  // Item property updates
+	public static final int INVENTORY_OPERATION = 0xB034;    // Move/pickup/drop/buy/sell
+	
+	// Party operations
+	public static final int PARTY_UPDATE = 0x3864;           // Party state changes
+	
+	// Storage operations
+	public static final int STORAGE_DATA_BEGIN = 0x3047;     // Storage open/begin (Personal)
+	public static final int GUILD_STORAGE_DATA_BEGIN = 0x3253;// Storage open/begin (Guild)
+	public static final int STORAGE_DATA = 0x3049;           // Storage item data
+	public static final int STORAGE_DATA_END = 0x3048;       // Storage data end
+	
+	// Quest operations
+	public static final int QUEST_UPDATE = 0x30D5;           // Quest state changes
+	
+	// Action operations
+	public static final int ENTITY_DESELECT = 0xB04B;        // Entity deselected
+	public static final int NPC_TALK = 0xB046;               // NPC talk dialog opened
+	
+	// Session operations
+	public static final int LOGOUT = 0x300A;                 // Logout success
+	public static final int TELEPORT_COMPLETE = 0x34B5;      // Game reset after teleport
+	
+	// Exchange/Trade operations
+	public static final int EXCHANGE_STARTED = 0x3085;       // Player trade started
+	public static final int EXCHANGE_CANCELLED = 0x3088;     // Player trade cancelled
+	public static final int EXCHANGE_APPROVED = 0x3087;      // Player trade approved
+	
+	// Pet/Mount operations
+	public static final int MOUNT_STATE_UPDATE = 0xB0CB;     // Mount/dismount vehicle
+	
+	// Job operations
+	public static final int JOB_JOIN = 0xB0E1;               // Join job
+	public static final int JOB_LEAVE = 0xB0E2;              // Leave job
+	
+	// Alchemy operations
+	public static final int ALCHEMY_ELIXIR = 0xB150;         // Elixir alchemy result
+	public static final int ALCHEMY_STONE = 0xB151;          // Stone alchemy result
+
+	// Additional Party operations
+	public static final int PARTY_INVITE = 0x3080;           // Party invitation/request
+	
+	// Additional Inventory operations
+	public static final int ITEM_USE = 0xB04C;               // Item used
+	public static final int ITEM_DURABILITY = 0x3052;        // Item durability update
+	public static final int INVENTORY_SIZE = 0x3092;         // Inventory/Storage size update
 	
 }

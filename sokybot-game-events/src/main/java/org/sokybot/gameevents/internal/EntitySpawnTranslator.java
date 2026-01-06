@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.EntitySpawnEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -26,7 +28,7 @@ public class EntitySpawnTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -64,14 +66,15 @@ public class EntitySpawnTranslator extends AbstractTranslator {
                         .orElse(null));
             }
             
-            return new EntitySpawnEvent(machineFullName, entityId, refId, entityName,
+            return singleEvent(new EntitySpawnEvent(machineFullName, entityId, refId, entityName,
                                        xSector, ySector, xOffset, yOffset, zOffset,
-                                       angle, position);
+                                       angle, position));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }
+
 
 

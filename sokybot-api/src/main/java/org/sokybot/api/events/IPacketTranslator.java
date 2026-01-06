@@ -1,5 +1,7 @@
 package org.sokybot.api.events;
 
+import java.util.List;
+
 import org.sokybot.network.packet.ImmutablePacket;
 
 /**
@@ -15,11 +17,14 @@ public interface IPacketTranslator {
     int getOpcode();
     
     /**
-     * Translates a raw packet to a domain event.
+     * Translates a raw packet to domain events.
+     * May return multiple events for packets that contain multiple entities
+     * (e.g., character data with items, skills, buffs).
      * 
      * @param machineFullName The full name of the machine that received this packet
      * @param packet The raw packet data
-     * @return The translated game event, or null if packet couldn't be translated
+     * @return List of translated game events, or empty list if packet couldn't be translated
      */
-    IGameEvent translate(String machineFullName, ImmutablePacket packet);
+    List<IGameEvent> translate(String machineFullName, ImmutablePacket packet);
 }
+

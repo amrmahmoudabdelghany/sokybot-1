@@ -65,7 +65,7 @@ public class GameEventPublisher {
     
     /**
      * Called by machine contexts when they receive a packet.
-     * Translates the packet to a domain event and publishes it via OSGi EventAdmin.
+     * Translates the packet to domain events and publishes them via OSGi EventAdmin.
      * 
      * @param machineFullName The full name of the machine (groupName.machineName)
      * @param packet The raw immutable packet received from proxy
@@ -76,9 +76,11 @@ public class GameEventPublisher {
         
         if (translator != null) {
             try {
-                IGameEvent event = translator.translate(machineFullName, packet);
-                if (event != null) {
-                    publishEvent(machineFullName, event);
+                java.util.List<IGameEvent> events = translator.translate(machineFullName, packet);
+                for (IGameEvent event : events) {
+                    if (event != null) {
+                        publishEvent(machineFullName, event);
+                    }
                 }
             } catch (Exception e) {
                 log.error("Error translating packet 0x{} from {}: {}", 

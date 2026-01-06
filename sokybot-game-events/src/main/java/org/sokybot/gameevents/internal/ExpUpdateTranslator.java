@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.ExpUpdateEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -24,7 +26,7 @@ public class ExpUpdateTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -43,10 +45,10 @@ public class ExpUpdateTranslator extends AbstractTranslator {
             // The engine does this by comparing against max exp for level
             boolean levelUp = false; // TODO: Could be enhanced with level tracking
             
-            return new ExpUpdateEvent(machineFullName, expGained, currentExp, levelUp);
+            return singleEvent(new ExpUpdateEvent(machineFullName, expGained, currentExp, levelUp));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

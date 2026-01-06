@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.CharacterDataEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -25,7 +27,7 @@ public class CharacterDataTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -54,12 +56,12 @@ public class CharacterDataTranslator extends AbstractTranslator {
             int intelligence = 0;
             
             // Create event with essential character data
-            return new CharacterDataEvent(machineFullName, currentExp, skillPoints, 
-                                         level, strength, intelligence);
+            return singleEvent(new CharacterDataEvent(machineFullName, currentExp, skillPoints, 
+                                         level, strength, intelligence));
             
         } catch (Exception e) {
             // CHAR_DATA packet is complex - return basic event on parsing issues
-            return new CharacterDataEvent(machineFullName, 0, 0, 0, 0, 0);
+            return singleEvent(new CharacterDataEvent(machineFullName, 0, 0, 0, 0, 0));
         }
     }
 }

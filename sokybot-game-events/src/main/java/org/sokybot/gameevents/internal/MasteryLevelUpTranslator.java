@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.api.events.MasteryLevelUpEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -25,7 +27,7 @@ public class MasteryLevelUpTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -42,13 +44,13 @@ public class MasteryLevelUpTranslator extends AbstractTranslator {
                     masteryName = lookup.findMasteryName(masteryId).orElse(null);
                 }
                 
-                return new MasteryLevelUpEvent(machineFullName, true, masteryId, masteryName, newLevel);
+                return singleEvent(new MasteryLevelUpEvent(machineFullName, true, masteryId, masteryName, newLevel));
             } else {
-                return new MasteryLevelUpEvent(machineFullName, false, 0, 0);
+                return singleEvent(new MasteryLevelUpEvent(machineFullName, false, 0, 0));
             }
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

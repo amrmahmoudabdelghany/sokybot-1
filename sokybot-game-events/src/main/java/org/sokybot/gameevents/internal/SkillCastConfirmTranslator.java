@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.api.events.SkillCastConfirmEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -25,7 +27,7 @@ public class SkillCastConfirmTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -35,10 +37,10 @@ public class SkillCastConfirmTranslator extends AbstractTranslator {
             boolean success = reader.getBoolean();
             byte queuePosition = reader.getByte();
             
-            return new SkillCastConfirmEvent(machineFullName, success, queuePosition);
+            return singleEvent(new SkillCastConfirmEvent(machineFullName, success, queuePosition));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

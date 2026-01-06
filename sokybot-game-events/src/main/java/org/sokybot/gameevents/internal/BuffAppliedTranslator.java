@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.BuffAppliedEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -25,7 +27,7 @@ public class BuffAppliedTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -41,10 +43,10 @@ public class BuffAppliedTranslator extends AbstractTranslator {
                     .orElse(null);
             }
             
-            return new BuffAppliedEvent(machineFullName, buffRefId, buffName, targetId, duration);
+            return singleEvent(new BuffAppliedEvent(machineFullName, buffRefId, buffName, targetId, duration));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.EntitySpeedUpdateEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -24,7 +26,7 @@ public class SpeedUpdateTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -32,10 +34,10 @@ public class SpeedUpdateTranslator extends AbstractTranslator {
             float walkSpeed = reader.getFloat();
             float runSpeed = reader.getFloat();
             
-            return new EntitySpeedUpdateEvent(machineFullName, entityId, walkSpeed, runSpeed);
+            return singleEvent(new EntitySpeedUpdateEvent(machineFullName, entityId, walkSpeed, runSpeed));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

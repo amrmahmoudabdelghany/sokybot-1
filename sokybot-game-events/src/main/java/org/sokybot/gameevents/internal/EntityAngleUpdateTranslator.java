@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.EntityAngleUpdateEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -24,17 +26,17 @@ public class EntityAngleUpdateTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
             int entityId = reader.getInt();
             short newAngle = reader.getShort();
             
-            return new EntityAngleUpdateEvent(machineFullName, entityId, newAngle);
+            return singleEvent(new EntityAngleUpdateEvent(machineFullName, entityId, newAngle));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

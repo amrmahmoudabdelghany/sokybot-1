@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.CharacterInfoEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -13,7 +15,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
  */
 public class CharacterInfoTranslator extends AbstractTranslator {
     
-    private static final int CHAR_INFO_OPCODE = 0x3011;
+    private static final int CHAR_INFO_OPCODE = 0x303D;
     
     public CharacterInfoTranslator(IGameDataLookup lookup) {
         super(lookup);
@@ -25,7 +27,7 @@ public class CharacterInfoTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -44,12 +46,12 @@ public class CharacterInfoTranslator extends AbstractTranslator {
             
             // Skip STR/INT shorts if not needed
             
-            return new CharacterInfoEvent(machineFullName, 
+            return singleEvent(new CharacterInfoEvent(machineFullName, 
                 phyAtkMin, phyAtkMax, magAtkMin, magAtkMax,
-                phyDef, magDef, hitRate, parryRate, maxHP, maxMP);
+                phyDef, magDef, hitRate, parryRate, maxHP, maxMP));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

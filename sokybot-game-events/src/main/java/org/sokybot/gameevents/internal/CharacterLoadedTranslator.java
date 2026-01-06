@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.CharacterLoadedEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -25,7 +27,7 @@ public class CharacterLoadedTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -172,15 +174,15 @@ public class CharacterLoadedTranslator extends AbstractTranslator {
                 reader.getByte(); reader.getByte(); reader.getInt();
             }
             
-            return new CharacterLoadedEvent(machineFullName, uniqueId, refId,
+            return singleEvent(new CharacterLoadedEvent(machineFullName, uniqueId, refId,
                 characterName, level, maxLevel, experience, gold, skillPoints, statPoints,
                 currentHP, currentMP, lifeState, debuffStatus, motionState, characterStatus,
                 walkSpeed, runSpeed, xSector, ySector, xOffset, yOffset, zOffset, angle,
                 itemCount, avatarItemCount, masteryCount, skillCount, activeBuffCount, hotKeyCount,
-                jobName, jobType, jobLevel, jobExp, pvpState, hasTransport, inCombat);
+                jobName, jobType, jobLevel, jobExp, pvpState, hasTransport, inCombat));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
     

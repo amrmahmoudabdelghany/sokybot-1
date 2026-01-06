@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.api.events.LoginResponseEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -24,17 +26,17 @@ public class LoginResponseTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
             byte resultCode = reader.getByte();
             boolean success = (resultCode == 1);
             
-            return new LoginResponseEvent(machineFullName, success, resultCode);
+            return singleEvent(new LoginResponseEvent(machineFullName, success, resultCode));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

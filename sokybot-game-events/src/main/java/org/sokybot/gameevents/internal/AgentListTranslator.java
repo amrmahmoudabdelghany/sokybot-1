@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.AgentListEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -24,16 +26,16 @@ public class AgentListTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
             byte agentCount = reader.getByte();
             
-            return new AgentListEvent(machineFullName, agentCount);
+            return singleEvent(new AgentListEvent(machineFullName, agentCount));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

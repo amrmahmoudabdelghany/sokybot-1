@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.GoldUpdateEvent;
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -25,7 +27,7 @@ public class GoldUpdateTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -34,14 +36,14 @@ public class GoldUpdateTranslator extends AbstractTranslator {
             // Only handle GOLD type (1)
             if (gainType == GOLD_TYPE) {
                 long newGoldAmount = reader.getLong();
-                return new GoldUpdateEvent(machineFullName, newGoldAmount);
+                return singleEvent(new GoldUpdateEvent(machineFullName, newGoldAmount));
             }
             
-            // Other types (SP, ZERK) - return null for now
-            return null;
+            // Other types (SP, ZERK) - return empty for now
+            return noEvents();
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

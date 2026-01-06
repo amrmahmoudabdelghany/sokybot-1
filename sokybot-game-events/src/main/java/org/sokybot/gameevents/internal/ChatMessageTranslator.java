@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.ChatMessageEvent;
 import org.sokybot.api.events.ChatMessageEvent.ChatType;
 import org.sokybot.api.events.IGameEvent;
@@ -25,7 +27,7 @@ public class ChatMessageTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -40,10 +42,10 @@ public class ChatMessageTranslator extends AbstractTranslator {
             int messageLength = reader.getShort() & 0xFFFF;
             String message = new String(reader.getBytes(messageLength));
             
-            return new ChatMessageEvent(machineFullName, chatType, senderName, message);
+            return singleEvent(new ChatMessageEvent(machineFullName, chatType, senderName, message));
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
     

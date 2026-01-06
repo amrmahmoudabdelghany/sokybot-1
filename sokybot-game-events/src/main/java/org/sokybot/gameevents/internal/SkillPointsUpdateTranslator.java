@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.api.events.SkillPointsUpdateEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -26,7 +28,7 @@ public class SkillPointsUpdateTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -35,13 +37,13 @@ public class SkillPointsUpdateTranslator extends AbstractTranslator {
             // Only handle SP type (3)
             if (gainType == SP_TYPE) {
                 int newSkillPoints = reader.getInt();
-                return new SkillPointsUpdateEvent(machineFullName, newSkillPoints);
+                return singleEvent(new SkillPointsUpdateEvent(machineFullName, newSkillPoints));
             }
             
-            return null;
+            return noEvents();
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }

@@ -1,5 +1,7 @@
 package org.sokybot.gameevents.internal;
 
+import java.util.List;
+
 import org.sokybot.api.events.IGameEvent;
 import org.sokybot.api.events.SkillLevelUpEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -13,7 +15,7 @@ import org.sokybot.persistence.service.IGameDataLookup;
  */
 public class SkillLevelUpTranslator extends AbstractTranslator {
     
-    private static final int CHAR_SKILL_LVL_UP_OPCODE = 0x70B2;
+    private static final int CHAR_SKILL_LVL_UP_OPCODE = 0xB0A1;
     
     public SkillLevelUpTranslator(IGameDataLookup lookup) {
         super(lookup);
@@ -25,7 +27,7 @@ public class SkillLevelUpTranslator extends AbstractTranslator {
     }
     
     @Override
-    public IGameEvent translate(String machineFullName, ImmutablePacket packet) {
+    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
@@ -42,13 +44,13 @@ public class SkillLevelUpTranslator extends AbstractTranslator {
                         .orElse(null);
                 }
                 
-                return new SkillLevelUpEvent(machineFullName, true, skillId, skillName);
+                return singleEvent(new SkillLevelUpEvent(machineFullName, true, skillId, skillName));
             } else {
-                return new SkillLevelUpEvent(machineFullName, false, 0);
+                return singleEvent(new SkillLevelUpEvent(machineFullName, false, 0));
             }
             
         } catch (Exception e) {
-            return null;
+            return noEvents();
         }
     }
 }
