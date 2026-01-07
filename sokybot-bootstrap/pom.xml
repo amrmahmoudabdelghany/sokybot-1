@@ -10,8 +10,8 @@
 	<modelVersion>4.0.0</modelVersion>
 	<packaging>jar</packaging>
 
-	<artifactId>sokybot-core</artifactId>
-	<name>Sokybot Core Bundle</name>
+	<artifactId>sokybot-bootstrap</artifactId>
+	<name>Sokybot Bootstrap Bundle</name>
 
 
 	<properties>

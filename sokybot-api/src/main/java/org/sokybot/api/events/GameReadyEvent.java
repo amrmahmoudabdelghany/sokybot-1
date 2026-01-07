@@ -8,7 +8,18 @@ import java.util.List;
  */
 public class GameReadyEvent implements IGameEvent {
     
-    public record CooldownInfo(int id, int remainingMs) {}
+    public static class CooldownInfo {
+        private final int id;
+        private final int remainingMs;
+        
+        public CooldownInfo(int id, int remainingMs) {
+            this.id = id;
+            this.remainingMs = remainingMs;
+        }
+        
+        public int id() { return id; }
+        public int remainingMs() { return remainingMs; }
+    }
     
     private final String fullName;
     private final long timestamp;

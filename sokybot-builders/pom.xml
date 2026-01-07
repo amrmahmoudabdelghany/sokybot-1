@@ -96,6 +96,14 @@
             <artifactId>commons-csv</artifactId>
             <version>1.10.0</version>
         </dependency>
+        
+        <!-- PK2 Extractor Bundle (pure extraction DTOs) -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-pk2-extractor</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
     </dependencies>
 

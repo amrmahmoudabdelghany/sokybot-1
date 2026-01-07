@@ -74,10 +74,10 @@ public class SokybotLauncher {
         
         // Level 0: Infrastructure
         String[] infra = {
-            "sokybot-core/target/dependency/org.apache.felix.scr-2.2.6.jar",
-            "sokybot-core/target/dependency/org.apache.felix.eventadmin-1.6.4.jar",
-            "sokybot-core/target/dependency/org.apache.felix.configadmin-1.9.26.jar",
-            "sokybot-core/target/dependency/org.apache.felix.fileinstall-3.7.4.jar"
+            "sokybot-bootstrap/target/dependency/org.apache.felix.scr-2.2.6.jar",
+            "sokybot-bootstrap/target/dependency/org.apache.felix.eventadmin-1.6.4.jar",
+            "sokybot-bootstrap/target/dependency/org.apache.felix.configadmin-1.9.26.jar",
+            "sokybot-bootstrap/target/dependency/org.apache.felix.fileinstall-3.7.4.jar"
         };
         
         // Level 1: Core API & Data

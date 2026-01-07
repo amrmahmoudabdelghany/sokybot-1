@@ -43,7 +43,7 @@
 	<modules>
 		<module>${project.artifactId}-api</module>
 		<module>${project.artifactId}-swing</module>
-		<module>${project.artifactId}-core</module>
+		<module>${project.artifactId}-bootstrap</module>
 		<module>${project.artifactId}-pk2</module>
 		<module>${project.artifactId}-security</module>
 		<module>${project.artifactId}-proxy</module>
@@ -55,6 +55,7 @@
 		<module>${project.artifactId}-engine</module>
 		<module>${project.artifactId}-ui</module>
 		<module>${project.artifactId}-builders</module>
+		<module>${project.artifactId}-pk2-extractor</module>
 		<module>${project.artifactId}-game-events</module>
 		<module>${project.artifactId}-map-debug</module>
 
@@ -254,7 +255,7 @@
 			<id>prod</id>
 			<modules>
 				<module>${project.artifactId}-api</module>
-				<module>${project.artifactId}-core</module>
+				<module>${project.artifactId}-bootstrap</module>
 				<module>${project.artifactId}-security</module>
 				<module>${project.artifactId}-game-loader</module>
 				<module>${project.artifactId}-pk2</module>
