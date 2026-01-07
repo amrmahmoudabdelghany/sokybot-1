@@ -54,6 +54,7 @@
 
 		<module>${project.artifactId}-engine</module>
 		<module>${project.artifactId}-ui</module>
+		<module>${project.artifactId}-machine-ui</module>
 		<module>${project.artifactId}-builders</module>
 		<module>${project.artifactId}-pk2-extractor</module>
 		<module>${project.artifactId}-game-events</module>
