@@ -15,7 +15,7 @@ import org.sokybot.machine.gamemodel.IGameModel;
 import org.sokybot.machine.gamemodel.ISpawnListener;
 import org.sokybot.machinegroup.gamemodel.ISpawnable;
 import org.sokybot.machinegroup.gamemodel.npc.Monster;
-import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
+import org.sokybot.persistence.entities.MonsterType;
 import org.sokybot.persistence.entities.NPCEntity;
 import org.sokybot.network.NetworkPeer;
 import org.sokybot.network.packet.Encoding;

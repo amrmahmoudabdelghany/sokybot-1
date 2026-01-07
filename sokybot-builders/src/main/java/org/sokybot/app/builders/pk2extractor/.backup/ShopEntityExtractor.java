@@ -1,12 +1,3 @@
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-package org.sokybot.app.builders.pk2extractor.mediapk2;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.math.NumberUtils;

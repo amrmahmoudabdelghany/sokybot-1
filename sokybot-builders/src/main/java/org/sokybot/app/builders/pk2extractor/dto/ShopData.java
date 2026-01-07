@@ -1,5 +1,3 @@
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 package org.sokybot.app.builders.pk2extractor.dto;
 
 import lombok.AllArgsConstructor;
@@ -19,7 +17,3 @@ public class ShopData {
     private String longId;
     private String name;
 }
-
-
-
-

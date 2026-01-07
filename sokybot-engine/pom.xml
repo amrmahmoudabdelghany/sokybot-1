@@ -40,6 +40,13 @@
 			<artifactId>sokybot-security</artifactId>
 			<scope>compile</scope>
 		</dependency>
+		
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sokybot-pk2-extractor</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
 
          <dependency>
             <groupId>org.springframework.boot</groupId>

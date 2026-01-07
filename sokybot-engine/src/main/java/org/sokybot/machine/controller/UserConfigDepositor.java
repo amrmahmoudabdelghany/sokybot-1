@@ -17,7 +17,7 @@ import org.sokybot.machine.Transition;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
 import org.sokybot.machine.model.UserAction;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
-import org.sokybot.machinegroup.repo.SettingRepo;
+import org.sokybot.persistence.service.SettingsRepository;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +51,7 @@ public class UserConfigDepositor {
 	private StateMachine<MachineState, IMachineEvent> machine;
 
 	@Autowired
-	private SettingRepo settingRepo;
+	private SettingsRepository settingsRepo;
 
 	@Autowired
 	private Settings userConfig;
@@ -112,7 +112,7 @@ public class UserConfigDepositor {
 		this.invocations.clear();
 
 		try {
-			this.settingRepo.save(getTargetObject(this.userConfig, Settings.class)) ;
+			this.settingsRepo.save(getTargetObject(this.userConfig, Settings.class)) ;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

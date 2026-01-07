@@ -1,5 +1,3 @@
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 package org.sokybot.app.builders.pk2extractor.datapk2;
 
 import static org.sokybot.machinegroup.pk2extractor.Pk2ExtractorUtils.toByteArray;
@@ -7,6 +5,11 @@ import static org.sokybot.machinegroup.pk2extractor.Pk2ExtractorUtils.toByteArra
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
+
+
+import org.osgi.service.component.annotations.Reference;
 import java.util.List;
 import java.util.Vector;
 

@@ -15,7 +15,7 @@ import javax.swing.ListSelectionModel;
 import org.sokybot.swing.SokyBotIcons;
 import org.sokybot.machine.page.skillpage.SkillTab.MasteryEntry;
 import org.sokybot.machine.page.skillpage.SkillTab.MonsterTypeEntry;
-import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
+import org.sokybot.persistence.entities.MonsterType;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 
 public class SkillTabComponentFactory {

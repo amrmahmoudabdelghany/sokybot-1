@@ -50,7 +50,7 @@ import org.sokybot.machinegroup.gamemodel.npc.Pet;
 import org.sokybot.machinegroup.gamemodel.npc.Player;
 import org.sokybot.machinegroup.gamemodel.portal.Portal;
 import org.sokybot.persistence.entities.PortalEntity;
-import org.sokybot.machinegroup.gamemodel.portal.TeleportEntity;
+import org.sokybot.persistence.entities.TeleportEntity;
 import org.sokybot.machinegroup.service.ISroMaterialDAO;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.packet.IStreamReader;

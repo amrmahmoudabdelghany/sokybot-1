@@ -26,7 +26,7 @@ import org.sokybot.machine.event.trainerevent.SkillLvlupEvent;
 import org.sokybot.machine.event.trainerevent.TrainerLoadedEvent;
 import org.sokybot.machine.event.trainerevent.TrainerSkillsUpdatedEvent;
 import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
+import org.sokybot.persistence.entities.MonsterType;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 import org.sokybot.machinegroup.gamemodel.skill.Mastery;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;

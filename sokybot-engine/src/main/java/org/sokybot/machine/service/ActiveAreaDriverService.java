@@ -25,7 +25,7 @@ import org.sokybot.machine.event.trainerevent.TrainerReachDestinationEvent;
 import org.sokybot.machine.event.trainerevent.TrainerStuckEvent;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
 import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.model.geo.Vector2D;
+import org.sokybot.persistence.entities.geo.Vector2D;
 import org.sokybot.machinegroup.gamemodel.npc.Monster;
 import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;

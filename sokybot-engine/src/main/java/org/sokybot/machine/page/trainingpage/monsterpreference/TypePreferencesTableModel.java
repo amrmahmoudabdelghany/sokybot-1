@@ -5,7 +5,7 @@ import java.util.List;
 
 import javax.swing.table.AbstractTableModel;
 
-import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
+import org.sokybot.persistence.entities.MonsterType;
 import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 

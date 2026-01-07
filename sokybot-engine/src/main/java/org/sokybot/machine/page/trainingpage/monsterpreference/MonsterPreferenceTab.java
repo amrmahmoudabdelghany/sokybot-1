@@ -18,7 +18,7 @@ import javax.swing.JTable;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.JTableHeader;
 
-import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
+import org.sokybot.persistence.entities.MonsterType;
 import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 // import org.springframework.beans.factory.annotation.Autowired;

@@ -21,7 +21,7 @@ import org.sokybot.machine.Transition;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
 import org.sokybot.machine.model.UserAction;
 import org.sokybot.machinegroup.gamemodel.setting.TrainingArea;
-import org.sokybot.machinegroup.repo.TrainingAreaRepo;
+import org.sokybot.persistence.service.TrainingAreaRepository;
 import org.springframework.aop.aspectj.AspectJAroundAdvice;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
 import org.springframework.aop.aspectj.AspectJExpressionPointcutAdvisor;
@@ -38,7 +38,7 @@ import org.springframework.statemachine.annotation.WithStateMachine;
 public class TrainingAreaDepositor {
 
 	@Autowired
-	private TrainingAreaRepo areaRepo;
+	private TrainingAreaRepository areaRepo;
 
 	@Autowired
 	private StateMachine<MachineState, IMachineEvent> machine;

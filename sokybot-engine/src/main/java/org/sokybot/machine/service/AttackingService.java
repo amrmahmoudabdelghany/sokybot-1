@@ -16,7 +16,7 @@ import org.sokybot.machine.event.monsterevent.MonsterSpawnEvent;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
 import org.sokybot.machine.gamemodel.Trainer;
 import org.sokybot.machinegroup.gamemodel.npc.Monster;
-import org.sokybot.machinegroup.gamemodel.npc.MonsterType;
+import org.sokybot.persistence.entities.MonsterType;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.springframework.beans.factory.annotation.Autowired;
