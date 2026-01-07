@@ -1,5 +1,3 @@
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 package org.sokybot.app.builders.pk2extractor.mediapk2;
 
 import java.util.List;
@@ -8,24 +6,18 @@ import java.util.stream.Collectors;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.sokybot.machinegroup.gamemodel.skill.SkillEntity;
-import org.sokybot.machinegroup.gamemodel.skill.SkillType;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.sokybot.app.builders.pk2extractor.IExtractor;
 import org.sokybot.app.builders.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.persistence.service.SkillEntityRepoRepository;
+import org.sokybot.machinegroup.gamemodel.skill.SkillEntity;
+import org.sokybot.machinegroup.gamemodel.skill.SkillType;
 import org.sokybot.pk2.IPk2Driver;
-
-
-
-
-
-
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component(service = IExtractor.class)
-@Qualifier("mediapk2")
 public class SkillEntityExtractor implements IExtractor {
 
 	
@@ -132,7 +124,3 @@ public class SkillEntityExtractor implements IExtractor {
 	}
 
 }
-
-
-
-
