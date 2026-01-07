@@ -132,6 +132,85 @@ public class TranslatorFactoryImpl implements ITranslatorFactory {
         translators.put(0x3052, new ItemDurabilityUpdateTranslator(lookup));
         translators.put(0x3092, new InventorySizeUpdateTranslator(lookup));
         
+        // === NEW TRANSLATORS (discovered from reference codebases) ===
+        
+        // Visual/Animation Events
+        translators.put(0x3091, new EmotionTranslator(lookup));          // Entity emotes
+        translators.put(0x3036, new PickupAnimationTranslator(lookup));  // Pickup animation
+        translators.put(0x3038, new EquipItemTranslator(lookup));        // Visual equip
+        translators.put(0x3039, new UnequipItemTranslator(lookup));      // Visual unequip
+        translators.put(0x3058, new DamageEffectTranslator(lookup));     // Damage numbers
+        
+        // Stat Update Events
+        translators.put(0xB050, StatPointsUpdateTranslator.forStrength(lookup));      // STR points
+        translators.put(0xB051, StatPointsUpdateTranslator.forIntelligence(lookup));  // INT points
+        translators.put(0x30DF, new HwanLevelUpdateTranslator(lookup));  // Hwan level
+        translators.put(0x3200, new AttackSpeedUpdateTranslator(lookup)); // Attack speed
+        
+        // Extended Exchange Events
+        translators.put(0x3086, new ExchangeConfirmedTranslator(lookup)); // Exchange confirmed
+        translators.put(0x3087, new ExchangeApprovedTranslator(lookup));  // Exchange approved
+        translators.put(0x3089, new ExchangeUpdateTranslator(lookup));    // Exchange item update
+        
+        // Stall (Street Vendor) Events
+        translators.put(0x30B7, StallEventTranslator.forAction(lookup));     // Stall action
+        translators.put(0x30B8, StallEventTranslator.forCreated(lookup));    // Stall created
+        translators.put(0x30B9, StallEventTranslator.forDestroyed(lookup));  // Stall destroyed
+        translators.put(0x30BB, StallEventTranslator.forNameChanged(lookup)); // Stall name
+        
+        // Party Matching Events
+        translators.put(0x306E, PartyMatchingTranslator.forPlayerJoinRequest(lookup)); // Join request
+        translators.put(0x3065, PartyMatchingTranslator.forPartyCreated(lookup));       // Party created
+        translators.put(0xB067, PartyMatchingTranslator.forMemberCountUpdate(lookup));  // Member count
+        
+        // === ADDITIONAL TRANSLATORS (Phase 2 Discovery) ===
+        
+        // Entity/Character Events
+        translators.put(0x3054, new LevelUpTranslator(lookup));              // Level up animation
+        translators.put(0x304D, new ItemOwnershipRemovedTranslator(lookup)); // Item available for pickup
+        
+        // World Events
+        translators.put(0x3020, new CelestialPositionTranslator(lookup));    // Sun/moon position
+        translators.put(0x3809, new WeatherUpdateTranslator(lookup));        // Weather changes
+        translators.put(0x3077, new GameReadyTranslator(lookup));            // Game ready + cooldowns
+        
+        // Quest Events
+        translators.put(0xB0D9, new QuestAbandonTranslator(lookup));         // Quest abandoned
+        
+        // Skill Events
+        translators.put(0xB202, new SkillWithdrawTranslator(lookup));        // Skill withdrawal
+        
+        // Alchemy Events
+        translators.put(0x34AA, new MagicOptionUpdateTranslator(lookup));    // Item magic options
+        
+        // Social Events
+        translators.put(0x302D, new ChatRestrictTranslator(lookup));         // Chat restriction
+        translators.put(0x3101, new GuildInfoTranslator(lookup));            // Guild info
+        
+        // Item Events
+        translators.put(0xB03E, new ItemRepairTranslator(lookup));           // Item repaired
+        
+        // === PHASE 3 TRANSLATORS ===
+        
+        // Item Perk/Buff Events
+        translators.put(0x325F, new ItemPerkAddTranslator(lookup));          // Item perk added
+        translators.put(0x3261, new ItemPerkRemoveTranslator(lookup));       // Item perk removed
+        
+        // Job System Events
+        translators.put(0xB0E3, new JobAliasUpdateTranslator(lookup));       // Job alias update
+        translators.put(0x30E6, new JobExperienceUpdateTranslator(lookup));  // Job experience
+        
+        // Combat/Equipment Events
+        translators.put(0x3201, new AmmoUpdateTranslator(lookup));           // Ammo update
+        
+        // Teleport Events
+        translators.put(0xB05A, new TeleportResponseTranslator(lookup));     // Teleport response
+        
+        // === PHASE 4 TRANSLATORS ===
+        
+        // Storage Events
+        translators.put(0xB558, new StorageBoxTakeItemTranslator(lookup));   // Storage box item taken
+        
         System.out.println("GAME-EVENTS: Created " + translators.size() + " translators for game: " + lookup.getGamePath());
         return translators;
     }
