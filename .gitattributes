@@ -1,0 +1,10 @@
+* text=auto
+
+*.java text
+*.xml text
+*.md text
+*.properties text
+*.txt text
+*.sh text
+*.bat text
+*.sql text
