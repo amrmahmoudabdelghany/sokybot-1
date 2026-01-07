@@ -111,6 +111,11 @@ public class TranslatorFactoryImpl implements ITranslatorFactory {
         // Pet/Mount Events
         translators.put(0xB0CB, new MountStateUpdateTranslator(lookup));
         
+        // COS (Controlled Object System) Events
+        translators.put(0x30C8, new CosDataTranslator(lookup));     // COS spawn data
+        translators.put(0x30C9, new CosUpdateTranslator(lookup));   // COS state updates
+        translators.put(0x3422, new FellowStatUpdateTranslator(lookup)); // Fellow stats
+        
         // Job Events
         translators.put(0xB0E1, new JobJoinTranslator(lookup));
         translators.put(0xB0E2, new JobLeaveTranslator(lookup));
