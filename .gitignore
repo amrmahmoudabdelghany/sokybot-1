@@ -64,7 +64,7 @@ felix-cache/
 build_output.txt
 debug_output.txt
 cp.txt
-resources/
+/resources/
 
 ### Common generated extensions ###
 *.log
