@@ -10,6 +10,7 @@ import org.sokybot.persistence.entities.SilkroadEntity;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
+import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import static org.sokybot.persistence.entities.ItemType.* ; 
@@ -19,6 +20,7 @@ import static org.sokybot.persistence.entities.ItemType.* ;
 @SuperBuilder
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
+@NoArgsConstructor
 public class ItemEntity extends SilkroadEntity {
 
 	private boolean isMallItem;
@@ -31,10 +33,9 @@ public class ItemEntity extends SilkroadEntity {
 	private int degree;
 	private int maxStacks;
 	private boolean isSortable;
+	private String iconPath;
 
-	public ItemEntity() {
-		super();
-	}
+
 
 	public boolean isConsumable() {
 		return (this.itemType.getValue() >> 8) == 3;

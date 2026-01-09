@@ -21,6 +21,7 @@ public class NPCData {
     private int level;
     private int HP;
     private NPCTypeData type;
+    private String iconPath;
     
     public boolean isMonster() {
         return this.longId != null && this.longId.contains("MOB_");

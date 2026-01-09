@@ -29,6 +29,10 @@ public class NPCEntity extends SilkroadEntity implements Serializable{
      public void setHP(int HP) { this.HP = HP; }
      public void setType(NPCType Type) { this.Type = Type; }
      
+     private String iconPath;
+     public String getIconPath() { return iconPath; }
+     public void setIconPath(String iconPath) { this.iconPath = iconPath; }
+     
      
      
      

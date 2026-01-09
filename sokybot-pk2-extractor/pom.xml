@@ -15,13 +15,7 @@
     <description>Pure extraction library for Silkroad PK2 files - outputs DTOs only, no persistence</description>
 
     <dependencies>
-        <!-- Core API -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
+
 
         <!-- PK2 File Access -->
         <dependency>

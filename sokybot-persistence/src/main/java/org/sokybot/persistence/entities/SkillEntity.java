@@ -27,6 +27,7 @@ public class SkillEntity extends SilkroadEntity {
 	private int duration ; 
 	private int masteryId ; 
 	private int MP ; 
+	private String iconPath; 
 	
 	//private ItemType requiredWeapon ;
 	
