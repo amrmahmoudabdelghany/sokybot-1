@@ -92,8 +92,7 @@
                             org.sokybot.persistence.service,
                             org.sokybot.persistence.entities,
                             org.sokybot.persistence.entities.geo,
-                            org.sokybot.persistence.entities.navmesh,
-                            org.sokybot.app.domain
+                            org.sokybot.persistence.entities.navmesh
                         </Export-Package>
                         <Private-Package>
                             org.sokybot.persistence.internal,

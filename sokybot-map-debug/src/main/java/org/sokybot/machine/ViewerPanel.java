@@ -45,7 +45,7 @@ import javax.swing.event.ChangeListener;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.model.geo.Vector2D;
+import org.sokybot.persistence.entities.geo.Vector2D;
 import org.sokybot.machinegroup.gamemodel.navmesh.Position;
 
 import org.sokybot.machinegroup.gamemodel.navmesh.SectorRef;

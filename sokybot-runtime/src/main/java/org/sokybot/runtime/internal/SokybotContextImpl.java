@@ -18,11 +18,12 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.ISokybotContext;
-import org.sokybot.app.domain.GroupInfo;
+import org.sokybot.runtime.internal.domain.GroupInfo;
+import org.sokybot.runtime.internal.persistence.GroupInfoRepository;
+import org.sokybot.runtime.internal.persistence.FileGroupInfoRepository;
 import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.exception.InvalidGameReferenceException;
 import org.sokybot.exception.NameUniquenessConstraintViolationException;
-import org.sokybot.persistence.service.GroupInfoRepository;
 import org.sokybot.service.IMainFrameConfigurator;
 import org.sokybot.context.IGroupContextFactory;
 import org.sokybot.utils.SilkroadUtils;
@@ -43,7 +44,7 @@ public class SokybotContextImpl implements ISokybotContext {
     
     private static final Logger log = LoggerFactory.getLogger(SokybotContextImpl.class);
     
-    @Reference
+    // Internal repository - instantiated directly, not via OSGi @Reference
     private GroupInfoRepository groupInfoRepo;
     
     @Reference
@@ -65,13 +66,16 @@ public class SokybotContextImpl implements ISokybotContext {
     public void activate(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
         
+        // Instantiate file-based repository directly (internal use only)
+        this.groupInfoRepo = new FileGroupInfoRepository();
+        
         // IGroupContextFactory is injected via @Reference
         // It's provided by engine bundle and creates Spring contexts
         
         // Register as OSGi service
         registerOSGiService();
         
-        // Load existing groups from database
+        // Load existing groups from file
         loadExistingGroups();
         
         log.info("SokybotContextImpl activated with {} groups", groups.size());

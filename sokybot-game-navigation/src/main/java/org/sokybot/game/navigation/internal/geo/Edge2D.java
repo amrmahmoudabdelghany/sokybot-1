@@ -1,4 +1,4 @@
-package org.sokybot.model.geo;
+package org.sokybot.game.navigation.internal.geo;
 
 import org.sokybot.persistence.entities.geo.Vector2D;
 

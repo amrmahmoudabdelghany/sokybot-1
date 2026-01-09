@@ -14,8 +14,10 @@ import org.osgi.service.event.EventAdmin;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 import org.sokybot.ui.api.IPageViewer;
-import org.sokybot.app.domain.GroupInfo;
-import org.sokybot.app.domain.MachineInfo;
+import org.sokybot.runtime.internal.domain.GroupInfo;
+import org.sokybot.runtime.internal.domain.MachineInfo;
+import org.sokybot.runtime.internal.persistence.MachineInfoRepository;
+import org.sokybot.runtime.internal.persistence.FileMachineInfoRepository;
 import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.runtime.internal.MachineContextFactory;
 import org.sokybot.engine.SpringGroupContextWrapper;
@@ -24,7 +26,6 @@ import org.sokybot.game.navigation.IRuteFinder;
 import org.sokybot.game.navigation.IRuteFinderFactory;
 import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.persistence.service.IGamePersistenceFactory;
-import org.sokybot.persistence.service.MachineInfoRepository;
 import org.sokybot.service.ISroDAO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,14 +62,15 @@ public class GroupContextImpl implements IGroupContext {
         this.groupInfo = groupInfo;
         this.springWrapper = springWrapper;
         this.bundleContext = bundleContext;
+        
+        // Instantiate file-based repository directly (internal use only)
+        this.machineInfoRepo = new FileMachineInfoRepository();
+        
         initializeServices();
         loadMachines();
     }
     
     private void initializeServices() {
-        // Get MachineInfoRepository from Spring context (via wrapper)
-        machineInfoRepo = springWrapper.getMachineInfoRepository();
-        
         // Get IMachineContextFactory from OSGi service registry
         if (bundleContext != null) {
             try {
@@ -175,7 +177,7 @@ public class GroupContextImpl implements IGroupContext {
             lock.lock();
             check(name);
             
-            MachineInfo info = new MachineInfo(this.groupInfo, name);
+            MachineInfo info = new MachineInfo(this.groupInfo.getId(), name);
             log.info("Machine info to store: {}", info);
             
             IMachineContext machineCtx = createMachineContext(info);

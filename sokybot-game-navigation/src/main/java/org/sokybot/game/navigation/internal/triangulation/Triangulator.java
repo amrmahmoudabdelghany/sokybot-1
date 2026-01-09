@@ -16,7 +16,7 @@ import org.poly2tri.triangulation.TriangulationAlgorithm;
 import org.poly2tri.triangulation.TriangulationPoint;
 import org.poly2tri.triangulation.delaunay.DelaunayTriangle;
 import org.poly2tri.triangulation.sets.ConstrainedPointSet;
-import org.sokybot.model.geo.Edge2D;
+import org.sokybot.game.navigation.internal.geo.Edge2D;
 import org.sokybot.persistence.entities.geo.Vector2D;
 import org.sokybot.persistence.entities.navmesh.ObjectLineRef;
 import org.sokybot.persistence.entities.ObjectNavMesh;
