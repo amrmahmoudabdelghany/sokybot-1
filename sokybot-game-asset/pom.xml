@@ -9,29 +9,33 @@
         <version>1.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>sokybot-proxy</artifactId>
+    <artifactId>sokybot-game-asset</artifactId>
     <packaging>bundle</packaging>
-    <name>sokybot-proxy</name>
-    <description>Network proxy bundle for handling game client-server connections</description>
+    <name>sokybot-game-asset</name>
+    <description>Game media asset provider bundle (minimaps, icons)</description>
 
     <dependencies>
-        
+        <!-- OSGi Declarative Services annotations -->
         <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-security</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.5.1</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-transport</artifactId>
-            <version>4.1.85.Final</version>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-pk2</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
-        
+
+        <!-- Logging -->
         <dependency>
-            <groupId>io.netty</groupId>
-            <artifactId>netty-handler</artifactId>
-            <version>4.1.85.Final</version>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${dependency.slf4j-api.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -44,12 +48,11 @@
                 <configuration>
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Activator>org.sokybot.proxy.ProxyActivator</Bundle-Activator>
+                        <Service-Component>OSGI-INF/*.xml</Service-Component>
+                        <_dsannotations>*</_dsannotations>
                         <Import-Package>*;resolution:=optional</Import-Package>
-                        <Export-Package>org.sokybot.proxy,org.sokybot.network,org.sokybot.network.packet</Export-Package>
-                        <Private-Package>org.sokybot.proxy.internal.*</Private-Package>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Embed-Transitive>true</Embed-Transitive>
+                        <Export-Package>org.sokybot.game.asset</Export-Package>
+                        <Private-Package>org.sokybot.game.asset.internal.*</Private-Package>
                     </instructions>
                 </configuration>
             </plugin>
