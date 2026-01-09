@@ -121,15 +121,7 @@ public class MachineGroupConfig {
 
 	}
 
-	//@Bean
-	//@Profile({"test" , "dev" ,"prod"})
-	//IEntityExtractorFactory gameEntityExtractorFactory() {
-
-		//return new Pk2Extractors(gamePath);
-
-		// return new Pk2Extractors(this.gamePath , new
-		// NitriteCache(db.getCollection(gamePath.replace(":", "-"))));
-	//}
+	// Removed commented out IEntityExtractorFactory bean
 
 	@Bean
 	@Profile({"test" , "dev" ,"prod"})

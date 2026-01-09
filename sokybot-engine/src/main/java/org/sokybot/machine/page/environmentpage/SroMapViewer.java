@@ -39,7 +39,6 @@ import org.sokybot.machine.gamemodel.Trainer;
 import org.sokybot.machinegroup.gamemodel.npc.Monster;
 import org.sokybot.machinegroup.gamemodel.setting.TrainingArea;
 import org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
 import org.sokybot.pk2.IPk2Driver;
 import org.sokybot.utils.DDSReader;
 import org.sokybot.utils.SilkroadUtils;

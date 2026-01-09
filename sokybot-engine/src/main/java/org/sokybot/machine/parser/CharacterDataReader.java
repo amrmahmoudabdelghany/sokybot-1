@@ -25,7 +25,7 @@ import org.sokybot.machinegroup.gamemodel.skill.Mastery;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.sokybot.persistence.entities.SkillEntity;
 import org.sokybot.machinegroup.gamemodel.skill.SkillType;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.network.packet.IStreamReader;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
@@ -41,7 +41,7 @@ public class CharacterDataReader implements ICharacterDataReader {
 	private IStreamReader reader;
 
 	@Autowired
-	private ISroMaterialDAO gameDao;
+	private IGameDataLookup gameDao;
 	
 	@Autowired
 	private Logger log ; 
@@ -84,7 +84,7 @@ public class CharacterDataReader implements ICharacterDataReader {
 		int refId = reader.getInt();
 
 		
-		return this.gameDao.findItemEntity(refId).map((itemEntity) -> {
+		return this.gameDao.findItem(refId).map((itemEntity) -> {
 			
 			Item item = new Item(itemEntity);
 			item.setSlot(itemSlot);
@@ -188,7 +188,7 @@ public class CharacterDataReader implements ICharacterDataReader {
 
 				MagicCube cube = new MagicCube(item);
 
-				cube.setStoredItemCount(reader.getInt());
+				this.gameDao.findItem(reader.getInt());
 
 				return cube;
 
@@ -269,7 +269,7 @@ public class CharacterDataReader implements ICharacterDataReader {
 	public Skill getSkill() {
 		int refId = reader.getInt();
 
-		Skill skill = this.gameDao.findSkillEntity(refId).map(Skill::new).orElseGet(() -> {
+		Skill skill = this.gameDao.findSkill(refId).map(Skill::new).orElseGet(() -> {
 			return new Skill(SkillEntity.builder().type(SkillType.UNKNOWN).refId(refId).build());
 		});
 
@@ -282,7 +282,7 @@ public class CharacterDataReader implements ICharacterDataReader {
 	public Buff getBuff() {
 		int bufRefId = reader.getInt();
 
-		Buff buff=  this.gameDao.findSkillEntity(bufRefId).map((entity) -> {
+		Buff buff=  this.gameDao.findSkill(bufRefId).map((entity) -> {
 			Buff res = new Buff(entity);
 			res.setBuffDuration(reader.getInt());
 			log.info("Readed Buf {} " , res); 

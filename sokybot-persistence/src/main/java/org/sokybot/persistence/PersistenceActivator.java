@@ -8,10 +8,14 @@ import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import java.util.Hashtable;
 
+import org.sokybot.persistence.internal.GamePersistenceFactoryImpl;
+import org.sokybot.persistence.service.IGamePersistenceFactory;
+
 public class PersistenceActivator implements BundleActivator {
     
     private EntityManagerFactory emf;
     private ServiceRegistration<EntityManagerFactory> emfRegistration;
+    private ServiceRegistration<IGamePersistenceFactory> persistenceFactoryRegistration;
     
     @Override
     public void start(BundleContext context) throws Exception {
@@ -33,6 +37,16 @@ public class PersistenceActivator implements BundleActivator {
             );
             
             System.out.println("PERSISTENCE: EntityManagerFactory registered as OSGi service");
+            
+            // Register GamePersistenceFactory
+            IGamePersistenceFactory factory = new GamePersistenceFactoryImpl(emf);
+            persistenceFactoryRegistration = context.registerService(
+                IGamePersistenceFactory.class,
+                factory,
+                new Hashtable<>()
+            );
+            System.out.println("PERSISTENCE: GamePersistenceFactory registered as OSGi service");
+
         } catch (Exception e) {
             System.err.println("PERSISTENCE: Failed to initialize EntityManagerFactory");
             e.printStackTrace();
@@ -47,6 +61,9 @@ public class PersistenceActivator implements BundleActivator {
         // Unregister service
         if (emfRegistration != null) {
             emfRegistration.unregister();
+        }
+        if (persistenceFactoryRegistration != null) {
+            persistenceFactoryRegistration.unregister();
         }
         
         // Close EntityManagerFactory

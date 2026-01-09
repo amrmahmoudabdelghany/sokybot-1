@@ -44,7 +44,7 @@ import org.sokybot.machinegroup.gamemodel.npc.NPCType;
 import org.sokybot.machinegroup.gamemodel.npc.PVPState;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.gameevents.events.stat.GoldUpdateEvent;
 import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.IStreamReader;
@@ -64,7 +64,7 @@ public class TrainerHandler {
 	private Trainer trainer;
 
 	@Autowired
-	private ISroMaterialDAO gameDao;
+	private IGameDataLookup gameDao;
 
 	@Autowired
 	private ApplicationContext ctx;
@@ -350,7 +350,7 @@ public class TrainerHandler {
 		if (event.isSuccess()) {
 			int skillId = event.getSkillId();
 			
-			this.gameDao.findSkillEntity(skillId).ifPresent((skillEntity) -> {
+			this.gameDao.findSkill(skillId).ifPresent((skillEntity) -> {
 				Skill skill = new Skill(skillEntity);
 				skill.setIsEnabled((byte) 0x01);
 				log.info("Skill updated: {}", skill);
@@ -378,7 +378,7 @@ public class TrainerHandler {
 		trainer.setServerTime(reader.getInt());
 
 		int refId = reader.getInt();
-		NPCEntity entity = this.ctx.getBean(ISroMaterialDAO.class)
+		NPCEntity entity = this.ctx.getBean(IGameDataLookup.class)
 				.findNPC(refId)
 				.orElse(NPCEntity.builder().refId(refId).Type(NPCType.UNKNOWN).build());
 
@@ -406,7 +406,7 @@ public class TrainerHandler {
 		trainer.setItemInventorySize(reader.getByte());
 		trainer.setItemCount(reader.getByte());
 
-		this.ctx.getBean(ISroMaterialDAO.class).findNPC(trainer.getRefId()).ifPresent((npc) -> {
+		this.ctx.getBean(IGameDataLookup.class).findNPC(trainer.getRefId()).ifPresent((npc) -> {
 			log.info("Trainer NPC Entity : " + npc);
 		});
 		// log.info("Trainer : {}" , this.trainer);
@@ -688,7 +688,7 @@ public class TrainerHandler {
 	@PacketListener(opcode = ClientOpcode.CHAR_SKILL_LVL_UP)
 	public void userlvlUpSkill(ImmutablePacket packet) { 
 		int refId = packet.getStreamReader().getInt();
-		this.gameDao.findSkillEntity(refId).ifPresent((skillEntity) -> {
+		this.gameDao.findSkill(refId).ifPresent((skillEntity) -> {
 			this.ctx.publishEvent(new UserUpdateSkillEvent(TrainerHandler.this, skillEntity));
 		});
 	}
@@ -704,7 +704,7 @@ public class TrainerHandler {
 			 
 			    
 			   int  skillId = reader.getInt() ; 
-			   this.gameDao.findSkillEntity(skillId)
+			   this.gameDao.findSkill(skillId)
 			   .ifPresent((skillEntity)->{
 				   Skill skill =  new Skill(skillEntity) ; 
 				   skill.setIsEnabled((byte)0x01); 
@@ -725,6 +725,8 @@ public class TrainerHandler {
 		
 		//log.info("Skill Cast Confrim Packet : {} " , packet);
 	}
+	
+	
 	
 	
 	

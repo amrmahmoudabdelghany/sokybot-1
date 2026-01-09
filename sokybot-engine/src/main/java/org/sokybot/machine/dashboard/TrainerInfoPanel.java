@@ -39,7 +39,8 @@ import org.sokybot.machine.MachineState;
 import org.sokybot.machine.StateChanged;
 import org.sokybot.machine.gamemodel.Trainer;
 import org.sokybot.machine.service.IChatManager;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.game.asset.IMediaAssetProvider;
+import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.utils.Helper;
 // import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.beans.factory.annotation.Value;
@@ -79,7 +80,10 @@ public class TrainerInfoPanel extends JPanel implements ActionListener, Property
 	private Trainer trainer;
 
 	// @Autowired
-	private ISroMaterialDAO gameDao;
+	private IGameDataLookup gameDao;
+
+	// @Autowired
+	private IMediaAssetProvider assetProvider;
 
 	// @Autowired
 	private IChatManager chatManager;
@@ -406,7 +410,7 @@ public class TrainerInfoPanel extends JPanel implements ActionListener, Property
 
 		case Trainer.ENTITY_PROPERTY:
 			
-			this.gameDao.findCharacterIcon(this.trainer.getRefId()).ifPresent((image)->{
+			this.assetProvider.findCharacterIcon(this.trainer.getRefId()).ifPresent((image)->{
 
 				this.lblCharIcon.setIcon(
 						new ImageIcon(org.sokybot.swing.SwingUtils.processImage(image, CHAR_IMAGE_WIDTH, CHAR_IMAGE_HEIGHT, CHAR_IMAGE_CRADIUS)));

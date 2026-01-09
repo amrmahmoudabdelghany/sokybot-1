@@ -31,7 +31,7 @@ import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 import org.sokybot.machinegroup.gamemodel.setting.TrainingArea;
 import org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.game.navigation.IRuteFinder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.statemachine.annotation.WithStateMachine;
@@ -51,7 +51,7 @@ public class ActiveAreaDriverService implements IMovingService {
 	private TrainingAreaSettings areaSettings;
 
 	@Autowired
-	private ISroMaterialDAO dao;
+	private IRuteFinder dao;
 
 	@Autowired
 	private Logger log;

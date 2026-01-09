@@ -123,6 +123,16 @@
 			<artifactId>sokybot-game-loader</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sokybot-game-navigation</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sokybot-game-asset</artifactId>
+			<version>${project.version}</version>
+		</dependency>
         <dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-persistence</artifactId>

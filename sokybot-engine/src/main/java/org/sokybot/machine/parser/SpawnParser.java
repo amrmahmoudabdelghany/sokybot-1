@@ -26,7 +26,7 @@ import org.sokybot.machinegroup.gamemodel.npc.Player;
 import org.sokybot.machinegroup.gamemodel.portal.Portal;
 import org.sokybot.persistence.entities.PortalEntity;
 import org.sokybot.machinegroup.gamemodel.skill.Buff;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.utils.SilkroadUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +43,7 @@ public class SpawnParser implements ISpawnParser {
 	private IStreamReader reader;
 
 	@Autowired
-	private ISroMaterialDAO sroDAO;
+	private IGameDataLookup sroDAO;
 	
 	@Autowired
 	private Logger log ; 
@@ -123,7 +123,7 @@ public class SpawnParser implements ISpawnParser {
 		byte activeBuffCount = reader.getByte();
 
 		for (int i = 0; i < activeBuffCount; i++) {
-			this.sroDAO.findSkillEntity(reader.getInt()).ifPresent((skill) -> {
+			this.sroDAO.findSkill(reader.getInt()).ifPresent((skill) -> {
 				Buff buff = new Buff(skill) ; 
 				buff.setBuffDuration(reader.getInt()) ; 
 				
@@ -214,7 +214,7 @@ public class SpawnParser implements ISpawnParser {
 
 		for (int i = 0; i < itemCount; i++) {
 
-			this.sroDAO.findItemEntity(reader.getInt())
+			this.sroDAO.findItem(reader.getInt())
 					.map((itemEntity) -> new Equipment(new Item(itemEntity)))
 					.ifPresent((eq) -> {
 

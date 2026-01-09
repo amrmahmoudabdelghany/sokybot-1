@@ -11,7 +11,7 @@ import javax.swing.JTextField;
 
 import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.persistence.service.IGameDataLookup;
 // import org.springframework.beans.factory.annotation.Autowired;
 // import org.springframework.statemachine.config.configurers.DefaultHistoryTransitionConfigurer;
 // import org.springframework.stereotype.Component;
@@ -23,10 +23,10 @@ public class MonsterNamePreference extends JPanel {
 	private JTable tblRes;
 	private NamePreferencesTableModel model;
 	private Settings settings;
-	private ISroMaterialDAO sroMaterialDAO;
+	private IGameDataLookup sroMaterialDAO;
 
 	// @Autowired
-	public MonsterNamePreference(Settings settings, ISroMaterialDAO sroMaterialDAO) {
+	public MonsterNamePreference(Settings settings, IGameDataLookup sroMaterialDAO) {
 		this.settings = settings;
 		this.tblRes = new JTable();
 		this.tblRes.setDefaultRenderer(MonsterPreference.class, new PreferenceCellRender());

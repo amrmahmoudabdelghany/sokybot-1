@@ -36,8 +36,6 @@ import org.sokybot.domain.map.NavMesh;
 import org.sokybot.domain.map.NavObject;
 import org.sokybot.domain.map.Position;
 import org.sokybot.domain.map.Segment;
-import org.sokybot.machinegroup.pk2extractor.Pk2Extractors;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
 import org.sokybot.machinegroup.service.SroMaterialDAO;
 
 import lombok.extern.slf4j.Slf4j;
@@ -76,21 +74,10 @@ public class TestCacheStoreData {
 
 	ICacheStorage cache2 = new CacheStorageImp() ; 
 	
-	@Test
-	public void testRealInteraction() {
-
-		ISroMaterialDAO sroDao = 
-				new SroMaterialDAO(new Pk2Extractors("E:\\Amroo\\Silkroad Games\\LegionSRO_15_08_2019", cache2), null);
-
-		
-		long bTime = System.currentTimeMillis() ; 
-		sroDao.refresh();
-		log.info("Time {} " ,TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis() - bTime));
-		
-		db.close();
-		
-
-	}
+	// @Test
+	// public void testRealInteraction() {
+	// 	// Removed legacy test
+	// }
 
 	@Test
 	public void testRetriveAllData() {

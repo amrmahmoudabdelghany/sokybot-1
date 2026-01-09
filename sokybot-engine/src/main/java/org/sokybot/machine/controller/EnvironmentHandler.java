@@ -70,7 +70,7 @@ import org.sokybot.machinegroup.gamemodel.npc.Player;
 import org.sokybot.machinegroup.gamemodel.portal.Portal;
 import org.sokybot.persistence.entities.PortalEntity;
 import org.sokybot.persistence.entities.TeleportEntity;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.app.AppConstants;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.packet.IStreamReader;
@@ -90,7 +90,7 @@ public class EnvironmentHandler {
 	private ApplicationContext ctx;
 
 	@Autowired
-	private ISroMaterialDAO sroDao;
+	private IGameDataLookup sroDao;
 
 	@Autowired
 	private IMutableGameModel gameModel;
@@ -350,7 +350,7 @@ public class EnvironmentHandler {
 
 		AtomicBoolean processed = new AtomicBoolean(false);
 		// item entity
-		this.sroDao.findItemEntity(refId).ifPresent((itemEntity) -> {
+		this.sroDao.findItem(refId).ifPresent((itemEntity) -> {
 
 			DropItem dropItem = spawnParser.readDropItem(itemEntity);
 			gameModel.add(dropItem);

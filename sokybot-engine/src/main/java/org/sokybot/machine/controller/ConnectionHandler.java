@@ -12,7 +12,7 @@ import org.sokybot.machine.model.ClientFeed;
 import org.sokybot.machine.model.UserAction;
 import org.sokybot.machinegroup.gamemodel.setting.BotType;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.network.packet.Encoding;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.packet.ServerOpcode;
@@ -76,7 +76,7 @@ public class ConnectionHandler implements IConnectionListener {
     public void connecting(ExtendedState extendedState) {
         Settings settings = this.ctx.getBean(Settings.class);
         String targetGateway = settings.getTargetGateway();
-        int port = this.ctx.getBean(ISroMaterialDAO.class).getPort();
+        int port = this.ctx.getBean(IGameDataLookup.class).getPort();
         
         // Set clientless mode based on config
         proxyConnection.setClientlessMode(config.getBotType() == BotType.CLIENTLESS);
@@ -138,7 +138,7 @@ public class ConnectionHandler implements IConnectionListener {
     }
 
     private String getClientPath() {
-        String clientPath = ctx.getBean(ISroMaterialDAO.class).getGamePath() + "\\sro_client.exe";
+        String clientPath = ctx.getBean(IGameDataLookup.class).getGamePath() + "\\sro_client.exe";
         return clientPath;
     }
 

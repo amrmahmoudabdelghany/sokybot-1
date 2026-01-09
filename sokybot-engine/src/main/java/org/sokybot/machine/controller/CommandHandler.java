@@ -38,7 +38,7 @@ import org.sokybot.machinegroup.gamemodel.setting.Settings;
 import org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.sokybot.machinegroup.mapnavigation.RuteFinder;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.game.navigation.IRuteFinder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -202,7 +202,7 @@ public class CommandHandler {
 			
 			
 			List<Vector2D> path = 
-					this.ctx.getBean(ISroMaterialDAO.class).findPath(new Position(this.trainer.getX(), 0, this.trainer.getY()),
+					this.ctx.getBean(IRuteFinder.class).findPath(new Position(this.trainer.getX(), 0, this.trainer.getY()),
 					new Position(targetX, 0, targetY));
 
 			path.add(0, new Vector2D(targetX , targetY)) ;

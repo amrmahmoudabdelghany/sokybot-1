@@ -4,7 +4,7 @@ package org.sokybot.machine.service;
 import org.slf4j.Logger;
 import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineState;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.network.NetworkPeer;
 import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.Encoding;
@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
 public class AuthenticationService implements IAuthenticationService {
 
 	@Autowired
-	private ISroMaterialDAO gameDAO;
+	private IGameDataLookup gameDAO;
 
 
 	@Autowired
