@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.mediapk2;
+package org.sokybot.pk2extractor.mediapk2.item;
 
 import java.nio.charset.StandardCharsets;
 
@@ -10,8 +10,8 @@ import org.sokybot.pk2extractor.ExtractionListener;
 import org.sokybot.pk2extractor.ExtractionProgressListener;
 import org.sokybot.pk2extractor.IExtractor;
 import org.sokybot.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.pk2extractor.dto.ItemData;
-import org.sokybot.pk2extractor.dto.ItemTypeData;
+import org.sokybot.pk2extractor.dto.item.ItemData;
+import org.sokybot.pk2extractor.dto.item.ItemTypeData;
 import org.sokybot.pk2extractor.exception.Pk2MissedResourceException;
 
 /**
@@ -145,6 +145,31 @@ public class ItemDataExtractor implements IExtractor<ItemData> {
             // Icon
             if (record.size() > 54) {
                 builder.iconPath(record.get(54));
+            }
+            
+            // Required level (column 33) - from skrillax itemdata.rs
+            if (record.size() > 33 && NumberUtils.isParsable(record.get(33))) {
+                builder.requiredLevel(Integer.parseInt(record.get(33)));
+            }
+            
+            // Biological type (column 58) - gender/pet restriction
+            if (record.size() > 58 && NumberUtils.isParsable(record.get(58))) {
+                builder.biologicalType(Integer.parseInt(record.get(58)));
+            }
+            
+            // Range (column 94) - attack/use range
+            if (record.size() > 94 && NumberUtils.isParsable(record.get(94))) {
+                builder.range(Integer.parseInt(record.get(94)));
+            }
+            
+            // Item parameters (columns 118, 120, 122, 124)
+            if (record.size() > 124) {
+                int[] params = new int[4];
+                params[0] = safeParseInt(record.get(118));
+                params[1] = safeParseInt(record.get(120));
+                params[2] = safeParseInt(record.get(122));
+                params[3] = safeParseInt(record.get(124));
+                builder.params(params);
             }
             
             return builder.build();

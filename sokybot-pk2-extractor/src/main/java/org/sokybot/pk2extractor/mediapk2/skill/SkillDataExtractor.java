@@ -1,4 +1,7 @@
-package org.sokybot.pk2extractor.mediapk2;
+package org.sokybot.pk2extractor.mediapk2.skill;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.BooleanUtils;
@@ -8,11 +11,13 @@ import org.sokybot.pk2extractor.ExtractionListener;
 import org.sokybot.pk2extractor.ExtractionProgressListener;
 import org.sokybot.pk2extractor.IExtractor;
 import org.sokybot.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.pk2extractor.dto.SkillData;
+import org.sokybot.pk2extractor.dto.skill.SkillData;
+import org.sokybot.pk2extractor.dto.skill.SkillEffect;
+import org.sokybot.pk2extractor.dto.skill.SkillTargetType;
 
 /**
  * Extracts comprehensive skill data from skilldata_*.txt.
- * Pure extraction with streaming callbacks - no caching or persistence.
+ * Enhanced to parse skill parameters/effects based on skrillax.
  */
 public class SkillDataExtractor implements IExtractor<SkillData> {
 
@@ -117,6 +122,32 @@ public class SkillDataExtractor implements IExtractor<SkillData> {
                 builder.targetRequired(BooleanUtils.toBoolean(Byte.valueOf(record.get(22))));
             }
             
+            // Field 23: Target Type
+            if (record.size() > 23 && NumberUtils.isParsable(record.get(23))) {
+                int targetCode = Integer.parseInt(record.get(23));
+                builder.targetType(SkillTargetType.fromCode(targetCode));
+            }
+            
+            // Field 26: Range
+            if (record.size() > 26 && NumberUtils.isParsable(record.get(26))) {
+                builder.range(Integer.parseInt(record.get(26)));
+            }
+            
+            // Field 27: Attack Distance
+            if (record.size() > 27 && NumberUtils.isParsable(record.get(27))) {
+                builder.attackDistance(Integer.parseInt(record.get(27)));
+            }
+            
+            // Field 28: AOE Range
+            if (record.size() > 28 && NumberUtils.isParsable(record.get(28))) {
+                builder.aoeRange(Integer.parseInt(record.get(28)));
+            }
+            
+            // Field 29: Max Targets
+            if (record.size() > 29 && NumberUtils.isParsable(record.get(29))) {
+                builder.maxTargets(Integer.parseInt(record.get(29)));
+            }
+            
             // Field 34: Mastery ID
             if (record.size() > 34 && NumberUtils.isParsable(record.get(34))) {
                 builder.masteryId(Integer.parseInt(record.get(34)));
@@ -128,12 +159,34 @@ public class SkillDataExtractor implements IExtractor<SkillData> {
                 builder.reqCommonMasteryLevel1(Integer.parseInt(record.get(36)));
             }
             
+            // Field 37: Skill Level
+            if (record.size() > 37 && NumberUtils.isParsable(record.get(37))) {
+                builder.skillLevel(Integer.parseInt(record.get(37)));
+            }
+            
             // Field 50, 51: Weapons
             if (record.size() > 50 && NumberUtils.isParsable(record.get(50))) {
                 builder.reqCastWeapon1(Byte.parseByte(record.get(50)));
             }
             if (record.size() > 51 && NumberUtils.isParsable(record.get(51))) {
                 builder.reqCastWeapon2(Byte.parseByte(record.get(51)));
+            }
+            
+            // Weapon requirements array (columns 50-55)
+            if (record.size() > 55) {
+                int[] weapons = new int[6];
+                int count = 0;
+                for (int i = 50; i <= 55; i++) {
+                    if (NumberUtils.isParsable(record.get(i))) {
+                        int w = Integer.parseInt(record.get(i));
+                        if (w > 0) weapons[count++] = w;
+                    }
+                }
+                if (count > 0) {
+                    int[] trimmed = new int[count];
+                    System.arraycopy(weapons, 0, trimmed, 0, count);
+                    builder.weaponRequirements(trimmed);
+                }
             }
             
             // Field 52: Consume HP
@@ -156,9 +209,56 @@ public class SkillDataExtractor implements IExtractor<SkillData> {
                 builder.name(record.get(62));
             }
             
+            // Skill Effects/Parameters (columns 69-118, grouped as paramType/value pairs)
+            // Layout: paramType1, value1, value2_1, prob1, duration1, paramType2, ...
+            List<SkillEffect> effects = parseSkillEffects(record);
+            if (!effects.isEmpty()) {
+                builder.effects(effects);
+            }
+            
             return builder.build();
         } catch (Exception e) {
             return null;
         }
+    }
+    
+    /**
+     * Parse skill effects from parameter columns.
+     * Effects are stored as groups of 5 values: paramType, value, value2, probability, duration
+     */
+    private List<SkillEffect> parseSkillEffects(CSVRecord record) {
+        List<SkillEffect> effects = new ArrayList<>();
+        
+        // Parse up to 10 effect slots (columns 69-118, 5 values each)
+        int startCol = 69;
+        for (int slot = 0; slot < 10; slot++) {
+            int col = startCol + (slot * 5);
+            if (record.size() <= col + 4) break;
+            
+            String paramTypeStr = record.get(col);
+            if (!NumberUtils.isParsable(paramTypeStr)) continue;
+            
+            int paramType = Integer.parseInt(paramTypeStr);
+            if (paramType == 0) continue; // Skip empty slots
+            
+            int value = safeParseInt(record.get(col + 1));
+            int value2 = safeParseInt(record.get(col + 2));
+            int probability = safeParseInt(record.get(col + 3));
+            int duration = safeParseInt(record.get(col + 4));
+            
+            effects.add(SkillEffect.builder()
+                .paramType(paramType)
+                .value(value)
+                .value2(value2)
+                .probability(probability)
+                .duration(duration)
+                .build());
+        }
+        
+        return effects;
+    }
+    
+    private int safeParseInt(String str) {
+        return NumberUtils.isParsable(str) ? Integer.parseInt(str) : 0;
     }
 }

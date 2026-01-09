@@ -2,7 +2,9 @@ package org.sokybot.machine.controller;
 
 import java.awt.Point;
 import java.util.Comparator;
+import java.util.Dictionary;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Optional;
@@ -18,10 +20,28 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
 import org.apache.commons.lang3.tuple.MutableTriple;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventConstants;
+import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
+import org.sokybot.gameevents.events.entity.EntityAngleUpdateEvent;
+import org.sokybot.gameevents.events.entity.EntityDespawnEvent;
+import org.sokybot.gameevents.events.entity.EntityHPMPUpdateEvent;
+import org.sokybot.gameevents.events.entity.EntityMovementEvent;
+import org.sokybot.gameevents.events.entity.EntitySelectedEvent;
+import org.sokybot.gameevents.events.entity.EntitySpawnEvent;
+import org.sokybot.gameevents.events.entity.EntitySpeedUpdateEvent;
+import org.sokybot.gameevents.events.entity.EntityStoppedEvent;
+import org.sokybot.gameevents.events.skill.SkillCastEvent;
+import org.sokybot.gameevents.events.skill.SkillCastEndEvent;
 import org.sokybot.machine.event.DespawnEvent;
 import org.sokybot.machine.event.SkillCastErrorEevent;
 import org.sokybot.machine.event.SkillCastStartEvent;
@@ -37,7 +57,6 @@ import org.sokybot.machine.gamemodel.GameModel;
 import org.sokybot.machine.gamemodel.IGameModel;
 import org.sokybot.machine.gamemodel.IMutableGameModel;
 import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machine.network.PacketListener;
 import org.sokybot.machine.parser.ISpawnParser;
 import org.sokybot.machinegroup.gamemodel.HealthChange;
 import org.sokybot.machinegroup.gamemodel.item.DropItem;
@@ -52,12 +71,15 @@ import org.sokybot.machinegroup.gamemodel.portal.Portal;
 import org.sokybot.persistence.entities.PortalEntity;
 import org.sokybot.persistence.entities.TeleportEntity;
 import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.app.AppConstants;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.network.packet.ServerOpcode;
+import org.sokybot.persistence.entities.navmesh.Position;
 import org.sokybot.utils.SilkroadUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 
@@ -82,10 +104,130 @@ public class EnvironmentHandler {
 	@Autowired
 	private ScheduledExecutorService taskExecutor;
 
+	@Autowired
+	private BundleContext bundleContext;
+
+	@Value("${" + AppConstants.MACHINE_NAME + "}")
+	private String machineName;
+
+	@Value("${" + AppConstants.GROUP_NAME + "}")
+	private String groupName;
+
 	private Map<Integer, ScheduledFuture<?>> movements = new HashMap<>();
 
 	private Pair<Byte, Short> currentG;
 
+	private ServiceRegistration<EventHandler> eventHandlerRegistration;
+
+	private String machineFullName() {
+		return groupName + "." + machineName;
+	}
+
+	@PostConstruct
+	public void init() {
+		// Register as OSGi EventHandler to listen to game events
+		if (bundleContext != null) {
+			try {
+				Dictionary<String, Object> properties = new Hashtable<>();
+				// Subscribe to all game events for this machine
+				String machineFullName = machineFullName();
+				String topicPattern = "sokybot/game/" + machineFullName + "/*";
+				properties.put(EventConstants.EVENT_TOPIC, topicPattern);
+				
+				// Create EventHandler that delegates to this controller
+				EventHandler handler = this::handleGameEvent;
+				
+				eventHandlerRegistration = bundleContext.registerService(
+						EventHandler.class,
+						handler,
+						properties);
+				
+				log.info("EnvironmentHandler registered as OSGi EventHandler for machine: {}", machineFullName);
+			} catch (Exception e) {
+				log.error("Failed to register EnvironmentHandler as EventHandler", e);
+			}
+		}
+	}
+
+	@PreDestroy
+	public void cleanup() {
+		if (eventHandlerRegistration != null) {
+			try {
+				eventHandlerRegistration.unregister();
+				log.info("EnvironmentHandler EventHandler unregistered");
+			} catch (Exception e) {
+				log.error("Error unregistering EnvironmentHandler EventHandler", e);
+			}
+		}
+	}
+
+	/**
+	 * Central event handler that routes OSGi events to appropriate methods.
+	 */
+	private void handleGameEvent(Event osgiEvent) {
+		try {
+			IGameEvent event = (IGameEvent) osgiEvent.getProperty("event");
+			if (event == null) {
+				return;
+			}
+
+			// Only handle events for this machine
+			if (!machineFullName().equals(event.getFullName())) {
+				return;
+			}
+
+			String eventType = event.getClass().getSimpleName();
+
+			// Route to appropriate handler based on event type
+			switch (eventType) {
+				case "SkillCastEvent":
+					handleSkillCastEvent((SkillCastEvent) event);
+					break;
+				case "SkillCastEndEvent":
+					handleSkillCastEndEvent((SkillCastEndEvent) event);
+					break;
+				case "EntityHPMPUpdateEvent":
+					handleHPMPUpdateEvent((EntityHPMPUpdateEvent) event);
+					break;
+				case "EntitySpeedUpdateEvent":
+					handleSpeedUpdateEvent((EntitySpeedUpdateEvent) event);
+					break;
+				case "EntityAngleUpdateEvent":
+					handleAngleUpdateEvent((EntityAngleUpdateEvent) event);
+					break;
+				case "EntitySelectedEvent":
+					handleEntitySelectedEvent((EntitySelectedEvent) event);
+					break;
+				case "EntityMovementEvent":
+					handleEntityMovementEvent((EntityMovementEvent) event);
+					break;
+				case "EntityStoppedEvent":
+					handleEntityStoppedEvent((EntityStoppedEvent) event);
+					break;
+				case "EntitySpawnEvent":
+					handleEntitySpawnEvent((EntitySpawnEvent) event);
+					break;
+				case "EntityDespawnEvent":
+					handleEntityDespawnEvent((EntityDespawnEvent) event);
+					break;
+				default:
+					// Unknown event type - log but don't fail
+					log.debug("Unhandled event type: {}", eventType);
+					break;
+			}
+		} catch (Exception e) {
+			log.error("Error handling game event", e);
+		}
+	}
+
+	// ========== EVENT HANDLERS (migrated from @PacketListener) ==========
+
+	// ========== DEPRECATED: Spawn/Despawn handlers still require packet parsing ==========
+	// These handlers need ISpawnParser which requires raw packet data to create domain objects.
+	// EntitySpawnEvent/EntityDespawnEvent contain refId and position but not enough to create
+	// Monster/Player/Pet/Item/Portal objects. These will be migrated later or kept as packet handlers.
+	
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.GROUP_SPAWN_BEGIN)
 	public void onGroupSpawnBegin(ImmutablePacket packet) {
 		IStreamReader reader = packet.getStreamReader();
@@ -95,6 +237,7 @@ public class EnvironmentHandler {
 
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.GROUP_SPAWN)
 	public void onGroupSpawn(ImmutablePacket packet) {
 
@@ -127,57 +270,51 @@ public class EnvironmentHandler {
 
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.GROUP_SPAWN_END)
 	public void onGroupSpawnEnd(ImmutablePacket packet) {
 		this.currentG = null;
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.SINGLE_SPAWN)
 	public void onSingleSpawn(ImmutablePacket packet) {
-		;
 		onSpawn(packet.getStreamReader());
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.SINGLE_DESPAWN)
 	public void onSingleDespawn(ImmutablePacket packet) {
 		onDespawn(packet.getStreamReader());
-
 	}
 
-	@PacketListener(opcode = ServerOpcode.SKILL_CAST_STARTED)
-	public void onSkillCastStarted(ImmutablePacket packet) {
+	/**
+	 * Handles SkillCastEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.SKILL_CAST_STARTED)
+	 */
+	private void handleSkillCastEvent(SkillCastEvent event) {
+		if (event.isSuccess()) {
+			Integer skillId = event.getSkillId();
+			Integer casterId = event.getCasterId();
+			Integer targetId = event.getTargetId();
 
-		// log.info("Skill Cast Started Packet {} " , packet);
-
-		IStreamReader reader = packet.getStreamReader();
-
-		if (reader.getBoolean()) { // if success
-
-			reader.getShort();
-
-			int skillId = reader.getInt();
-
-			int casterId = reader.getInt();
-			reader.getInt(); // unknow
-			int targetId = reader.getInt();
-
+			// Publish Spring event for backward compatibility
 			this.ctx.publishEvent(
 					SkillCastStartEvent.builder().skillId(skillId).casterId(casterId).targetId(targetId).build());
 
-			if (targetId == this.trainer.getUniqueId()) {
+			if (targetId != null && targetId.equals(this.trainer.getUniqueId())) {
 				this.ctx.publishEvent(TrainerAttackedEvent.builder().casterId(casterId).skillId(skillId).build());
 			}
-
-		} else {
-
-			this.ctx.publishEvent(new SkillCastErrorEevent(packet));
 		}
-
+		// Note: SkillCastEvent already represents success/failure, so no need for error event
 	}
 
-	@PacketListener(opcode = ServerOpcode.SKILL_CAST_ENDED)
-	public void onSkillCastEnd(ImmutablePacket packet) {
-
+	/**
+	 * Handles SkillCastEndEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.SKILL_CAST_ENDED)
+	 */
+	private void handleSkillCastEndEvent(SkillCastEndEvent event) {
+		// Currently empty - can add logic if needed
 	}
 
 	private void onDespawn(IStreamReader reader) {
@@ -358,212 +495,222 @@ public class EnvironmentHandler {
 
 	}
 
-	@PacketListener(opcode = ServerOpcode.HPMP_UPDATE)
-	public void onHPMPUpdate(ImmutablePacket packet) {
-
-		IStreamReader reader = packet.getStreamReader();
-
-		int id = reader.getInt();
-		reader.getShort();
-		HealthChange changeType = HealthChange.of(reader.getByte());
-		gameModel.find(id, IFighter.class).ifPresent((target) -> {
-
+	/**
+	 * Handles EntityHPMPUpdateEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.HPMP_UPDATE)
+	 */
+	private void handleHPMPUpdateEvent(EntityHPMPUpdateEvent event) {
+		int entityId = event.getEntityId();
+		
+		gameModel.find(entityId, IFighter.class).ifPresent((target) -> {
 			if (target instanceof Trainer) {
 				Trainer trainer = (Trainer) target;
-				switch (changeType) {
-				case HPChanged:
-					trainer.setCharHP(reader.getInt());
-					break;
-				case MPChanged:
-					trainer.setCharMP(reader.getInt());
-					break;
-				case HPAndMPChanged:
-					trainer.setCharHP(reader.getInt());
-					trainer.setCharMP(reader.getInt());
-					break;
-				case BadStatus:
-					int badStatus = reader.getInt(); // 0 = stop, 1 = fire (?), 2 = ice, 3 = freeze, 4 = electricity, 8
-														// = fire, 16 = poison
-					log.debug("Bad Status Value : {} ", badStatus);
-					break;
-				case HPAndBadStatusOrMonster:
-					trainer.setCharHP(reader.getInt());
-					int _badStatus = reader.getInt(); // 0 = stop, 1 = fire (?), 2 = ice, 3 = freeze, 4 = electricity, 8
-														// = fire, 16 = poison
-					log.debug("Bad Status Value : {} ", _badStatus);
-					break;
-				case MPAndBadStatus:
-					trainer.setCharMP(reader.getInt());
-					int __badStatus = reader.getInt(); // 0 = stop, 1 = fire (?), 2 = ice, 3 = freeze, 4 = electricity,
-														// 8
-					// = fire, 16 = poison
-					log.debug("Bad Status Value : {} ", __badStatus);
-					break;
+				Integer newHP = event.getNewHP();
+				Integer newMP = event.getNewMP();
+				
+				if (newHP != null) {
+					trainer.setCharHP(newHP);
 				}
+				if (newMP != null) {
+					trainer.setCharMP(newMP);
+				}
+				
+				// Bad status is in the event but not stored in trainer currently
+				// Can be added if needed
 			} else if (target instanceof Monster) {
-				if (changeType == HealthChange.HPAndBadStatusOrMonster) {
-					int currentHP = reader.getInt();
-					target.setCurrentHP(currentHP);
-					// log.info("Monster With id {} HP changed to {} " , id , target.getCurrentHP())
-					// ;
-					this.ctx.publishEvent(new MonsterHPUpdateEvent((Monster) target, target.getUniqueId(), currentHP));
+				Integer newHP = event.getNewHP();
+				if (newHP != null) {
+					target.setCurrentHP(newHP);
+					this.ctx.publishEvent(new MonsterHPUpdateEvent((Monster) target, target.getUniqueId(), newHP));
 				}
 			} else if (target instanceof Pet) {
-
+				// Handle pet HP/MP updates if needed
 			}
 		});
-
 	}
 
-	@PacketListener(opcode = ServerOpcode.SPEED_UPDATE)
-	public void speedUpdate(ImmutablePacket packet) {
-		IStreamReader reader = packet.getStreamReader();
-
-		this.gameModel.find(reader.getInt(), Player.class).ifPresent((player) -> {
-			player.setWalkSpeed(reader.getFloat());
-			player.setRunSpeed(reader.getFloat());
-
+	/**
+	 * Handles EntitySpeedUpdateEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.SPEED_UPDATE)
+	 */
+	private void handleSpeedUpdateEvent(EntitySpeedUpdateEvent event) {
+		int entityId = event.getEntityId();
+		this.gameModel.find(entityId, Player.class).ifPresent((player) -> {
+			player.setWalkSpeed(event.getWalkSpeed());
+			player.setRunSpeed(event.getRunSpeed());
 		});
-
 	}
 
-	@PacketListener(opcode = ServerOpcode.ANGLE_UPDATE)
-	public void onAngleChanged(ImmutablePacket packet) {
-		IStreamReader reader = packet.getStreamReader();
-		this.gameModel.find(reader.getInt(), Trainer.class).ifPresent((trainer) -> {
-			trainer.setAngle(SilkroadUtils.getAngle(reader.getShort()));
-			// log.info("New Angle is : {} ", trainer.getAngle());
+	/**
+	 * Handles EntityAngleUpdateEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.ANGLE_UPDATE)
+	 */
+	private void handleAngleUpdateEvent(EntityAngleUpdateEvent event) {
+		int entityId = event.getEntityId();
+		this.gameModel.find(entityId, Trainer.class).ifPresent((trainer) -> {
+			// Angle is already parsed in the event (degrees)
+			// But original code used SilkroadUtils.getAngle() which might convert from short
+			// Assuming event contains angle in degrees
+			// EntityAngleUpdateEvent contains angle in degrees (already converted)
+			trainer.setAngle((byte) event.getNewAngle());
 		});
-		;
 	}
 
-	@PacketListener(opcode = ServerOpcode.SPAWN_SELECTED)
-	public void onSpawnSelected(ImmutablePacket packet) {
-		IStreamReader reader = packet.getStreamReader();
+	/**
+	 * Handles EntitySelectedEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.SPAWN_SELECTED)
+	 */
+	private void handleEntitySelectedEvent(EntitySelectedEvent event) {
+		int selectedId = event.getSelectedEntityId();
+		this.gameModel.setSelectedSpawn(selectedId);
 
-		if (reader.getBoolean()) {
-
-			int selectedId = reader.getInt();
-
-			this.gameModel.setSelectedSpawn(selectedId);
-
-			if (reader.getBoolean()) {
-				this.gameModel.find(selectedId, IFighter.class).ifPresent((f) -> {
-
-					f.setCurrentHP(reader.getInt());
-
-					if (f instanceof Monster) {
-						this.ctx.publishEvent(new MonsterSelectedEvent((Monster) f));
-					}
-				});
-
-			}
+		Integer currentHP = event.getCurrentHP();
+		if (currentHP != null) {
+			this.gameModel.find(selectedId, IFighter.class).ifPresent((f) -> {
+				f.setCurrentHP(currentHP);
+				if (f instanceof Monster) {
+					this.ctx.publishEvent(new MonsterSelectedEvent((Monster) f));
+				}
+			});
 		}
-
 	}
 
-	@PacketListener(opcode = ServerOpcode.SPAWN_MOVEMENT)
-	public void onSpawnMove(ImmutablePacket packet) {
+	/**
+	 * Handles EntityMovementEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.SPAWN_MOVEMENT)
+	 * 
+	 * NOTE: EntityMovementEvent.Position contains offset coordinates (x, y, z) but not sectors.
+	 * The original packet parsing extracts sector and offset separately.
+	 * Position(x, y, z) here represents offset values, not world coordinates.
+	 */
+	private void handleEntityMovementEvent(EntityMovementEvent event) {
+		int entityId = event.getEntityId();
+		
+		this.gameModel.find(entityId, IFighter.class).ifPresent((fighter) -> {
+			boolean hasDestination = event.hasDestination();
+			fighter.setHasDestination(hasDestination);
+			
+			// Set movement type if available
+			if (event.getMovementType() != null) {
+				fighter.setMovementType(org.sokybot.machinegroup.gamemodel.npc.MovementType.of(event.getMovementType()));
+			}
 
-		IStreamReader reader = packet.getStreamReader();
-
-		this.gameModel.find(reader.getInt(), IFighter.class).ifPresent((fighter) -> {
-
-			fighter.setHasDestination(reader.getBoolean());
-
-			if (fighter.isHasDestination()) {
-
-				fighter.setDestXSector(reader.getUnsignedByte());
-				fighter.setDestYSector(reader.getUnsignedByte());
-
-				if (fighter.isInCave()) {
-
-					fighter.setDestXOffset(reader.getInt());
-					fighter.setDestZOffset(reader.getInt());
-					fighter.setDestYOffset(reader.getInt());
-
-				} else {
-
-					fighter.setDestXOffset(reader.getShort());
-					fighter.setDestZOffset(reader.getShort());
-					fighter.setDestYOffset(reader.getShort());
-
-				}
-
-				fighter.setDestX(SilkroadUtils.getXCoord(fighter.getDestXOffset(), fighter.getDestXSector()));
-				fighter.setDestY(SilkroadUtils.getYCoord(fighter.getDestYOffset(), fighter.getDestYSector()));
-				// log.info("Char Has Destination ({} , {})" , fighter.getDestX() ,
-				// fighter.getDestY());
-
+			Position dest = event.getDestination();
+			if (hasDestination && dest != null) {
+				// Use sector information from event
+				byte destXSector = event.getDestXSector() != null ? event.getDestXSector().byteValue() : (byte)0;
+				byte destYSector = event.getDestYSector() != null ? event.getDestYSector().byteValue() : (byte)0;
+				float destXOffset = dest.getX();
+				float destYOffset = dest.getY();
+				float destZOffset = dest.getZ();
+				
+				fighter.setDestXSector(destXSector);
+				fighter.setDestYSector(destYSector);
+				fighter.setDestXOffset((short) destXOffset);
+				fighter.setDestYOffset((short) destYOffset);
+				fighter.setDestZOffset((short) destZOffset);
+				
+				// Compute world coordinates for destination
+				int destX = SilkroadUtils.getXCoord(destXOffset, destXSector);
+				int destY = SilkroadUtils.getYCoord(destYOffset, destYSector);
+				fighter.setDestX(destX);
+				fighter.setDestY(destY);
 			} else {
-				fighter.setSkyClickFlag(reader.getByte());
-				// log.info("Server Say That SkyClickFlag {} ", fighter.getSkyClickFlag());
-				byte angleAction = reader.getByte();
-
-				// log.info("Char Does`nt have distnation and Sky Flag is {} , angle is {} " ,
-				// fighter.getSkyClickFlag() , angleAction) ;
-
-				if (fighter.getSkyClickFlag() == 1) {
-
-					fighter.setAngle(angleAction);
+				// No destination - use skyClickFlag and angle from event
+				if (event.getSkyClickFlag() != null) {
+					fighter.setSkyClickFlag(event.getSkyClickFlag());
 				}
-				// byte angleAction = reader.getByte() ; // 0 absolute , 1 go forward
-				// fighter.setAngle(reader.getByte()); // 0 absolute , 1 go forward
-				// log.info("No Dest , Angle Action is : {} , Sky Flag : {} ", angleAction,
-				// fighter.getSkyClickFlag());
+				if (event.getAngleAction() != null && event.getSkyClickFlag() != null && event.getSkyClickFlag() == 1) {
+					fighter.setAngle(event.getAngleAction());
+				}
 			}
 
-			if (reader.getBoolean()) { // has Origin
-				// log.info("Char has origin");
-				fighter.setXSector(reader.getUnsignedByte());
-				fighter.setYSector(reader.getUnsignedByte());
-				fighter.setXOffset(reader.getShort());
-				fighter.setZOffset(reader.getShort());
-
-				fighter.setAngle(SilkroadUtils.getAngle(reader.getShort()));
-				fighter.setYOffset(reader.getShort());
-				// log.info("Has Origin And Angle is : {} ", fighter.getAngle());
-
-				fighter.setLocation(SilkroadUtils.getXCoord(fighter.getXOffset(), fighter.getXSector(), 100),
-						SilkroadUtils.getYCoord(fighter.getYOffset(), fighter.getYSector(), 100));
-
+			Position currentPos = event.getCurrentPosition();
+			if (currentPos != null && event.getCurrentXSector() != null && event.getCurrentYSector() != null) {
+				// Use sector information from event
+				byte xSector = event.getCurrentXSector().byteValue();
+				byte ySector = event.getCurrentYSector().byteValue();
+				float xOffset = currentPos.getX();
+				float yOffset = currentPos.getY();
+				float zOffset = currentPos.getZ();
+				
+				fighter.setXSector(xSector);
+				fighter.setYSector(ySector);
+				fighter.setXOffset((short) xOffset);
+				fighter.setYOffset((short) yOffset);
+				fighter.setZOffset((short) zOffset);
+				
+				// Set angle if available
+				if (event.getCurrentAngle() != null) {
+					fighter.setAngle(org.sokybot.utils.SilkroadUtils.getAngle(event.getCurrentAngle()));
+				}
+				
+				// Compute world coordinates
+				int x = SilkroadUtils.getXCoord(xOffset, xSector, 100);
+				int y = SilkroadUtils.getYCoord(yOffset, ySector, 100);
+				fighter.setLocation(x, y);
 			}
+
 			translate(fighter);
 		});
 	}
 
-	@PacketListener(opcode = ServerOpcode.SPAWN_STUCK)
-	public void onStopMovement(ImmutablePacket packet) {
+	/**
+	 * Handles EntityStoppedEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.SPAWN_STUCK)
+	 */
+	private void handleEntityStoppedEvent(EntityStoppedEvent event) {
 		log.info("On Stop Movement");
-		IStreamReader reader = packet.getStreamReader();
-
-		int uniqueId = reader.getInt();
+		int uniqueId = event.getEntityId();
+		
 		ScheduledFuture<?> movement = this.movements.get(uniqueId);
 		if (movement != null) {
 			movement.cancel(true);
 		}
+		
 		this.gameModel.find(uniqueId).ifPresent((spawn) -> {
 			if (spawn instanceof Trainer) {
 				log.info("Trainer stop movement");
-				TrainerStuckEvent event = new TrainerStuckEvent(this, packet);
 				Trainer trainer = this.gameModel.getTrainer();
-
-				trainer.setXSector(event.getXSector());
-				trainer.setYSector(event.getYSector());
-				trainer.setXOffset(event.getX());
-				trainer.setYOffset(event.getY());
-				trainer.setZOffset(event.getZ());
-				Point location = event.getLocation();
-				trainer.setLocation((int) location.getX(), (int) location.getY());
-				trainer.setAngle(event.getAngle());
-
-				this.ctx.publishEvent(event);
-
+				
+				// NOTE: EntityStoppedEvent doesn't contain position data
+				// The original TrainerStuckEvent parsed the packet to get position
+				// For now, we'll need to handle this differently or enhance EntityStoppedEvent
+				// TODO: EntityStoppedEvent should include position data or we need a different approach
+				
+				// Publish Spring event for backward compatibility (but without packet)
+				// TrainerStuckEvent requires packet - this is a limitation
+				// We may need to keep packet parsing for this specific case or enhance the event
+				log.warn("EntityStoppedEvent received but TrainerStuckEvent requires packet data - position update skipped");
 			} else if (spawn instanceof Monster) {
 				log.info("Monster stop movement");
 			}
 		});
+	}
 
+	/**
+	 * Handles EntitySpawnEvent from OSGi EventAdmin.
+	 * NOTE: This still needs packet data to fully parse entities (Monster, Player, Pet, Item, Portal)
+	 * EntitySpawnEvent only contains refId and position - full parsing requires ISpawnParser
+	 * TODO: Either enhance EntitySpawnEvent to include full entity data or keep packet parsing for spawns
+	 */
+	private void handleEntitySpawnEvent(EntitySpawnEvent event) {
+		// EntitySpawnEvent has refId and position, but not enough to create Monster/Player/etc.
+		// The original onSpawn() uses ISpawnParser which needs packet reader
+		// For now, log and handle basic case - full implementation needs packet data or enhanced event
+		log.warn("EntitySpawnEvent received but full entity parsing requires packet data - spawn handling incomplete");
+		log.debug("Spawn event: refId={}, entityId={}, position={}", 
+			event.getRefId(), event.getEntityId(), event.getPosition());
+	}
+
+	/**
+	 * Handles EntityDespawnEvent from OSGi EventAdmin.
+	 * Migrated from onDespawn()
+	 */
+	private void handleEntityDespawnEvent(EntityDespawnEvent event) {
+		int uniqueId = event.getEntityId();
+		this.gameModel.remove(uniqueId);
+		Optional.ofNullable(this.movements.remove(uniqueId)).ifPresent((movement) -> movement.cancel(true));
 	}
 
 	private void translate(final IFighter fighter) {

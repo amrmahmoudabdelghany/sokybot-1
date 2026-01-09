@@ -4,8 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.osgi.service.component.annotations.Component;
-import org.sokybot.api.events.IPacketTranslator;
-import org.sokybot.api.events.ITranslatorFactory;
+import org.sokybot.gameevents.events.core.IPacketTranslator;
+import org.sokybot.gameevents.events.core.ITranslatorFactory;
 import org.sokybot.gameevents.internal.*;
 import org.sokybot.persistence.service.IGameDataLookup;
 

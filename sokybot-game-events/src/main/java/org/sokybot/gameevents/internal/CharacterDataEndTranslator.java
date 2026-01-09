@@ -3,7 +3,12 @@ package org.sokybot.gameevents.internal;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.sokybot.api.events.*;
+import org.sokybot.gameevents.events.core.IGameEvent;
+import org.sokybot.gameevents.events.character.CharacterBuffLoadedEvent;
+import org.sokybot.gameevents.events.character.CharacterItemLoadedEvent;
+import org.sokybot.gameevents.events.character.CharacterLoadedEvent;
+import org.sokybot.gameevents.events.character.CharacterMasteryLoadedEvent;
+import org.sokybot.gameevents.events.character.CharacterSkillLoadedEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.network.packet.ImmutablePacket;

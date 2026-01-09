@@ -11,7 +11,7 @@ import org.sing_group.gc4s.input.filechooser.JFileChooserPanel;
 import org.sing_group.gc4s.input.filechooser.JFileChooserPanelBuilder;
 import org.sing_group.gc4s.input.filechooser.SelectionMode;
 import org.sing_group.gc4s.input.text.BindJXTextField;
-import org.sokybot.ISokybotContext;
+import org.sokybot.runtime.ISokybotContext;
 
 public class MachineGroupBuilderDialog extends AbstractInputJDialog {
     private static final long serialVersionUID = 1L;

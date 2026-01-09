@@ -10,8 +10,8 @@ import org.sokybot.pk2extractor.ExtractionListener;
 import org.sokybot.pk2extractor.ExtractionProgressListener;
 import org.sokybot.pk2extractor.IExtractor;
 import org.sokybot.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.pk2extractor.dto.SectorRefData;
-import org.sokybot.pk2extractor.dto.SectorRefData.*;
+import org.sokybot.pk2extractor.dto.region.SectorRefData;
+import org.sokybot.pk2extractor.dto.region.SectorRefData.*;
 
 /**
  * Extracts sector navmesh data from .nvm files in Data.pk2.

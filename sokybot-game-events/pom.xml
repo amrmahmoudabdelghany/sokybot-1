@@ -16,11 +16,12 @@
     <description>Translates network packets to domain game events using OSGi Event Admin</description>
 
     <dependencies>
-        <!-- Sokybot API for event interfaces -->
+        <!-- Sokybot API for network packet types -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-api</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Sokybot Persistence for Position and entity types -->
@@ -67,13 +68,13 @@
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Export-Package>
-                            org.sokybot.gameevents
+                            org.sokybot.gameevents,
+                            org.sokybot.gameevents.events.*
                         </Export-Package>
                         <Private-Package>
                             org.sokybot.gameevents.internal.*
                         </Private-Package>
                         <Import-Package>
-                            org.sokybot.api.events,
                             org.sokybot.network.packet,
                             org.osgi.service.event,
                             org.osgi.service.component.annotations,

@@ -11,7 +11,7 @@ import javax.swing.Box;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import org.sing_group.gc4s.dialog.AbstractInputJDialog;
-import org.sokybot.ISokybotContext;
+import org.sokybot.runtime.ISokybotContext;
 import org.sokybot.app.AppConstants;
 import org.sokybot.app.builders.Order.OrderType;
 import org.sokybot.service.ISroDAO;

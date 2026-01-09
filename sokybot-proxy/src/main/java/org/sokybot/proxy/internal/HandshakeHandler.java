@@ -24,7 +24,7 @@ public class HandshakeHandler {
     private static final int CHALLENGE_OPCODE = 0x5001;
     
     private final NetworkComponents networkComponents;
-    private final IConnectionListener listener;
+    private volatile IConnectionListener listener;
     private final Channel serverChannel;
     
     private int clientSecret;
@@ -255,5 +255,15 @@ public class HandshakeHandler {
         stream[5] ^= (byte) (stream[5] + Dkey[1] + keyByte);
         stream[6] ^= (byte) (stream[6] + Dkey[2] + keyByte);
         stream[7] ^= (byte) (stream[7] + Dkey[3] + keyByte);
+    }
+    
+    /**
+     * Sets the connection listener for lifecycle events.
+     * Can be called after handler creation to update the listener.
+     * 
+     * @param listener the connection listener (can be null)
+     */
+    public void setListener(IConnectionListener listener) {
+        this.listener = listener;
     }
 }

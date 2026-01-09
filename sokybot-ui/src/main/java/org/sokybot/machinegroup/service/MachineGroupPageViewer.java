@@ -6,7 +6,7 @@ import javax.swing.JComponent;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.sokybot.IPageViewer;
+import org.sokybot.ui.api.IPageViewer;
 import org.sokybot.app.AppConstants;
 import org.sokybot.machinegroup.PageContainer;
 import org.sokybot.machinegroup.navigationtree.INavTree;

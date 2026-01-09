@@ -1,6 +1,6 @@
 package org.sokybot.machineui;
 
-import org.sokybot.IGroupContext;
+import org.sokybot.runtime.IGroupContext;
 import org.sokybot.machinegroup.PageContainer;
 import org.sokybot.machinegroup.navigationtree.INavTree;
 import org.sokybot.machinegroup.navigationtree.TreeNode;

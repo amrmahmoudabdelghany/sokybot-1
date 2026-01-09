@@ -2,20 +2,20 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.MasteryLevelUpEvent;
+import org.sokybot.gameevents.events.core.IGameEvent;
+import org.sokybot.gameevents.events.skill.MasteryLevelUpEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
- * Translates mastery level up packets (opcode 0x70B5) to MasteryLevelUpEvent.
+ * Translates mastery level up packets (opcode 0xB0A2) to MasteryLevelUpEvent.
  * Based on TrainerHandler.masteryLevelUp() pattern.
  * Uses IGameDataLookup to enrich event with mastery name.
  */
 public class MasteryLevelUpTranslator extends AbstractTranslator {
     
-    private static final int CHAR_MASTERY_LVL_UP_OPCODE = 0x70B5;
+    private static final int CHAR_MASTERY_LVL_UP_OPCODE = 0xB0A2;
     
     public MasteryLevelUpTranslator(IGameDataLookup lookup) {
         super(lookup);

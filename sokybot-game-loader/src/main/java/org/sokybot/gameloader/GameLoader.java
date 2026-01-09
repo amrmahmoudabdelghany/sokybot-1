@@ -10,7 +10,7 @@ import java.nio.file.Paths;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
-import org.sokybot.service.IGameLoader;
+import org.sokybot.loader.IGameLoader;
 
 //@Component(service = IGameLoader.class  , immediate = true  )
 public class GameLoader implements IGameLoader, BundleActivator {

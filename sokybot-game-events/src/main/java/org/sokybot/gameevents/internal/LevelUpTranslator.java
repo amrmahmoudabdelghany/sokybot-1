@@ -2,8 +2,8 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.LevelUpEvent;
+import org.sokybot.gameevents.events.core.IGameEvent;
+import org.sokybot.gameevents.events.stat.LevelUpEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;

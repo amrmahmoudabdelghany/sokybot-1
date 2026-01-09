@@ -3,8 +3,8 @@ package org.sokybot.gameevents.internal;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.sokybot.api.events.GameReadyEvent;
-import org.sokybot.api.events.IGameEvent;
+import org.sokybot.gameevents.events.session.GameReadyEvent;
+import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;

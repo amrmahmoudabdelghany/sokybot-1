@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.dto;
+package org.sokybot.pk2extractor.dto.teleport;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

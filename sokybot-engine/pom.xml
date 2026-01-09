@@ -25,6 +25,18 @@
         
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-ui-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-proxy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-swing</artifactId>
             <version>${project.version}</version>
         </dependency>
@@ -111,9 +123,17 @@
 			<artifactId>sokybot-game-loader</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<dependency>
+        <dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-persistence</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		
+		<!-- Game Events for packet translation -->
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sokybot-game-events</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>

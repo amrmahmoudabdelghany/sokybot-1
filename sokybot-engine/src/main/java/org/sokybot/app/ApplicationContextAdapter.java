@@ -1,3 +1,4 @@
+/*
 package org.sokybot.app;
 
 import java.util.ArrayList;
@@ -177,3 +178,4 @@ public class ApplicationContextAdapter implements ISokybotContext {
 			throw new InvalidGameReferenceException("Invalid game directory " + gamePath, gamePath);
 	}
 }
+*/

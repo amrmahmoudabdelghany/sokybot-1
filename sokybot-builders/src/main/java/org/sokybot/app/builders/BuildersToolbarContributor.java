@@ -5,7 +5,7 @@ import javax.swing.JDialog;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.sokybot.ISokybotContext;
+import org.sokybot.runtime.ISokybotContext;
 import org.sokybot.service.IMainFrameConfigurator;
 
 @Component(immediate = true)

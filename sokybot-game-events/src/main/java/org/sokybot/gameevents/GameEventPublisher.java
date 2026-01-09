@@ -5,8 +5,8 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.IPacketTranslator;
+import org.sokybot.gameevents.events.core.IGameEvent;
+import org.sokybot.gameevents.events.core.IPacketTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 
 import java.util.HashMap;

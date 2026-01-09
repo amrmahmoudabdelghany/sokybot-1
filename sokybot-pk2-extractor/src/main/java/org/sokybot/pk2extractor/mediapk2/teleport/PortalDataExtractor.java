@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.mediapk2;
+package org.sokybot.pk2extractor.mediapk2.teleport;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.sokybot.pk2.IPk2Driver;
@@ -6,7 +6,7 @@ import org.sokybot.pk2extractor.ExtractionListener;
 import org.sokybot.pk2extractor.ExtractionProgressListener;
 import org.sokybot.pk2extractor.IExtractor;
 import org.sokybot.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.pk2extractor.dto.PortalData;
+import org.sokybot.pk2extractor.dto.teleport.PortalData;
 
 /**
  * Extracts Portal data from teleportbuilding.txt.

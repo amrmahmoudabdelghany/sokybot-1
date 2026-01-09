@@ -3,7 +3,7 @@ package org.sokybot.machine.controller;
 
 import org.slf4j.Logger;
 import org.sokybot.app.AppConstants;
-import org.sokybot.app.service.IGameLoaderService;
+import org.sokybot.loader.IGameLoaderService;
 import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineState;
 import org.sokybot.machine.StateEntry;

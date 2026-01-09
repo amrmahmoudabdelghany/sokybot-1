@@ -1,9 +1,12 @@
-package org.sokybot.pk2extractor.dto;
+package org.sokybot.pk2extractor.dto.item;
+
+import org.sokybot.pk2extractor.dto.character.GenderData;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
 
 /**
  * DTO for Item data extracted from pk2 files.
@@ -45,4 +48,12 @@ public class ItemData {
     private boolean canRepair;
     private boolean canRevive;
     private boolean canUse;
+    
+    // Enhanced fields from skrillax (itemdata.rs)
+    private int range;          // column 94 - attack/use range
+    private int requiredLevel;  // column 33 - minimum level to equip
+    private int biologicalType; // column 58 - gender/pet restriction (0=Female, 1=Male, 2=Both, 3-5=Pet types)
+    
+    // Item parameters (columns 118, 120, 122, 124)
+    private int[] params;
 }

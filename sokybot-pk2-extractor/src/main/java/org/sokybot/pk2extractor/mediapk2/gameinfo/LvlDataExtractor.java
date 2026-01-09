@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.mediapk2;
+package org.sokybot.pk2extractor.mediapk2.gameinfo;
 
 import java.nio.charset.StandardCharsets;
 
@@ -9,7 +9,7 @@ import org.sokybot.pk2extractor.ExtractionListener;
 import org.sokybot.pk2extractor.ExtractionProgressListener;
 import org.sokybot.pk2extractor.IExtractor;
 import org.sokybot.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.pk2extractor.dto.LvlData;
+import org.sokybot.pk2extractor.dto.progression.LvlData;
 import org.sokybot.pk2extractor.exception.Pk2MissedResourceException;
 
 /**

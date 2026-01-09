@@ -15,10 +15,12 @@
     <description>Network proxy bundle for handling game client-server connections</description>
 
     <dependencies>
+        <!-- API for network classes (IPacketPublisher, MutablePacket, etc.) -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-api</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>

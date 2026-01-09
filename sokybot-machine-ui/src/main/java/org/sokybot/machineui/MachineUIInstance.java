@@ -6,7 +6,7 @@ import java.util.List;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 
-import org.sokybot.IMachineContext;
+import org.sokybot.runtime.IMachineContext;
 import org.sokybot.machinegroup.DashboardContainer;
 import org.sokybot.machinegroup.PageContainer;
 import org.sokybot.machinegroup.navigationtree.INavTree;

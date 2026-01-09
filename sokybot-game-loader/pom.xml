@@ -16,6 +16,12 @@
 
 		<dependency>
 			<groupId>io.github.sokybot</groupId>
+			<artifactId>sokybot-loader-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.github.sokybot</groupId>
 			<artifactId>sokybot-api</artifactId>
 			<scope>provided</scope>
 		</dependency>

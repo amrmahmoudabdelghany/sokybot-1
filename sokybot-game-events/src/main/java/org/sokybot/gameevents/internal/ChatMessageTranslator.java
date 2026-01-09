@@ -2,9 +2,9 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.ChatMessageEvent;
-import org.sokybot.api.events.ChatMessageEvent.ChatType;
-import org.sokybot.api.events.IGameEvent;
+import org.sokybot.gameevents.events.chat.ChatMessageEvent;
+import org.sokybot.gameevents.events.chat.ChatMessageEvent.ChatType;
+import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;

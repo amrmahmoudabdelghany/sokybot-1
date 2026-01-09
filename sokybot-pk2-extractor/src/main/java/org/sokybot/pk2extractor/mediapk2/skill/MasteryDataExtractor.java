@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.mediapk2;
+package org.sokybot.pk2extractor.mediapk2.skill;
 
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.math.NumberUtils;
@@ -7,7 +7,7 @@ import org.sokybot.pk2extractor.ExtractionListener;
 import org.sokybot.pk2extractor.ExtractionProgressListener;
 import org.sokybot.pk2extractor.IExtractor;
 import org.sokybot.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.pk2extractor.dto.MasteryData;
+import org.sokybot.pk2extractor.dto.skill.MasteryData;
 import org.sokybot.pk2extractor.exception.Pk2MissedResourceException;
 
 /**

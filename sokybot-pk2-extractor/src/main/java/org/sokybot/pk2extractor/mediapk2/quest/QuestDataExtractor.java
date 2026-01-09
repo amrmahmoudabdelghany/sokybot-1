@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.mediapk2;
+package org.sokybot.pk2extractor.mediapk2.quest;
 
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.BooleanUtils;
@@ -8,7 +8,7 @@ import org.sokybot.pk2extractor.ExtractionListener;
 import org.sokybot.pk2extractor.ExtractionProgressListener;
 import org.sokybot.pk2extractor.IExtractor;
 import org.sokybot.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.pk2extractor.dto.QuestData;
+import org.sokybot.pk2extractor.dto.quest.QuestData;
 
 /**
  * Extracts quest data from questdata.txt files.

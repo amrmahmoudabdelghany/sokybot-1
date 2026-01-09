@@ -27,7 +27,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 public class ProxyConnection implements IProxyConnection {
     
     private final String machineId;
-    private final IConnectionListener listener;
+    private volatile IConnectionListener listener;
     private final EventLoopGroup bossGroup;
     private final EventLoopGroup workerGroup;
     
@@ -234,7 +234,19 @@ public class ProxyConnection implements IProxyConnection {
                 gameServerChannel, 
                 clientlessMode
             );
+        } else {
+            // Update listener if handler already exists
+            handshakeHandler.setListener(listener);
         }
         return handshakeHandler;
+    }
+    
+    @Override
+    public void setConnectionListener(IConnectionListener listener) {
+        this.listener = listener;
+        // Update existing handshake handler if it exists
+        if (handshakeHandler != null) {
+            handshakeHandler.setListener(listener);
+        }
     }
 }

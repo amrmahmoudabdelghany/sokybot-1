@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.dto;
+package org.sokybot.pk2extractor.dto.region;
 
 import java.util.ArrayList;
 import java.util.List;

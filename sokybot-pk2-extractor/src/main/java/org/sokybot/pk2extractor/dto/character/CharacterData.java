@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.dto;
+package org.sokybot.pk2extractor.dto.character;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -46,4 +46,20 @@ public class CharacterData {
     private boolean isDimensionPillar;
     private boolean isSummonFlower;
     private boolean isEventMob;
+    
+    // Movement (from skrillax characterdata.rs)
+    private int walkSpeed;      // column 46
+    private int runSpeed;       // column 47
+    private int berserkSpeed;   // column 48
+    
+    // Combat
+    private int baseRange;      // column 50
+    private int pickupRange;    // column 61
+    private boolean aggressive; // column 93
+    
+    // Progression
+    private int exp;            // column 79
+    
+    // Skills (columns 83-92, non-zero skill IDs)
+    private int[] skillIds;
 }

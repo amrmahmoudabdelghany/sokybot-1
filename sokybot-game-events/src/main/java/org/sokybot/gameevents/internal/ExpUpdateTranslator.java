@@ -2,19 +2,19 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.ExpUpdateEvent;
-import org.sokybot.api.events.IGameEvent;
+import org.sokybot.gameevents.events.stat.ExpUpdateEvent;
+import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
- * Translates experience/SP update packets (opcode 0x38CB) to ExpUpdateEvent.
+ * Translates experience/SP update packets (opcode 0x3056) to ExpUpdateEvent.
  * Based on TrainerHandler.expUpdate() pattern.
  */
 public class ExpUpdateTranslator extends AbstractTranslator {
     
-    private static final int EXP_SP_UPDATE_OPCODE = 0x38CB;
+    private static final int EXP_SP_UPDATE_OPCODE = 0x3056;
     
     public ExpUpdateTranslator(IGameDataLookup lookup) {
         super(lookup);

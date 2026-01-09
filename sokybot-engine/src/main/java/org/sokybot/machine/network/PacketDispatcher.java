@@ -5,8 +5,7 @@ import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sokybot.IMachineContext;
-// TODO: Uncomment when sokybot-game-events module is implemented
-// import org.sokybot.gameevents.GameEventPublisher;
+import org.sokybot.gameevents.GameEventPublisher;
 import org.sokybot.network.IPacketObserver;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,15 +39,11 @@ public class PacketDispatcher implements IPacketObserver {
     @Autowired
     private BundleContext bundleContext;
     
-    // TODO: Uncomment when sokybot-game-events module is implemented
-    // private GameEventPublisher eventPublisher;
-    // private ServiceReference<GameEventPublisher> serviceRef;
+    private GameEventPublisher eventPublisher;
+    private ServiceReference<GameEventPublisher> serviceRef;
     
     @PostConstruct
     public void init() {
-        // TODO: Enable when sokybot-game-events module is implemented
-        log.info("PacketDispatcher: Game events integration not yet enabled");
-        /*
         try {
             // Get OSGi service reference to GameEventPublisher
             serviceRef = bundleContext.getServiceReference(GameEventPublisher.class);
@@ -62,18 +57,15 @@ public class PacketDispatcher implements IPacketObserver {
                 log.info("PacketDispatcher initialized for machine: {}", 
                     machineContext.fullName());
             } else {
-                log.error("GameEventPublisher service not found! Events will not be published.");
+                log.warn("GameEventPublisher service not found! Events will not be published. This is normal during startup if sokybot-game-events bundle hasn't started yet.");
             }
         } catch (Exception e) {
             log.error("Failed to initialize PacketDispatcher: {}", e.getMessage(), e);
         }
-        */
     }
     
     @PreDestroy
     public void cleanup() {
-        // TODO: Enable when sokybot-game-events module is implemented
-        /*
         try {
             // Unsubscribe from packet publisher
             if (machineContext.packetPublisher() != null) {
@@ -90,17 +82,18 @@ public class PacketDispatcher implements IPacketObserver {
         } catch (Exception e) {
             log.error("Error during PacketDispatcher cleanup: {}", e.getMessage(), e);
         }
-        */
     }
     
     @Override
     public void onNext(int opcode, ImmutablePacket packet) {
-        // TODO: Enable when sokybot-game-events module is implemented
-        /*
         if (eventPublisher != null) {
             // Forward packet to game-events module for translation
             eventPublisher.onPacketReceived(machineContext.fullName(), packet);
+        } else {
+            // GameEventPublisher not available yet - this is normal during startup
+            // The service might not be registered yet if sokybot-game-events bundle hasn't started
+            log.debug("GameEventPublisher not available, dropping packet opcode 0x{}", 
+                Integer.toHexString(opcode).toUpperCase());
         }
-        */
     }
 }

@@ -3,6 +3,8 @@ package org.sokybot.machine.controller;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+import java.util.Dictionary;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -11,13 +13,19 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.SynchronousQueue;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventConstants;
+import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.sokybot.app.AppConstants;
+import org.sokybot.gameevents.events.chat.ChatMessageEvent;
 import org.sokybot.machine.gamemodel.IGameModel;
 import org.sokybot.machine.gamemodel.ISpawnListener;
 import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machine.network.PacketListener;
 import org.sokybot.machine.service.IChatManager;
 import org.sokybot.machine.service.ITrainerManager;
 import org.sokybot.machinegroup.gamemodel.ISpawnable;
@@ -31,9 +39,6 @@ import org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.sokybot.machinegroup.mapnavigation.RuteFinder;
 import org.sokybot.machinegroup.service.ISroMaterialDAO;
-import org.sokybot.network.packet.ClientOpcode;
-import org.sokybot.network.packet.IStreamReader;
-import org.sokybot.network.packet.ImmutablePacket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -70,27 +75,82 @@ public class CommandHandler {
 	@Autowired
 	private ScheduledExecutorService taskExecutor;
 
+	@Autowired
+	private BundleContext bundleContext;
 
-	@PacketListener(opcode = ClientOpcode.CHAT_REQUEST)
-	public void onClientChat(ImmutablePacket packet) {
+	private ServiceRegistration<EventHandler> eventHandlerRegistration;
 
-		IStreamReader reader = packet.getStreamReader();
+	@PostConstruct
+	public void init() {
+		// Register as OSGi EventHandler to listen to ChatMessageEvent
+		if (bundleContext != null) {
+			try {
+				Dictionary<String, Object> properties = new Hashtable<>();
+				// Subscribe to all ChatMessageEvent topics (for all machines)
+				// Format: "sokybot/game/*/ChatMessageEvent"
+				properties.put(EventConstants.EVENT_TOPIC, "sokybot/game/*/ChatMessageEvent");
+				
+				// Create EventHandler that delegates to this controller
+				EventHandler handler = this::handleChatMessageEvent;
+				
+				eventHandlerRegistration = bundleContext.registerService(
+						EventHandler.class,
+						handler,
+						properties);
+				
+				log.info("CommandHandler registered as OSGi EventHandler for ChatMessageEvent");
+			} catch (Exception e) {
+				log.error("Failed to register CommandHandler as EventHandler", e);
+			}
+		}
+	}
 
-		ChatType chatType = ChatType.of(reader.getByte());
-		byte chatIndex = reader.getByte();
-		log.info("Chat index {} , Chat Type {} ", chatIndex, chatType.name());
+	@PreDestroy
+	public void cleanup() {
+		if (eventHandlerRegistration != null) {
+			try {
+				eventHandlerRegistration.unregister();
+				log.info("CommandHandler EventHandler unregistered");
+			} catch (Exception e) {
+				log.error("Error unregistering CommandHandler EventHandler", e);
+			}
+		}
+	}
 
-		if (chatType == ChatType.PM) {
-			String reciver = reader.getString();
-			if (reciver.equals(this.trainerName)) {
-				 log.info("Chat Message Reciver {} " , reciver);
-				String message = reader.getString();
-
-				this.ctx.getBean(CommandLine.class).execute(message);
+	/**
+	 * Handles ChatMessageEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ClientOpcode.CHAT_REQUEST) to event-driven approach.
+	 * 
+	 * Note: Original code listened to CLIENT packets, but that was likely incorrect.
+	 * We now listen to SERVER packets (CHAT_UPDATE) which contain incoming chat messages.
+	 */
+	private void handleChatMessageEvent(Event osgiEvent) {
+		try {
+			ChatMessageEvent event = (ChatMessageEvent) osgiEvent.getProperty("event");
+			String machineName = (String) osgiEvent.getProperty("machineName");
+			
+			// Only handle events for this machine
+			// machineName is extracted from fullName (format: "groupName.machineName")
+			String[] parts = machineName != null ? machineName.split("\\.") : new String[0];
+			String actualMachineName = parts.length > 1 ? parts[1] : machineName;
+			
+			if (!this.trainerName.equals(actualMachineName)) {
+				return;
 			}
 
+			// Only handle private messages
+			// For private messages received from server, senderName is who sent it to us
+			// If we receive a private message, it's addressed TO this trainer
+			if (event.getChatType() == ChatMessageEvent.ChatType.PRIVATE) {
+				log.info("Received private chat message from {}: {}", 
+					event.getSenderName(), event.getMessage());
+				
+				// Execute command from private message
+				this.ctx.getBean(CommandLine.class).execute(event.getMessage());
+			}
+		} catch (Exception e) {
+			log.error("Error handling ChatMessageEvent", e);
 		}
-
 	}
 
 	@Command(name = "useSkill")

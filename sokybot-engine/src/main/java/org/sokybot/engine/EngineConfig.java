@@ -86,7 +86,7 @@ public class EngineConfig {
 
     /**
      * Expose IPacketPublisher from the proxy connection.
-     * This is required for PacketListenerInstaller to wire up controller listeners.
+     * This is used by PacketDispatcher to forward packets to GameEventPublisher.
      */
     @Bean
     public org.sokybot.network.IPacketPublisher packetPublisher(IProxyConnection connection) {

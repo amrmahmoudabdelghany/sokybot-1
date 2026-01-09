@@ -1,6 +1,26 @@
 package org.sokybot.machine.controller;
 
+import java.util.Dictionary;
+import java.util.Hashtable;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventConstants;
+import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
+import org.sokybot.gameevents.events.character.CharacterDeathEvent;
+import org.sokybot.gameevents.events.character.CharacterInfoEvent;
+import org.sokybot.gameevents.events.character.CharacterLoadedEvent;
+import org.sokybot.gameevents.events.core.IGameEvent;
+import org.sokybot.gameevents.events.skill.MasteryLevelUpEvent;
+import org.sokybot.gameevents.events.skill.SkillLevelUpEvent;
+import org.sokybot.gameevents.events.skill.SkillPointsUpdateEvent;
+import org.sokybot.gameevents.events.stat.ExpUpdateEvent;
+import org.sokybot.app.AppConstants;
 import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineState;
 import org.sokybot.machine.event.MasteryLvlUpEvent;
@@ -9,7 +29,6 @@ import org.sokybot.machine.event.trainerevent.TrainerLoadedEvent;
 import org.sokybot.machine.event.userevent.UserUpdateSkillEvent;
 import org.sokybot.machine.gamemodel.Trainer;
 import org.sokybot.machine.model.ClientFeed;
-import org.sokybot.machine.network.PacketListener;
 import org.sokybot.machine.parser.ICharacterDataReader;
 import org.sokybot.machinegroup.gamemodel.AttackGainType;
 import org.sokybot.machinegroup.gamemodel.item.Item;
@@ -26,12 +45,14 @@ import org.sokybot.machinegroup.gamemodel.npc.PVPState;
 import org.sokybot.machinegroup.gamemodel.setting.Settings;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.gameevents.events.stat.GoldUpdateEvent;
 import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.network.packet.ServerOpcode;
 import org.sokybot.utils.SilkroadUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.statemachine.StateMachine;
 import org.springframework.stereotype.Controller;
@@ -55,8 +76,299 @@ public class TrainerHandler {
 	private StateMachine<MachineState, IMachineEvent> stateMachine;
 	
 	@Autowired
-	private Settings config ; 
+	private Settings config;
 
+	@Autowired
+	private BundleContext bundleContext;
+
+	@Value("${" + AppConstants.MACHINE_NAME + "}")
+	private String machineName;
+
+	@Value("${" + AppConstants.GROUP_NAME + "}")
+	private String groupName;
+
+	private ServiceRegistration<EventHandler> eventHandlerRegistration;
+
+	private String machineFullName() {
+		return groupName + "." + machineName;
+	}
+
+	@PostConstruct
+	public void init() {
+		// Register as OSGi EventHandler to listen to game events
+		if (bundleContext != null) {
+			try {
+				Dictionary<String, Object> properties = new Hashtable<>();
+				// Subscribe to all game events for this machine
+				String machineFullName = machineFullName();
+				String topicPattern = "sokybot/game/" + machineFullName + "/*";
+				properties.put(EventConstants.EVENT_TOPIC, topicPattern);
+				
+				// Create EventHandler that delegates to this controller
+				EventHandler handler = this::handleGameEvent;
+				
+				eventHandlerRegistration = bundleContext.registerService(
+						EventHandler.class,
+						handler,
+						properties);
+				
+				log.info("TrainerHandler registered as OSGi EventHandler for machine: {}", machineFullName);
+			} catch (Exception e) {
+				log.error("Failed to register TrainerHandler as EventHandler", e);
+			}
+		}
+	}
+
+	@PreDestroy
+	public void cleanup() {
+		if (eventHandlerRegistration != null) {
+			try {
+				eventHandlerRegistration.unregister();
+				log.info("TrainerHandler EventHandler unregistered");
+			} catch (Exception e) {
+				log.error("Error unregistering TrainerHandler EventHandler", e);
+			}
+		}
+	}
+
+	/**
+	 * Central event handler that routes OSGi events to appropriate methods.
+	 */
+	private void handleGameEvent(Event osgiEvent) {
+		try {
+			IGameEvent event = (IGameEvent) osgiEvent.getProperty("event");
+			if (event == null) {
+				return;
+			}
+
+			// Only handle events for this machine
+			if (!machineFullName().equals(event.getFullName())) {
+				return;
+			}
+
+			String eventType = event.getClass().getSimpleName();
+
+			// Route to appropriate handler based on event type
+			switch (eventType) {
+				case "CharacterLoadedEvent":
+					handleCharacterLoadedEvent((CharacterLoadedEvent) event);
+					break;
+				case "CharacterInfoEvent":
+					handleCharacterInfoEvent((CharacterInfoEvent) event);
+					break;
+				case "ExpUpdateEvent":
+					handleExpUpdateEvent((ExpUpdateEvent) event);
+					break;
+				case "CharacterDeathEvent":
+					handleCharacterDeathEvent((CharacterDeathEvent) event);
+					break;
+				case "GoldUpdateEvent":
+					handleGoldUpdateEvent((GoldUpdateEvent) event);
+					break;
+				case "SkillPointsUpdateEvent":
+					handleSkillPointsUpdateEvent((SkillPointsUpdateEvent) event);
+					break;
+				case "MasteryLevelUpEvent":
+					handleMasteryLevelUpEvent((MasteryLevelUpEvent) event);
+					break;
+				case "SkillLevelUpEvent":
+					handleSkillLevelUpEvent((SkillLevelUpEvent) event);
+					break;
+				default:
+					log.debug("Unhandled event type: {}", eventType);
+					break;
+			}
+		} catch (Exception e) {
+			log.error("Error handling game event", e);
+		}
+	}
+
+	// ========== EVENT HANDLERS (migrated from @PacketListener) ==========
+
+	/**
+	 * Handles CharacterLoadedEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.CHAR_DATA)
+	 * 
+	 * NOTE: CharacterLoadedEvent contains basic character data but not the full parsing
+	 * of items, masteries, skills, quests that ICharacterDataReader provides.
+	 * This handler uses the event data to update trainer with available information.
+	 * Full parsing with items/masteries/skills still requires packet parsing for now.
+	 */
+	private void handleCharacterLoadedEvent(CharacterLoadedEvent event) {
+		log.info("Character Loaded Event received");
+
+		// Update basic stats from event
+		trainer.setLevel((byte) event.getLevel());
+		trainer.setMaxlvl((byte) event.getMaxLevel());
+		trainer.setCharEXPOffset(event.getExperience());
+		trainer.setGold(event.getGold());
+		trainer.setSkillPoint((int) event.getSkillPoints());
+		trainer.setCharHP(event.getCurrentHP());
+		trainer.setCharMP(event.getCurrentMP());
+
+		// Update position
+		trainer.setXSector((byte) event.getXSector());
+		trainer.setYSector((byte) event.getYSector());
+		trainer.setXOffset(event.getXOffset());
+		trainer.setYOffset(event.getYOffset());
+		trainer.setZOffset(event.getZOffset());
+		trainer.setAngle(event.getAngle());
+
+		// Compute world coordinates
+		int x = SilkroadUtils.getXCoord(trainer.getXOffset(), trainer.getXSector(), 10);
+		int y = SilkroadUtils.getYCoord(trainer.getYOffset(), trainer.getYSector(), 10);
+		trainer.setLocation(x, y);
+
+		// Update speeds
+		trainer.setWalkSpeed(event.getWalkSpeed());
+		trainer.setRunSpeed(event.getRunSpeed());
+
+		// NOTE: Items, masteries, skills, quests, buffs parsing still requires
+		// ICharacterDataReader and packet parsing. The event only contains counts.
+		// For now, we trigger the state machine and publish TrainerLoadedEvent.
+		// Full parsing can be done later if needed.
+
+		// Trigger state machine transition
+		this.stateMachine.sendEvent(ClientFeed.GAME_READY);
+		this.ctx.publishEvent(new TrainerLoadedEvent(trainer));
+
+		log.info("Trainer Loaded");
+	}
+
+	/**
+	 * Handles CharacterInfoEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.CHAR_INFO)
+	 * 
+	 * NOTE: CharacterInfoEvent doesn't include STR/INT stats that the original code sets.
+	 * These are set separately or may need to be added to the event.
+	 */
+	private void handleCharacterInfoEvent(CharacterInfoEvent event) {
+		this.trainer.setPhyAtkMin(event.getPhyAtkMin());
+		this.trainer.setPhyAtkMax(event.getPhyAtkMax());
+		this.trainer.setMagAtkMin(event.getMagAtkMin());
+		this.trainer.setMagAtkMax(event.getMagAtkMax());
+		this.trainer.setPhyDef(event.getPhyDef());
+		this.trainer.setMagDef(event.getMagDef());
+		this.trainer.setHitRate(event.getHitRate());
+		this.trainer.setParryRate(event.getParryRate());
+		this.trainer.setMaxHP(event.getMaxHP());
+		this.trainer.setMaxMP(event.getMaxMP());
+		this.trainer.setCharSTR(event.getStrength());
+		this.trainer.setCharINT(event.getIntelligence());
+	}
+
+	/**
+	 * Handles ExpUpdateEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.EXP_SP_UPDATE)
+	 */
+	private void handleExpUpdateEvent(ExpUpdateEvent event) {
+		// Original code computed level changes from exp difference
+		// ExpUpdateEvent already contains levelUp flag and total exp
+		long newExpOffset = event.getTotalExp();
+		long currentExpOffset = this.trainer.getCharEXPOffset();
+		long gainedEXP = newExpOffset - currentExpOffset;
+
+		// Handle level changes if levelUp flag is set
+		if (event.isLevelUp()) {
+			// Level increased - adjust exp offset
+			long currentMaxExp = this.gameDao.getLvlEXP(this.trainer.getLevel()).orElse(118L);
+			long remainingExp = newExpOffset - currentMaxExp;
+			
+			// Level might have increased multiple times
+			while (remainingExp >= currentMaxExp && this.trainer.getLevel() < 120) {
+				this.trainer.setLevel((byte) (this.trainer.getLevel() + 1));
+				currentMaxExp = this.gameDao.getLvlEXP(this.trainer.getLevel()).orElse(118L);
+				remainingExp -= currentMaxExp;
+			}
+			
+			this.trainer.setCharEXPOffset(remainingExp >= 0 ? remainingExp : newExpOffset);
+		} else if (gainedEXP < 0) {
+			// Level might have decreased
+			long currentMaxExp = this.gameDao.getLvlEXP(this.trainer.getLevel()).orElse(118L);
+			long adjustedExp = newExpOffset;
+			
+			while (adjustedExp < 0 && this.trainer.getLevel() > 1) {
+				this.trainer.setLevel((byte) (this.trainer.getLevel() - 1));
+				currentMaxExp = this.gameDao.getLvlEXP(this.trainer.getLevel()).orElse(118L);
+				adjustedExp += currentMaxExp;
+			}
+			
+			this.trainer.setCharEXPOffset(adjustedExp);
+		} else {
+			// Normal exp update
+			this.trainer.setCharEXPOffset(newExpOffset);
+		}
+	}
+
+	/**
+	 * Handles CharacterDeathEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.CHAR_DIE)
+	 */
+	private void handleCharacterDeathEvent(CharacterDeathEvent event) {
+		// Original code checked a flag byte, but CharacterDeathEvent represents death directly
+		this.trainer.setLifeState(LifeState.Dead);
+	}
+
+	/**
+	 * Handles GoldUpdateEvent from OSGi EventAdmin.
+	 * Partially migrated from @PacketListener(opcode = ServerOpcode.ATTACK_GAINS_UPDATE)
+	 */
+	private void handleGoldUpdateEvent(GoldUpdateEvent event) {
+		this.trainer.setGold(event.getNewGoldAmount());
+	}
+
+	/**
+	 * Handles SkillPointsUpdateEvent from OSGi EventAdmin.
+	 * Partially migrated from @PacketListener(opcode = ServerOpcode.ATTACK_GAINS_UPDATE)
+	 */
+	private void handleSkillPointsUpdateEvent(SkillPointsUpdateEvent event) {
+		this.trainer.setSkillPoint(event.getNewSkillPoints());
+	}
+
+	/**
+	 * Handles MasteryLevelUpEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.CHAR_MASTERY_LVL_UP)
+	 */
+	private void handleMasteryLevelUpEvent(MasteryLevelUpEvent event) {
+		if (event.isSuccess()) {
+			int masteryId = event.getMasteryId();
+			byte newLevel = (byte) event.getNewLevel();
+			
+			this.trainer.getMastryList().findMastry(masteryId).ifPresent((m) -> {
+				m.setMasteryLevel(newLevel);
+				// Publish Spring event for backward compatibility
+				this.ctx.publishEvent(new MasteryLvlUpEvent(this, m));
+			});
+		}
+	}
+
+	/**
+	 * Handles SkillLevelUpEvent from OSGi EventAdmin.
+	 * Migrated from @PacketListener(opcode = ServerOpcode.CHAR_SKILL_LVL_UP)
+	 */
+	private void handleSkillLevelUpEvent(SkillLevelUpEvent event) {
+		if (event.isSuccess()) {
+			int skillId = event.getSkillId();
+			
+			this.gameDao.findSkillEntity(skillId).ifPresent((skillEntity) -> {
+				Skill skill = new Skill(skillEntity);
+				skill.setIsEnabled((byte) 0x01);
+				log.info("Skill updated: {}", skill);
+				// Publish Spring event for backward compatibility
+				this.ctx.publishEvent(new SkillLvlupEvent(skill));
+			});
+		}
+	}
+
+	// ========== DEPRECATED: Still requires packet parsing ==========
+	
+	/**
+	 * DEPRECATED: This handler still requires full packet parsing via ICharacterDataReader
+	 * to extract items, masteries, skills, quests, buffs, etc.
+	 * CharacterLoadedEvent provides basic data but not full entity parsing.
+	 * TODO: Either enhance CharacterLoadedEvent to include full parsing or keep packet parsing for this
+	 */
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.CHAR_DATA)
 	public void parsingCharData(ImmutablePacket packet) {
 
@@ -263,6 +575,7 @@ public class TrainerHandler {
 
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.CHAR_INFO)
 	public void parsingCharInfo(ImmutablePacket packet) {
 		IStreamReader reader = packet.getStreamReader();
@@ -280,9 +593,9 @@ public class TrainerHandler {
 		this.trainer.setMaxMP(reader.getInt());
 		this.trainer.setCharSTR(reader.getShort());
 		this.trainer.setCharINT(reader.getShort());
-
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.EXP_SP_UPDATE)
 	public void expUpdate(ImmutablePacket packet) {
 
@@ -324,20 +637,17 @@ public class TrainerHandler {
 
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.CHAR_DIE)
 	public void onCharDie(ImmutablePacket packet) {
-
 		IStreamReader reader = packet.getStreamReader();
-
 		byte flag = reader.getByte();
-
 		if (flag == 0x04) {
-
 			this.trainer.setLifeState(LifeState.Dead);
 		}
-
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.ATTACK_GAINS_UPDATE)
 	public void attackGainsUpdates(ImmutablePacket packet) {
 		IStreamReader reader = packet.getStreamReader();
@@ -359,14 +669,12 @@ public class TrainerHandler {
 
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.CHAR_MASTERY_LVL_UP)
 	public void masteryLevelUp(ImmutablePacket packet) {
 		IStreamReader reader = packet.getStreamReader();
-
 		byte result = reader.getByte();
-
 		if (result == 1) {
-
 			int masteryId = reader.getInt();
 			byte newLvl = reader.getByte();
 			this.trainer.getMastryList().findMastry(masteryId).ifPresent((m) -> {
@@ -374,23 +682,18 @@ public class TrainerHandler {
 				this.ctx.publishEvent(new MasteryLvlUpEvent(this, m));
 			});
 		}
-
 	}
 
+	@Deprecated
 	@PacketListener(opcode = ClientOpcode.CHAR_SKILL_LVL_UP)
 	public void userlvlUpSkill(ImmutablePacket packet) { 
-		
-		
-		int refId  = packet.getStreamReader().getInt() ; 
-		
-		 this.gameDao
-		 .findSkillEntity(refId)
-		 .ifPresent((skillEntity)->{
-			 
-			 	 this.ctx.publishEvent(new UserUpdateSkillEvent(TrainerHandler.this, skillEntity)) ; 
-		 });
-		 
+		int refId = packet.getStreamReader().getInt();
+		this.gameDao.findSkillEntity(refId).ifPresent((skillEntity) -> {
+			this.ctx.publishEvent(new UserUpdateSkillEvent(TrainerHandler.this, skillEntity));
+		});
 	}
+
+	@Deprecated
 	@PacketListener(opcode = ServerOpcode.CHAR_SKILL_LVL_UP)
 	public void skillLevelUp(ImmutablePacket packet) {
 		

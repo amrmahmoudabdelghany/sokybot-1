@@ -2,9 +2,9 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.PartyMatchingEvent;
-import org.sokybot.api.events.PartyMatchingEvent.MatchingEventType;
+import org.sokybot.gameevents.events.core.IGameEvent;
+import org.sokybot.gameevents.events.party.PartyMatchingEvent;
+import org.sokybot.gameevents.events.party.PartyMatchingEvent.MatchingEventType;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;

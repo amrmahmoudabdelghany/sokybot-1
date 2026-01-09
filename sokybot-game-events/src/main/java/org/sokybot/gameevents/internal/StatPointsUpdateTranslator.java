@@ -2,9 +2,9 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.StatPointsUpdateEvent;
-import org.sokybot.api.events.StatPointsUpdateEvent.StatType;
+import org.sokybot.gameevents.events.core.IGameEvent;
+import org.sokybot.gameevents.events.stat.StatPointsUpdateEvent;
+import org.sokybot.gameevents.events.stat.StatPointsUpdateEvent.StatType;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;

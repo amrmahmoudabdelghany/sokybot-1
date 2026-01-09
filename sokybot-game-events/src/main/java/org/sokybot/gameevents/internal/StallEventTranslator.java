@@ -2,9 +2,9 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.IGameEvent;
-import org.sokybot.api.events.StallEvent;
-import org.sokybot.api.events.StallEvent.StallEventType;
+import org.sokybot.gameevents.events.core.IGameEvent;
+import org.sokybot.gameevents.events.stall.StallEvent;
+import org.sokybot.gameevents.events.stall.StallEvent.StallEventType;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;

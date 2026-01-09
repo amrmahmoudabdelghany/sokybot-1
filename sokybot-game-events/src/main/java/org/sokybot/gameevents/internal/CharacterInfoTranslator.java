@@ -2,8 +2,8 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.CharacterInfoEvent;
-import org.sokybot.api.events.IGameEvent;
+import org.sokybot.gameevents.events.character.CharacterInfoEvent;
+import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;
@@ -44,11 +44,14 @@ public class CharacterInfoTranslator extends AbstractTranslator {
             int maxHP = reader.getInt();
             int maxMP = reader.getInt();
             
-            // Skip STR/INT shorts if not needed
+            // Extract STR/INT stats
+            short strength = reader.getShort();
+            short intelligence = reader.getShort();
             
             return singleEvent(new CharacterInfoEvent(machineFullName, 
                 phyAtkMin, phyAtkMax, magAtkMin, magAtkMax,
-                phyDef, magDef, hitRate, parryRate, maxHP, maxMP));
+                phyDef, magDef, hitRate, parryRate, maxHP, maxMP,
+                strength, intelligence));
             
         } catch (Exception e) {
             return noEvents();

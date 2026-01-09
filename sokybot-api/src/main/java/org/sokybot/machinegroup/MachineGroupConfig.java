@@ -11,7 +11,7 @@ import org.hibernate.jpa.HibernatePersistenceProvider;
 import org.hibernate.tool.schema.Action;
 import org.sokybot.ICacheStorage;
 //import org.sokybot.gameloader.GameLoader;
-import org.sokybot.service.IGameLoader;
+import org.sokybot.loader.IGameLoader;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;

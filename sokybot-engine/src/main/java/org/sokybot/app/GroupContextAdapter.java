@@ -1,3 +1,4 @@
+/*
 package org.sokybot.app;
 
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ import javax.annotation.PostConstruct;
 import org.sokybot.IGroupContext;
 import org.sokybot.IMachineContext;
 import org.sokybot.IMachineListener;
-import org.sokybot.IPageViewer;
+import org.sokybot.ui.api.IPageViewer;
 import org.sokybot.app.domain.GroupInfo;
 import org.sokybot.app.domain.MachineInfo;
 import org.sokybot.exception.NameUniquenessConstraintViolationException;
@@ -165,3 +166,4 @@ public class GroupContextAdapter implements IGroupContext {
 		return this.groupCtx.isRunning();
 	}
 }
+*/

@@ -1,4 +1,4 @@
-package org.sokybot.pk2extractor.mediapk2;
+package org.sokybot.pk2extractor.mediapk2.character;
 
 import java.nio.charset.StandardCharsets;
 
@@ -10,7 +10,7 @@ import org.sokybot.pk2extractor.ExtractionListener;
 import org.sokybot.pk2extractor.ExtractionProgressListener;
 import org.sokybot.pk2extractor.IExtractor;
 import org.sokybot.pk2extractor.Pk2ExtractorUtils;
-import org.sokybot.pk2extractor.dto.CharacterData;
+import org.sokybot.pk2extractor.dto.character.CharacterData;
 import org.sokybot.pk2extractor.exception.Pk2MissedResourceException;
 
 /**
@@ -173,6 +173,54 @@ public class CharacterDataExtractor implements IExtractor<CharacterData> {
                 if (codeName.equals("SN_MOB_GOD_PILLAR")) builder.isDimensionPillar(true);
                 if (codeName.startsWith("STRUCTURE_SUMMON_FLOWER_")) builder.isSummonFlower(true);
                 if (codeName.startsWith("MOB_EV")) builder.isEventMob(true);
+            }
+            
+            // Movement speeds (columns 46-48) - from skrillax characterdata.rs
+            if (record.size() > 46 && NumberUtils.isParsable(record.get(46))) {
+                builder.walkSpeed(Integer.parseInt(record.get(46)));
+            }
+            if (record.size() > 47 && NumberUtils.isParsable(record.get(47))) {
+                builder.runSpeed(Integer.parseInt(record.get(47)));
+            }
+            if (record.size() > 48 && NumberUtils.isParsable(record.get(48))) {
+                builder.berserkSpeed(Integer.parseInt(record.get(48)));
+            }
+            
+            // Combat ranges (columns 50, 61)
+            if (record.size() > 50 && NumberUtils.isParsable(record.get(50))) {
+                builder.baseRange(Integer.parseInt(record.get(50)));
+            }
+            if (record.size() > 61 && NumberUtils.isParsable(record.get(61))) {
+                builder.pickupRange(Integer.parseInt(record.get(61)));
+            }
+            
+            // Experience (column 79)
+            if (record.size() > 79 && NumberUtils.isParsable(record.get(79))) {
+                builder.exp(Integer.parseInt(record.get(79)));
+            }
+            
+            // Skills (columns 83-92, non-zero skill IDs)
+            if (record.size() > 92) {
+                int[] skills = new int[10];
+                int skillCount = 0;
+                for (int i = 83; i <= 92; i++) {
+                    if (NumberUtils.isParsable(record.get(i))) {
+                        int skillId = Integer.parseInt(record.get(i));
+                        if (skillId != 0) {
+                            skills[skillCount++] = skillId;
+                        }
+                    }
+                }
+                if (skillCount > 0) {
+                    int[] trimmed = new int[skillCount];
+                    System.arraycopy(skills, 0, trimmed, 0, skillCount);
+                    builder.skillIds(trimmed);
+                }
+            }
+            
+            // Aggressive flag (column 93)
+            if (record.size() > 93 && NumberUtils.isParsable(record.get(93))) {
+                builder.aggressive(Integer.parseInt(record.get(93)) == 1);
             }
             
             return builder.build();

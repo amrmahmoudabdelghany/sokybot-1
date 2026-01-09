@@ -5,7 +5,7 @@ import javax.swing.JComponent;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.sokybot.IMachinePageViewer;
+import org.sokybot.ui.api.IMachinePageViewer;
 import org.sokybot.app.AppConstants;
 import org.sokybot.machinegroup.DashboardContainer;
 import org.sokybot.machinegroup.PageContainer;

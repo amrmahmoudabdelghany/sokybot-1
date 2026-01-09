@@ -2,9 +2,9 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
-import org.sokybot.api.events.CosDataEvent;
-import org.sokybot.api.events.CosType;
-import org.sokybot.api.events.IGameEvent;
+import org.sokybot.gameevents.events.cos.CosDataEvent;
+import org.sokybot.gameevents.events.cos.CosType;
+import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.network.packet.ImmutablePacket;
