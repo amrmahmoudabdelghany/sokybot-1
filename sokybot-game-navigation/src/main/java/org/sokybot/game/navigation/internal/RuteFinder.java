@@ -1,4 +1,4 @@
-package org.sokybot.machinegroup.mapnavigation;
+package org.sokybot.game.navigation.internal;
 
 import java.awt.Color;
 import java.awt.Rectangle;
@@ -26,19 +26,20 @@ import org.sokybot.persistence.entities.navmesh.NavBorderRef;
 import org.sokybot.persistence.entities.navmesh.NavCellRef;
 import org.sokybot.persistence.entities.ObjectNavMesh;
 import org.sokybot.persistence.entities.navmesh.Position;
-import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplit;
-import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef;
-import org.sokybot.machinegroup.mapnavigation.triangulation.LineRef;
-import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType;
-import org.sokybot.machinegroup.mapnavigation.triangulation.Line;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.game.navigation.internal.triangulation.CellSplit;
+import org.sokybot.game.navigation.internal.triangulation.CellSplitRef;
+import org.sokybot.game.navigation.internal.triangulation.LineRef;
+import org.sokybot.game.navigation.internal.triangulation.CellSplitRef.LineType;
+import org.sokybot.game.navigation.internal.triangulation.Line;
+import org.sokybot.game.navigation.IRuteFinder;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 import static org.sokybot.utils.SilkroadUtils.getSectorYX;
 import static org.sokybot.utils.SilkroadUtils.getSectorOffset;
 
-public class RuteFinder {
+public class RuteFinder implements IRuteFinder {
 
-	private ISroMaterialDAO sroDao;
+	private IGameDataLookup gameDataLookup;
 
 	private Position pStart, pStop;
 
@@ -58,16 +59,18 @@ public class RuteFinder {
 
 	private float hEstimate = 1;
 
-	public RuteFinder(ISroMaterialDAO sroDao) {
-		this.sroDao = sroDao;
-		this.navMesh = new NavMesh(sroDao);
-
+	public RuteFinder(NavMesh navMesh, IGameDataLookup gameDataLookup) {
+		this.gameDataLookup = gameDataLookup;
+		this.navMesh = navMesh;
 	}
+
+	@Override
 
 	public List<Vector2D> findPath(float startX, float startY, float stopX, float stopY, float h) {
 		return findPath(new Position(startX, 0, startY), new Position(stopX, 0, stopY), h);
 	}
 
+	@Override
 	public List<Vector2D> findPath(Position start, Position stop, float h) {
 
 		System.out.println("findPath start (" + start.getX() + "," + start.getY() + " )" + " , stop (" + stop.getX()

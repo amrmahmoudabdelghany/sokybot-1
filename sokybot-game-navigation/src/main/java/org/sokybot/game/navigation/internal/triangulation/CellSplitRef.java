@@ -1,4 +1,4 @@
-package org.sokybot.machinegroup.mapnavigation.triangulation;
+package org.sokybot.game.navigation.internal.triangulation;
 
 import java.awt.geom.Point2D.Float;
 import java.util.ArrayList;

@@ -1,26 +1,22 @@
-package org.sokybot.machinegroup.mapnavigation;
+package org.sokybot.game.navigation.internal;
 
 import static org.sokybot.utils.SilkroadUtils.getSectorOffset;
 import static org.sokybot.utils.SilkroadUtils.getSectorYX;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import org.sokybot.persistence.entities.ObjectNavMesh;
 import org.sokybot.persistence.entities.SectorRef;
-import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplit;
-import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef;
-import org.sokybot.machinegroup.mapnavigation.triangulation.Triangulator;
-import org.sokybot.machinegroup.service.ISroMaterialDAO;
+import org.sokybot.game.navigation.internal.triangulation.CellSplit;
+import org.sokybot.game.navigation.internal.triangulation.Triangulator;
+import org.sokybot.persistence.service.IGameDataLookup;
 
 public class NavMesh {
 
-	private ISroMaterialDAO sroDao;
+	private IGameDataLookup gameDataLookup;
 
 	private Triangulator ops = new Triangulator();
 
-	public NavMesh(ISroMaterialDAO sroDao) {
-		this.sroDao = sroDao;
+	public NavMesh(IGameDataLookup gameDataLookup) {
+		this.gameDataLookup = gameDataLookup;
 	}
 
 	public Sector getSector(byte sectorX, byte sectorY) {
@@ -28,7 +24,7 @@ public class NavMesh {
 	}
 
 	public Sector getSector(short sectorYX) {
-		SectorRef ref = this.sroDao.findSegment(sectorYX).orElseThrow();
+		SectorRef ref = this.gameDataLookup.findSector(sectorYX).orElseThrow();
 		return new Sector(this, ref);
 	}
 
@@ -37,7 +33,7 @@ public class NavMesh {
 	}
 
 	public boolean containsSector(short sectorYX) {
-		return this.sroDao.findSegment(sectorYX).map((s) -> true).orElse(false);
+		return this.gameDataLookup.findSector(sectorYX).map((s) -> true).orElse(false);
 	}
 
 	public Sector getSectorAt(float x, float y) {
@@ -55,13 +51,14 @@ public class NavMesh {
 	}
 
 	public ObjectNavMesh getObjectNavMesh(int objectId) {
-		return this.sroDao.findObjectNavMesh(objectId).orElse(null);
+		return this.gameDataLookup.findObjectNavMesh(objectId).orElse(null);
 	}
 
 	private SectorRef getSectorRef(short sectorYX) {
 
-		return this.sroDao.findSegment(sectorYX).orElse(null);
+		return this.gameDataLookup.findSector(sectorYX).orElse(null);
 
 	}
 
 }
+

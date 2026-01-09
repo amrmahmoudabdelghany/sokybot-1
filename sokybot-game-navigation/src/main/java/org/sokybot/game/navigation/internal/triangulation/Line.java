@@ -1,9 +1,9 @@
-package org.sokybot.machinegroup.mapnavigation.triangulation;
+package org.sokybot.game.navigation.internal.triangulation;
 
 import java.util.stream.Stream;
 
 import org.sokybot.persistence.entities.geo.Vector2D;
-import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType;
+import org.sokybot.game.navigation.internal.triangulation.CellSplitRef.LineType;
 
 import lombok.AllArgsConstructor;
 

@@ -4,6 +4,7 @@ import java.util.Optional;
 
 import org.sokybot.IContextAdapter;
 import org.sokybot.ui.api.IPageViewer;
+import org.sokybot.game.navigation.IRuteFinder;
 import org.sokybot.service.ISroDAO;
 
 public interface IGroupContext extends IContextAdapter {
@@ -20,4 +21,11 @@ public interface IGroupContext extends IContextAdapter {
 	void removeMachineListener(IMachineListener machineListener);
 	void installMachine(String name);
 	void installMachine(String name, String... options);
+	
+	/**
+	 * Get the route finder for this group.
+	 * Created once per group using IRuteFinderFactory.
+	 */
+	IRuteFinder getRuteFinder();
 }
+

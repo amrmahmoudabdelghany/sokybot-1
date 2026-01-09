@@ -1,4 +1,4 @@
-package org.sokybot.machinegroup.mapnavigation;
+package org.sokybot.game.navigation.internal;
 
 
 import java.awt.geom.Rectangle2D;

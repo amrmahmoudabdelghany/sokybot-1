@@ -1,4 +1,4 @@
-package org.sokybot.machinegroup.mapnavigation.triangulation;
+package org.sokybot.game.navigation.internal.triangulation;
 
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
@@ -21,12 +21,12 @@ import org.sokybot.persistence.entities.geo.Vector2D;
 import org.sokybot.persistence.entities.navmesh.ObjectLineRef;
 import org.sokybot.persistence.entities.ObjectNavMesh;
 import org.sokybot.persistence.entities.navmesh.Position;
-import org.sokybot.machinegroup.mapnavigation.Border;
-import org.sokybot.machinegroup.mapnavigation.Cell;
-import org.sokybot.machinegroup.mapnavigation.CellLink;
-import org.sokybot.machinegroup.mapnavigation.CellObject;
-import org.sokybot.machinegroup.mapnavigation.ObjectLine;
-import org.sokybot.machinegroup.mapnavigation.triangulation.CollisionDetector.CollisionResult;
+import org.sokybot.game.navigation.internal.Border;
+import org.sokybot.game.navigation.internal.Cell;
+import org.sokybot.game.navigation.internal.CellLink;
+import org.sokybot.game.navigation.internal.CellObject;
+import org.sokybot.game.navigation.internal.ObjectLine;
+import org.sokybot.game.navigation.internal.triangulation.CollisionDetector.CollisionResult;
 
 public class Triangulator {
 
@@ -389,21 +389,21 @@ public class Triangulator {
 			Point lB = cellSplit.points.get(l1.bIndex);
 
 			if (isBlockedLine(lA.getX(), lA.getY(), lB.getX(), lB.getY())) {
-				l1.lineType = org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType.Block;
+				l1.lineType = CellSplitRef.LineType.Block;
 			}
 
 			lA = cellSplit.points.get(l2.aIndex);
 			lB = cellSplit.points.get(l2.bIndex);
 
 			if (isBlockedLine(lA.getX(), lA.getY(), lB.getX(), lB.getY())) {
-				l2.lineType = org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType.Block;
+				l2.lineType = CellSplitRef.LineType.Block;
 			}
 
 			lA = cellSplit.points.get(l3.aIndex);
 			lB = cellSplit.points.get(l3.bIndex);
 
 			if (isBlockedLine(lA.getX(), lA.getY(), lB.getX(), lB.getY())) {
-				l3.lineType = org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType.Block;
+				l3.lineType = CellSplitRef.LineType.Block;
 			}
 
 			
@@ -497,19 +497,19 @@ public class Triangulator {
 
 					case BC:
 
-						lineRef.lineType = org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType.BC;
+						lineRef.lineType = CellSplitRef.LineType.BC;
 						break;
 
 					case Block:
-						lineRef.lineType = org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType.Block;
+						lineRef.lineType = CellSplitRef.LineType.Block;
 						break;
 
 					case Entry:
-						lineRef.lineType = org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType.ObjectEntrance;
+						lineRef.lineType = CellSplitRef.LineType.ObjectEntrance;
 						break;
 
 					case LC:
-						lineRef.lineType = org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType.LC;
+						lineRef.lineType = CellSplitRef.LineType.LC;
 						break;
 
 					}

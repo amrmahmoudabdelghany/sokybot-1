@@ -8,6 +8,8 @@ import javax.persistence.EntityManagerFactory;
 import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.persistence.entities.MasteryData;
 import org.sokybot.persistence.entities.NPCEntity;
+import org.sokybot.persistence.entities.ObjectNavMesh;
+import org.sokybot.persistence.entities.SectorRef;
 import org.sokybot.persistence.entities.SkillEntity;
 import org.sokybot.persistence.service.IGameDataLookup;
 
@@ -73,4 +75,27 @@ public class GameDataLookupImpl implements IGameDataLookup {
             em.close();
         }
     }
+    
+    @Override
+    public Optional<SectorRef> findSector(short sectorYX) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            SectorRef result = em.find(SectorRef.class, sectorYX);
+            return Optional.ofNullable(result);
+        } finally {
+            em.close();
+        }
+    }
+    
+    @Override
+    public Optional<ObjectNavMesh> findObjectNavMesh(int objectId) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            ObjectNavMesh result = em.find(ObjectNavMesh.class, objectId);
+            return Optional.ofNullable(result);
+        } finally {
+            em.close();
+        }
+    }
 }
+

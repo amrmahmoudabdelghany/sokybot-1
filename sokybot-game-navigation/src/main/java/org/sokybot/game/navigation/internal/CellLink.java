@@ -1,4 +1,4 @@
-package org.sokybot.machinegroup.mapnavigation;
+package org.sokybot.game.navigation.internal;
 
 import org.sokybot.persistence.entities.geo.Vector2D;
 import org.sokybot.persistence.entities.navmesh.NavCellLinkRef;

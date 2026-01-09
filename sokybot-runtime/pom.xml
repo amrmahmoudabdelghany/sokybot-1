@@ -61,6 +61,14 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        
+        <!-- Game Navigation for IRuteFinder -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-game-navigation</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
 
         <!-- OSGi Declarative Services annotations -->

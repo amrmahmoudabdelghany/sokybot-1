@@ -20,6 +20,10 @@ import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.runtime.internal.MachineContextFactory;
 import org.sokybot.engine.SpringGroupContextWrapper;
 import org.sokybot.exception.NameUniquenessConstraintViolationException;
+import org.sokybot.game.navigation.IRuteFinder;
+import org.sokybot.game.navigation.IRuteFinderFactory;
+import org.sokybot.persistence.service.IGameDataLookup;
+import org.sokybot.persistence.service.IGamePersistenceFactory;
 import org.sokybot.persistence.service.MachineInfoRepository;
 import org.sokybot.service.ISroDAO;
 import org.slf4j.Logger;
@@ -45,6 +49,10 @@ public class GroupContextImpl implements IGroupContext {
     private MachineInfoRepository machineInfoRepo;
     private IMachineContextFactory machineContextFactory;
     private EventAdmin eventAdmin;
+    private IRuteFinderFactory ruteFinderFactory;
+    private IGamePersistenceFactory gamePersistenceFactory;
+    
+    private IRuteFinder ruteFinder;
     
     private final Lock lock = new ReentrantLock();
     private final Map<String, IMachineContext> machines = new HashMap<>();
@@ -73,6 +81,18 @@ public class GroupContextImpl implements IGroupContext {
                 ServiceReference<EventAdmin> eventAdminRef = bundleContext.getServiceReference(EventAdmin.class);
                 if (eventAdminRef != null) {
                     eventAdmin = bundleContext.getService(eventAdminRef);
+                }
+                
+                // Get IRuteFinderFactory from OSGi service registry
+                ServiceReference<IRuteFinderFactory> ruteFinderFactoryRef = bundleContext.getServiceReference(IRuteFinderFactory.class);
+                if (ruteFinderFactoryRef != null) {
+                    ruteFinderFactory = bundleContext.getService(ruteFinderFactoryRef);
+                }
+                
+                // Get IGamePersistenceFactory from OSGi service registry
+                ServiceReference<IGamePersistenceFactory> persistenceFactoryRef = bundleContext.getServiceReference(IGamePersistenceFactory.class);
+                if (persistenceFactoryRef != null) {
+                    gamePersistenceFactory = bundleContext.getService(persistenceFactoryRef);
                 }
             } catch (Exception e) {
                 log.warn("Services not available from OSGi", e);
@@ -195,6 +215,22 @@ public class GroupContextImpl implements IGroupContext {
     @Override
     public boolean isRunning() {
         return springWrapper != null && springWrapper.isRunning();
+    }
+    
+    @Override
+    public IRuteFinder getRuteFinder() {
+        if (ruteFinder == null) {
+            if (ruteFinderFactory == null || gamePersistenceFactory == null) {
+                log.warn("RuteFinderFactory or GamePersistenceFactory not available");
+                return null;
+            }
+            // TODO: Pass correct gamePath later - using empty string for now
+            IGameDataLookup lookup = gamePersistenceFactory.getLookup("");
+            if (lookup != null) {
+                ruteFinder = ruteFinderFactory.createRuteFinder(lookup);
+            }
+        }
+        return ruteFinder;
     }
     
     public void destroy() {

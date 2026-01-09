@@ -1,4 +1,4 @@
-package org.sokybot.machinegroup.mapnavigation.triangulation;
+package org.sokybot.game.navigation.internal.triangulation;
 
 
 import org.sokybot.persistence.entities.geo.Vector2D;

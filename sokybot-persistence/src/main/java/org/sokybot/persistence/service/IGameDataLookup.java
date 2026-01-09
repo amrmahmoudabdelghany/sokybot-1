@@ -4,6 +4,8 @@ import java.util.Optional;
 
 import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.persistence.entities.NPCEntity;
+import org.sokybot.persistence.entities.ObjectNavMesh;
+import org.sokybot.persistence.entities.SectorRef;
 import org.sokybot.persistence.entities.SkillEntity;
 
 /**
@@ -37,4 +39,16 @@ public interface IGameDataLookup {
      * Get the game path this lookup is associated with
      */
     String getGamePath();
+    
+    /**
+     * Find sector reference by sectorYX.
+     * Used for navigation mesh data.
+     */
+    Optional<SectorRef> findSector(short sectorYX);
+    
+    /**
+     * Find object nav mesh by object ID.
+     * Used for navigation mesh data.
+     */
+    Optional<ObjectNavMesh> findObjectNavMesh(int objectId);
 }

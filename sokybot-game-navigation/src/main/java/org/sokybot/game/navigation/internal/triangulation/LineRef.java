@@ -1,10 +1,10 @@
-package org.sokybot.machinegroup.mapnavigation.triangulation;
+package org.sokybot.game.navigation.internal.triangulation;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplitRef.LineType;
+import org.sokybot.game.navigation.internal.triangulation.CellSplitRef.LineType;
 
 import lombok.Getter;
 import lombok.ToString;

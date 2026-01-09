@@ -62,6 +62,7 @@
 		<module>${project.artifactId}-game-events</module>
 		<module>${project.artifactId}-map-debug</module>
 		<module>${project.artifactId}-ui-api</module>
+		<module>${project.artifactId}-game-navigation</module>
 
 
 

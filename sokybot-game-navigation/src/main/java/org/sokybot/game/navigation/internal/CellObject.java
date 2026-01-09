@@ -1,4 +1,4 @@
-package org.sokybot.machinegroup.mapnavigation;
+package org.sokybot.game.navigation.internal;
 
 import java.util.List;
 import java.util.stream.Stream;
