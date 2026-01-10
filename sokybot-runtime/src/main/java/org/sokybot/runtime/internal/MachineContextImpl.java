@@ -124,6 +124,19 @@ public class MachineContextImpl implements IMachineContext {
         return engine != null && engine.isRunning();
     }
     
+    @Override
+    public IEngine getEngine() {
+        return this.engine;
+    }
+
+    @Override
+    public org.sokybot.settings.Settings getSettings() {
+        if (this.engine != null) {
+            return this.engine.getSettings();
+        }
+        return null; // Or throw generic exception? Returning null for now to be safe.
+    }
+    
     public void destroy() {
         log.info("Destroying machine context: {}", fullName());
         

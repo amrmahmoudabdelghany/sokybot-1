@@ -2,6 +2,7 @@ package org.sokybot.machineui;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import org.osgi.framework.BundleContext;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -46,6 +47,13 @@ public class MachineUIEventHandler implements EventHandler {
     
     // Track UI instances per machine (fullName -> MachineUIInstance)
     private final Map<String, MachineUIInstance> machineUIs = new ConcurrentHashMap<>();
+
+    private BundleContext bundleContext;
+
+    @org.osgi.service.component.annotations.Activate
+    public void activate(org.osgi.framework.BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
     
     @Override
     public void handleEvent(Event event) {
@@ -85,7 +93,8 @@ public class MachineUIEventHandler implements EventHandler {
                 context,
                 pageContainer,
                 dashboardContainer,
-                navTree
+                navTree,
+                bundleContext
             );
             
             ui.createPages();

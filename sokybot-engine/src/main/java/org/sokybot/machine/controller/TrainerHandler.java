@@ -42,7 +42,7 @@ import org.sokybot.machinegroup.gamemodel.npc.MovementType;
 import org.sokybot.persistence.entities.NPCEntity;
 import org.sokybot.machinegroup.gamemodel.npc.NPCType;
 import org.sokybot.machinegroup.gamemodel.npc.PVPState;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.Settings;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.gameevents.events.stat.GoldUpdateEvent;
@@ -119,7 +119,6 @@ public class TrainerHandler {
 		}
 	}
 
-	@PreDestroy
 	public void cleanup() {
 		if (eventHandlerRegistration != null) {
 			try {
@@ -130,6 +129,27 @@ public class TrainerHandler {
 			}
 		}
 	}
+
+	private void publishOsgiEvent(String subTopic, Object eventPayload) {
+	    if (bundleContext == null) return;
+	    try {
+	        org.osgi.framework.ServiceReference<org.osgi.service.event.EventAdmin> ref = 
+	            bundleContext.getServiceReference(org.osgi.service.event.EventAdmin.class);
+	        if (ref != null) {
+	            org.osgi.service.event.EventAdmin eventAdmin = bundleContext.getService(ref);
+	            if (eventAdmin != null) {
+	                java.util.Map<String, Object> props = new java.util.HashMap<>();
+	                props.put("event", eventPayload);
+	                props.put("machineId", machineFullName());
+	                eventAdmin.postEvent(new Event("sokybot/machine/" + subTopic, props));
+	            }
+	        }
+	    } catch(Exception e) {
+	        log.error("Error publishing OSGi event: " + subTopic, e);
+	    }
+	}
+
+
 
 	/**
 	 * Central event handler that routes OSGi events to appropriate methods.
@@ -569,6 +589,7 @@ public class TrainerHandler {
 
 		this.stateMachine.sendEvent(ClientFeed.GAME_READY);
 		this.ctx.publishEvent(new TrainerLoadedEvent(trainer));
+		publishOsgiEvent("trainer/loaded", new TrainerLoadedEvent(trainer));
 
 		log.info("Trainer Loaded");
 		;

@@ -5,13 +5,28 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
+import org.osgi.service.event.EventHandler;
 import org.sokybot.app.AppConstants;
+import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineConfig;
+import org.sokybot.machine.MachineState;
+import org.sokybot.settings.ISettingsManager;
+import org.sokybot.settings.Settings;
+import org.sokybot.machine.model.UserAction;
 import org.sokybot.proxy.IProxyConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.statemachine.StateMachine;
+import org.springframework.statemachine.listener.StateMachineListenerAdapter;
+import org.springframework.statemachine.state.State;
 
 /**
  * Factory implementation for creating engine instances.
@@ -25,7 +40,17 @@ public class EngineFactory implements IEngineFactory {
     private static final Logger log = LoggerFactory.getLogger(EngineFactory.class);
     
     private final Map<String, EngineImpl> engines = new ConcurrentHashMap<>();
-    
+
+    @Reference
+    private ISettingsManager settingsManager;
+
+    private BundleContext bundleContext;
+
+    @Activate
+    public void activate(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
     @Override
     public IEngine createEngine(String machineId, IProxyConnection proxyConnection, 
                                 String groupName, String machineName) {
@@ -38,44 +63,33 @@ public class EngineFactory implements IEngineFactory {
             log.info("Creating engine for machine: {}", machineId);
             
             try {
-                // Create Spring context with MachineConfig
-                // Register proxy connection and related beans before context starts
+                // ... (Existing Spring Context creation code) ...
                 ConfigurableApplicationContext springContext = new SpringApplicationBuilder(MachineConfig.class)
                         .properties(Map.of(
                                 AppConstants.MACHINE_NAME, machineName,
                                 AppConstants.GROUP_NAME, groupName,
                                 "spring.config.location", "classpath:machine.properties"))
                         .initializers((ctx) -> {
-                            // Register machine info
                             ctx.getBeanFactory().registerSingleton("machineId", machineId);
                             ctx.getBeanFactory().registerSingleton("groupName", groupName);
                             ctx.getBeanFactory().registerSingleton("machineName", machineName);
-                            
-                            // Register proxy connection as singleton bean
-                            // This will be used by EngineConfig.packetPublisher() bean
                             ctx.getBeanFactory().registerSingleton("proxyConnection", proxyConnection);
-                            
-                            // Note: EngineConfig.proxyConnection() bean method will be skipped
-                            // since we've already registered a bean with that name.
-                            // ConnectionHandler (IConnectionListener) will be created by Spring
-                            // and should work with the registered proxy connection.
                         })
                         .run();
                 
-                // Wire ConnectionHandler to proxy connection if it exists
-                try {
+                // ...Wrapper connections...
+                 try {
                     org.sokybot.proxy.IConnectionListener connectionHandler = 
                         springContext.getBean(org.sokybot.proxy.IConnectionListener.class);
                     if (connectionHandler != null && proxyConnection != null) {
                         proxyConnection.setConnectionListener(connectionHandler);
-                        log.debug("Wired ConnectionHandler to proxy connection for machine: {}", machineId);
                     }
                 } catch (Exception e) {
-                    log.warn("Could not wire ConnectionHandler to proxy connection (may not exist): {}", e.getMessage());
+                    log.warn("Could not wire ConnectionHandler: {}", e.getMessage());
                 }
-                
+
                 // Wrap Spring context as IEngine
-                EngineImpl engine = new EngineImpl(machineId, springContext);
+                EngineImpl engine = new EngineImpl(machineId, groupName, machineName, springContext, eventAdmin, settingsManager, bundleContext);
                 engines.put(machineId, engine);
                 
                 log.info("Engine created successfully for machine: {}", machineId);
@@ -88,6 +102,7 @@ public class EngineFactory implements IEngineFactory {
         }
     }
     
+    // ... (destroyEngine and getEngine remain same) ...
     @Override
     public void destroyEngine(String machineId) {
         synchronized (engines) {
@@ -105,19 +120,119 @@ public class EngineFactory implements IEngineFactory {
     public IEngine getEngine(String machineId) {
         return engines.get(machineId);
     }
-    
+
     /**
-     * Internal implementation of IEngine that wraps a Spring context.
+     * Internal implementation of IEngine that wraps a Spring context and manages Settings.
      */
-    private static class EngineImpl implements IEngine {
+    private static class EngineImpl implements IEngine, EventHandler {
         
         private final String machineId;
+        private final String groupName;
+        private final String machineName;
         private final ConfigurableApplicationContext springContext;
-        private volatile boolean running = false;
+        private final EventAdmin eventAdmin;
+        private final ISettingsManager settingsManager;
+        private final BundleContext bundleContext;
         
-        public EngineImpl(String machineId, ConfigurableApplicationContext springContext) {
+        private volatile boolean running = false;
+        private volatile Settings settings;
+        private ServiceRegistration<EventHandler> eventRegistration;
+        
+        public EngineImpl(String machineId, String groupName, String machineName, 
+                          ConfigurableApplicationContext springContext, 
+                          EventAdmin eventAdmin,
+                          ISettingsManager settingsManager,
+                          BundleContext bundleContext) {
             this.machineId = machineId;
+            this.groupName = groupName; // Persist group logic
+            this.machineName = machineName;
             this.springContext = springContext;
+            this.eventAdmin = eventAdmin;
+            this.settingsManager = settingsManager;
+            this.bundleContext = bundleContext;
+            
+            // Initial load
+            reloadSettings();
+            
+            // Register State Machine Listener
+            registerStateListener();
+            registerSettingsListener();
+        }
+
+        private void reloadSettings() {
+            try {
+                this.settings = settingsManager.loadSettings(groupName, machineName, "core", Settings.class);
+            } catch (Exception e) {
+                log.error("Failed to load settings for machine {}", machineId, e);
+            }
+        }
+
+        private void registerSettingsListener() {
+           if (bundleContext != null) {
+               java.util.Dictionary<String, Object> props = new java.util.Hashtable<>();
+               props.put(org.osgi.service.event.EventConstants.EVENT_TOPIC, "sokybot/settings/updated");
+               // Filter events for this machine
+               String filter = "(&(groupName=" + groupName + ")(machineName=" + machineName + "))";
+               props.put(org.osgi.service.event.EventConstants.EVENT_FILTER, filter);
+               
+               eventRegistration = bundleContext.registerService(EventHandler.class, this, props);
+           }
+        }
+
+        @Override
+        public void handleEvent(Event event) {
+            // Reload settings when notified
+            log.debug("Received settings update event for machine {}", machineId);
+            Settings newSettings = (Settings) event.getProperty("settings");
+            if (newSettings != null) {
+                this.settings = newSettings;
+            } else {
+                reloadSettings();
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        private void registerStateListener() {
+            try {
+                 StateMachine<MachineState, IMachineEvent> sm = springContext.getBean(StateMachine.class);
+                 sm.addStateListener(new StateMachineListenerAdapter<>() {
+                     @Override
+                     public void stateChanged(State<MachineState, IMachineEvent> from, State<MachineState, IMachineEvent> to) {
+                         if (to != null) {
+                             postStateEvent(to.getId().name());
+                         }
+                     }
+                 });
+            } catch (Exception e) {
+                log.warn("Could not register StateMachine listener: {}", e.getMessage());
+            }
+        }
+
+        private void postStateEvent(String stateName) {
+            if (eventAdmin != null) {
+                Map<String, Object> props = new HashMap<>();
+                props.put("machineId", machineId);
+                props.put("state", stateName);
+                String topic = "sokybot/machine/state";
+                eventAdmin.postEvent(new Event(topic, props));
+            }
+        }
+
+        @Override
+        public void sendEvent(String eventName) {
+            try {
+                UserAction action = UserAction.valueOf(eventName);
+                @SuppressWarnings("unchecked")
+                StateMachine<MachineState, IMachineEvent> sm = springContext.getBean(StateMachine.class);
+                sm.sendEvent(action);
+                log.debug("Sent event {} to machine {}", eventName, machineId);
+            } catch (IllegalArgumentException e) {
+                 log.error("Invalid event name: {}", eventName);
+                 throw new IllegalArgumentException("Unknown event: " + eventName);
+            } catch (Exception e) {
+                 log.error("Failed to send event {} to machine {}", eventName, machineId, e);
+                 throw new RuntimeException("Failed to send event", e);
+            }
         }
         
         @Override
@@ -130,8 +245,6 @@ public class EngineFactory implements IEngineFactory {
             if (!running) {
                 synchronized (this) {
                     if (!running) {
-                        // Spring context is already started when created
-                        // But we can explicitly start it if needed
                         if (!springContext.isRunning()) {
                             springContext.start();
                         }
@@ -147,6 +260,9 @@ public class EngineFactory implements IEngineFactory {
             if (running) {
                 synchronized (this) {
                     if (running) {
+                        if (eventRegistration != null) {
+                            eventRegistration.unregister();
+                        }
                         try {
                             springContext.stop();
                             springContext.close();
@@ -162,8 +278,14 @@ public class EngineFactory implements IEngineFactory {
         }
         
         @Override
+        public Settings getSettings() {
+             return this.settings;
+        }
+
+        @Override
         public boolean isRunning() {
             return running && springContext.isRunning();
         }
     }
+}
 }

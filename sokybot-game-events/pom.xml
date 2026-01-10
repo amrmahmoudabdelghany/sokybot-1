@@ -32,6 +32,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-proxy</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- OSGi Event Admin for event publishing -->
         <dependency>
             <groupId>org.osgi</groupId>

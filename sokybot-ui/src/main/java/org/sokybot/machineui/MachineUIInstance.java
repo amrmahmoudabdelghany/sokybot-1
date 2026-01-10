@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.formdev.flatlaf.icons.FlatSearchIcon;
+import org.sokybot.machineui.dashboard.MachineDashboard;
 
 /**
  * Manages all UI components for a single machine instance.
@@ -38,24 +39,43 @@ public class MachineUIInstance {
     private final PageContainer pageContainer;
     private final DashboardContainer dashboardContainer;
     private final INavTree navTree;
+    private final BundleContext bundleContext;
+    private final PageFactory pageFactory;
+    private final DashboardFactory dashboardFactory;
     
     private final List<PageRegistration> registeredPages = new ArrayList<>();
     private String dashboardPath;
+    private MachineDashboard dashboard;
+    private org.sokybot.machineui.model.MachineViewModel viewModel;
     
     public MachineUIInstance(
             String groupName,
             String machineName,
             IMachineContext context,
-            PageContainer pageContainer,
-            DashboardContainer dashboardContainer,
-            INavTree navTree) {
+            INavTree navTree,
+            IPageContainer pageContainer,
+            IDashboardContainer dashboardContainer,
+            PageFactory pageFactory,
+            DashboardFactory dashboardFactory,
+            BundleContext bundleContext) { // Added BundleContext
         this.groupName = groupName;
         this.machineName = machineName;
-        this.fullName = context.fullName();
+        this.fullName = groupName + "." + machineName;
         this.context = context;
+        this.navTree = navTree;
         this.pageContainer = pageContainer;
         this.dashboardContainer = dashboardContainer;
-        this.navTree = navTree;
+        this.pageFactory = pageFactory;
+        this.dashboardFactory = dashboardFactory;
+        this.bundleContext = bundleContext;
+        
+        this.viewModel = new org.sokybot.machineui.model.MachineViewModel(fullName, bundleContext);
+        
+        init();
+    }
+    
+    private void init() {
+        // Any initialization logic that needs to run after all fields are set
     }
     
     /**
@@ -72,17 +92,29 @@ public class MachineUIInstance {
         // TODO: Create pages using factory services
         // For now, this is a placeholder structure
         
-        // Example: Training Page
-        // IMachinePage trainingPage = pageFactory.createTrainingPage(context);
-        // registerPage("Training", trainingPage.getIcon(), trainingPage.getComponent());
+        // Create Training Page
+        org.sokybot.machineui.page.training.TrainingPage trainingPage = new org.sokybot.machineui.page.training.TrainingPage(context);
+        registerPage(trainingPage.getName(), trainingPage.getIcon(), trainingPage.getComponent());
         
-        // Example: Environment Page
-        // IMachinePage envPage = pageFactory.createEnvironmentPage(context);
-        // registerPage("Environment", envPage.getIcon(), envPage.getComponent());
+        // Create Environment Page
+        org.sokybot.machineui.page.environment.EnvTab envTab = new org.sokybot.machineui.page.environment.EnvTab(viewModel);
+        registerPage(envTab.getName(), envTab.getIcon(), envTab.getComponent());
+        
+        // Create Item Page (Inventory & Settings)
+        org.sokybot.machineui.page.item.ItemPage itemPage = new org.sokybot.machineui.page.item.ItemPage(context);
+        registerPage(itemPage.getName(), itemPage.getIcon(), itemPage.getComponent());
+
+        // Create Skill Page
+        org.sokybot.machineui.page.skill.SkillPage skillPage = new org.sokybot.machineui.page.skill.SkillPage(context, viewModel, bundleContext);
+        registerPage(skillPage.getName(), skillPage.getIcon(), skillPage.getComponent());
         
         // Create dashboard
-        // JComponent dashboard = dashboardFactory.createDashboard(context);
-        // registerDashboard(dashboard);
+        this.dashboard = new MachineDashboard(context, bundleContext);
+        registerDashboard(this.dashboard);
+        
+        // Create Log Page
+        org.sokybot.machineui.page.LogPage logPage = new org.sokybot.machineui.page.LogPage();
+        registerPage(logPage.getName(), logPage.getIcon(), logPage);
         
         log.info("Created {} pages and dashboard for machine: {}", registeredPages.size(), fullName);
     }
@@ -113,6 +145,11 @@ public class MachineUIInstance {
             } catch (Exception e) {
                 log.warn("Error removing dashboard: {}", dashboardPath, e);
             }
+        }
+        
+        if (dashboard != null) {
+             dashboard.dispose();
+             dashboard = null;
         }
         
         // Remove navigation tree node

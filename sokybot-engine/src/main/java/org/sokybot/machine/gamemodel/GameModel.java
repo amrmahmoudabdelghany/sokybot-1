@@ -19,7 +19,7 @@ import org.sokybot.machine.StateEntry;
 import org.sokybot.machine.event.DespawnEvent;
 import org.sokybot.machine.event.monsterevent.MonsterSpawnEvent;
 import org.sokybot.machinegroup.gamemodel.ISpawnable;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.Settings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;

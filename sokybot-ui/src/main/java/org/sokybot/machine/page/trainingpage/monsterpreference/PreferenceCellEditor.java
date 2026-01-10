@@ -13,7 +13,7 @@ import javax.swing.JComboBox;
 import javax.swing.JTable;
 import javax.swing.table.TableCellEditor;
 
-import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
+import org.sokybot.settings.MonsterPreference;
 
 
 

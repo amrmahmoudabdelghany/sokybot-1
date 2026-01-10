@@ -8,7 +8,7 @@ import javax.swing.table.DefaultTableModel;
 
 import org.sokybot.machinegroup.gamemodel.Gender;
 import org.sokybot.machinegroup.gamemodel.item.ItemEntity;
-import org.sokybot.machinegroup.gamemodel.setting.ItemAction;
+import org.sokybot.settings.ItemAction;
 import org.springframework.stereotype.Component;
 
 @Component

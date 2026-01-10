@@ -9,8 +9,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 
-import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.MonsterPreference;
+import org.sokybot.settings.Settings;
 import org.sokybot.machinegroup.service.ISroMaterialDAO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.statemachine.config.configurers.DefaultHistoryTransitionConfigurer;

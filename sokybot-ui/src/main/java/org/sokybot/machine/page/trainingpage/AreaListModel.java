@@ -3,9 +3,9 @@ package org.sokybot.machine.page.trainingpage;
 import javax.annotation.PostConstruct;
 import javax.swing.DefaultListModel;
 
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
-import org.sokybot.machinegroup.gamemodel.setting.TrainingArea;
-import org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings;
+import org.sokybot.settings.Settings;
+import org.sokybot.settings.TrainingArea;
+import org.sokybot.settings.TrainingAreaSettings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

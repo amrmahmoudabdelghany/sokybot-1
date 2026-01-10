@@ -1,7 +1,7 @@
 package org.sokybot.machine.page.itempage;
 
 import org.sokybot.machinegroup.gamemodel.item.ItemEntity;
-import org.sokybot.machinegroup.gamemodel.setting.ItemAction;
+import org.sokybot.settings.ItemAction;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

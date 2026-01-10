@@ -27,9 +27,9 @@ import javax.swing.JTextField;
 
 import org.apache.commons.lang3.math.NumberUtils;
 import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
-import org.sokybot.machinegroup.gamemodel.setting.TrainingArea;
-import org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings;
+import org.sokybot.settings.Settings;
+import org.sokybot.settings.TrainingArea;
+import org.sokybot.settings.TrainingAreaSettings;
 import org.sokybot.utils.SwingUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;

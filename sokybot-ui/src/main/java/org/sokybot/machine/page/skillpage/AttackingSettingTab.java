@@ -16,7 +16,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 
 import org.sokybot.app.AppSwingUtilities;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.Settings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 

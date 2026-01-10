@@ -20,7 +20,7 @@ import org.sokybot.machine.MachineState;
 import org.sokybot.machine.Transition;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
 import org.sokybot.machine.model.UserAction;
-import org.sokybot.machinegroup.gamemodel.setting.TrainingArea;
+import org.sokybot.settings.TrainingArea;
 import org.sokybot.persistence.service.TrainingAreaRepository;
 import org.springframework.aop.aspectj.AspectJAroundAdvice;
 import org.springframework.aop.aspectj.AspectJExpressionPointcut;
@@ -69,19 +69,19 @@ public class TrainingAreaDepositor {
 
 	}
 
-	@After("execution(* org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings.setActiveArea(String))")
+	@After("execution(* org.sokybot.settings.TrainingAreaSettings.setActiveArea(String))")
 	public void onSetActiveArea() { 
 		
 		 this.ctx.publishEvent(new UserConfigUpdatedEvent(TrainingAreaDepositor.this, "SETACTIVEAREA"));
 	}
-	@Around("execution(* org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings.removeTrainingArea(String))")
+	@Around("execution(* org.sokybot.settings.TrainingAreaSettings.removeTrainingArea(String))")
 	public Object onRemoveArea(ProceedingJoinPoint joinPoint) throws Throwable {
 		TrainingArea removedArea = (TrainingArea) joinPoint.proceed();
 		this.areaRepo.delete(removedArea);
 		return removedArea;
 	}
 
-	@Around("execution(* org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings.getArea(String))")
+	@Around("execution(* org.sokybot.settings.TrainingAreaSettings.getArea(String))")
 	public Object onGetArea(ProceedingJoinPoint joinPoint) throws Throwable {
 
 		String areaName = (String) joinPoint.getArgs()[0];
@@ -120,7 +120,7 @@ public class TrainingAreaDepositor {
 
 	private AspectJExpressionPointcutAdvisor advisor() {
 		AspectJExpressionPointcutAdvisor advisor = new AspectJExpressionPointcutAdvisor();
-		advisor.setExpression("execution(* org.sokybot.machinegroup.gamemodel.setting.TrainingArea.set*(..))");
+		advisor.setExpression("execution(* org.sokybot.settings.TrainingArea.set*(..))");
 		advisor.setAdvice(new TrainingAreaInterceptor());
 
 		return advisor;

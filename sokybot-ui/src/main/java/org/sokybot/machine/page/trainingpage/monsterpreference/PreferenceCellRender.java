@@ -5,7 +5,7 @@ import java.awt.Component;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableCellRenderer;
 
-import org.sokybot.machinegroup.gamemodel.setting.MonsterPreference;
+import org.sokybot.settings.MonsterPreference;
 
 
 public class PreferenceCellRender extends DefaultTableCellRenderer {

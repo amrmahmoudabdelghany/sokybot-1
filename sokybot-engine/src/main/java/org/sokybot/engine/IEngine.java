@@ -41,4 +41,19 @@ public interface IEngine {
      * @return true if engine is running
      */
     boolean isRunning();
+    
+    /**
+     * Sends a command/event to the engine.
+     * The event name is mapped to an internal UserAction.
+     * 
+     * @param eventName The name of the event (e.g., "CONNECT", "START_TRAINING")
+     */
+    void sendEvent(String eventName);
+
+    /**
+     * Gets the settings associated with this engine.
+     * 
+     * @return The settings object.
+     */
+    Settings getSettings();
 }

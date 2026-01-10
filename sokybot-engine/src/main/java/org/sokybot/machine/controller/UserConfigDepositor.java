@@ -16,7 +16,7 @@ import org.sokybot.machine.MachineState;
 import org.sokybot.machine.Transition;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
 import org.sokybot.machine.model.UserAction;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.Settings;
 import org.sokybot.persistence.service.SettingsRepository;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
@@ -56,19 +56,19 @@ public class UserConfigDepositor {
 	@Autowired
 	private Settings userConfig;
 
-	@Pointcut("execution(* org.sokybot.machinegroup.gamemodel.setting.Settings.set*(..))")
+	@Pointcut("execution(* org.sokybot.settings.Settings.set*(..))")
 	public void setterMethods() {
 	}
 
-	@Pointcut("execution(* org.sokybot.machinegroup.gamemodel.setting.Settings.remove*(..))")
+	@Pointcut("execution(* org.sokybot.settings.Settings.remove*(..))")
 	public void removeMethods() {
 	}
 
-	@Pointcut("execution(* org.sokybot.machinegroup.gamemodel.setting.Settings.add*(..))")
+	@Pointcut("execution(* org.sokybot.settings.Settings.add*(..))")
 	public void addMethods() {
 	}
 
-	@Pointcut("execution(* org.sokybot.machinegroup.gamemodel.setting.Settings.swap*(..))")
+	@Pointcut("execution(* org.sokybot.settings.Settings.swap*(..))")
 	public void swapMethods() {
 	}
 
