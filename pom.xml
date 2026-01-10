@@ -64,6 +64,7 @@
 		<module>${project.artifactId}-ui-api</module>
 		<module>${project.artifactId}-game-navigation</module>
 		<module>${project.artifactId}-game-asset</module>
+		<module>${project.artifactId}-group-ui</module>
 
 
 

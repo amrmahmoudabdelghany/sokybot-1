@@ -28,9 +28,7 @@ import org.slf4j.LoggerFactory;
     service = EventHandler.class,
     property = {
         EventConstants.EVENT_TOPIC + "=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_CREATED,
-        EventConstants.EVENT_TOPIC + "=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED,
-        EventConstants.EVENT_TOPIC + "=" + ContextLifecycleEvents.TOPIC_GROUP_CONTEXT_CREATED,
-        EventConstants.EVENT_TOPIC + "=" + ContextLifecycleEvents.TOPIC_GROUP_CONTEXT_DESTROYED
+        EventConstants.EVENT_TOPIC + "=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED
     }
 )
 public class MachineUIEventHandler implements EventHandler {
@@ -49,9 +47,6 @@ public class MachineUIEventHandler implements EventHandler {
     // Track UI instances per machine (fullName -> MachineUIInstance)
     private final Map<String, MachineUIInstance> machineUIs = new ConcurrentHashMap<>();
     
-    // Track UI instances per group (groupName -> GroupUIInstance)
-    private final Map<String, GroupUIInstance> groupUIs = new ConcurrentHashMap<>();
-
     @Override
     public void handleEvent(Event event) {
         String topic = event.getTopic();
@@ -62,10 +57,6 @@ public class MachineUIEventHandler implements EventHandler {
                 handleMachineCreated(event);
             } else if (topic.equals(ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED)) {
                 handleMachineDestroyed(event);
-            } else if (topic.equals(ContextLifecycleEvents.TOPIC_GROUP_CONTEXT_CREATED)) {
-                handleGroupCreated(event);
-            } else if (topic.equals(ContextLifecycleEvents.TOPIC_GROUP_CONTEXT_DESTROYED)) {
-                handleGroupDestroyed(event);
             } else {
                 log.warn("Unknown event topic: {}", topic);
             }
@@ -121,52 +112,6 @@ public class MachineUIEventHandler implements EventHandler {
             }
         } else {
             log.warn("No UI instance found for machine: {}", fullName);
-        }
-    }
-    
-    private void handleGroupCreated(Event event) {
-        String groupName = (String) event.getProperty(ContextLifecycleEvents.PROP_GROUP_NAME);
-        IGroupContext context = (IGroupContext) event.getProperty(ContextLifecycleEvents.PROP_CONTEXT);
-        
-        if (context == null) {
-            log.error("Group context is null in CREATED event for {}", groupName);
-            return;
-        }
-        
-        log.info("Creating UI for group: {}", groupName);
-        
-        try {
-            GroupUIInstance ui = new GroupUIInstance(
-                groupName,
-                context,
-                pageContainer,
-                navTree
-            );
-            
-            ui.createPages();
-            groupUIs.put(groupName, ui);
-            
-            log.info("Successfully created UI for group: {}", groupName);
-        } catch (Exception e) {
-            log.error("Failed to create UI for group: {}", groupName, e);
-        }
-    }
-    
-    private void handleGroupDestroyed(Event event) {
-        String groupName = (String) event.getProperty(ContextLifecycleEvents.PROP_GROUP_NAME);
-        
-        log.info("Destroying UI for group: {}", groupName);
-        
-        GroupUIInstance ui = groupUIs.remove(groupName);
-        if (ui != null) {
-            try {
-                ui.destroyPages();
-                log.info("Successfully destroyed UI for group: {}", groupName);
-            } catch (Exception e) {
-                log.error("Error destroying UI for group: {}", groupName, e);
-            }
-        } else {
-            log.warn("No UI instance found for group: {}", groupName);
         }
     }
 }

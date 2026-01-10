@@ -1,4 +1,4 @@
-package org.sokybot.machineui;
+package org.sokybot.groupui;
 
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.machinegroup.PageContainer;
