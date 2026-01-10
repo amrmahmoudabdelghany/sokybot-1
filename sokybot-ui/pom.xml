@@ -145,7 +145,7 @@
                             !org.jdesktop.swingx.*,
                             *;resolution:=optional
                         </Import-Package>
-                        <Export-Package>org.sokybot.ui.*</Export-Package>
+                        <Export-Package>org.sokybot.*</Export-Package>
                         <!-- Embed MyDoggy and SwingX to avoid classloader issues -->
                         <Embed-Dependency>*;scope=compile;inline=false</Embed-Dependency>
                         <_dsannotations>*</_dsannotations>
