@@ -10,7 +10,7 @@ import org.sokybot.machine.model.ServerFeed;
 import org.sokybot.machine.network.PacketListener;
 import org.sokybot.machine.network.PacketListener.PacketSource;
 import org.sokybot.machine.service.IConnectionManager;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.Settings;
 import org.sokybot.network.packet.Encoding;
 import org.sokybot.network.packet.IPacketReader;
 import org.sokybot.network.packet.ImmutablePacket;

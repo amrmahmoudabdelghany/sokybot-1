@@ -4,7 +4,7 @@ import org.sokybot.app.AppConstants;
 import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineState;
 import org.sokybot.machine.model.UserAction;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.Settings;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.sokybot.IMachinePageViewer;

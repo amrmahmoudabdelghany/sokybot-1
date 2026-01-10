@@ -3,8 +3,8 @@ package org.sokybot.machine;
 import javax.transaction.Transactional;
 
 import org.sokybot.app.AppConstants;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
-import org.sokybot.machinegroup.gamemodel.setting.TrainingAreaSettings;
+import org.sokybot.settings.Settings;
+import org.sokybot.settings.TrainingAreaSettings;
 import org.sokybot.persistence.service.SettingsRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;

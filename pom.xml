@@ -52,6 +52,7 @@
 		<module>${project.artifactId}-game-loader</module>
 		<module>${project.artifactId}-persistence</module>
 		<module>${project.artifactId}-packet-sniffer</module>
+		<module>${project.artifactId}-settings</module>
 
 		<module>${project.artifactId}-engine</module>
 		<module>${project.artifactId}-ui</module>

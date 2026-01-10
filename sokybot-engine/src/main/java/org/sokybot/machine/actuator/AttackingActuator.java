@@ -5,7 +5,7 @@ import org.sokybot.machine.MachineState;
 import org.sokybot.machine.service.IAttackingService;
 import org.sokybot.machine.service.IMonsterTargetService;
 import org.sokybot.machine.service.IMovingService;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.Settings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.statemachine.StateContext;
 import org.springframework.statemachine.action.Action;

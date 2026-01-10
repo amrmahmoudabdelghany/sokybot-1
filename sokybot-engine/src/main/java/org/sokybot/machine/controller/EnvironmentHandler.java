@@ -43,7 +43,8 @@ import org.sokybot.gameevents.events.entity.EntityStoppedEvent;
 import org.sokybot.gameevents.events.skill.SkillCastEvent;
 import org.sokybot.gameevents.events.skill.SkillCastEndEvent;
 import org.sokybot.machine.event.DespawnEvent;
-import org.sokybot.machine.event.SkillCastErrorEevent;
+import org.sokybot.engine.event.SkillCastErrorEvent;
+import org.sokybot.engine.event.TrainerStuckEvent;
 import org.sokybot.machine.event.SkillCastStartEvent;
 import org.sokybot.machine.event.SpawnReachDestinationEvent;
 import org.sokybot.machine.event.monsterevent.MonsterDespawnEvent;
@@ -107,22 +108,6 @@ public class EnvironmentHandler {
 	@Autowired
 	private BundleContext bundleContext;
 
-	@Value("${" + AppConstants.MACHINE_NAME + "}")
-	private String machineName;
-
-	@Value("${" + AppConstants.GROUP_NAME + "}")
-	private String groupName;
-
-	private Map<Integer, ScheduledFuture<?>> movements = new HashMap<>();
-
-	private Pair<Byte, Short> currentG;
-
-	private ServiceRegistration<EventHandler> eventHandlerRegistration;
-
-	private String machineFullName() {
-		return groupName + "." + machineName;
-	}
-
 	@PostConstruct
 	public void init() {
 		// Register as OSGi EventHandler to listen to game events
@@ -159,6 +144,25 @@ public class EnvironmentHandler {
 				log.error("Error unregistering EnvironmentHandler EventHandler", e);
 			}
 		}
+	}
+	
+	private void publishOsgiEvent(String subTopic, Object eventPayload) {
+	    if (bundleContext == null) return;
+	    try {
+	        org.osgi.framework.ServiceReference<org.osgi.service.event.EventAdmin> ref = 
+	            bundleContext.getServiceReference(org.osgi.service.event.EventAdmin.class);
+	        if (ref != null) {
+	            org.osgi.service.event.EventAdmin eventAdmin = bundleContext.getService(ref);
+	            if (eventAdmin != null) {
+	                Map<String, Object> props = new HashMap<>();
+	                props.put("event", eventPayload);
+	                props.put("machineId", machineFullName());
+	                eventAdmin.postEvent(new Event("sokybot/machine/" + subTopic, props));
+	            }
+	        }
+	    } catch(Exception e) {
+	        log.error("Error publishing OSGi event: " + subTopic, e);
+	    }
 	}
 
 	/**
@@ -321,15 +325,18 @@ public class EnvironmentHandler {
 
 		int uniqueId = reader.getInt();
 
-		this.gameModel.remove(uniqueId);
+		this.gameModel.find(uniqueId, Monster.class)
+		.ifPresentOrElse((m)->{
+			MonsterDespawnEvent event = new MonsterDespawnEvent(EnvironmentHandler.this, m);
+			// this.ctx.publishEvent(event);
+			publishOsgiEvent("despawn/monster", event);
+			this.gameModel.remove(m.getUniqueId()) ;
+		}, () -> {
+			this.gameModel.remove(uniqueId);
+			// this.ctx.publishEvent(new DespawnEvent(this, uniqueId));
+		});
 
-		// this.gameModel.find(uniqueId, Monster.class)
-		// .ifPresentOrElse((m)->{
-		// this.ctx.publishEvent(new MonsterDespawnEvent(EnvironmentHandler.this, m)) ;
-		// this.gameModel.remove(m.getUniqueId()) ;
-		// }, ()->this.ctx.publishEvent(new DespawnEvent(this, uniqueId)));
-
-//		this.gameModel.remove(refId);
+		// this.gameModel.remove(uniqueId); // Removed as it's handled above
 
 		Optional.ofNullable(this.movements.remove(uniqueId)).ifPresent((movment) -> movment.cancel(true));
 
@@ -417,8 +424,9 @@ public class EnvironmentHandler {
 				gameModel.add(monster);
 				// System.out.println("Monster " + monster.getRefId() + " Added to gamemodel" )
 				// ;
-				// this.ctx.publishEvent(new MonsterSpawnEvent(EnvironmentHandler.this,
-				// monster));
+				MonsterSpawnEvent event = new MonsterSpawnEvent(EnvironmentHandler.this, monster);
+				// this.ctx.publishEvent(event);
+				publishOsgiEvent("spawn/monster", event);
 
 			} else if (longId.contains("COS_")) {
 

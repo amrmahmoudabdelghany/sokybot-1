@@ -22,6 +22,11 @@
             <artifactId>sokybot-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-settings</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         
         <dependency>
             <groupId>${project.groupId}</groupId>

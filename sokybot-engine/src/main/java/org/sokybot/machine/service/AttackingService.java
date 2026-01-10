@@ -8,7 +8,7 @@ import java.util.PriorityQueue;
 
 import org.slf4j.Logger;
 import org.sokybot.machine.event.DespawnEvent;
-import org.sokybot.machine.event.SkillCastErrorEevent;
+import org.sokybot.engine.event.SkillCastErrorEvent;
 import org.sokybot.machine.event.SpawnReachDestinationEvent;
 import org.sokybot.machine.event.monsterevent.MonsterHPUpdateEvent;
 import org.sokybot.machine.event.monsterevent.MonsterSelectedEvent;
@@ -17,7 +17,7 @@ import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
 import org.sokybot.machine.gamemodel.Trainer;
 import org.sokybot.machinegroup.gamemodel.npc.Monster;
 import org.sokybot.persistence.entities.MonsterType;
-import org.sokybot.machinegroup.gamemodel.setting.Settings;
+import org.sokybot.settings.Settings;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -104,15 +104,15 @@ public class AttackingService implements IAttackingService {
 	
 
 	@EventListener
-	public void onCastError(SkillCastErrorEevent event) {
+	public void onCastError(SkillCastErrorEvent event) {
 		String error = "";
 
-		if (event.getErrorType() == SkillCastErrorEevent.OBSTACLE) {
+		if (event.getErrorType() == SkillCastErrorEvent.OBSTACLE) {
 			error = "Counter Obstacle";
 			// here we can get the path between target monster and trainer go to it 
-		} else if (event.getErrorType() == SkillCastErrorEevent.INVALID_TARGET) {
+		} else if (event.getErrorType() == SkillCastErrorEvent.INVALID_TARGET) {
 			error = "Invalid Target";
-		} else if (event.getErrorType() == SkillCastErrorEevent.SKILL_ON_COOLDOWN) {
+		} else if (event.getErrorType() == SkillCastErrorEvent.SKILL_ON_COOLDOWN) {
 			error = "Skill On Cooldown";
 		}
 
