@@ -1,31 +1,12 @@
 package org.sokybot.persistence.service;
 
 import org.sokybot.persistence.entities.ItemEntity;
-import java.util.List;
 import java.util.Optional;
 
 /**
  * OSGi service interface for ItemEntity persistence operations.
  */
-public interface ItemEntityRepository {
-    
-    ItemEntity save(ItemEntity entity);
-    
-    List<ItemEntity> saveAll(List<ItemEntity> entities);
-    
-    Optional<ItemEntity> findById(Integer id);
-    
-    List<ItemEntity> findAll();
-    
-    void deleteById(Integer id);
-    
-    void delete(ItemEntity entity);
-    
-    void deleteAll();
-    
-    boolean existsById(Integer id);
-    
-    long count();
+public interface ItemEntityRepository extends IRepository<ItemEntity, Integer> {
     
     /**
      * Find item by longId.

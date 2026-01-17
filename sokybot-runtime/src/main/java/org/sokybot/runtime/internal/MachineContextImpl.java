@@ -4,8 +4,8 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
-import org.sokybot.IMachinePageViewer;
-import org.sokybot.app.domain.MachineInfo;
+import org.sokybot.ui.api.IMachinePageViewer;
+import org.sokybot.runtime.internal.domain.MachineInfo;
 import org.sokybot.engine.IEngine;
 import org.sokybot.engine.IEngineFactory;
 import org.sokybot.proxy.IConnectionListener;
@@ -72,7 +72,7 @@ public class MachineContextImpl implements IMachineContext {
             engine = engineFactory.createEngine(
                     machineId,
                     proxyConnection,
-                    machineInfo.getGroup().getName(),
+                    groupContext.name(),  // Get group name from groupContext instead of machineInfo
                     machineInfo.getMachineName()
             );
             
@@ -86,7 +86,7 @@ public class MachineContextImpl implements IMachineContext {
                              try {
                                  // Translate packet - chunk manager accessed via registry
                                  java.util.List<org.sokybot.gameevents.events.core.IGameEvent> events = 
-                                     translator.translate(machineId, packet, null);
+                                     translator.translate(machineId, packet);
                                  
                                  if (events != null && eventAdmin != null) {
                                      events.forEach(event -> {
@@ -149,7 +149,7 @@ public class MachineContextImpl implements IMachineContext {
     
     @Override
     public String fullName() {
-        return machineInfo.getGroup().getName() + "." + name();
+        return groupContext.name() + "." + name();
     }
     
     @Override

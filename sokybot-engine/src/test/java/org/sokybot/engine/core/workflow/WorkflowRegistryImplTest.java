@@ -93,12 +93,15 @@ class WorkflowRegistryImplTest {
     @Test
     @DisplayName("Should enable and disable cycles")
     void testEnableDisableCycle() {
-        ICycleDefinition cycle = WorkflowTestBuilders.cycle("test-cycle")
-            .priority(100)
-            .entryState("STATE1")
-            .state("STATE1", WorkflowTestBuilders.guard().returns(true).build(),
-                   WorkflowTestBuilders.action().build(), null)
-            .build();
+        // Create CycleDefinitionImpl directly to support enable/disable
+        ICycleState state1 = mock(ICycleState.class);
+        when(state1.getName()).thenReturn("STATE1");
+        
+        ICycleDefinition cycle = new CycleDefinitionImpl(
+            "test-cycle", 100, "STATE1", 
+            WorkflowTestBuilders.guard().returns(true).build(),
+            null, 0, null, false, null,
+            java.util.List.of(state1));
         
         registry.registerCycle(cycle);
         

@@ -12,25 +12,34 @@
         <class>org.sokybot.app.domain.GroupInfo</class>
         <class>org.sokybot.app.domain.MachineInfo</class>
         
-        <exclude-unlisted-classes>true</exclude-unlisted-classes>
+        <!-- Game entities -->
+        <class>org.sokybot.persistence.entities.GameInfo</class>
+        <class>org.sokybot.persistence.entities.ItemEntity</class>
+        <class>org.sokybot.persistence.entities.NPCEntity</class>
+        <class>org.sokybot.persistence.entities.ShopEntity</class>
+        <class>org.sokybot.persistence.entities.SkillEntity</class>
+        <class>org.sokybot.persistence.entities.TeleportEntity</class>
+        <class>org.sokybot.persistence.entities.PortalEntity</class>
+        <class>org.sokybot.persistence.entities.SectorRef</class>
+        <class>org.sokybot.persistence.entities.ObjectNavMesh</class>
+        <class>org.sokybot.persistence.entities.LvlEXP</class>
+        <class>org.sokybot.persistence.entities.MasteryData</class>
+        <class>org.sokybot.persistence.entities.SilkroadEntity</class>
+        <class>org.sokybot.persistence.entities.SilkroadType</class>
+        <class>org.sokybot.persistence.entities.DivisionInfo</class>
+        <class>org.sokybot.persistence.entities.Division</class>
         
-        <properties>
-            <!-- H2 Database Configuration -->
-            <property name="javax.persistence.jdbc.driver" value="org.h2.Driver"/>
-            <property name="javax.persistence.jdbc.url" value="jdbc:h2:file:./sokybot-db;AUTO_SERVER=TRUE"/>
-            <property name="javax.persistence.jdbc.user" value="sa"/>
-            <property name="javax.persistence.jdbc.password" value=""/>
-            
-            <!-- Hibernate Settings -->
-            <property name="hibernate.dialect" value="org.hibernate.dialect.H2Dialect"/>
-            <property name="hibernate.hbm2ddl.auto" value="update"/>
-            <property name="hibernate.show_sql" value="false"/>
-            <property name="hibernate.format_sql" value="true"/>
-            
-            <!-- Connection Pool Settings -->
-            <property name="hibernate.hikari.minimumIdle" value="5"/>
-            <property name="hibernate.hikari.maximumPoolSize" value="10"/>
-            <property name="hibernate.hikari.connectionTimeout" value="30000"/>
-        </properties>
+        <!-- Navigation mesh entities -->
+        <class>org.sokybot.persistence.entities.navmesh.NavCellRef</class>
+        <class>org.sokybot.persistence.entities.navmesh.NavBorderRef</class>
+        <class>org.sokybot.persistence.entities.navmesh.NavCellLinkRef</class>
+        <class>org.sokybot.persistence.entities.navmesh.NavObjectRef</class>
+        <class>org.sokybot.persistence.entities.navmesh.ObjectLineRef</class>
+        <class>org.sokybot.persistence.entities.navmesh.ObjectGroundTriRef</class>
+        <class>org.sokybot.persistence.entities.navmesh.Position</class>
+        
+        <!-- Note: Properties are provided programmatically via PersistenceContextManagerImpl -->
+        <!-- Database connection settings are configured per-game in the manager -->
+        <exclude-unlisted-classes>false</exclude-unlisted-classes>
     </persistence-unit>
 </persistence>

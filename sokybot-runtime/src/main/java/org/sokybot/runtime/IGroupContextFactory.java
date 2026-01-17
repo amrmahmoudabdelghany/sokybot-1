@@ -1,6 +1,6 @@
 package org.sokybot.runtime;
 
-import org.sokybot.app.domain.GroupInfo;
+import org.sokybot.runtime.internal.domain.GroupInfo;
 import org.osgi.framework.BundleContext;
 
 public interface IGroupContextFactory {

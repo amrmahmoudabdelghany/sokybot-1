@@ -20,13 +20,11 @@ import org.sokybot.runtime.internal.persistence.MachineInfoRepository;
 import org.sokybot.runtime.internal.persistence.FileMachineInfoRepository;
 import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.runtime.internal.MachineContextFactory;
-// import org.sokybot.engine.SpringGroupContextWrapper;
 import org.sokybot.exception.NameUniquenessConstraintViolationException;
 import org.sokybot.game.navigation.IRuteFinder;
 import org.sokybot.game.navigation.IRuteFinderFactory;
 import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.persistence.service.IGamePersistenceFactory;
-import org.sokybot.service.ISroDAO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,23 +32,22 @@ import org.slf4j.LoggerFactory;
  * Implementation of IGroupContext that manages a group of machines.
  * 
  * This implementation:
- * - Uses Spring context created by IGroupContextFactory (from engine bundle)
- * - Manages child machine contexts using IMachineContextFactory
+ * - Pure OSGi implementation - no Spring dependencies
+ * - Manages child machine contexts using MachineContextFactory
  * - Publishes machine lifecycle events via EventAdmin
- * - Accesses services via OSGi or Spring context wrapper
+ * - Accesses services via OSGi service registry
  */
 public class GroupContextImpl implements IGroupContext {
     
     private static final Logger log = LoggerFactory.getLogger(GroupContextImpl.class);
     
     private final GroupInfo groupInfo;
-    private final SpringGroupContextWrapper springWrapper;
     private final BundleContext bundleContext;
+    private final EventAdmin eventAdmin;
+    private final IRuteFinderFactory ruteFinderFactory;
+    private final IGamePersistenceFactory gamePersistenceFactory;
     
     private MachineInfoRepository machineInfoRepo;
-    private EventAdmin eventAdmin;
-    private IRuteFinderFactory ruteFinderFactory;
-    private IGamePersistenceFactory gamePersistenceFactory;
     
     private IRuteFinder ruteFinder;
     
@@ -61,43 +58,23 @@ public class GroupContextImpl implements IGroupContext {
     private final Lock lock = new ReentrantLock();
     private final Map<String, IMachineContext> machines = new HashMap<>();
     
-    public GroupContextImpl(GroupInfo groupInfo, SpringGroupContextWrapper springWrapper, BundleContext bundleContext) {
+    private IGameDataLookup gameDataLookup;
+    
+    public GroupContextImpl(GroupInfo groupInfo,
+                           BundleContext bundleContext,
+                           EventAdmin eventAdmin,
+                           IRuteFinderFactory ruteFinderFactory,
+                           IGamePersistenceFactory gamePersistenceFactory) {
         this.groupInfo = groupInfo;
-        this.springWrapper = springWrapper;
         this.bundleContext = bundleContext;
+        this.eventAdmin = eventAdmin;
+        this.ruteFinderFactory = ruteFinderFactory;
+        this.gamePersistenceFactory = gamePersistenceFactory;
         
         // Instantiate file-based repository directly (internal use only)
         this.machineInfoRepo = new FileMachineInfoRepository();
         
-        initializeServices();
         loadMachines();
-    }
-    
-    private void initializeServices() {
-        // Get EventAdmin from OSGi service registry
-        if (bundleContext != null) {
-            try {
-                // Get EventAdmin from OSGi service registry
-                ServiceReference<EventAdmin> eventAdminRef = bundleContext.getServiceReference(EventAdmin.class);
-                if (eventAdminRef != null) {
-                    eventAdmin = bundleContext.getService(eventAdminRef);
-                }
-                
-                // Get IRuteFinderFactory from OSGi service registry
-                ServiceReference<IRuteFinderFactory> ruteFinderFactoryRef = bundleContext.getServiceReference(IRuteFinderFactory.class);
-                if (ruteFinderFactoryRef != null) {
-                    ruteFinderFactory = bundleContext.getService(ruteFinderFactoryRef);
-                }
-                
-                // Get IGamePersistenceFactory from OSGi service registry
-                ServiceReference<IGamePersistenceFactory> persistenceFactoryRef = bundleContext.getServiceReference(IGamePersistenceFactory.class);
-                if (persistenceFactoryRef != null) {
-                    gamePersistenceFactory = bundleContext.getService(persistenceFactoryRef);
-                }
-            } catch (Exception e) {
-                log.warn("Services not available from OSGi", e);
-            }
-        }
     }
     
     private void loadMachines() {
@@ -135,29 +112,29 @@ public class GroupContextImpl implements IGroupContext {
     }
     
     @Override
-    public ISroDAO getGameDAO() {
-        // Get from Spring context (via wrapper)
-        return springWrapper.getGameDAO();
-    }
-    
-    @Override
     public IPageViewer pageViewer() {
-        // Get from OSGi service or Spring context (via wrapper)
-        return springWrapper.getPageViewer();
+        // Get from OSGi service registry
+        if (bundleContext != null) {
+            try {
+                ServiceReference<IPageViewer> ref = bundleContext.getServiceReference(IPageViewer.class);
+                if (ref != null) {
+                    return bundleContext.getService(ref);
+                }
+            } catch (Exception e) {
+                log.debug("IPageViewer not available from OSGi", e);
+            }
+        }
+        return null;
     }
     
     @Override
     public IMachineContext[] getMachines() {
-        synchronized (machines) {
-            return machines.values().toArray(new IMachineContext[0]);
-        }
+        return machines.values().toArray(new IMachineContext[0]);
     }
     
     @Override
     public Optional<IMachineContext> findMachineCtx(String name) {
-        synchronized (machines) {
-            return Optional.ofNullable(machines.get(name));
-        }
+        return Optional.ofNullable(machines.get(name));
     }
     
     @Override
@@ -191,17 +168,7 @@ public class GroupContextImpl implements IGroupContext {
         }
     }
     
-    @Override
-    public void addMachineListener(org.sokybot.IMachineListener machineListener) {
-        // Deprecated: Use EventAdmin to listen to MACHINE_CONTEXT_CREATED/DESTROYED events instead
-        log.warn("addMachineListener() is deprecated. Use EventAdmin to listen to context lifecycle events.");
-    }
-    
-    @Override
-    public void removeMachineListener(org.sokybot.IMachineListener machineListener) {
-        // Deprecated: Use EventAdmin to listen to MACHINE_CONTEXT_CREATED/DESTROYED events instead
-        log.warn("removeMachineListener() is deprecated. Use EventAdmin to listen to context lifecycle events.");
-    }
+
     
     @Override
     public String name() {
@@ -210,29 +177,32 @@ public class GroupContextImpl implements IGroupContext {
     
     @Override
     public boolean isRunning() {
-        return springWrapper != null && springWrapper.isRunning();
+        return bundleContext != null && bundleContext.getBundle().getState() == org.osgi.framework.Bundle.ACTIVE;
     }
-    
-    private IGameDataLookup gameDataLookup;
 
     @Override
     public IGameDataLookup getGameDataLookup() {
-         if (this.gameDataLookup == null) {
-              if (this.gamePersistenceFactory == null) {
-                  // Try lazy fetch if services were not ready during init
-                  if (bundleContext != null) {
-                      ServiceReference<IGamePersistenceFactory> ref = bundleContext.getServiceReference(IGamePersistenceFactory.class);
-                      if (ref != null) {
-                          gamePersistenceFactory = bundleContext.getService(ref);
-                      }
-                  }
-              }
-              
-              if (this.gamePersistenceFactory != null) {
-                  this.gameDataLookup = this.gamePersistenceFactory.getLookup(this.groupInfo.getGamePath());
-              }
-         }
-         return this.gameDataLookup;
+        if (this.gameDataLookup == null) {
+            synchronized (this) {
+                if (this.gameDataLookup == null) {
+                    if (this.gamePersistenceFactory == null) {
+                        // Try lazy fetch if services were not ready during init
+                        if (bundleContext != null) {
+                            ServiceReference<IGamePersistenceFactory> ref = bundleContext.getServiceReference(IGamePersistenceFactory.class);
+                            if (ref != null) {
+                                IGamePersistenceFactory factory = bundleContext.getService(ref);
+                                if (factory != null) {
+                                    this.gameDataLookup = factory.getLookup(this.groupInfo.getGamePath());
+                                }
+                            }
+                        }
+                    } else {
+                        this.gameDataLookup = this.gamePersistenceFactory.getLookup(this.groupInfo.getGamePath());
+                    }
+                }
+            }
+        }
+        return this.gameDataLookup;
     }
 
     @Override
@@ -253,8 +223,9 @@ public class GroupContextImpl implements IGroupContext {
         return ruteFinder;
     }
     
-    @Override
-    public Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> getTranslators() {
+    // Package-private method - accessible to MachineContextFactory in same package
+    // Not exposed in public IGroupContext interface (internal implementation detail)
+    Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> getTranslators() {
         if (sharedTranslators == null) {
             synchronized (translatorsLock) {
                 if (sharedTranslators == null) {
@@ -263,7 +234,7 @@ public class GroupContextImpl implements IGroupContext {
                     if (lookup != null) {
                         org.sokybot.gameevents.events.core.ITranslatorFactory factory = getTranslatorFactory();
                         if (factory != null) {
-                            sharedTranslators = factory.createTranslators(lookup, null);
+                            sharedTranslators = factory.createTranslators(lookup);
                             log.info("Created {} shared translators for game: {} (version: {})", 
                                     sharedTranslators.size(), groupInfo.getGamePath(), lookup.getVersion());
                         } else {
@@ -298,19 +269,12 @@ public class GroupContextImpl implements IGroupContext {
         machines.values().forEach(machine -> {
             try {
                 publishMachineDestroyed(machine);
-                if (machineContextFactory != null) {
-                    machineContextFactory.destroyMachineContext(machine);
-                }
+                MachineContextFactory.destroyMachineContext(machine);
             } catch (Exception e) {
                 log.error("Error destroying machine context: {}", machine.name(), e);
             }
         });
         machines.clear();
-        
-        // Close Spring context (via wrapper)
-        if (springWrapper != null) {
-            springWrapper.destroy();
-        }
         
         log.info("Group context destroyed: {}", groupInfo.getName());
     }

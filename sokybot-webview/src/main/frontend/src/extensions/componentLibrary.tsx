@@ -27,7 +27,7 @@ export const UIComponentLibrary: Record<string, React.ComponentType<any>> = {
     'Input': Input,
     'Label': Label,
     'Progress': Progress,
-    
+
     // HTML elements (as string tags)
     'div': 'div' as any,
     'span': 'span' as any,

@@ -7,9 +7,11 @@ import org.osgi.service.event.EventHandler;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.events.character.TrainerStuckEvent;
 import org.sokybot.runtime.IMachineContext;
-import org.sokybot.settings.Settings;
-import org.sokybot.settings.TrainingArea;
-import org.sokybot.settings.TrainingAreaSettings;
+import org.sokybot.actuator.training.TrainingSettings;
+import org.sokybot.runtime.IMachineContext;
+import org.sokybot.settings.api.IProfileManager;
+import org.sokybot.settings.api.ISettingsProvider;
+import org.sokybot.settings.api.ISettingsRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import reactor.core.publisher.Flux;
@@ -24,12 +26,30 @@ public class TrainingService implements EventHandler {
     
     private final String machineFullName;
     private final IMachineContext machineContext;
+    private final ISettingsProvider<TrainingSettings> settingsProvider;
+    private final IProfileManager profileManager;
     private final Sinks.Many<Map<String, Object>> stateSink = 
         Sinks.many().multicast().onBackpressureBuffer(100);
     
-    public TrainingService(String machineFullName, IMachineContext machineContext) {
+    public TrainingService(
+            String machineFullName, 
+            IMachineContext machineContext,
+            ISettingsRegistry settingsRegistry,
+            IProfileManager profileManager) {
+        
         this.machineFullName = machineFullName;
         this.machineContext = machineContext;
+        this.profileManager = profileManager;
+        
+        this.settingsProvider = settingsRegistry.getProvider(
+            machineContext.getGroupName(),
+            machineContext.getMachineName(),
+            "training",
+            TrainingSettings.class
+        );
+        
+        // Subscribe to settings changes
+        this.settingsProvider.subscribe(settings -> emitStateUpdate());
     }
     
     @Override
@@ -55,83 +75,62 @@ public class TrainingService implements EventHandler {
     
     public Map<String, Object> handleAction(String action, Map<String, Object> data) {
         Map<String, Object> newState = new HashMap<>();
-        Settings settings = machineContext != null ? machineContext.getSettings() : null;
         
-        if (settings == null) {
-            return Map.of("success", false, "error", "Settings not available");
-        }
-        
-        switch (action) {
-            case "refresh":
-                newState.putAll(getTrainingData(settings));
-                return Map.of("success", true, "state", newState);
-            case "setAutoAttack":
-                boolean autoAttack = (Boolean) data.getOrDefault("value", false);
-                settings.setAutoAttack(autoAttack);
-                newState.put("autoAttack", autoAttack);
-                emitStateUpdate();
-                return Map.of("success", true, "state", newState);
-            case "setAutoLogin":
-                boolean autoLogin = (Boolean) data.getOrDefault("value", false);
-                settings.setAutoLogin(autoLogin);
-                newState.put("autoLogin", autoLogin);
-                emitStateUpdate();
-                return Map.of("success", true, "state", newState);
-            case "setActiveArea":
-                // TODO: Implement active area setting
-                return Map.of("success", false, "error", "Not implemented");
-            default:
-                return Map.of("success", false, "error", "Unknown action: " + action);
+        try {
+            switch (action) {
+                case "refresh":
+                    break;
+                case "save":
+                    settingsProvider.save();
+                    break;
+                case "reset":
+                    settingsProvider.resetToDefaults();
+                    break;
+                case "update":
+                    settingsProvider.update(settings -> {
+                        if (data.containsKey("autoAttack")) settings.setAutoAttack((Boolean) data.get("autoAttack"));
+                        if (data.containsKey("doNotAttack")) settings.setDoNotAttack((Boolean) data.get("doNotAttack"));
+                        // Add other fields as needed
+                    });
+                    break;
+                default:
+                    return Map.of("success", false, "error", "Unknown action: " + action);
+            }
+            
+            newState.putAll(getTrainingData());
+            return Map.of("success", true, "state", newState);
+            
+        } catch (Exception e) {
+            return Map.of("success", false, "error", e.getMessage());
         }
     }
     
     public Flux<Map<String, Object>> streamTraining() {
-        // Return initial state + updates
-        Settings settings = machineContext != null ? machineContext.getSettings() : null;
         return Flux.concat(
-            Flux.just(getTrainingData(settings)),
+            Flux.just(getTrainingData()),
             stateSink.asFlux()
         );
     }
     
-    private Map<String, Object> getTrainingData(Settings settings) {
+    private Map<String, Object> getTrainingData() {
         Map<String, Object> data = new HashMap<>();
-        if (settings != null) {
-            data.put("autoAttack", settings.isAutoAttack());
-            data.put("autoLogin", settings.isAutoLogin());
-            
-            TrainingAreaSettings areaSettings = settings.getTrainingAreaSettings();
-            if (areaSettings != null) {
-                TrainingArea active = areaSettings.getActiveAreaInstance();
-                if (active != null) {
-                    Map<String, Object> area = new HashMap<>();
-                    area.put("name", active.getName());
-                    area.put("x", active.getAreaX());
-                    area.put("y", active.getAreaY());
-                    area.put("r", active.getAreaR());
-                    data.put("activeArea", area);
-                } else {
-                    data.put("activeArea", null);
-                }
-            } else {
-                data.put("activeArea", null);
-            }
-        } else {
-            data.put("autoAttack", false);
-            data.put("autoLogin", false);
-            data.put("activeArea", null);
-        }
+        TrainingSettings settings = settingsProvider.get();
+        
+        data.put("settings", settings);
+        data.put("isDirty", settingsProvider.isDirty());
+        
+        // Add game state (e.g., active area, nearby mobs)
+        // For now just returning settings structure
+        
         return data;
     }
     
     private void emitStateUpdate() {
-        Settings settings = machineContext != null ? machineContext.getSettings() : null;
-        stateSink.tryEmitNext(getTrainingData(settings));
+        stateSink.tryEmitNext(getTrainingData());
     }
     
     public Map<String, Object> getInitialState() {
-        Settings settings = machineContext != null ? machineContext.getSettings() : null;
-        return getTrainingData(settings);
+        return getTrainingData();
     }
     
     public void shutdown() {

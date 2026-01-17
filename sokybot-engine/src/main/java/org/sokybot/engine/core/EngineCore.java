@@ -13,8 +13,6 @@ import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.proxy.IProxyConnection;
-import org.sokybot.settings.ISettingsManager;
-import org.sokybot.settings.Settings;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +34,6 @@ public class EngineCore implements IEngine {
     private final String machineName;
     private final IProxyConnection proxyConnection;
     private final IGameModel gameModel;
-    private final Settings settings;
-    private final ISettingsManager settingsManager;
     
     // Core components
     private final DispatcherImpl dispatcher;
@@ -59,7 +55,6 @@ public class EngineCore implements IEngine {
     
     public EngineCore(String machineId, String groupName, String machineName,
                      IProxyConnection proxyConnection, IGameModel gameModel,
-                     Settings settings, ISettingsManager settingsManager,
                      BundleContext bundleContext) {
         if (machineId == null || machineId.trim().isEmpty()) {
             throw new IllegalArgumentException("Machine ID cannot be null or empty");
@@ -70,11 +65,11 @@ public class EngineCore implements IEngine {
         if (gameModel == null) {
             throw new IllegalArgumentException("Game model cannot be null");
         }
-        if (settings == null) {
-            throw new IllegalArgumentException("Settings cannot be null");
+        if (groupName == null || groupName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Group name cannot be null or empty");
         }
-        if (settingsManager == null) {
-            throw new IllegalArgumentException("Settings manager cannot be null");
+        if (machineName == null || machineName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Machine name cannot be null or empty");
         }
         
         this.machineId = machineId;
@@ -82,15 +77,13 @@ public class EngineCore implements IEngine {
         this.machineName = machineName;
         this.proxyConnection = proxyConnection;
         this.gameModel = gameModel;
-        this.settings = settings;
-        this.settingsManager = settingsManager;
         this.bundleContext = bundleContext;
         
         // Initialize components
         this.dispatcher = new DispatcherImpl(proxyConnection, machineId);
         this.workflowRegistry = new WorkflowRegistryImpl();
         this.workflowContext = new WorkflowContextImpl(
-            gameModel, dispatcher, settings, settingsManager, machineId);
+            gameModel, dispatcher, groupName, machineName);
         this.actionQueue = new ActionQueueImpl();
         this.queueProcessor = new ActionQueueProcessorImpl(actionQueue);
         this.interruptionManager = new InterruptionManager(workflowRegistry);
@@ -254,11 +247,6 @@ public class EngineCore implements IEngine {
     }
     
     @Override
-    public Settings getSettings() {
-        return settings;
-    }
-    
-    @Override
     public IWorkflowRegistry getWorkflowRegistry() {
         return workflowRegistry;
     }
@@ -278,10 +266,6 @@ public class EngineCore implements IEngine {
     
     DispatcherImpl getDispatcher() {
         return dispatcher;
-    }
-    
-    ISettingsManager getSettingsManager() {
-        return settingsManager;
     }
     
     /**

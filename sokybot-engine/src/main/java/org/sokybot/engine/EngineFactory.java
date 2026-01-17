@@ -11,8 +11,6 @@ import org.sokybot.engine.core.EngineCore;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.gamemodel.IGameModelFactory;
 import org.sokybot.proxy.IProxyConnection;
-import org.sokybot.settings.ISettingsManager;
-import org.sokybot.settings.Settings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,14 +27,8 @@ public class EngineFactory implements IEngineFactory {
     
     private final Map<String, EngineCore> engines = new ConcurrentHashMap<>();
 
-    private ISettingsManager settingsManager;
     private IGameModelFactory gameModelFactory;
     private BundleContext bundleContext;
-
-    @Reference
-    public void setSettingsManager(ISettingsManager settingsManager) {
-        this.settingsManager = settingsManager;
-    }
 
     @Reference
     public void setGameModelFactory(IGameModelFactory gameModelFactory) {
@@ -60,27 +52,16 @@ public class EngineFactory implements IEngineFactory {
             log.info("Creating engine for machine: {}", machineId);
             
             try {
-                // Load settings
-                Settings settings = settingsManager.loadSettings(
-                    groupName, machineName, "core", Settings.class);
-                
-                // If settings don't exist, create new instance
-                if (settings == null || settings.getId() == null) {
-                    settings = new Settings(machineId, groupName, machineName);
-                    settingsManager.saveSettings(groupName, machineName, "core", settings);
-                }
-                
                 // Create game model
                 IGameModel gameModel = gameModelFactory.create(machineName);
                 if (gameModel == null) {
                     throw new IllegalStateException("Failed to create game model for machine: " + machineName);
                 }
                 
-                // Create engine core
+                // Create engine core (no longer needs Settings or ISettingsManager)
                 EngineCore engine = new EngineCore(
                     machineId, groupName, machineName,
-                    proxyConnection, gameModel,
-                    settings, settingsManager, bundleContext);
+                    proxyConnection, gameModel, bundleContext);
                 
                 engines.put(machineId, engine);
                 

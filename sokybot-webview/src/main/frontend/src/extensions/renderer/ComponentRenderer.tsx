@@ -1,5 +1,17 @@
 import React from 'react';
-import { UIComponent } from '../types';
+// UIComponent inlined to work around Vite serving ui-types.ts as empty
+interface UIComponent {
+    type: string;
+    props?: Record<string, any>;
+    children?: UIComponent[] | string;
+    className?: string;
+    style?: Record<string, any>;
+    key?: string;
+    icon?: string;
+    iconProps?: Record<string, any>;
+    variant?: string;
+    size?: string;
+}
 import { getComponentFromLibrary, renderIcon } from '../componentLibrary';
 import { cn } from '@/lib/utils';
 import { getComponent } from '../registry';
@@ -125,7 +137,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 }
                 return null;
             });
-            
+
             const LibraryComponent = getComponentFromLibrary(type);
             if (LibraryComponent) {
                 const { dataSource, renderItem, hidden, children: propsChildren, ...componentProps } = resolvedProps;
@@ -160,7 +172,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     if (LibraryComponent) {
         // Determine children: prefer props.children, then component.children
         const resolvedChildren = resolvedProps.children !== undefined
-            ? (typeof resolvedProps.children === 'string' 
+            ? (typeof resolvedProps.children === 'string'
                 ? resolveTemplate(resolvedProps.children, context)
                 : resolvedProps.children)
             : (children ? renderChildren(children, pageId, machineId, context, onAction) : undefined);
@@ -475,7 +487,7 @@ function evaluateBooleanExpression(expr: string, ctx: Record<string, any>): bool
     // Simple boolean value - try to resolve as literal first
     if (trimmed === 'true') return true;
     if (trimmed === 'false') return false;
-    
+
     // Otherwise evaluate as expression
     const value = evaluateExpression(trimmed, ctx);
     return Boolean(value);

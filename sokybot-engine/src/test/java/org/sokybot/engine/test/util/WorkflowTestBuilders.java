@@ -250,8 +250,10 @@ public class WorkflowTestBuilders {
     public static class TestCycleBuilder {
         private final String name;
         private int priority = 100;
+        private int interruptionPriority = 0;
         private String entryState;
         private IGuard entryGuard;
+        private IGuard interruptionGuard;
         private final List<IWorkflowState> states = new ArrayList<>();
         
         TestCycleBuilder(String name) {
@@ -263,6 +265,14 @@ public class WorkflowTestBuilders {
          */
         public TestCycleBuilder priority(int priority) {
             this.priority = priority;
+            return this;
+        }
+
+        /**
+         * Sets the cycle interruption priority.
+         */
+        public TestCycleBuilder interruptionPriority(int priority) {
+            this.interruptionPriority = priority;
             return this;
         }
         
@@ -279,6 +289,14 @@ public class WorkflowTestBuilders {
          */
         public TestCycleBuilder entryGuard(IGuard guard) {
             this.entryGuard = guard;
+            return this;
+        }
+
+        /**
+         * Sets the interruption guard.
+         */
+        public TestCycleBuilder interruptionGuard(IGuard guard) {
+            this.interruptionGuard = guard;
             return this;
         }
         
@@ -306,7 +324,7 @@ public class WorkflowTestBuilders {
                 entryState = states.get(0).getName();
             }
             
-            return new SimpleTestCycle(name, priority, entryState, entryGuard, states);
+            return new SimpleTestCycle(name, priority, interruptionPriority, entryState, entryGuard, interruptionGuard, states);
         }
     }
     
@@ -316,16 +334,20 @@ public class WorkflowTestBuilders {
     private static class SimpleTestCycle implements ICycleDefinition {
         private final String name;
         private final int priority;
+        private final int interruptionPriority;
         private final String entryState;
         private final IGuard entryGuard;
+        private final IGuard interruptionGuard;
         private final List<ICycleState> states;
         private final Map<String, ICycleState> statesMap;
         
-        SimpleTestCycle(String name, int priority, String entryState, IGuard entryGuard, List<IWorkflowState> states) {
+        SimpleTestCycle(String name, int priority, int interruptionPriority, String entryState, IGuard entryGuard, IGuard interruptionGuard, List<IWorkflowState> states) {
             this.name = name;
             this.priority = priority;
+            this.interruptionPriority = interruptionPriority;
             this.entryState = entryState;
             this.entryGuard = entryGuard;
+            this.interruptionGuard = interruptionGuard;
             // Convert IWorkflowState to ICycleState if needed
             this.statesMap = new HashMap<>();
             List<ICycleState> cycleStates = new ArrayList<>();
@@ -366,12 +388,12 @@ public class WorkflowTestBuilders {
         
         @Override
         public IGuard getInterruptionGuard() {
-            return null;
+            return interruptionGuard;
         }
         
         @Override
         public int getInterruptionPriority() {
-            return 0;
+            return interruptionPriority;
         }
         
         @Override

@@ -20,6 +20,12 @@
 
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-game-events-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
         </dependency>

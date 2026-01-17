@@ -41,42 +41,44 @@
             },
             {
               "type": "div",
-              "className": "space-y-2",
+              "className": "space-y-4",
               "children": [
                 {
                   "type": "div",
-                  "className": "flex justify-between items-center text-sm text-slate-700 dark:text-slate-300",
+                  "className": "flex items-center space-x-2",
                   "children": [
                     {
-                      "type": "span",
+                      "type": "Checkbox",
                       "props": {
-                        "children": "Auto Attack"
+                        "checked": "${settings.autoAttack}",
+                        "onCheckedChange": "update",
+                        "name": "autoAttack"
                       }
                     },
                     {
-                      "type": "span",
-                      "className": "${autoAttack ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}",
+                      "type": "Label",
                       "props": {
-                        "children": "${autoAttack ? 'Enabled' : 'Disabled'}"
+                        "children": "Enable Auto Attack"
                       }
                     }
                   ]
                 },
                 {
                   "type": "div",
-                  "className": "flex justify-between items-center text-sm text-slate-700 dark:text-slate-300",
+                  "className": "flex items-center space-x-2",
                   "children": [
                     {
-                      "type": "span",
+                      "type": "Checkbox",
                       "props": {
-                        "children": "Auto Login"
+                        "checked": "${settings.doNotAttack}",
+                        "onCheckedChange": "update",
+                        "name": "doNotAttack"
                       }
                     },
                     {
-                      "type": "span",
-                      "className": "${autoLogin ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}",
+                      "type": "Label",
                       "props": {
-                        "children": "${autoLogin ? 'Enabled' : 'Disabled'}"
+                        "children": "Do Not Attack Mode"
                       }
                     }
                   ]

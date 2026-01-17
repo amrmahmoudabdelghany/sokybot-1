@@ -12,6 +12,9 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.OneToMany;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
@@ -30,6 +33,7 @@ public class DivisionInfo implements Serializable {
 	public byte local = 0;
 	
 	@OneToMany(fetch = FetchType.EAGER , cascade = CascadeType.ALL)
+	@Fetch(FetchMode.SUBSELECT)
 	private  List<Division> divisions;
 
 	

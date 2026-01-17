@@ -12,7 +12,10 @@ import org.sokybot.gamemodel.model.IItem;
 import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.Encoding;
 import org.sokybot.network.packet.MutablePacket;
+import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.NetworkPeer;
+import org.sokybot.settings.api.ISettingsRegistry;
+import org.sokybot.settings.api.ISettingsProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,12 +43,26 @@ public class TrainingActuator implements IActuator {
     public String getName() {
         return "training";
     }
+
+    @Reference
+    private ISettingsRegistry settingsRegistry;
     
     @Override
     public void initialize(IActuatorContext context) throws BundleException {
         log.info("Initializing training actuator for machine: {}", context.getMachineId());
         
         try {
+            // Register settings
+            settingsRegistry.register("training", TrainingSettings.class, TrainingSettings::new);
+            
+            // Get settings provider
+            ISettingsProvider<TrainingSettings> settingsProvider = settingsRegistry.getProvider(
+                context.getGroupName(), 
+                context.getMachineName(), 
+                "training", 
+                TrainingSettings.class
+            );
+
             // Register training cycle with interruption support for low HP/MP
             ICycleDefinition cycle = new CycleDefinitionBuilder()
                 .name("training-cycle")
@@ -53,7 +70,8 @@ public class TrainingActuator implements IActuator {
                 .entryState("CHECK_POTION")
                 .entryGuard(ctx -> {
                     // Only enter if logged in and auto-attack enabled
-                    return isLoggedIn(ctx) && ctx.getSettings().isAutoAttack();
+                    TrainingSettings settings = settingsProvider.get();
+                    return isLoggedIn(ctx) && settings.isAutoAttack();
                 })
                 // Interruption guard for low HP/MP - high priority interruption
                 .interruptionGuard(ctx -> {
@@ -86,7 +104,7 @@ public class TrainingActuator implements IActuator {
                 .state("CHECK_COMBAT", builder -> builder
                     .guard(ctx -> {
                         // Check if should attack
-                        return shouldAttack(ctx);
+                        return shouldAttack(ctx, settingsProvider.get());
                     })
                     .action(ctx -> {
                         log.info("Engaging in combat");
@@ -263,15 +281,15 @@ public class TrainingActuator implements IActuator {
     /**
      * Checks if should attack.
      */
-    private boolean shouldAttack(IWorkflowContext context) {
+    private boolean shouldAttack(IWorkflowContext context, TrainingSettings settings) {
         try {
             // Check if auto-attack is enabled
-            if (!context.getSettings().isAutoAttack()) {
+            if (!settings.isAutoAttack()) {
                 return false;
             }
             
             // Check if doNotAttack flag is set
-            if (context.getSettings().isDoNotAttack()) {
+            if (settings.isDoNotAttack()) {
                 return false;
             }
             

@@ -1,4 +1,4 @@
-package org.sokybot.persistence.entities;
+import org.sokybot.commons.ItemAction;
 
 import java.util.Map;
 

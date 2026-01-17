@@ -3,6 +3,7 @@ package org.sokybot.engine.core.interruption;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import java.util.List;
 import org.sokybot.engine.api.workflow.*;
 import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
 import org.sokybot.engine.core.workflow.WorkflowContextImpl;
@@ -59,8 +60,9 @@ class InterruptionManagerTest extends WorkflowTestBase {
         IGuard interruptionGuard = WorkflowTestBuilders.guard().returns(true).build();
         ICycleDefinition highPriorityCycle = WorkflowTestBuilders.cycle("high-cycle")
             .priority(200)
+            .interruptionPriority(200)
             .entryState("STATE1")
-            .entryGuard(interruptionGuard)
+            .interruptionGuard(interruptionGuard)
             .state("STATE1",
                    WorkflowTestBuilders.guard().returns(true).build(),
                    WorkflowTestBuilders.action().build(),
@@ -129,6 +131,16 @@ class InterruptionManagerTest extends WorkflowTestBase {
         ICycleState mockState = mock(ICycleState.class);
         when(mockState.getName()).thenReturn("STATE1");
         
+        // Register test-cycle
+        ICycleDefinition testCycle = mock(ICycleDefinition.class);
+        when(testCycle.getName()).thenReturn("test-cycle");
+        when(testCycle.isInterruptible()).thenReturn(true);
+        when(testCycle.getState("STATE1")).thenReturn(mockState);
+        when(testCycle.isEnabled()).thenReturn(true);
+        when(testCycle.getEntryStateName()).thenReturn("STATE1");
+        when(testCycle.getStates()).thenReturn(List.of(mockState));
+        registry.registerCycle(testCycle);
+
         // Set current cycle
         interruptionManager.setCurrentCycle("test-cycle", mockState, 100);
         

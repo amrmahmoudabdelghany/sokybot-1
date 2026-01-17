@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Optional;
+
 
 import org.sokybot.pk2.IPk2Driver;
 import org.sokybot.pk2.JMXFile;
@@ -45,21 +47,30 @@ public class ObjectInfoExtractor implements IExtractor<ObjectNavMeshData> {
         try {
             if (progressListener != null) progressListener.onStart(NAME, -1);
             
-            driver.findFirst("\\navmesh\\object.ifo").ifPresent(jmx -> {
+            Optional<JMXFile> ifoFile = driver.findFirst("(?i).*object\\.ifo");
+            if (ifoFile.isPresent()) {
+                JMXFile jmx = ifoFile.get();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(jmx.getInputStream()));
+                
                 reader.lines()
                     .filter(line -> line.length() > 5 && !line.equals("JMXVOBJI1000"))
                     .forEach(line -> {
                         try {
                             int id = Integer.parseInt(line.substring(0, 5));
-                            String bsrPath = line.substring(line.indexOf('"') + 1, line.lastIndexOf('"'));
-                            bsrPath = processPath(bsrPath);
+                            String rawBsrPath = line.substring(line.indexOf('"') + 1, line.lastIndexOf('"'));
+                            String bsrPath = processPath(rawBsrPath);
                             
-                            if (bsrPath != null && !bsrPath.isBlank() && bsrPath.endsWith(".bsr")) {
-                                driver.findFirst(bsrPath)
-                                    .map(this::extractBmsPath)
-                                    .flatMap(driver::findFirst)
-                                    .ifPresent(bmsFile -> {
+                            if (rawBsrPath != null && !rawBsrPath.isBlank() && rawBsrPath.toLowerCase().endsWith(".bsr")) {
+                                driver.findFirst(bsrPath).ifPresent(bsrFile -> {
+                                    String bmsPath;
+                                    try {
+                                        bmsPath = extractBmsPath(bsrFile);
+                                    } catch (Exception e) {
+                                        // Failed to extract BMS path
+                                        return; 
+                                    }
+
+                                    driver.findFirst(bmsPath).ifPresent(bmsFile -> {
                                         ObjectNavMeshData dto = extractObjectNavmesh(id, bmsFile);
                                         if (dto != null) {
                                             counter[0]++;
@@ -68,12 +79,13 @@ public class ObjectInfoExtractor implements IExtractor<ObjectNavMeshData> {
                                                 progressListener.onProgress(NAME, counter[0], -1, String.valueOf(id));
                                         }
                                     });
+                                });
                             }
                         } catch (Exception e) {
-                            // Skip malformed lines
+                           // Continue processing next line
                         }
-                    });
-            });
+                     });
+            }
             
             long duration = System.currentTimeMillis() - startTime;
             if (listener != null) listener.onComplete(counter[0]);
@@ -86,7 +98,17 @@ public class ObjectInfoExtractor implements IExtractor<ObjectNavMeshData> {
     }
     
     private String processPath(String path) {
-        return "(?i)" + String.join("\\(?i)", path.split("\\\\"));
+        String normalized = path.replace('\\', '/');
+        if (normalized.startsWith("/")) normalized = normalized.substring(1); // remove leading slash
+        String[] parts = normalized.split("/");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < parts.length; i++) {
+             sb.append("(?i)").append(java.util.regex.Pattern.quote(parts[i]));
+             if (i < parts.length - 1) {
+                 sb.append("/");
+             }
+        }
+        return sb.toString();
     }
     
     private ObjectNavMeshData extractObjectNavmesh(int id, JMXFile file) {

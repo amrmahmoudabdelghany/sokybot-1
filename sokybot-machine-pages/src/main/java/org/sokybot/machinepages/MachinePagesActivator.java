@@ -26,6 +26,12 @@ import org.sokybot.machinepages.service.InventoryService;
 import org.sokybot.machinepages.service.LogService;
 import org.sokybot.machinepages.service.SkillService;
 import org.sokybot.machinepages.service.TrainingService;
+import org.sokybot.machinepages.service.ConnectionService;
+import org.sokybot.machinepages.service.NavigationService;
+import org.sokybot.machinepages.service.HealingService;
+import org.sokybot.settings.api.IProfileManager;
+import org.sokybot.settings.api.ISettingsRegistry;
+import org.sokybot.settings.security.ICredentialEncryptor;
 
 /**
  * Activator for Machine Pages bundle.
@@ -40,6 +46,15 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
     @Reference
     private IWebviewConfigurator webviewConfigurator;
     
+    @Reference
+    private ISettingsRegistry settingsRegistry;
+    
+    @Reference
+    private IProfileManager profileManager;
+    
+    @Reference
+    private ICredentialEncryptor credentialEncryptor;
+    
     private BundleContext bundleContext;
     
     // Service instances per machine
@@ -51,6 +66,9 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
     private Map<String, Object> trainingSchema;
     private Map<String, Object> environmentSchema;
     private Map<String, Object> logSchema;
+    private Map<String, Object> connectionSchema;
+    private Map<String, Object> navigationSchema;
+    private Map<String, Object> healingSchema;
     
     @Activate
     public void activate(org.osgi.service.component.ComponentContext componentContext) {
@@ -86,7 +104,12 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
             skillsSchema = SchemaLoader.loadSchema("/ui/skills.json", getClass());
             trainingSchema = SchemaLoader.loadSchema("/ui/training.json", getClass());
             environmentSchema = SchemaLoader.loadSchema("/ui/environment.json", getClass());
+            trainingSchema = SchemaLoader.loadSchema("/ui/training.json", getClass());
+            environmentSchema = SchemaLoader.loadSchema("/ui/environment.json", getClass());
             logSchema = SchemaLoader.loadSchema("/ui/log.json", getClass());
+            connectionSchema = SchemaLoader.loadSchema("/ui/connection.json", getClass());
+            navigationSchema = SchemaLoader.loadSchema("/ui/navigation.json", getClass());
+            healingSchema = SchemaLoader.loadSchema("/ui/healing.json", getClass());
             
             System.out.println("Machine Pages: UI schemas loaded successfully");
         } catch (Exception e) {
@@ -155,7 +178,15 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
             ctx.getGameModel() != null ? ctx.getGameModel().getTrainer() : null);
         services.skillService = new SkillService(machineFullName,
             ctx.getGameModel() != null ? ctx.getGameModel().getTrainer() : null);
-        services.trainingService = new TrainingService(machineFullName, ctx);
+            
+        services.trainingService = new TrainingService(machineFullName, ctx, settingsRegistry, profileManager);
+        
+        services.connectionService = new ConnectionService(machineFullName, ctx, 
+            settingsRegistry, profileManager, credentialEncryptor);
+            
+        services.navigationService = new NavigationService(machineFullName, ctx, settingsRegistry);
+        services.healingService = new HealingService(machineFullName, ctx, settingsRegistry);
+            
         services.environmentService = new EnvironmentService(machineFullName);
         services.logService = new LogService(machineFullName);
         
@@ -236,6 +267,33 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
                 "sokybot/game/" + machineFullName + "/TrainerStuckEvent");
             services.trainingHandlerRegistration = bundleContext.registerService(
                 EventHandler.class, services.trainingService, trainingProps);
+
+            // Register ConnectionService EventHandler
+            Dictionary<String, Object> connectionProps = new Hashtable<>();
+            connectionProps.put(EventConstants.EVENT_TOPIC, new String[] {
+                "sokybot/network/" + machineFullName + "/Connected",
+                "sokybot/network/" + machineFullName + "/Disconnected"
+            });
+            services.connectionHandlerRegistration = bundleContext.registerService(
+                EventHandler.class, services.connectionService, connectionProps);
+            
+            // Register NavigationService EventHandler
+            Dictionary<String, Object> navProps = new Hashtable<>();
+            navProps.put(EventConstants.EVENT_TOPIC, new String[] {
+                "sokybot/game/" + machineFullName + "/PositionUpdateEvent",
+                "sokybot/game/" + machineFullName + "/MapChangedEvent"
+            });
+            services.navigationHandlerRegistration = bundleContext.registerService(
+                EventHandler.class, services.navigationService, navProps);
+                
+            // Register HealingService EventHandler
+            Dictionary<String, Object> healingProps = new Hashtable<>();
+            healingProps.put(EventConstants.EVENT_TOPIC, new String[] {
+                "sokybot/game/" + machineFullName + "/UpdateHPEvent",
+                "sokybot/game/" + machineFullName + "/UpdateMPEvent"
+            });
+            services.healingHandlerRegistration = bundleContext.registerService(
+                EventHandler.class, services.healingService, healingProps);
             
             // Register EnvironmentService EventHandler
             Dictionary<String, Object> envProps = new Hashtable<>();
@@ -407,6 +465,93 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
             );
         }
         
+        // Register Connection page
+        if (connectionSchema != null) {
+            webviewConfigurator.addDeclarativePage(
+                "connection_" + machineFullName,
+                "Connection",
+                "Link",
+                deepCopySchema(connectionSchema)
+            );
+            webviewConfigurator.registerSchemaHandler(
+                "connection_" + machineFullName,
+                (request) -> {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("schema", deepCopySchema(connectionSchema));
+                    result.put("state", services.connectionService.getInitialState());
+                    return result;
+                }
+            );
+            webviewConfigurator.registerActionHandler(
+                "connection_" + machineFullName,
+                (action, data) -> services.connectionService.handleAction(action, data)
+            );
+            webviewConfigurator.registerStreamHandler(
+                "connection_" + machineFullName,
+                "connection",
+                (params) -> services.connectionService.streamState(),
+                "state"
+            );
+        }
+
+        // Register Navigation page
+        if (navigationSchema != null) {
+            webviewConfigurator.addDeclarativePage(
+                "navigation_" + machineFullName,
+                "Navigation",
+                "Compass",
+                deepCopySchema(navigationSchema)
+            );
+            webviewConfigurator.registerSchemaHandler(
+                "navigation_" + machineFullName,
+                (request) -> {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("schema", deepCopySchema(navigationSchema));
+                    result.put("state", services.navigationService.getInitialState());
+                    return result;
+                }
+            );
+            webviewConfigurator.registerActionHandler(
+                "navigation_" + machineFullName,
+                (action, data) -> services.navigationService.handleAction(action, data)
+            );
+            webviewConfigurator.registerStreamHandler(
+                "navigation_" + machineFullName,
+                "navigation",
+                (params) -> services.navigationService.streamNavigation(),
+                "state"
+            );
+        }
+
+        // Register Healing page
+        if (healingSchema != null) {
+            webviewConfigurator.addDeclarativePage(
+                "healing_" + machineFullName,
+                "Healing",
+                "Heart",
+                deepCopySchema(healingSchema)
+            );
+            webviewConfigurator.registerSchemaHandler(
+                "healing_" + machineFullName,
+                (request) -> {
+                    Map<String, Object> result = new HashMap<>();
+                    result.put("schema", deepCopySchema(healingSchema));
+                    result.put("state", services.healingService.getInitialState());
+                    return result;
+                }
+            );
+            webviewConfigurator.registerActionHandler(
+                "healing_" + machineFullName,
+                (action, data) -> services.healingService.handleAction(action, data)
+            );
+            webviewConfigurator.registerStreamHandler(
+                "healing_" + machineFullName,
+                "healing",
+                (params) -> services.healingService.streamHealing(),
+                "state"
+            );
+        }
+        
         System.out.println("Machine Pages: Pages registered for " + machineFullName);
     }
     
@@ -433,12 +578,18 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
         TrainingService trainingService;
         EnvironmentService environmentService;
         LogService logService;
+        ConnectionService connectionService;
+        NavigationService navigationService;
+        HealingService healingService;
         
         ServiceRegistration<EventHandler> inventoryHandlerRegistration;
         ServiceRegistration<EventHandler> skillHandlerRegistration;
         ServiceRegistration<EventHandler> trainingHandlerRegistration;
         ServiceRegistration<EventHandler> environmentHandlerRegistration;
         ServiceRegistration<EventHandler> logHandlerRegistration;
+        ServiceRegistration<EventHandler> connectionHandlerRegistration;
+        ServiceRegistration<EventHandler> navigationHandlerRegistration;
+        ServiceRegistration<EventHandler> healingHandlerRegistration;
         
         void shutdown() {
             if (inventoryService != null) inventoryService.shutdown();
@@ -446,6 +597,9 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
             if (trainingService != null) trainingService.shutdown();
             if (environmentService != null) environmentService.shutdown();
             if (logService != null) logService.shutdown();
+            if (connectionService != null) connectionService.shutdown();
+            if (navigationService != null) navigationService.shutdown();
+            if (healingService != null) healingService.shutdown();
         }
     }
 }

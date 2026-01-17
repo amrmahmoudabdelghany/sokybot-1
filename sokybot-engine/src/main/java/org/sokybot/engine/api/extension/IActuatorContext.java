@@ -3,8 +3,6 @@ package org.sokybot.engine.api.extension;
 import org.sokybot.engine.api.IDispatcher;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.gamemodel.IGameModel;
-import org.sokybot.settings.Settings;
-import org.sokybot.settings.ISettingsManager;
 
 /**
  * Context provided to actuators during initialization.
@@ -34,24 +32,24 @@ public interface IActuatorContext {
     IDispatcher getDispatcher();
     
     /**
-     * Gets the settings for this machine.
-     * 
-     * @return The settings object
-     */
-    Settings getSettings();
-    
-    /**
-     * Gets the settings manager for this machine.
-     * 
-     * @return The settings manager
-     */
-    ISettingsManager getSettingsManager();
-    
-    /**
      * Gets the machine ID.
      * Format: "groupName.machineName"
      * 
      * @return The machine ID
      */
     String getMachineId();
+    
+    /**
+     * Gets the group name.
+     * 
+     * @return The group name
+     */
+    String getGroupName();
+    
+    /**
+     * Gets the machine name.
+     * 
+     * @return The machine name
+     */
+    String getMachineName();
 }

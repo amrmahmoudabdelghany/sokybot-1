@@ -2,6 +2,8 @@ package org.sokybot.proxy;
 
 import org.osgi.service.event.EventAdmin;
 import org.sokybot.network.packet.MutablePacket;
+import org.sokybot.network.IPacketPublisher;
+import org.sokybot.proxy.internal.SimplePacketPublisher;
 import org.sokybot.proxy.internal.ClientChannelInitializer;
 import org.sokybot.proxy.internal.HandshakeHandler;
 import org.sokybot.proxy.internal.NetworkComponents;
@@ -246,6 +248,7 @@ public class ProxyConnection implements IProxyConnection {
         if (handshakeHandler != null) {
             handshakeHandler.setListener(listener);
         }
+    }
     @Override
     public IPacketPublisher getPacketPublisher() {
         return this.packetPublisher;

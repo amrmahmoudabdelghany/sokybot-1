@@ -5,20 +5,19 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceEvent;
 import org.osgi.framework.ServiceListener;
 import org.osgi.framework.ServiceReference;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
 import org.sokybot.loader.IGameLoader;
 import org.sokybot.loader.IGameLoaderService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Service for discovering and managing IGameLoader OSGi services.
@@ -26,19 +25,20 @@ import lombok.extern.slf4j.Slf4j;
  * Uses BundleContext directly to find and track IGameLoader services
  * instead of going through IPluginService abstraction.
  */
-@Component
-@Slf4j
+@Component(service = IGameLoaderService.class)
 public class GameLoaderService implements IGameLoaderService, ServiceListener {
+	
+	private static final Logger log = LoggerFactory.getLogger(GameLoaderService.class);
 
     private Map<String, IGameLoader> gameLoaders = new ConcurrentHashMap<>();
     private BundleContext bundleContext;
 
-    @Autowired
-    public void setBundleContext(BundleContext bundleContext) {
+    @Activate
+    public void activate(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+        init();
     }
-
-    @PostConstruct
+    
     void init() {
         if (bundleContext == null) {
             log.warn("BundleContext not available - GameLoaderService will not work");
@@ -71,7 +71,7 @@ public class GameLoaderService implements IGameLoaderService, ServiceListener {
         }
     }
 
-    @PreDestroy
+    @Deactivate
     void destroy() {
         if (bundleContext != null) {
             bundleContext.removeServiceListener(this);

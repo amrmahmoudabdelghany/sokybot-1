@@ -12,6 +12,8 @@ import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.Encoding;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.NetworkPeer;
+import org.sokybot.settings.api.ISettingsRegistry;
+import org.sokybot.settings.api.ISettingsProvider;
 import org.sokybot.persistence.service.IGameDataLookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +31,9 @@ public class LoginActuator implements IActuator {
     
     @Reference
     private IGameDataLookup gameDataLookup;
+
+    @Reference
+    private ISettingsRegistry settingsRegistry;
     
     @Override
     public String getName() {
@@ -40,6 +45,17 @@ public class LoginActuator implements IActuator {
         log.info("Initializing login actuator for machine: {}", context.getMachineId());
         
         try {
+            // Register settings
+            settingsRegistry.register("login", LoginSettings.class, LoginSettings::new);
+            
+            // Get settings provider
+            ISettingsProvider<LoginSettings> settingsProvider = settingsRegistry.getProvider(
+                context.getGroupName(), 
+                context.getMachineName(), 
+                "login", 
+                LoginSettings.class
+            );
+
             // Register login cycle
             ICycleDefinition cycle = new CycleDefinitionBuilder()
                 .name("login-cycle")
@@ -47,8 +63,9 @@ public class LoginActuator implements IActuator {
                 .entryState("CHECK_LOGGED_IN")
                 .entryGuard(ctx -> {
                     // Only enter if connected and not logged in
+                    LoginSettings settings = settingsProvider.get();
                     return ctx.getDispatcher().isConnected() 
-                        && ctx.getSettings().isAutoLogin()
+                        && settings.isAutoLogin()
                         && !isLoggedIn(ctx);
                 })
                 .state("CHECK_LOGGED_IN", builder -> builder
@@ -61,21 +78,23 @@ public class LoginActuator implements IActuator {
                 .state("SEND_LOGIN_REQUEST", builder -> builder
                     .guard(ctx -> {
                         // Check if credentials are available
-                        return ctx.getSettings().getUsername() != null 
-                            && !ctx.getSettings().getUsername().isEmpty()
-                            && ctx.getSettings().getPassword() != null
-                            && !ctx.getSettings().getPassword().isEmpty();
+                        LoginSettings settings = settingsProvider.get();
+                        return settings.getUsername() != null 
+                            && !settings.getUsername().isEmpty()
+                            && settings.getPassword() != null
+                            && !settings.getPassword().isEmpty();
                     })
                     .action(ctx -> {
-                        String username = ctx.getSettings().getUsername();
-                        String password = ctx.getSettings().getPassword();
+                        LoginSettings settings = settingsProvider.get();
+                        String username = settings.getUsername();
+                        String password = settings.getPassword();
                         log.info("Sending login request for user: {}", username);
                         
                         // Get locale from game data lookup
                         byte locale = gameDataLookup.getLocal().orElse((byte) 22);
                         
                         // Parse agent ID from settings (if available)
-                        short agentId = parseAgentId(ctx.getSettings().getTargetAgent());
+                        short agentId = parseAgentId(settings.getTargetAgent());
                         
                         // Create login packet
                         sendLoginPacket(ctx, username, password, locale, agentId);

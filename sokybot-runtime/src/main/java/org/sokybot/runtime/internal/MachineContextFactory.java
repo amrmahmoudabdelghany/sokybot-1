@@ -2,7 +2,7 @@ package org.sokybot.runtime.internal;
 
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
-import org.sokybot.app.domain.MachineInfo;
+import org.sokybot.runtime.internal.domain.MachineInfo;
 
 /**
  * Internal factory for creating IMachineContext instances.
@@ -13,7 +13,7 @@ class MachineContextFactory {
     /**
      * Creates a new machine context by assembling components from OSGi services.
      * 
-     * @param machineInfo The machine information
+     * @param machineInfo The machine information (runtime domain)
      * @param groupContext The parent group context
      * @param bundleContext OSGi bundle context (for service lookup)
      * @return The created machine context
@@ -40,7 +40,9 @@ class MachineContextFactory {
         org.sokybot.gamemodel.IGameModel gameModel = gameModelFactory.create(machineInfo.getMachineName());
         
         // Get shared translators from GroupContext (per-game, memory optimized)
-        java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators = groupContext.getTranslators();
+        // Access package-private method since MachineContextFactory is in same package
+        GroupContextImpl groupContextImpl = (GroupContextImpl) groupContext;
+        java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators = groupContextImpl.getTranslators();
         
         // Create per-bot ChunkedPacketManager (stateful, must be per-bot)
         org.sokybot.gameevents.ChunkedPacketManager chunkManager = new org.sokybot.gameevents.ChunkedPacketManager();

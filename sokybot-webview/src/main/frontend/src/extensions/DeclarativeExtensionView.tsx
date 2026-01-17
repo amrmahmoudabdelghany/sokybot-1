@@ -1,7 +1,19 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { rsocketService } from '../RSocketClient';
 import { ComponentRenderer } from './renderer/ComponentRenderer';
-import { UIComponent } from './types';
+// UIComponent inlined to work around Vite serving ui-types.ts as empty
+interface UIComponent {
+    type: string;
+    props?: Record<string, any>;
+    children?: UIComponent[] | string;
+    className?: string;
+    style?: Record<string, any>;
+    key?: string;
+    icon?: string;
+    iconProps?: Record<string, any>;
+    variant?: string;
+    size?: string;
+}
 
 interface DeclarativeExtensionViewProps {
     pageId: string;
@@ -22,13 +34,13 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     );
     const [data, setData] = useState<Record<string, any>>({});
     const [loading, setLoading] = useState(!providedSchema);
-    
+
     // Performance: Debounce state updates
     const updateTimeoutRef = useRef<NodeJS.Timeout>();
     const lastUpdateRef = useRef<number>(0);
     const pendingUpdatesRef = useRef<Map<string, any>>(new Map());
     const streamSubscriptionsRef = useRef<Map<string, any>>(new Map());
-    
+
     // Performance: Memoize action handler
     const handleAction = useCallback(async (action: string, actionData: any) => {
         try {
@@ -36,26 +48,26 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 `extension.action:${pageId}:${action}:${JSON.stringify(actionData)}`
             );
             const result = typeof response === 'string' ? JSON.parse(response) : response;
-            
+
             // Apply delta updates efficiently
             if (result.delta) {
                 applyDeltaUpdate(result.delta);
             } else if (result.state) {
                 setData(prev => ({ ...prev, ...result.state }));
             }
-            
+
             return result;
         } catch (err) {
             console.error(`Action ${action} failed`, err);
             throw err;
         }
     }, [pageId]);
-    
+
     // Efficient delta update application
     const applyDeltaUpdate = useCallback((delta: Record<string, any>) => {
         setData(prev => {
             const updated = { ...prev };
-            
+
             // Handle new packets (append only)
             if (delta.newPackets) {
                 const existing = prev.trafficPackets || [];
@@ -65,27 +77,27 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                     updated.trafficPackets = updated.trafficPackets.slice(-1000);
                 }
             }
-            
+
             // Merge other delta fields
             Object.keys(delta).forEach(key => {
                 if (key !== 'newPackets') {
                     updated[key] = delta[key];
                 }
             });
-            
+
             return updated;
         });
     }, []);
-    
+
     // Auto-discover and subscribe to streams in schema
     useEffect(() => {
         if (!providedSchema) {
             fetchSchema();
         }
-        
+
         // Discover streams in schema
         discoverAndSubscribeStreams(providedSchema || schema);
-        
+
         // Subscribe to state change events (delta updates)
         const subscription = rsocketService.streamEvents(
             (event) => {
@@ -95,7 +107,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             },
             (error) => console.error("Extension event error", error)
         );
-        
+
         return () => {
             subscription?.unsubscribe();
             if (updateTimeoutRef.current) {
@@ -106,7 +118,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             streamSubscriptionsRef.current.clear();
         };
     }, [pageId, machineId, providedSchema]);
-    
+
     const fetchSchema = async () => {
         setLoading(true);
         try {
@@ -114,11 +126,11 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 `extension.schema:${pageId}${machineId ? `:${machineId}` : ''}`
             );
             const result = typeof response === 'string' ? JSON.parse(response) : response;
-            
+
             if (result.schema) {
                 setSchema(result.schema);
             }
-            
+
             if (result.data || result.state) {
                 setData(result.data || result.state || {});
             }
@@ -128,34 +140,34 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             setLoading(false);
         }
     };
-    
+
     const discoverAndSubscribeStreams = (schema: any) => {
         if (!schema) return;
-        
+
         // Check if component has stream
         if (schema.type === 'stream' || schema.props?.streamId) {
             const streamId = schema.props?.streamId || schema.id;
             const streamParams = schema.props?.streamParams || {};
             const stateKey = schema.props?.stateKey;
-            
+
             if (streamId) {
                 subscribeToStream(streamId, streamParams, stateKey);
             }
         }
-        
+
         // Recursively check children
         if (schema.children && Array.isArray(schema.children)) {
             schema.children.forEach((child: any) => discoverAndSubscribeStreams(child));
         }
     };
-    
+
     const subscribeToStream = (
         streamId: string,
         params: Record<string, any>,
         stateKey?: string
     ) => {
         const streamRequest = `extension.stream:${pageId}:${streamId}:${JSON.stringify(params)}`;
-        
+
         const subscription = stateKey
             ? rsocketService.requestStreamWithState(
                 streamRequest,
@@ -171,14 +183,14 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                     }));
                 }
             );
-        
+
         streamSubscriptionsRef.current.set(streamId, subscription);
     };
-    
+
     // Performance: Memoize rendered components
     const renderedContent = useMemo(() => {
         if (!schema) return null;
-        
+
         if (Array.isArray(schema)) {
             return schema.map((component, idx) => (
                 <ComponentRenderer
@@ -191,7 +203,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 />
             ));
         }
-        
+
         return (
             <ComponentRenderer
                 component={schema}
@@ -202,14 +214,14 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             />
         );
     }, [schema, pageId, machineId, data, handleAction]);
-    
+
     if (loading) {
         return <div className="text-center py-4">Loading...</div>;
     }
-    
+
     if (!schema) {
         return <div>No schema available for {pageId}</div>;
     }
-    
+
     return <div className="h-full overflow-auto">{renderedContent}</div>;
 };

@@ -3,7 +3,10 @@ package org.sokybot.engine.core;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import java.util.List;
 import org.sokybot.engine.api.EngineState;
+import org.sokybot.engine.api.workflow.ICycleDefinition;
+import org.sokybot.engine.api.workflow.ICycleState;
 import org.sokybot.engine.test.EngineTestBase;
 import org.sokybot.engine.test.util.OSGiTestUtils;
 import org.sokybot.gamemodel.IGameModel;
@@ -156,8 +159,20 @@ class EngineCoreTest extends EngineTestBase {
     void testSendEventWhenRunning() {
         engine = createTestEngine();
         
-        engine.start();
+        // Register training-cycle
+        ICycleDefinition trainingCycle = mock(ICycleDefinition.class);
+        when(trainingCycle.getName()).thenReturn("training-cycle");
+        when(trainingCycle.getDesiredPriority()).thenReturn(100);
+        when(trainingCycle.isEnabled()).thenReturn(true);
+        when(trainingCycle.getEntryStateName()).thenReturn("START");
+        ICycleState startState = mock(ICycleState.class);
+        when(startState.getName()).thenReturn("START");
+        when(trainingCycle.getStates()).thenReturn(List.of(startState));
         
+        engine.getWorkflowRegistry().registerCycle(trainingCycle);
+
+        engine.start();
+
         // Should not throw exception
         assertDoesNotThrow(() -> {
             engine.sendEvent("START_TRAINING");

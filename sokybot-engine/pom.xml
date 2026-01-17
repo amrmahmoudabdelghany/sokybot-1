@@ -24,7 +24,7 @@
         
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-proxy</artifactId>
+            <artifactId>sokybot-engine-api</artifactId>
             <version>${project.version}</version>
         </dependency>
         
@@ -148,7 +148,6 @@
                             *;resolution:=optional
                         </Import-Package>
                         <Export-Package>
-                            org.sokybot.engine.api.*,
                             org.sokybot.engine.core.*
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>

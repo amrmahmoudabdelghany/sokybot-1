@@ -1,0 +1,273 @@
+{
+    "type": "div",
+    "className": "h-full flex flex-col space-y-6",
+    "children": [
+        {
+            "type": "div",
+            "className": "flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2",
+            "children": [
+                {
+                    "type": "h3",
+                    "className": "text-slate-700 dark:text-slate-300 font-bold",
+                    "props": {
+                        "children": "Healing Settings"
+                    }
+                },
+                {
+                    "type": "div",
+                    "className": "flex space-x-2",
+                    "children": [
+                        {
+                            "type": "Button",
+                            "variant": "outline",
+                            "size": "sm",
+                            "props": {
+                                "onClick": "refresh",
+                                "children": "Refresh"
+                            }
+                        },
+                        {
+                            "type": "Button",
+                            "variant": "default",
+                            "size": "sm",
+                            "props": {
+                                "onClick": "save",
+                                "children": "Save Settings"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "className": "grid grid-cols-1 md:grid-cols-2 gap-6",
+            "children": [
+                {
+                    "type": "div",
+                    "className": "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-sm",
+                    "children": [
+                        {
+                            "type": "h4",
+                            "className": "text-sm font-semibold text-rose-500 dark:text-rose-400 mb-3 uppercase tracking-wider",
+                            "props": {
+                                "children": "Character Healing"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "className": "space-y-6",
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "className": "space-y-3",
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "className": "flex justify-between items-center",
+                                            "children": [
+                                                {
+                                                    "type": "Label",
+                                                    "props": {
+                                                        "children": "HP Potion Threshold"
+                                                    }
+                                                },
+                                                {
+                                                    "type": "span",
+                                                    "className": "text-sm text-slate-500",
+                                                    "props": {
+                                                        "children": "${settings.hpPotionThreshold}%"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "Slider",
+                                            "props": {
+                                                "value": [
+                                                    "${settings.hpPotionThreshold}"
+                                                ],
+                                                "min": 0,
+                                                "max": 100,
+                                                "step": 1,
+                                                "onValueChange": "update",
+                                                "name": "hpPotionThreshold"
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "className": "flex items-center space-x-2",
+                                            "children": [
+                                                {
+                                                    "type": "Checkbox",
+                                                    "props": {
+                                                        "checked": "${settings.useHpPotion}",
+                                                        "onCheckedChange": "update",
+                                                        "name": "useHpPotion"
+                                                    }
+                                                },
+                                                {
+                                                    "type": "Label",
+                                                    "props": {
+                                                        "children": "Use HP Potions"
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "div",
+                                    "className": "space-y-3",
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "className": "flex justify-between items-center",
+                                            "children": [
+                                                {
+                                                    "type": "Label",
+                                                    "props": {
+                                                        "children": "MP Potion Threshold"
+                                                    }
+                                                },
+                                                {
+                                                    "type": "span",
+                                                    "className": "text-sm text-slate-500",
+                                                    "props": {
+                                                        "children": "${settings.mpPotionThreshold}%"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "Slider",
+                                            "props": {
+                                                "value": [
+                                                    "${settings.mpPotionThreshold}"
+                                                ],
+                                                "min": 0,
+                                                "max": 100,
+                                                "step": 1,
+                                                "onValueChange": "update",
+                                                "name": "mpPotionThreshold"
+                                            }
+                                        },
+                                        {
+                                            "type": "div",
+                                            "className": "flex items-center space-x-2",
+                                            "children": [
+                                                {
+                                                    "type": "Checkbox",
+                                                    "props": {
+                                                        "checked": "${settings.useMpPotion}",
+                                                        "onCheckedChange": "update",
+                                                        "name": "useMpPotion"
+                                                    }
+                                                },
+                                                {
+                                                    "type": "Label",
+                                                    "props": {
+                                                        "children": "Use MP Potions"
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "div",
+                    "className": "space-y-6",
+                    "children": [
+                        {
+                            "type": "div",
+                            "className": "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-sm",
+                            "children": [
+                                {
+                                    "type": "h4",
+                                    "className": "text-sm font-semibold text-purple-500 dark:text-purple-400 mb-3 uppercase tracking-wider",
+                                    "props": {
+                                        "children": "Live Status"
+                                    }
+                                },
+                                {
+                                    "type": "div",
+                                    "className": "space-y-4",
+                                    "children": [
+                                        {
+                                            "type": "div",
+                                            "className": "space-y-1",
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "className": "flex justify-between text-sm",
+                                                    "children": [
+                                                        {
+                                                            "type": "span",
+                                                            "props": {
+                                                                "children": "HP"
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "span",
+                                                            "props": {
+                                                                "children": "${currentHP} / ${maxHP}"
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "Progress",
+                                                    "props": {
+                                                        "value": "${(currentHP / maxHP) * 100}",
+                                                        "className": "h-2 bg-slate-200 dark:bg-slate-800",
+                                                        "indicatorClassName": "bg-red-500"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        {
+                                            "type": "div",
+                                            "className": "space-y-1",
+                                            "children": [
+                                                {
+                                                    "type": "div",
+                                                    "className": "flex justify-between text-sm",
+                                                    "children": [
+                                                        {
+                                                            "type": "span",
+                                                            "props": {
+                                                                "children": "MP"
+                                                            }
+                                                        },
+                                                        {
+                                                            "type": "span",
+                                                            "props": {
+                                                                "children": "${currentMP} / ${maxMP}"
+                                                            }
+                                                        }
+                                                    ]
+                                                },
+                                                {
+                                                    "type": "Progress",
+                                                    "props": {
+                                                        "value": "${(currentMP / maxMP) * 100}",
+                                                        "className": "h-2 bg-slate-200 dark:bg-slate-800",
+                                                        "indicatorClassName": "bg-blue-500"
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

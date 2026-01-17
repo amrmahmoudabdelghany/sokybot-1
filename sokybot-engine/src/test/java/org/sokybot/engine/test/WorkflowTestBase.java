@@ -1,14 +1,10 @@
 package org.sokybot.engine.test;
 
-import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.sokybot.engine.core.workflow.WorkflowContextImpl;
-import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.engine.test.util.mocks.MockDispatcher;
 import org.sokybot.engine.test.util.mocks.MockGameModel;
 import org.sokybot.gamemodel.IGameModel;
-import org.sokybot.settings.ISettingsManager;
-import org.sokybot.settings.Settings;
 
 /**
  * Base class for workflow tests.
@@ -16,12 +12,10 @@ import org.sokybot.settings.Settings;
  */
 public abstract class WorkflowTestBase {
     
-    @Mock
-    protected ISettingsManager settingsManager;
-    
     protected MockGameModel mockGameModel;
     protected MockDispatcher mockDispatcher;
-    protected Settings testSettings;
+    protected String testGroupName = "test-group";
+    protected String testMachineName = "test-machine";
     
     /**
      * Sets up test fixtures before each test.
@@ -29,12 +23,6 @@ public abstract class WorkflowTestBase {
     protected void setUp() {
         mockGameModel = new MockGameModel();
         mockDispatcher = new MockDispatcher();
-        
-        testSettings = new Settings("test-machine", "test-group", "test-machine");
-        
-        if (settingsManager == null) {
-            settingsManager = Mockito.mock(ISettingsManager.class);
-        }
     }
     
     /**
@@ -43,7 +31,7 @@ public abstract class WorkflowTestBase {
      * @return A new WorkflowContextImpl instance configured for testing
      */
     protected WorkflowContextImpl createWorkflowContext() {
-        return createWorkflowContext(mockGameModel, mockDispatcher, testSettings);
+        return createWorkflowContext(mockGameModel, mockDispatcher, testGroupName, testMachineName);
     }
     
     /**
@@ -51,19 +39,20 @@ public abstract class WorkflowTestBase {
      * 
      * @param gameModel The game model to use
      * @param dispatcher The dispatcher to use
-     * @param settings The settings to use
+     * @param groupName The group name
+     * @param machineName The machine name
      * @return A new WorkflowContextImpl instance
      */
     protected WorkflowContextImpl createWorkflowContext(
             IGameModel gameModel,
             MockDispatcher dispatcher,
-            Settings settings) {
+            String groupName,
+            String machineName) {
         return new WorkflowContextImpl(
             gameModel,
             dispatcher,
-            settings,
-            settingsManager,
-            "test-machine");
+            groupName,
+            machineName);
     }
     
     /**

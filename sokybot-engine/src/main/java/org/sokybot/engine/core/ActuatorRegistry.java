@@ -6,10 +6,8 @@ import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.IActuatorContext;
 import org.sokybot.engine.api.extension.BundleException;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
-import org.sokybot.engine.core.dispatcher.DispatcherImpl;
 import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.gamemodel.IGameModel;
-import org.sokybot.settings.ISettingsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,18 +63,22 @@ public class ActuatorRegistry {
             
             if (references != null && !references.isEmpty()) {
                 for (ServiceReference<IActuator> ref : references) {
-                    IActuator actuator = bundleContext.getService(ref);
-                    if (actuator != null) {
-                        registerActuator(actuator);
-                        serviceReferences.add(ref);
+                    try {
+                        IActuator actuator = bundleContext.getService(ref);
+                        if (actuator != null) {
+                            registerActuator(actuator);
+                            serviceReferences.add(ref);
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to initialize actuator from service reference: {}", e.getMessage(), e);
                     }
                 }
-                log.info("Discovered {} actuators via OSGi", actuators.size());
+                log.info("Discovered and processed {} actuators via OSGi", references.size());
             } else {
                 log.warn("No actuators discovered via OSGi services");
             }
         } catch (Exception e) {
-            log.error("Failed to discover actuators via OSGi: {}", e.getMessage(), e);
+            log.error("Failed to query actuator services: {}", e.getMessage(), e);
         }
         
         log.info("Actuator initialization complete for machine: {}", engine.getMachineId());
@@ -107,8 +109,8 @@ public class ActuatorRegistry {
         // Create actuator context
         ActuatorContextImpl context = new ActuatorContextImpl(
             workflowRegistry, workflowContext.getGameModel(),
-            engine.getDispatcher(), workflowContext.getSettings(),
-            engine.getSettingsManager(), engine.getMachineId());
+            engine.getDispatcher(), 
+            engine.getGroupName(), engine.getMachineName());
         
         actuatorContexts.add(context);
         

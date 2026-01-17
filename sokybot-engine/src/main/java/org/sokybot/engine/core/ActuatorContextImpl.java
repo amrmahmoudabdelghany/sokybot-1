@@ -4,8 +4,6 @@ import org.sokybot.engine.api.IDispatcher;
 import org.sokybot.engine.api.extension.IActuatorContext;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.gamemodel.IGameModel;
-import org.sokybot.settings.Settings;
-import org.sokybot.settings.ISettingsManager;
 
 /**
  * Implementation of actuator context.
@@ -16,16 +14,15 @@ public class ActuatorContextImpl implements IActuatorContext {
     private final IWorkflowRegistry workflowRegistry;
     private final IGameModel gameModel;
     private final IDispatcher dispatcher;
-    private final Settings settings;
-    private final ISettingsManager settingsManager;
     private final String machineId;
+    private final String groupName;
+    private final String machineName;
     
     public ActuatorContextImpl(IWorkflowRegistry workflowRegistry,
                               IGameModel gameModel,
                               IDispatcher dispatcher,
-                              Settings settings,
-                              ISettingsManager settingsManager,
-                              String machineId) {
+                              String groupName,
+                              String machineName) {
         if (workflowRegistry == null) {
             throw new IllegalArgumentException("Workflow registry cannot be null");
         }
@@ -35,22 +32,19 @@ public class ActuatorContextImpl implements IActuatorContext {
         if (dispatcher == null) {
             throw new IllegalArgumentException("Dispatcher cannot be null");
         }
-        if (settings == null) {
-            throw new IllegalArgumentException("Settings cannot be null");
+        if (groupName == null || groupName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Group name cannot be null or empty");
         }
-        if (settingsManager == null) {
-            throw new IllegalArgumentException("Settings manager cannot be null");
-        }
-        if (machineId == null || machineId.trim().isEmpty()) {
-            throw new IllegalArgumentException("Machine ID cannot be null or empty");
+        if (machineName == null || machineName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Machine name cannot be null or empty");
         }
         
         this.workflowRegistry = workflowRegistry;
         this.gameModel = gameModel;
         this.dispatcher = dispatcher;
-        this.settings = settings;
-        this.settingsManager = settingsManager;
-        this.machineId = machineId;
+        this.groupName = groupName;
+        this.machineName = machineName;
+        this.machineId = groupName + "." + machineName;
     }
     
     @Override
@@ -69,17 +63,17 @@ public class ActuatorContextImpl implements IActuatorContext {
     }
     
     @Override
-    public Settings getSettings() {
-        return settings;
-    }
-    
-    @Override
-    public ISettingsManager getSettingsManager() {
-        return settingsManager;
-    }
-    
-    @Override
     public String getMachineId() {
         return machineId;
+    }
+    
+    @Override
+    public String getGroupName() {
+        return groupName;
+    }
+    
+    @Override
+    public String getMachineName() {
+        return machineName;
     }
 }

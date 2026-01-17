@@ -32,12 +32,14 @@ class ActuatorRegistryTest {
         workflowRegistry = new WorkflowRegistryImpl();
         workflowContext = mock(WorkflowContextImpl.class);
         when(workflowContext.getGameModel()).thenReturn(mock(org.sokybot.gamemodel.IGameModel.class));
-        when(workflowContext.getSettings()).thenReturn(mock(org.sokybot.settings.Settings.class));
+        when(workflowContext.getGroupName()).thenReturn("test-group");
+        when(workflowContext.getMachineName()).thenReturn("test-machine");
         
         engineCore = mock(EngineCore.class);
         when(engineCore.getMachineId()).thenReturn("test-machine");
+        when(engineCore.getGroupName()).thenReturn("test-group");
+        when(engineCore.getMachineName()).thenReturn("test-machine");
         when(engineCore.getDispatcher()).thenReturn(mock(org.sokybot.engine.core.dispatcher.DispatcherImpl.class));
-        when(engineCore.getSettingsManager()).thenReturn(mock(org.sokybot.settings.ISettingsManager.class));
         
         mockBundleContext = OSGiTestUtils.createMockBundleContext();
         

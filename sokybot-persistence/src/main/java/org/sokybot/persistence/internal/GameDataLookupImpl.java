@@ -1,18 +1,12 @@
 package org.sokybot.persistence.internal;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
-import javax.persistence.EntityTransaction;
-import javax.persistence.TypedQuery;
 
 import org.sokybot.persistence.entities.DivisionInfo;
 import org.sokybot.persistence.entities.GameInfo;
@@ -20,7 +14,6 @@ import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.persistence.entities.LvlEXP;
 import org.sokybot.persistence.entities.MasteryData;
 import org.sokybot.persistence.entities.NPCEntity;
-import org.sokybot.persistence.entities.NPCType;
 import org.sokybot.persistence.entities.ObjectNavMesh;
 import org.sokybot.persistence.entities.PortalEntity;
 import org.sokybot.persistence.entities.SectorRef;
@@ -28,15 +21,15 @@ import org.sokybot.persistence.entities.ShopEntity;
 import org.sokybot.persistence.entities.SilkroadType;
 import org.sokybot.persistence.entities.SkillEntity;
 import org.sokybot.persistence.entities.TeleportEntity;
-import org.sokybot.persistence.entities.Gender;
-import org.sokybot.persistence.entities.Race;
-import org.sokybot.persistence.entities.ItemType;
+import org.sokybot.persistence.internal.extraction.CachedExtractionDecorator;
+import org.sokybot.persistence.internal.extraction.IPk2ExtractionHandler;
+import org.sokybot.persistence.internal.extraction.ItemExtractionHandler;
+import org.sokybot.persistence.internal.extraction.NPCExtractionHandler;
+import org.sokybot.persistence.internal.extraction.RetryableExtractionDecorator;
 import org.sokybot.persistence.service.IGameDataLookup;
-import org.sokybot.pk2.IPk2Driver;
+import org.sokybot.persistence.service.PersistenceException;
 import org.sokybot.pk2extractor.dto.character.NPCData;
 import org.sokybot.pk2extractor.dto.item.ItemData;
-import org.sokybot.pk2extractor.mediapk2.character.NPCDataExtractor;
-import org.sokybot.pk2extractor.mediapk2.item.ItemDataExtractor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,14 +39,66 @@ import org.slf4j.LoggerFactory;
  */
 public class GameDataLookupImpl implements IGameDataLookup {
     
-    private final Logger logger = LoggerFactory.getLogger(GameDataLookupImpl.class);
+    private static final Logger logger = LoggerFactory.getLogger(GameDataLookupImpl.class);
 
     private final String gamePath;
     private final EntityManagerFactory emf;
     
+    // Per-game repository instances
+    private final NPCEntityRepositoryImpl npcRepository;
+    private final ItemEntityRepositoryImpl itemRepository;
+    private final SkillEntityRepositoryImpl skillRepository;
+    private final ShopEntityRepositoryImpl shopRepository;
+    private final TeleportEntityRepositoryImpl teleportRepository;
+    private final PortalEntityRepositoryImpl portalRepository;
+    private final SectorRefRepositoryImpl sectorRepository;
+    private final ObjectNavMeshRepositoryImpl objectNavMeshRepository;
+    private final LvlEXPRepositoryImpl lvlEXPRepository;
+    private final MasteryDataRepositoryImpl masteryRepository;
+    private final GameInfoRepositoryImpl gameInfoRepository;
+    
+    // PK2 extraction handlers with decorators
+    private final IPk2ExtractionHandler<NPCData, NPCEntity> npcExtractionHandler;
+    private final IPk2ExtractionHandler<ItemData, ItemEntity> itemExtractionHandler;
+    
     public GameDataLookupImpl(String gamePath, EntityManagerFactory emf) {
         this.gamePath = gamePath;
         this.emf = emf;
+        
+        // Create per-game repository instances with this game's EMF
+        this.npcRepository = new NPCEntityRepositoryImpl(emf);
+        this.itemRepository = new ItemEntityRepositoryImpl(emf);
+        this.skillRepository = new SkillEntityRepositoryImpl(emf);
+        this.shopRepository = new ShopEntityRepositoryImpl(emf);
+        this.teleportRepository = new TeleportEntityRepositoryImpl(emf);
+        this.portalRepository = new PortalEntityRepositoryImpl(emf);
+        this.sectorRepository = new SectorRefRepositoryImpl(emf);
+        this.objectNavMeshRepository = new ObjectNavMeshRepositoryImpl(emf);
+        this.lvlEXPRepository = new LvlEXPRepositoryImpl(emf);
+        this.masteryRepository = new MasteryDataRepositoryImpl(emf);
+        this.gameInfoRepository = new GameInfoRepositoryImpl(emf);
+        
+        // Create extraction handlers with decorators
+        // Base handlers
+        IPk2ExtractionHandler<NPCData, NPCEntity> baseNpcHandler = new NPCExtractionHandler(emf);
+        IPk2ExtractionHandler<ItemData, ItemEntity> baseItemHandler = new ItemExtractionHandler(emf);
+        
+        // Add retry decorator (3 retries with 1000ms delay)
+        IPk2ExtractionHandler<NPCData, NPCEntity> retryableNpcHandler = 
+            new RetryableExtractionDecorator<>(baseNpcHandler, 3, 1000);
+        IPk2ExtractionHandler<ItemData, ItemEntity> retryableItemHandler = 
+            new RetryableExtractionDecorator<>(baseItemHandler, 3, 1000);
+        
+        // Add caching decorator (skip if already extracted)
+        this.npcExtractionHandler = new CachedExtractionDecorator<>(
+            retryableNpcHandler,
+            () -> npcRepository.count() > 0
+        );
+        
+        this.itemExtractionHandler = new CachedExtractionDecorator<>(
+            retryableItemHandler,
+            () -> itemRepository.count() > 0
+        );
     }
     
     @Override
@@ -63,88 +108,92 @@ public class GameDataLookupImpl implements IGameDataLookup {
     
     @Override
     public Optional<NPCEntity> findNPC(int refId) {
-        Optional<NPCEntity> entity = find(NPCEntity.class, refId);
-        if (entity.isPresent()) return entity;
+        Optional<NPCEntity> entity = npcRepository.findById(refId);
+        if (entity.isPresent()) {
+            return entity;
+        }
         
+        // Lazy load NPCs if not found
         synchronized(this) {
-             entity = find(NPCEntity.class, refId);
-             if(entity.isPresent()) return entity;
-             
-             importNPCs();
-             return find(NPCEntity.class, refId);
+            // Double-check pattern
+            entity = npcRepository.findById(refId);
+            if (entity.isPresent()) {
+                return entity;
+            }
+            
+            importNPCs();
+            return npcRepository.findById(refId);
         }
     }
     
     @Override
     public Optional<ItemEntity> findItem(int refId) {
-        Optional<ItemEntity> entity = find(ItemEntity.class, refId);
-        if (entity.isPresent()) return entity;
+        Optional<ItemEntity> entity = itemRepository.findById(refId);
+        if (entity.isPresent()) {
+            return entity;
+        }
         
+        // Lazy load Items if not found
         synchronized(this) {
-            entity = find(ItemEntity.class, refId);
-            if (entity.isPresent()) return entity;
+            // Double-check pattern
+            entity = itemRepository.findById(refId);
+            if (entity.isPresent()) {
+                return entity;
+            }
             
             importItems();
-            return find(ItemEntity.class, refId);
+            return itemRepository.findById(refId);
         }
     }
     
     @Override
     public Optional<SkillEntity> findSkill(int refId) {
-        return find(SkillEntity.class, refId);
-        // TODO: Implement lazy loading for skills
+        return skillRepository.findById(refId);
     }
 
     @Override
     public Optional<ShopEntity> findShop(int npcRefId) {
-        return find(ShopEntity.class, npcRefId);
+        return shopRepository.findById(npcRefId);
     }
 
     @Override
     public Optional<TeleportEntity> findTeleport(int refId) {
-        return find(TeleportEntity.class, refId);
+        return teleportRepository.findById(refId);
     }
 
     @Override
     public Optional<PortalEntity> findPortal(int refId) {
-        return find(PortalEntity.class, refId);
+        return portalRepository.findById(refId);
     }
     
     @Override
     public Optional<String> findMasteryName(int masteryId) {
-        return find(MasteryData.class, masteryId).map(MasteryData::getName);
+        return masteryRepository.findById(masteryId).map(MasteryData::getName);
     }
 
     @Override
     public Optional<Long> getLvlEXP(int lvl) {
-        return find(LvlEXP.class, lvl).map(LvlEXP::getExp);
+        return lvlEXPRepository.findById(lvl).map(LvlEXP::getExp);
     }
     
     @Override
     public Optional<SectorRef> findSector(short sectorYX) {
-        return find(SectorRef.class, sectorYX);
+        return sectorRepository.findById(sectorYX);
     }
     
     @Override
     public List<SectorRef> findAllSectors() {
-        return execute(em -> {
-            TypedQuery<SectorRef> query = em.createQuery("SELECT s FROM SectorRef s", SectorRef.class);
-            return query.getResultList();
-        });
+        return sectorRepository.findAll();
     }
 
     @Override
     public Optional<ObjectNavMesh> findObjectNavMesh(int objectId) {
-        return find(ObjectNavMesh.class, objectId);
+        return objectNavMeshRepository.findById(objectId);
     }
 
     @Override
     public List<NPCEntity> findAllMonsterLike(String filter) {
-         return execute(em -> {
-            TypedQuery<NPCEntity> query = em.createQuery("SELECT n FROM NPCEntity n WHERE n.name LIKE :filter", NPCEntity.class);
-            query.setParameter("filter", "%" + filter + "%");
-            return query.getResultList();
-        });
+        return npcRepository.findAllMonsterLike(filter);
     }
 
     @Override
@@ -202,123 +251,32 @@ public class GameDataLookupImpl implements IGameDataLookup {
 
     // Helper methods
     
-    private <T> Optional<T> find(Class<T> entityClass, Object primaryKey) {
-        EntityManager em = emf.createEntityManager();
-        try {
-            return Optional.ofNullable(em.find(entityClass, primaryKey));
-        } finally {
-            em.close();
-        }
-    }
-    
     private Optional<GameInfo> findGameInfo() {
         // GameInfo uses gamePath as ID
-        return find(GameInfo.class, this.gamePath); 
+        return gameInfoRepository.findById(this.gamePath); 
     }
     
-    private <T> T execute(EntityManagerFunction<T> action) {
-        EntityManager em = emf.createEntityManager();
-        try {
-            return action.apply(em);
-        } finally {
-            em.close();
-        }
-    }
-    
+    /**
+     * Import NPCs from PK2 file using the extraction handler with decorators.
+     */
     private void importNPCs() {
-        logger.info("Importing NPC Data from PK2...");
-        try (IPk2Driver driver = IPk2Driver.open(new File(gamePath, "Media.pk2").getAbsolutePath())) {
-            NPCDataExtractor extractor = new NPCDataExtractor();
-            EntityManager em = emf.createEntityManager();
-            EntityTransaction tx = em.getTransaction();
-            try {
-                tx.begin();
-                extractor.extract(driver, new org.sokybot.pk2extractor.ExtractionListener<NPCData>() {
-                    @Override
-                    public void onExtracted(NPCData dto) {
-                        try {
-                            NPCEntity entity = NPCEntity.builder()
-                                    .refId(dto.getRefId())
-                                    .longId(dto.getLongId())
-                                    .name(dto.getName())
-                                    .level(dto.getLevel())
-                                    .HP(dto.getHP())
-                                    .Type(dto.getType() != null ? NPCType.of(dto.getType().getValue()) : null)
-                                    .iconPath(dto.getIconPath())
-                                    .build();
-                            em.merge(entity);
-                        } catch (Exception e) {
-                            logger.error("Failed to merge NPC entity: " + dto.getLongId(), e);
-                        }
-                    }
-                    @Override public void onComplete(int totalCount) {}
-                    @Override public void onError(Exception error) {
-                        logger.error("Extraction error", error);
-                    }
-                }, null);
-                tx.commit();
-            } catch(Exception e) {
-                if(tx.isActive()) tx.rollback();
-                throw e;
-            } finally {
-                em.close();
-            }
-        } catch (IOException e) {
-            logger.error("Failed to import NPC data", e);
+        try {
+            npcExtractionHandler.extractAndPersist(gamePath, "Media.pk2");
+        } catch (PersistenceException e) {
+            logger.error("Failed to import NPCs for game: " + gamePath, e);
+            throw new RuntimeException("Failed to import NPCs", e);
         }
     }
 
+    /**
+     * Import Items from PK2 file using the extraction handler with decorators.
+     */
     private void importItems() {
-        logger.info("Importing Item Data from PK2...");
-        try (IPk2Driver driver = IPk2Driver.open(new File(gamePath, "Media.pk2").getAbsolutePath())) {
-            ItemDataExtractor extractor = new ItemDataExtractor();
-            EntityManager em = emf.createEntityManager();
-            EntityTransaction tx = em.getTransaction();
-            try {
-                tx.begin();
-                extractor.extract(driver, new org.sokybot.pk2extractor.ExtractionListener<ItemData>() {
-                    @Override
-                    public void onExtracted(ItemData dto) {
-                        try {
-                             ItemEntity entity = ItemEntity.builder()
-                                    .refId(dto.getRefId())
-                                    .longId(dto.getLongId())
-                                    .name(dto.getName())
-                                    .isMallItem(dto.isMallItem())
-                                    .iconPath(dto.getIconPath())
-                                    .level(dto.getLevel())
-                                    .degree(dto.getDegree())
-                                    .maxStacks(dto.getMaxStacks())
-                                    .isSortable(dto.isSortable())
-                                    .isSOX(dto.isSOX())
-                                    .itemType(dto.getItemType() != null ? ItemType.parseType(dto.getItemType().getValue(), dto.getLongId()) : null)
-                                    .race(dto.getRace() != null ? Race.parseType((byte)dto.getRace().getValue()) : null)
-                                    .gender(dto.getGender() != null ? Gender.parseType((byte)dto.getGender().getValue()) : null)
-                                    .build();
-                            em.merge(entity);
-                        } catch(Exception e) {
-                             logger.error("Failed to merge Item entity: " + dto.getLongId(), e);
-                        }
-                    }
-                    @Override public void onComplete(int totalCount) {}
-                    @Override public void onError(Exception error) {
-                         logger.error("Extraction error", error);
-                    }
-                }, null);
-                tx.commit();
-            } catch(Exception e) {
-                if(tx.isActive()) tx.rollback();
-                throw e;
-            } finally {
-                em.close();
-            }
-        } catch (IOException e) {
-             logger.error("Failed to import Item data", e);
+        try {
+            itemExtractionHandler.extractAndPersist(gamePath, "Media.pk2");
+        } catch (PersistenceException e) {
+            logger.error("Failed to import Items for game: " + gamePath, e);
+            throw new RuntimeException("Failed to import Items", e);
         }
-    }
-
-    @FunctionalInterface
-    private interface EntityManagerFunction<T> {
-        T apply(EntityManager em);
     }
 }

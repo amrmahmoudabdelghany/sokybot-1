@@ -1,5 +1,7 @@
 package org.sokybot.runtime.internal;
 
+import org.sokybot.commons.SilkroadUtils;
+
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,9 +26,9 @@ import org.sokybot.runtime.internal.persistence.FileGroupInfoRepository;
 import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.exception.InvalidGameReferenceException;
 import org.sokybot.exception.NameUniquenessConstraintViolationException;
-import org.sokybot.service.IMainFrameConfigurator;
-import org.sokybot.context.IGroupContextFactory;
-import org.sokybot.utils.SilkroadUtils;
+
+import org.sokybot.runtime.IGroupContextFactory;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,13 +49,7 @@ public class SokybotContextImpl implements ISokybotContext {
     // Internal repository - instantiated directly, not via OSGi @Reference
     private GroupInfoRepository groupInfoRepo;
     
-    @Reference
     private IGroupContextFactory groupContextFactory;
-    
-    @Reference(required = false)
-    private IMainFrameConfigurator frameConfigurator;
-    
-    @Reference(required = false)
     private EventAdmin eventAdmin;
     
     private BundleContext bundleContext;
@@ -61,6 +57,16 @@ public class SokybotContextImpl implements ISokybotContext {
     
     private final Lock lock = new ReentrantLock();
     private final Map<String, IGroupContext> groups = new ConcurrentHashMap<>();
+    
+    @Reference
+    public void setGroupContextFactory(IGroupContextFactory factory) {
+        this.groupContextFactory = factory;
+    }
+    
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL)
+    public void setEventAdmin(EventAdmin eventAdmin) {
+        this.eventAdmin = eventAdmin;
+    }
     
     @Activate
     public void activate(BundleContext bundleContext) {
@@ -147,11 +153,6 @@ public class SokybotContextImpl implements ISokybotContext {
     }
     
     @Override
-    public IMainFrameConfigurator getFrameConfigurator() {
-        return frameConfigurator;
-    }
-    
-    @Override
     public IGroupContext[] getGroups() {
         return groups.values().toArray(new IGroupContext[0]);
     }
@@ -196,18 +197,6 @@ public class SokybotContextImpl implements ISokybotContext {
     }
     
     @Override
-    public void addGroupListener(org.sokybot.IGroupListener listener) {
-        // Deprecated: Use EventAdmin to listen to GROUP_CONTEXT_CREATED/DESTROYED events instead
-        log.warn("addGroupListener() is deprecated. Use EventAdmin to listen to context lifecycle events.");
-    }
-    
-    @Override
-    public void removeGroupListener(org.sokybot.IGroupListener listener) {
-        // Deprecated: Use EventAdmin to listen to GROUP_CONTEXT_CREATED/DESTROYED events instead
-        log.warn("removeGroupListener() is deprecated. Use EventAdmin to listen to context lifecycle events.");
-    }
-    
-    @Override
     public boolean isRunning() {
         return bundleContext != null && bundleContext.getBundle().getState() == org.osgi.framework.Bundle.ACTIVE;
     }
@@ -232,7 +221,7 @@ public class SokybotContextImpl implements ISokybotContext {
         }
         
         if (!SilkroadUtils.isValidSilkroadDirectory(gamePath)) {
-            throw new InvalidGameReferenceException("Invalid game directory " + gamePath, gamePath);
+            throw new InvalidGameReferenceException("Invalid game reference " + gamePath, gamePath);
         }
     }
     

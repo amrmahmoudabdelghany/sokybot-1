@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import React from 'react';
 import { ComponentRenderer } from './ComponentRenderer';
-import type { UIComponent } from '../types';
+import type { UIComponent } from '../ui-types';
 
 describe('ComponentRenderer', () => {
   it('should render simple div component', () => {

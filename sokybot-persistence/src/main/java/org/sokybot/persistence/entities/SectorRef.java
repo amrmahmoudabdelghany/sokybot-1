@@ -56,6 +56,7 @@ public class SectorRef implements Serializable {
 	@JoinColumn(name = "segment")
 	private List<NavCellLinkRef> navCellLinks;
 
+	@javax.persistence.Transient
 	private float[] hightMap;
 	
 	public short getSectorYX() {
