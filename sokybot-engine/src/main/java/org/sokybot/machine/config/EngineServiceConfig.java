@@ -16,8 +16,7 @@ import java.util.Optional;
 @Configuration
 public class EngineServiceConfig {
 
-    @Autowired(required = false)
-    @Autowired(required = false)
+
     private BundleContext bundleContext;
 
     @org.springframework.beans.factory.annotation.Value("${gamePath}")

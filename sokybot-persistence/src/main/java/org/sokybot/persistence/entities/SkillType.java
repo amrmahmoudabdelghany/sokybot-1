@@ -1,6 +1,5 @@
 package org.sokybot.persistence.entities;
 
-
 public enum SkillType {
 
 	UNKNOWN((byte)0xff) , 
@@ -64,7 +63,7 @@ public enum SkillType {
 		}else if(longId.contains("SN_SKILL_CH_WATER_SELFHEAL") 
 				|| longId.contains("SKILL_EU_CLERIC_HEALA_GROUP")
 				|| longId.contains("SKILL_EU_CLERIC_RECOVERYA_GROUP")
-                || longId.contains("SKILL_EU_CLERIC_RECOVERYA_QUICK")) { 
+				|| longId.contains("SKILL_EU_CLERIC_RECOVERYA_QUICK")) { 
 			return SkillType.SelfHeal ; 
 		}else if(longId.contains("SKILL_EU_BARD_RECOVERA_MPHEAL") || longId.contains("EU_BARD_RECOVERA_MANATRANS")) { 
 			return SkillType.ManaBuff ; 

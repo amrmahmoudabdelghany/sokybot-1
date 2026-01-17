@@ -17,7 +17,7 @@ import javax.swing.event.ListSelectionListener;
 
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventHandler;
-import org.sokybot.machine.gamemodel.Trainer;
+import org.sokybot.gamemodel.model.ITrainer;
 import org.sokybot.settings.Settings;
 import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.sokybot.machinegroup.gamemodel.skill.SkillType;
@@ -156,7 +156,7 @@ public class SkillTab extends JPanel implements ItemListener, ListSelectionListe
     }
 
     private void updateTrainerMasteries() {
-        Trainer trainer = viewModel.getTrainer();
+        ITrainer trainer = viewModel.getTrainer();
         if (trainer == null) return;
 
         comMasteryFilter.removeAllItems();
@@ -170,7 +170,7 @@ public class SkillTab extends JPanel implements ItemListener, ListSelectionListe
     }
 
     private void updateSkillList() {
-        Trainer trainer = viewModel.getTrainer();
+        ITrainer trainer = viewModel.getTrainer();
         if (trainer == null) return;
 
         this.tblSkill.getSelectionModel().clearSelection();
@@ -195,7 +195,7 @@ public class SkillTab extends JPanel implements ItemListener, ListSelectionListe
     }
 
     private void updateAttackSkillList() {
-        Trainer trainer = viewModel.getTrainer();
+        ITrainer trainer = viewModel.getTrainer();
         Settings settings = context.getSettings();
         if (trainer == null || settings == null) return;
 
@@ -233,7 +233,7 @@ public class SkillTab extends JPanel implements ItemListener, ListSelectionListe
     public void valueChanged(ListSelectionEvent e) {
         if (e.getValueIsAdjusting()) return;
 
-        Trainer trainer = viewModel.getTrainer();
+        ITrainer trainer = viewModel.getTrainer();
         if (trainer == null) return;
 
         Object source = e.getSource();

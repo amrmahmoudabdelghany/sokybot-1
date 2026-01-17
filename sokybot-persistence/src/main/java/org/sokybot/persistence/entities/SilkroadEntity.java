@@ -28,15 +28,5 @@ public class SilkroadEntity implements Serializable{
 	
 	private String name;
 
-	public int getRefId() {
-		return refId;
-	}
-
-	public String getLongId() {
-		return longId;
-	}
-
-	public String getName() {
-		return name;
-	}
+	
 }

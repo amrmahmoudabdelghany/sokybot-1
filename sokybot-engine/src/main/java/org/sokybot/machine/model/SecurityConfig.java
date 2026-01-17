@@ -3,7 +3,7 @@ package org.sokybot.machine.model;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import org.sokybot.utils.SilkroadUtils;
+import org.sokybot.commons.SilkroadUtils;
 
 import lombok.AllArgsConstructor;
 

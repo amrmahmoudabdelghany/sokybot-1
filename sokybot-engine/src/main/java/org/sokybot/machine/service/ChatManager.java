@@ -1,7 +1,7 @@
 package org.sokybot.machine.service;
 
 import org.sokybot.app.AppConstants;
-import org.sokybot.machinegroup.gamemodel.chat.ChatType;
+import org.sokybot.game.enums.ChatType;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.packet.ServerOpcode;
 import org.springframework.beans.factory.annotation.Autowired;

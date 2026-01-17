@@ -15,6 +15,7 @@
     <description>Network proxy bundle for handling game client-server connections</description>
 
     <dependencies>
+
         
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -46,7 +47,11 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Activator>org.sokybot.proxy.ProxyActivator</Bundle-Activator>
                         <Import-Package>*;resolution:=optional</Import-Package>
-                        <Export-Package>org.sokybot.proxy,org.sokybot.network,org.sokybot.network.packet</Export-Package>
+                        <Export-Package>
+                            org.sokybot.proxy,
+                            org.sokybot.network,
+                            org.sokybot.network.*
+                        </Export-Package>
                         <Private-Package>org.sokybot.proxy.internal.*</Private-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>

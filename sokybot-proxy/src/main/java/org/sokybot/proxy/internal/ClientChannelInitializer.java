@@ -1,5 +1,6 @@
 package org.sokybot.proxy.internal;
 
+import org.osgi.service.event.EventAdmin;
 import org.sokybot.network.NetworkPeer;
 import org.sokybot.proxy.ProxyConnection;
 
@@ -14,16 +15,16 @@ public class ClientChannelInitializer extends ChannelInitializer<SocketChannel> 
     
     private final ProxyConnection proxyConnection;
     private final NetworkComponents networkComponents;
-    private final SimplePacketPublisher packetPublisher;
+    private final EventAdmin eventAdmin;
     private final ChannelGroup channelGroup;
     
     public ClientChannelInitializer(ProxyConnection proxyConnection, 
                                     NetworkComponents networkComponents,
-                                    SimplePacketPublisher packetPublisher,
+                                    EventAdmin eventAdmin,
                                     ChannelGroup channelGroup) {
         this.proxyConnection = proxyConnection;
         this.networkComponents = networkComponents;
-        this.packetPublisher = packetPublisher;
+        this.eventAdmin = eventAdmin;
         this.channelGroup = channelGroup;
     }
     
@@ -40,7 +41,7 @@ public class ClientChannelInitializer extends ChannelInitializer<SocketChannel> 
             .addLast(new PacketDecoder(networkComponents.getBlowfish()))
             .addLast(new PacketEncoder(networkComponents))
             .addLast(new ClientServerBridge(proxyConnection))
-            .addLast(packetPublisher)
+            .addLast((io.netty.channel.ChannelHandler) proxyConnection.getPacketPublisher())
             .addLast(new ClientHandler(proxyConnection));
         
         channelGroup.add(ch);
@@ -49,3 +50,4 @@ public class ClientChannelInitializer extends ChannelInitializer<SocketChannel> 
         proxyConnection.onClientChannelActive(ch);
     }
 }
+

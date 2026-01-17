@@ -1,13 +1,12 @@
 package org.sokybot.gameevents.internal;
 
 import java.util.List;
-
 import org.sokybot.gameevents.events.entity.EntityAngleUpdateEvent;
+import org.sokybot.gameevents.ChunkedPacketManager;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;
-
 /**
  * Translates angle update packets (opcode 0x911F) to EntityAngleUpdateEvent.
  * Based on EnvironmentHandler.onAngleChanged() pattern.
@@ -15,28 +14,20 @@ import org.sokybot.persistence.service.IGameDataLookup;
 public class EntityAngleUpdateTranslator extends AbstractTranslator {
     
     private static final int ANGLE_UPDATE_OPCODE = 0x911F;
-    
     public EntityAngleUpdateTranslator(IGameDataLookup lookup) {
         super(lookup);
     }
-    
     @Override
     public int getOpcode() {
         return ANGLE_UPDATE_OPCODE;
-    }
-    
-    @Override
-    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
+    protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
             int entityId = reader.getInt();
             short newAngle = reader.getShort();
-            
             return singleEvent(new EntityAngleUpdateEvent(machineFullName, entityId, newAngle));
-            
         } catch (Exception e) {
             return noEvents();
         }
-    }
 }

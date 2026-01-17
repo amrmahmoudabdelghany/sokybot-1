@@ -60,7 +60,11 @@ public class SokybotLauncher {
             "org.slf4j;version=1.7.36,org.slf4j.helpers;version=1.7.36,org.slf4j.spi;version=1.7.36," +
             "com.sun.jna;version=5.12.1,com.sun.jna.win32;version=5.12.1," +
             "com.sun.jna.platform;version=5.12.1,com.sun.jna.platform.win32;version=5.12.1," +
-            "com.sun.jna.ptr;version=5.12.1,com.sun.jna.structure;version=5.12.1"
+            "com.sun.jna.ptr;version=5.12.1,com.sun.jna.structure;version=5.12.1," +
+            "org.osgi.service.component;version=1.5.0,org.osgi.service.component.runtime;version=1.5.0," +
+            "org.osgi.service.component.runtime.dto;version=1.5.0," +
+            "org.osgi.service.component.annotations;version=1.5.0," +
+            "javax.annotation;version=1.3.2"
         );
 
         FrameworkFactory factory = ServiceLoader.load(FrameworkFactory.class).iterator().next();
@@ -81,10 +85,10 @@ public class SokybotLauncher {
         };
         
         // Level 1: Core API & Data
-        String[] core = { "sokybot-api", "sokybot-security", "sokybot-pk2", "sokybot-game-loader", "sokybot-persistence" };
+        String[] core = { "sokybot-security", "sokybot-pk2", "sokybot-game-loader", "sokybot-persistence" };
         
         // Level 2: Functional Logic & UI
-        String[] apps = { "sokybot-packet-sniffer", "sokybot-engine", "sokybot-ui", "sokybot-builders" };
+        String[] apps = { "sokybot-packet-sniffer", "sokybot-engine", "sokybot-ui", "sokybot-builders", "sokybot-webview" };
 
         loadBundles(ctx, infra, true); // Direct paths
         loadBundles(ctx, core, false); // Discoverable modules
@@ -110,7 +114,7 @@ public class SokybotLauncher {
         for (String target : targets) {
             String path = isDirectPath ? target : discoverBundle(target);
             if (path != null) {
-                String fileUrl = "file:/" + Paths.get(path).toAbsolutePath().toString().replace("\\", "/");
+                String fileUrl = Paths.get(path).toAbsolutePath().toUri().toString();
                 System.out.println("[Bootstrap] Loading " + target + " from " + path);
                 Bundle b = ctx.installBundle(fileUrl);
                 b.start();

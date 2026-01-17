@@ -2,6 +2,7 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
+import org.sokybot.gameevents.ChunkedPacketManager;
 import org.sokybot.gameevents.events.combat.AgentListEvent;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
@@ -26,14 +27,33 @@ public class AgentListTranslator extends AbstractTranslator {
     }
     
     @Override
-    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
+    protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
+            java.util.List<org.sokybot.game.dto.AgentServer> resList = new java.util.ArrayList<>();
             
-            byte agentCount = reader.getByte();
-            
-            return singleEvent(new AgentListEvent(machineFullName, agentCount));
-            
+            byte hasEntity = reader.getByte();
+            if (hasEntity == 0x01) {
+                reader.getByte();
+                short farmSize = reader.getShort();
+                // String farmName = new String(reader.getBytes(farmSize)); // Unused in event currently
+                reader.getBytes(farmSize); // Skip farmName
+                reader.getByte(); // spirator
+                hasEntity = reader.getByte();
+                while (hasEntity == 0x01) {
+                    org.sokybot.game.dto.AgentServer agent = org.sokybot.game.dto.AgentServer.builder()
+                            .serverId(reader.getShort())
+                            .serverName(new String(reader.getBytes(reader.getShort())))
+                            .onlineUsers(reader.getShort())
+                            .maxUsers(reader.getShort())
+                            .operating(reader.getByte())
+                            .build();
+                    reader.getByte(); // fram id
+                    hasEntity = reader.getByte();
+                    resList.add(agent);
+                }
+            }
+            return singleEvent(new AgentListEvent(machineFullName, (byte)resList.size(), resList));
         } catch (Exception e) {
             return noEvents();
         }

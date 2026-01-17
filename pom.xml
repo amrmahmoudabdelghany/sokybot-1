@@ -41,7 +41,7 @@
 
 
 	<modules>
-		<module>${project.artifactId}-api</module>
+
 		<module>${project.artifactId}-swing</module>
 		<module>${project.artifactId}-bootstrap</module>
 		<module>${project.artifactId}-pk2</module>
@@ -65,6 +65,19 @@
 		<module>${project.artifactId}-ui-api</module>
 		<module>${project.artifactId}-game-navigation</module>
 		<module>${project.artifactId}-game-asset</module>
+
+		<module>${project.artifactId}-commons</module>
+		<module>${project.artifactId}-webview</module>
+		<module>${project.artifactId}-machine-pages</module>
+		
+		<!-- Actuator bundles -->
+		<module>${project.artifactId}-actuator-connector</module>
+		<module>${project.artifactId}-actuator-login</module>
+		<module>${project.artifactId}-actuator-training</module>
+		
+		<!-- Extension bundles -->
+		<module>${project.artifactId}-bundle-manager</module>
+
 
 
 
@@ -95,13 +108,7 @@
 
 
 
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>sokybot-api</artifactId>
-				<version>${project.version}</version>
-				<scope>provided</scope>
 
-			</dependency>
 
 			<dependency>
 				<groupId>${project.groupId}</groupId>

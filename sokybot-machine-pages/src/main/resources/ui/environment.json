@@ -1,0 +1,36 @@
+{
+  "type": "div",
+  "className": "h-full flex flex-col items-center justify-center p-10 text-slate-500 space-y-4",
+  "children": [
+    {
+      "type": "div",
+      "className": "text-4xl",
+      "props": {
+        "children": ""
+      }
+    },
+    {
+      "type": "h3",
+      "className": "text-lg font-medium text-slate-700 dark:text-slate-300",
+      "props": {
+        "children": "Environment Settings"
+      }
+    },
+    {
+      "type": "p",
+      "className": "max-w-md text-center text-sm text-slate-500 dark:text-slate-400",
+      "props": {
+        "children": "Monster preferences and area filters will be available here. Currently, this feature is under development."
+      }
+    },
+    {
+      "type": "Button",
+      "variant": "outline",
+      "size": "sm",
+      "props": {
+        "onClick": "refresh",
+        "children": "Refresh"
+      }
+    }
+  ]
+}

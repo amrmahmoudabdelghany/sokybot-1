@@ -23,12 +23,9 @@ import org.sokybot.machine.event.monsterevent.MonsterSpawnEvent;
 import org.sokybot.machine.event.trainerevent.TrainerAttackedEvent;
 import org.sokybot.machine.event.trainerevent.TrainerLoadedEvent;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
-import org.sokybot.machine.gamemodel.IGameModel;
-import org.sokybot.machine.gamemodel.IMutableGameModel;
-import org.sokybot.machine.gamemodel.ISpawnListener;
-import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machinegroup.gamemodel.ISpawnable;
-import org.sokybot.machinegroup.gamemodel.npc.Monster;
+import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.gamemodel.model.ITrainer;
+import org.sokybot.gamemodel.model.IMonster;
 import org.sokybot.persistence.entities.NPCEntity;
 import org.sokybot.settings.MonsterPreference;
 import org.sokybot.settings.Settings;
@@ -38,13 +35,13 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 @Service
-public class MonsterTargetService implements IMonsterTargetService, ISpawnListener {
+public class MonsterTargetService implements IMonsterTargetService {
 
-//	private Map<Integer, Monster> monsters = new HashMap<>();
+	// private Map<Integer, IMonster> monsters = new HashMap<>();
 
-	private Map<Integer, Monster> outAreaMonsters = new HashMap<>();
+	private Map<Integer, IMonster> outAreaMonsters = new HashMap<>();
 
-	private PriorityQueue<Monster> monsterQueue = new PriorityQueue<>(new MonsterComparator());
+	private PriorityQueue<IMonster> monsterQueue = new PriorityQueue<>(new MonsterComparator());
 
 	private Set<Integer> avoidedMonsters = new HashSet<>();
 
@@ -63,18 +60,17 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 	private ITrainerManager trainerManager;
 
 	@Autowired
-	private Trainer trainer;
+	private ITrainer trainer;
 
 	@Autowired
 	private Logger log;
 
-	private Monster selectedMonster;
+	private IMonster selectedMonster;
  
 	@PostConstruct
 	private void init() { 
-	  this.gameModel.addSpawnListener(this);
+	  // this.gameModel.addSpawnListener(this); // Removed
 	}
-	@Override
 	public void targetNextMonster() {
 
 		if (this.monsterQueue.isEmpty()) {
@@ -85,7 +81,7 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 			this.monsterQueue.add(selectedMonster);
 		}
 
-		Monster nextMonster = this.monsterQueue.poll();
+		IMonster nextMonster = this.monsterQueue.poll();
 		this.trainerManager.select(nextMonster.getUniqueId());
 	}
 
@@ -109,8 +105,8 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 		return this.monsterQueue.size();
 	}
 
-	private void traceMonster(Monster m) {
-		if (!this.settings.isAvoided(m)) {
+	private void traceMonster(IMonster m) {
+		if (this.settings.getMonsterPreference(m.getMonsterType(), m.getName()) != org.sokybot.settings.MonsterPreference.AVOID) {
 			int dis = (int) m.distance(this.trainingAreaSettings.getActiveArea().getAreaX(),
 					this.trainingAreaSettings.getActiveArea().getAreaY());
 
@@ -128,7 +124,7 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 		this.outAreaMonsters.clear();
 		this.monsterQueue.clear();
 		this.avoidedMonsters.clear();
-		this.gameModel.findAll(Monster.class).forEach((id, m) -> {
+		this.gameModel.findAll(IMonster.class).forEach((id, m) -> {
 			traceMonster(m);
 		});
 //		this.monsters.forEach((id, m) -> {
@@ -144,13 +140,7 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 
 	}
 
-	@Override
-	public void spawnAdded(ISpawnable spawnObj) {
 
-		if (spawnObj instanceof Monster) {
-			traceMonster((Monster) spawnObj);
-		}
-	}
 
 //	@EventListener
 //	public void onMonsterSpawn(MonsterSpawnEvent event) {
@@ -162,7 +152,7 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 //
 //	}
 
-	private void removeMonster(Monster monster) {
+	private void removeMonster(IMonster monster) {
 		// Monster monster = this.monsters.remove(uniqueId);
 		int uniqueId = monster.getUniqueId();
 
@@ -187,7 +177,7 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 	public void onTrainerAttackedEvent(TrainerAttackedEvent event) {
 		int caster = event.getCasterId();
 
-		this.gameModel.find(caster, Monster.class).ifPresent((m) -> {
+		this.gameModel.find(caster, IMonster.class).ifPresent((m) -> {
 			this.attackerMonsters.add(caster);
 
 			if (this.settings.isPreferAttackerMonster() && isIgnoredMonster(caster)) {
@@ -197,19 +187,19 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 
 	}
 
-	private MonsterPreference getMonsterPreference(Monster m) {
+	private MonsterPreference getMonsterPreference(IMonster m) {
 		int id = m.getUniqueId();
 		if (this.settings.isPreferAttackerMonster() && this.attackerMonsters.contains(id)) {
 			return MonsterPreference.PREFER;
 		}
-		return this.settings.getMonsterPreference(m);
+		return this.settings.getMonsterPreference(m.getName());
 	}
 
 	@EventListener
 	public void onSpawnReachDistination(SpawnReachDestinationEvent event) {
 
 		if (this.outAreaMonsters.containsKey(event.getUniqueId())) {
-			Monster m = this.outAreaMonsters.get(event.getUniqueId());
+			IMonster m = this.outAreaMonsters.get(event.getUniqueId());
 
 			if (this.trainingAreaSettings.getActiveArea().contains(m.getDestX(), m.getDestY())) {
 				m = this.outAreaMonsters.remove(event.getUniqueId());
@@ -236,13 +226,7 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 
 	}
 
-	@Override
-	public void spawnSelected(ISpawnable spawnObj) {
 
-		if (spawnObj instanceof Monster) {
-			 this.selectedMonster = (Monster) spawnObj ; 
-		}
-	}
 //	@EventListener
 //	public void onMonsterSelected(MonsterSelectedEvent event) {
 //		this.selectedMonster = event.getSelectedMonster();
@@ -256,18 +240,12 @@ public class MonsterTargetService implements IMonsterTargetService, ISpawnListen
 //
 //	}
 
-	public void spawnRemoved(ISpawnable spawnObj) {
 
-		if (spawnObj instanceof Monster) {
-			removeMonster((Monster) spawnObj);
-		}
 
-	}
-
-	private final class MonsterComparator implements Comparator<Monster> {
+	private final class MonsterComparator implements Comparator<IMonster> {
 
 		@Override
-		public int compare(Monster o1, Monster o2) {
+		public int compare(IMonster o1, IMonster o2) {
 			if (o1 == null || o2 == null)
 				return 0;
 

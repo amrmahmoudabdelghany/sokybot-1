@@ -15,14 +15,8 @@ public class SkillList {
 	private List<String> skillList  = new ArrayList<>(); 
 	
 	private Settings settings ;
-
-    public List<String> getSkillList() {
-        return skillList;
-    }
-
-    public Settings getSettings() {
-        return settings;
-    }
+	
+	public List<String> getSkillList() { return skillList; }
 	
 	public SkillList(Settings parent  ) {
 		this.settings = parent ;   

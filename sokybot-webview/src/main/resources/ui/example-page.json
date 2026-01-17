@@ -1,0 +1,61 @@
+{
+  "type": "Card",
+  "className": "w-full",
+  "children": [
+    {
+      "type": "CardHeader",
+      "children": [
+        {
+          "type": "CardTitle",
+          "props": {
+            "children": "Example Extension Page"
+          }
+        }
+      ]
+    },
+    {
+      "type": "CardContent",
+      "className": "space-y-4",
+      "children": [
+        {
+          "type": "div",
+          "className": "p-4 bg-slate-100 dark:bg-slate-800 rounded",
+          "children": [
+            {
+              "type": "h3",
+              "className": "text-lg font-semibold mb-2",
+              "props": {
+                "children": "This is an example declarative UI page"
+              }
+            },
+            {
+              "type": "p",
+              "className": "text-slate-600 dark:text-slate-400",
+              "props": {
+                "children": "This page is defined entirely in JSON and demonstrates the declarative UI system."
+              }
+            }
+          ]
+        },
+        {
+          "type": "div",
+          "className": "flex gap-2",
+          "children": [
+            {
+              "type": "Button",
+              "variant": "default",
+              "icon": "Check",
+              "props": {
+                "onClick": "exampleAction",
+                "actionData": {
+                  "message": "Button clicked!"
+                },
+                "children": "Click Me"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

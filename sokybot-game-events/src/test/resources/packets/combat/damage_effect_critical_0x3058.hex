@@ -1,0 +1,9 @@
+# Damage Effect - Critical
+# Opcode: 0x3058
+# Format: targetEntityId (int) + damageType (byte) + damageAmount (int)
+# targetEntityId: 54321 (0x0000D431)
+# damageType: 0x01 (CRITICAL)
+# damageAmount: 5000 (0x00001388)
+31 D4 00 00
+01
+88 13 00 00

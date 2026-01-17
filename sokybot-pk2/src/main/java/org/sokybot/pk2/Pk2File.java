@@ -101,15 +101,27 @@ public class Pk2File implements IPk2Driver {
 
 	@Override
 	public List<JMXFile> find(String regex, int limit) {
+		// Validate that file is opened before operations
+		if (!isOpened || channel == null || blowfish == null) {
+			throw new IllegalStateException("Pk2File is not opened. Call open() first.");
+		}
+		
+		String effectiveRegex = resolvePattern(regex);
 
 		List<JMXFile> res = new ArrayList<>();
 
 		// openIfClosed() ;
 		// log.debug("Channel Opened with file {} and arguments verified" ,
 		// this.filePath);
-		if (!regex.isBlank()) {
+		if (!effectiveRegex.isBlank()) {
 
-			Stack<String> pathStack = getPathStack(regex);
+			Stack<String> pathStack = getPathStack(effectiveRegex);
+			
+			// Validate pathStack is not empty
+			if (pathStack.isEmpty()) {
+				log.warn("Empty path stack from regex: {}", regex);
+				return res;
+			}
 
 			String fileName = pathStack.remove(0);
 			if (pathStack.isEmpty()) {
@@ -169,7 +181,9 @@ public class Pk2File implements IPk2Driver {
 		long nextChain = block.getLastEntry().nextChain;
 
 		if (nextChain > 0) {
-			List<JMXFile> nextFiles = findFile(regex, nextChain, limit - res.size());
+			// Fix: Prevent negative limit calculation
+			int remainingLimit = limit > 0 ? Math.max(0, limit - res.size()) : limit;
+			List<JMXFile> nextFiles = findFile(regex, nextChain, remainingLimit);
 			res.addAll(nextFiles);
 
 			if (limit > 0 && res.size() == limit) {
@@ -179,8 +193,9 @@ public class Pk2File implements IPk2Driver {
 		}
 
 		for (JMXDirectory jMXDirectory : jMXDirectories) {
-
-			List<JMXFile> children = findFile(regex, jMXDirectory.getPosition(), limit - res.size());
+			// Fix: Prevent negative limit calculation
+			int remainingLimit = limit > 0 ? Math.max(0, limit - res.size()) : limit;
+			List<JMXFile> children = findFile(regex, jMXDirectory.getPosition(), remainingLimit);
 			
 			res.addAll(children);
 			if (limit > 0 && res.size() == limit) {
@@ -214,8 +229,9 @@ public class Pk2File implements IPk2Driver {
 
 		// (limit > 0 && res.size() < limit) || limit <= 0)
 		while (!posStack.isEmpty() && (limit <= 0 || res.size() < limit)) {
-
-			res.addAll(findFile(regex, posStack.pop(), limit));
+			// Fix: Calculate remaining limit to prevent negative values
+			int remainingLimit = limit > 0 ? Math.max(0, limit - res.size()) : limit;
+			res.addAll(findFile(regex, posStack.pop(), remainingLimit));
 
 		}
 
@@ -255,7 +271,7 @@ public class Pk2File implements IPk2Driver {
 
 	}
 
-	private Stack<String> getPathStack(String path) {
+	Stack<String> getPathStack(String path) {
 
 		Stack<String> pathStack = new Stack<>();
 		Stack<String> nestedFlag = new Stack<>();
@@ -265,7 +281,7 @@ public class Pk2File implements IPk2Driver {
 		for (int i = path.length() - 1; i >= 0; i--) {
 			c = path.charAt(i);
 			switch (c) {
-			case '\\':
+			case '/':
 
 				if (nestedFlag.isEmpty()) {
 
@@ -303,6 +319,14 @@ public class Pk2File implements IPk2Driver {
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
 
 		int totalReadBytes = pk2FileChannel.read(buffer);
+		
+		// Validate that we read the complete header
+		if (totalReadBytes < HEADER_SIZE) {
+			throw new IOException(String.format(
+				"PK2 file header incomplete. Expected %d bytes, read %d bytes. File may be corrupted or truncated.",
+				HEADER_SIZE, totalReadBytes));
+		}
+		
 		buffer.position(0);
 		byte[] nameBuffer = new byte[30];
 		buffer.get(nameBuffer);
@@ -369,8 +393,11 @@ public class Pk2File implements IPk2Driver {
 	@Override
 	public void close() throws IOException {
 		if (this.isOpened) {
-			this.channel.close();
+			if (this.channel != null) {
+				this.channel.close();
+			}
 			this.channel = null;
+			this.blowfish = null;
 			this.isOpened = false;
 		}
 	}
@@ -515,8 +542,32 @@ public class Pk2File implements IPk2Driver {
 	 * res.addAll(nextFiles);
 	 *
 	 * }
-	 *
-	 * return res; }
+	         * return res; }
+         */
+
+	/**
+	 * Resolves a input pattern into a valid regex.
+	 * If the input is a simple wildcard pattern (contains * but no valid regex chars), 
+	 * it converts it to regex.
 	 */
+	String resolvePattern(String pattern) {
+		if (pattern == null) return "";
+		
+		// Check for regex signatures: complex symbols, .* wildcard, or escaped dot
+		boolean isRegex = pattern.matches(".*[\\[\\]\\(\\)\\{\\}\\|\\+\\?\\^\\$].*") 
+						|| pattern.contains(".*") 
+						|| pattern.contains("\\.");
+
+		// Check if it's a simple wildcard pattern (contains * but not identified as regex)
+		if (pattern.contains("*") && !isRegex) {
+			// Convert simple wildcard pattern to regex
+			String regex = pattern
+				.replace("\\", "\\\\") // Escape backslashes
+				.replace(".", "\\.")   // Escape dots
+				.replace("*", ".*");   // Convert wildcard to regex match
+			return regex;
+		}
+		return pattern;
+	}
 
 }

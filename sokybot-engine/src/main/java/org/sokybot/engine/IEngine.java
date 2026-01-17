@@ -1,12 +1,17 @@
 package org.sokybot.engine;
 
+import org.sokybot.engine.api.EngineState;
+import org.sokybot.engine.api.workflow.IWorkflowRegistry;
+import org.sokybot.settings.Settings;
+
 /**
  * Public interface for a machine engine instance.
  * 
  * Each machine has its own engine instance that contains:
- * - State machine (workflows) - accessed via IMachineContext if needed
- * - Actuators (actions)
- * - Controllers (event handlers)
+ * - Workflow engine (cycles, states)
+ * - Actuators (cycle definitions)
+ * - Action queue processor
+ * - Priority-based interruption handler
  * 
  * This interface allows other bundles to interact with engines
  * without depending on engine implementation details or Spring framework.
@@ -26,12 +31,18 @@ public interface IEngine {
     String getMachineId();
     
     /**
-     * Starts the engine (state machine, actuators, etc.).
+     * Starts the engine (workflow engine, actuators, etc.).
+     * Engine starts in IDLE state.
+     * 
+     * @throws IllegalStateException if engine is already started
      */
     void start();
     
     /**
-     * Stops the engine and releases resources.
+     * Stops the engine and releases all resources.
+     * Stops any active cycle immediately.
+     * 
+     * @throws IllegalStateException if engine is not running
      */
     void stop();
     
@@ -43,10 +54,19 @@ public interface IEngine {
     boolean isRunning();
     
     /**
-     * Sends a command/event to the engine.
-     * The event name is mapped to an internal UserAction.
+     * Gets the current engine state (IDLE, ACTIVE, STOPPED).
      * 
-     * @param eventName The name of the event (e.g., "CONNECT", "START_TRAINING")
+     * @return Current engine state
+     */
+    EngineState getEngineState();
+    
+    /**
+     * Sends a user command/event to the engine.
+     * Valid events: "START_TRAINING", "STOP_TRAINING", "CONNECT", "DISCONNECT"
+     * 
+     * @param eventName The event name
+     * @throws IllegalArgumentException if event name is invalid
+     * @throws IllegalStateException if engine is not running
      */
     void sendEvent(String eventName);
 
@@ -56,4 +76,12 @@ public interface IEngine {
      * @return The settings object.
      */
     Settings getSettings();
+    
+    /**
+     * Gets the workflow registry for this engine.
+     * Used by actuators to register cycles.
+     * 
+     * @return The workflow registry
+     */
+    IWorkflowRegistry getWorkflowRegistry();
 }

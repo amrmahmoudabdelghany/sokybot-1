@@ -20,7 +20,7 @@ import org.sokybot.runtime.internal.persistence.MachineInfoRepository;
 import org.sokybot.runtime.internal.persistence.FileMachineInfoRepository;
 import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.runtime.internal.MachineContextFactory;
-import org.sokybot.engine.SpringGroupContextWrapper;
+// import org.sokybot.engine.SpringGroupContextWrapper;
 import org.sokybot.exception.NameUniquenessConstraintViolationException;
 import org.sokybot.game.navigation.IRuteFinder;
 import org.sokybot.game.navigation.IRuteFinderFactory;
@@ -48,12 +48,15 @@ public class GroupContextImpl implements IGroupContext {
     private final BundleContext bundleContext;
     
     private MachineInfoRepository machineInfoRepo;
-    private IMachineContextFactory machineContextFactory;
     private EventAdmin eventAdmin;
     private IRuteFinderFactory ruteFinderFactory;
     private IGamePersistenceFactory gamePersistenceFactory;
     
     private IRuteFinder ruteFinder;
+    
+    // Shared translators per game (lazy initialized)
+    private Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators;
+    private final Object translatorsLock = new Object();
     
     private final Lock lock = new ReentrantLock();
     private final Map<String, IMachineContext> machines = new HashMap<>();
@@ -71,14 +74,9 @@ public class GroupContextImpl implements IGroupContext {
     }
     
     private void initializeServices() {
-        // Get IMachineContextFactory from OSGi service registry
+        // Get EventAdmin from OSGi service registry
         if (bundleContext != null) {
             try {
-                ServiceReference<IMachineContextFactory> ref = bundleContext.getServiceReference(IMachineContextFactory.class);
-                if (ref != null) {
-                    machineContextFactory = bundleContext.getService(ref);
-                }
-                
                 // Get EventAdmin from OSGi service registry
                 ServiceReference<EventAdmin> eventAdminRef = bundleContext.getServiceReference(EventAdmin.class);
                 if (eventAdminRef != null) {
@@ -99,10 +97,6 @@ public class GroupContextImpl implements IGroupContext {
             } catch (Exception e) {
                 log.warn("Services not available from OSGi", e);
             }
-        }
-        
-        if (machineContextFactory == null) {
-            throw new IllegalStateException("IMachineContextFactory not available from OSGi");
         }
     }
     
@@ -137,7 +131,7 @@ public class GroupContextImpl implements IGroupContext {
     }
     
     private IMachineContext createMachineContext(MachineInfo machineInfo) {
-        return machineContextFactory.createMachineContext(machineInfo, this, bundleContext);
+        return MachineContextFactory.createMachineContext(machineInfo, this, bundleContext);
     }
     
     @Override
@@ -219,20 +213,82 @@ public class GroupContextImpl implements IGroupContext {
         return springWrapper != null && springWrapper.isRunning();
     }
     
+    private IGameDataLookup gameDataLookup;
+
+    @Override
+    public IGameDataLookup getGameDataLookup() {
+         if (this.gameDataLookup == null) {
+              if (this.gamePersistenceFactory == null) {
+                  // Try lazy fetch if services were not ready during init
+                  if (bundleContext != null) {
+                      ServiceReference<IGamePersistenceFactory> ref = bundleContext.getServiceReference(IGamePersistenceFactory.class);
+                      if (ref != null) {
+                          gamePersistenceFactory = bundleContext.getService(ref);
+                      }
+                  }
+              }
+              
+              if (this.gamePersistenceFactory != null) {
+                  this.gameDataLookup = this.gamePersistenceFactory.getLookup(this.groupInfo.getGamePath());
+              }
+         }
+         return this.gameDataLookup;
+    }
+
     @Override
     public IRuteFinder getRuteFinder() {
         if (ruteFinder == null) {
-            if (ruteFinderFactory == null || gamePersistenceFactory == null) {
-                log.warn("RuteFinderFactory or GamePersistenceFactory not available");
-                return null;
+            if (ruteFinderFactory == null) {
+                 log.warn("RuteFinderFactory not available");
+                 return null;
             }
-            // TODO: Pass correct gamePath later - using empty string for now
-            IGameDataLookup lookup = gamePersistenceFactory.getLookup("");
+            
+            IGameDataLookup lookup = getGameDataLookup();
             if (lookup != null) {
                 ruteFinder = ruteFinderFactory.createRuteFinder(lookup);
+            } else {
+                log.warn("GameDataLookup not available - cannot create RuteFinder");
             }
         }
         return ruteFinder;
+    }
+    
+    @Override
+    public Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> getTranslators() {
+        if (sharedTranslators == null) {
+            synchronized (translatorsLock) {
+                if (sharedTranslators == null) {
+                    // Lazy initialization - create once per game
+                    IGameDataLookup lookup = getGameDataLookup();
+                    if (lookup != null) {
+                        org.sokybot.gameevents.events.core.ITranslatorFactory factory = getTranslatorFactory();
+                        if (factory != null) {
+                            sharedTranslators = factory.createTranslators(lookup, null);
+                            log.info("Created {} shared translators for game: {} (version: {})", 
+                                    sharedTranslators.size(), groupInfo.getGamePath(), lookup.getVersion());
+                        } else {
+                            log.warn("ITranslatorFactory not available - cannot create translators");
+                            sharedTranslators = Map.of();
+                        }
+                    } else {
+                        log.warn("GameDataLookup not available - cannot create translators");
+                        sharedTranslators = Map.of();
+                    }
+                }
+            }
+        }
+        return sharedTranslators;
+    }
+    
+    private org.sokybot.gameevents.events.core.ITranslatorFactory getTranslatorFactory() {
+        if (bundleContext != null) {
+            ServiceReference<org.sokybot.gameevents.events.core.ITranslatorFactory> ref = 
+                bundleContext.getServiceReference(org.sokybot.gameevents.events.core.ITranslatorFactory.class);
+            if (ref != null) {
+                return bundleContext.getService(ref);
+            }
+        }
+        return null;
     }
     
     public void destroy() {

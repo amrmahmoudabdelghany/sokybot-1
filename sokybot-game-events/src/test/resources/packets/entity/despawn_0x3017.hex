@@ -1,0 +1,5 @@
+# Entity Despawn
+# Opcode: 0x3017
+# Format: entityId (int)
+# entityId: 12345 (0x3039)
+39 30 00 00

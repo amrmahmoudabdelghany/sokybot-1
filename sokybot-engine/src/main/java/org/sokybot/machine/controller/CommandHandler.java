@@ -23,20 +23,14 @@ import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.sokybot.app.AppConstants;
 import org.sokybot.gameevents.events.chat.ChatMessageEvent;
-import org.sokybot.machine.gamemodel.IGameModel;
-import org.sokybot.machine.gamemodel.ISpawnListener;
-import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machine.service.IChatManager;
-import org.sokybot.machine.service.ITrainerManager;
-import org.sokybot.machinegroup.gamemodel.ISpawnable;
-import org.sokybot.machinegroup.gamemodel.chat.ChatType;
-import org.sokybot.persistence.entities.geo.Vector2D;
-import org.sokybot.persistence.entities.navmesh.Position;
-import org.sokybot.machinegroup.gamemodel.npc.Monster;
-import org.sokybot.persistence.entities.MonsterType;
+import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.gamemodel.model.ITrainer;
+import org.sokybot.gamemodel.model.ISpawn;
+import org.sokybot.gamemodel.model.IMonster;
+import org.sokybot.settings.MonsterType;
 import org.sokybot.settings.Settings;
 import org.sokybot.settings.TrainingAreaSettings;
-import org.sokybot.machinegroup.gamemodel.skill.Skill;
+import org.sokybot.game.dto.Skill;
 import org.sokybot.machinegroup.mapnavigation.RuteFinder;
 import org.sokybot.game.navigation.IRuteFinder;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -61,7 +55,7 @@ public class CommandHandler {
 	private Logger log;
 
 	@Autowired
-	private Trainer trainer; // for debug
+	private ITrainer trainer; // for debug
 
 	@Autowired
 	private Settings config;
@@ -160,8 +154,8 @@ public class CommandHandler {
 		
 		 this.gameModel.getSelected().map((spawn)->{
 			
-			 if(spawn instanceof Monster) { 
-				return  (Monster) spawn; 
+			 if(spawn instanceof IMonster) { 
+				return  (IMonster) spawn; 
 			}
 			return null ; 
 				 
@@ -203,13 +197,13 @@ public class CommandHandler {
 			
 			List<Vector2D> path = 
 					this.ctx.getBean(IRuteFinder.class).findPath(new Position(this.trainer.getX(), 0, this.trainer.getY()),
-					new Position(targetX, 0, targetY));
+					new Position(targetX, 0, targetY), 1.0f);
 
 			path.add(0, new Vector2D(targetX , targetY)) ;
 
 			for(int i = 0; i < path.size() ; i++) { 
 	          Vector2D p  = path.get(i) ; 
-	          long time = (Math.round(this.trainer.distance(p.x, p.y) / (this.trainer.getRunSpeed() * 0.1)  )* 1000) ; 
+	          long time = (Math.round(this.trainer.distance((int)p.x, (int)p.y) / (this.trainer.getRunSpeed() * 0.1)  )* 1000) ; 
 
 	          this.chatManager.logMessage(this.trainerName + " ", "On Walking to ( " + p.x + " , " + p.y + " )");
 	  		 this.ctx.getBean(ITrainerManager.class).walk((int)p.x, (int)p.y);

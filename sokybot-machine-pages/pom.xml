@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>io.github.sokybot</groupId>
+        <artifactId>sokybot</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>sokybot-machine-pages</artifactId>
+    <packaging>bundle</packaging>
+    <name>sokybot-machine-pages</name>
+    <description>Machine pages (Inventory, Skills, Training, Environment, Log) using declarative UI system</description>
+
+    <dependencies>
+        <!-- Webview Extension API -->
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-webview</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Runtime for IMachineContext -->
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-runtime</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Game Model for trainer/skills/inventory data -->
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-game-model</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Settings for training settings -->
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-settings</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Game Events for event types -->
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-game-events</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Jackson for JSON -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+        
+        <!-- Reactor for streams -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>3.5.11</version>
+        </dependency>
+        
+        <!-- OSGi -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.framework</artifactId>
+            <version>1.9.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.5.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.event</artifactId>
+            <version>1.4.1</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${dependency.slf4j-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Import-Package>
+                            !javax.servlet*,
+                            !javax.swing.*,
+                            !java.awt.*,
+                            !reactor.*,
+                            !org.reactivestreams.*,
+                            *;resolution:=optional
+                        </Import-Package>
+                        <Export-Package>org.sokybot.machinepages</Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

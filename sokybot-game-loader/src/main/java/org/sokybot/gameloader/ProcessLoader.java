@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-import org.sokybot.IKernel32;
+import org.sokybot.commons.jna.IKernel32;
 import org.sokybot.gameloader.injector.IInjector;
 import org.sokybot.gameloader.injector.Injector;
 import org.sokybot.gameloader.injector.shellcode.IShellCode;

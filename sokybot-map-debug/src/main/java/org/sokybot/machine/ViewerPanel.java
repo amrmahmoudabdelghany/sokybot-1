@@ -63,7 +63,7 @@ import org.sokybot.machinegroup.mapnavigation.Sector;
 import org.sokybot.machinegroup.mapnavigation.triangulation.CellSplit;
 import org.sokybot.machinegroup.mapnavigation.triangulation.Line;
 import org.sokybot.machinegroup.service.ISroMaterialDAO;
-import org.sokybot.utils.SilkroadUtils;
+import org.sokybot.commons.SilkroadUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;

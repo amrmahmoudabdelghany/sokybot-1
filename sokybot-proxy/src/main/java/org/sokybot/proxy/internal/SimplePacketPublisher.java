@@ -1,97 +1,73 @@
 package org.sokybot.proxy.internal;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.sokybot.network.IPacketObserver;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.IPacketSubscription;
 import org.sokybot.network.packet.ImmutablePacket;
 
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
-/**
- * Publishes packets to subscribed observers.
- * Implements the pub/sub pattern for packet handling.
- */
+import io.netty.channel.ChannelHandler.Sharable;
+
 @Sharable
 public class SimplePacketPublisher extends SimpleChannelInboundHandler<ImmutablePacket> implements IPacketPublisher {
-    
-    private final Executor executor;
-    private final Map<Integer, List<IPacketObserver>> observers;
-    
-    public SimplePacketPublisher() {
-        this.executor = Executors.newCachedThreadPool();
-        this.observers = new HashMap<>();
-        this.observers.put(ANY, new ArrayList<>());
-    }
-    
+
+    private final Map<Integer, CopyOnWriteArrayList<IPacketObserver>> observers = new ConcurrentHashMap<>();
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ImmutablePacket packet) throws Exception {
-        // Notify ANY observers
-        List<IPacketObserver> anyObservers = observers.get(ANY);
-        if (anyObservers != null) {
-            for (IPacketObserver obs : anyObservers) {
-                executor.execute(() -> obs.onNext(packet.getOpcode(), packet));
-            }
-        }
-        
-        // Notify opcode-specific observers
-        List<IPacketObserver> specificObservers = observers.get(packet.getOpcode());
-        if (specificObservers != null) {
-            for (IPacketObserver obs : specificObservers) {
-                obs.onNext(packet.getOpcode(), packet);
-            }
-        }
-        
+        publish(packet);
         ctx.fireChannelRead(packet);
     }
-    
+
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-        for (List<IPacketObserver> observerList : observers.values()) {
-            for (IPacketObserver obs : observerList) {
-                executor.execute(() -> obs.onError(cause));
+    public IPacketSubscription subscribe(int opcode, IPacketObserver observer) {
+        observers.computeIfAbsent(opcode, k -> new CopyOnWriteArrayList<>()).add(observer);
+
+        return () -> {
+            CopyOnWriteArrayList<IPacketObserver> list = observers.get(opcode);
+            if (list != null) {
+                list.remove(observer);
             }
-        }
-        super.exceptionCaught(ctx, cause);
+        };
     }
-    
+
     @Override
-    public IPacketSubscription subscribe(IPacketObserver observer, int opcode) {
-        List<IPacketObserver> targetList = observers.get(opcode);
-        if (targetList == null) {
-            targetList = new ArrayList<>();
-            observers.put(opcode, targetList);
+    public IPacketSubscription subscribe(IPacketObserver observer, int... opcodes) {
+        // Composite subscription could be implemented here
+        // For simplicity, we can just subscribe individually but returning a composite subscription
+        // simplifies management for consumers.
+        
+        // However, standard simplistic implementation for now:
+        for (int opcode : opcodes) {
+            subscribe(opcode, observer);
         }
         
-        targetList.add(observer);
-        
-        return new PacketSubscription(targetList, observer);
+        return () -> {
+            for (int opcode : opcodes) {
+                CopyOnWriteArrayList<IPacketObserver> list = observers.get(opcode);
+                if (list != null) {
+                    list.remove(observer);
+                }
+            }
+        };
     }
-    
-    /**
-     * Subscription handle that allows unsubscribing.
-     */
-    private static class PacketSubscription implements IPacketSubscription {
-        
-        private final List<IPacketObserver> parentList;
-        private final IPacketObserver source;
-        
-        PacketSubscription(List<IPacketObserver> parentList, IPacketObserver source) {
-            this.parentList = parentList;
-            this.source = source;
-        }
-        
-        @Override
-        public void cancel() {
-            parentList.remove(source);
+
+    public void publish(ImmutablePacket packet) {
+        CopyOnWriteArrayList<IPacketObserver> list = observers.get(packet.getOpcode());
+        if (list != null) {
+            for (IPacketObserver observer : list) {
+                try {
+                    observer.onPacket(packet);
+                } catch (Exception e) {
+                   e.printStackTrace(); // Log error but don't stop others
+                }
+            }
         }
     }
 }

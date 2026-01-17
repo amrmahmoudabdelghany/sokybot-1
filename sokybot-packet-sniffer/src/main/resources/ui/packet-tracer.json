@@ -1,0 +1,164 @@
+{
+  "type": "Card",
+  "className": "w-full h-full",
+  "children": [
+    {
+      "type": "CardHeader",
+      "children": [
+        {
+          "type": "CardTitle",
+          "props": {
+            "children": "Packet Tracer"
+          }
+        }
+      ]
+    },
+    {
+      "type": "CardContent",
+      "className": "space-y-4",
+      "children": [
+        {
+          "type": "div",
+          "className": "flex items-center gap-2",
+          "children": [
+            {
+              "type": "Label",
+              "props": {
+                "htmlFor": "tracerSearch",
+                "children": "Search:"
+              }
+            },
+            {
+              "type": "Input",
+              "props": {
+                "id": "tracerSearch",
+                "placeholder": "Filter by name, opcode, or source...",
+                "onChange": "filterTracer",
+                "value": "${tracerSearchFilter}"
+              },
+              "className": "flex-1"
+            }
+          ]
+        },
+        {
+          "type": "div",
+          "className": "grid grid-cols-1 lg:grid-cols-2 gap-4",
+          "children": [
+            {
+              "type": "Card",
+              "children": [
+                {
+                  "type": "CardHeader",
+                  "children": [
+                    {
+                      "type": "CardTitle",
+                      "props": {
+                        "children": "Packet Tracers"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "CardContent",
+                  "className": "p-0",
+                  "children": [
+                    {
+                      "type": "div",
+                      "className": "overflow-x-auto",
+                      "children": [
+                        {
+                          "type": "table",
+                          "className": "w-full",
+                          "props": {
+                            "dataSource": "filteredTracers",
+                            "columns": [
+                              {
+                                "field": "name",
+                                "label": "Name",
+                                "className": "text-left p-2 border"
+                              },
+                              {
+                                "field": "source",
+                                "label": "Source",
+                                "className": "text-left p-2 border"
+                              },
+                              {
+                                "field": "opcode",
+                                "label": "Opcode",
+                                "className": "text-left p-2 border font-mono"
+                              },
+                              {
+                                "field": "count",
+                                "label": "Count",
+                                "className": "text-right p-2 border"
+                              },
+                              {
+                                "field": "ignored",
+                                "label": "Ignored",
+                                "className": "text-center p-2 border"
+                              }
+                            ],
+                            "onRowClick": "selectTracer",
+                            "rowClassName": "hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Card",
+              "children": [
+                {
+                  "type": "CardHeader",
+                  "children": [
+                    {
+                      "type": "CardTitle",
+                      "props": {
+                        "children": "Description"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "CardContent",
+                  "className": "space-y-2",
+                  "children": [
+                    {
+                      "type": "Label",
+                      "props": {
+                        "htmlFor": "tracerDescription",
+                        "children": "Selected Tracer Description"
+                      }
+                    },
+                    {
+                      "type": "textarea",
+                      "props": {
+                        "id": "tracerDescription",
+                        "placeholder": "Enter description for selected tracer...",
+                        "onChange": "updateDescription",
+                        "onBlur": "saveDescription",
+                        "value": "${selectedTracerDescription}",
+                        "rows": 12
+                      },
+                      "className": "w-full p-2 border rounded resize-none"
+                    },
+                    {
+                      "type": "div",
+                      "className": "text-xs text-muted-foreground",
+                      "props": {
+                        "children": "Changes are saved automatically when you click outside the textarea."
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

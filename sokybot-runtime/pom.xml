@@ -21,9 +21,10 @@
 
     <dependencies>
         <!-- Sokybot API for interfaces -->
+
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-api</artifactId>
+            <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
         </dependency>
         
@@ -60,6 +61,20 @@
             <artifactId>sokybot-persistence</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+             <groupId>${project.groupId}</groupId>
+             <artifactId>sokybot-game-model</artifactId>
+             <version>${project.version}</version>
+             <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+             <groupId>${project.groupId}</groupId>
+             <artifactId>sokybot-game-events</artifactId>
+             <version>${project.version}</version>
+             <scope>provided</scope>
         </dependency>
         
         <!-- Game Navigation for IRuteFinder -->

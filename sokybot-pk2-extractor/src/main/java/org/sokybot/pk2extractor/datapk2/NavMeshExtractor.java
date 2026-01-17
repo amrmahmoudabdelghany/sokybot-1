@@ -184,9 +184,9 @@ public class NavMeshExtractor implements IExtractor<SectorRefData> {
                                      List<NavCellRefData> navCells) {
         int cellLinkCount = buffer.getInt();
         for (short linkIndex = 0; linkIndex < cellLinkCount; linkIndex++) {
-            float minX = buffer.getInt() / 10f;
+            float minX = buffer.getFloat() / 10f;
             float minY = 192 - buffer.getFloat() / 10;
-            float maxX = buffer.getInt() / 10f;
+            float maxX = buffer.getFloat() / 10f;
             float maxY = 192 - buffer.getFloat() / 10;
             
             byte lineFlag = buffer.get();

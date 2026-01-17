@@ -18,5 +18,5 @@ public interface ITranslatorFactory {
      * @param lookup The game-specific data lookup service
      * @return Map of opcode to translator instance
      */
-    Map<Integer, IPacketTranslator> createTranslators(IGameDataLookup lookup);
+    Map<Integer, IPacketTranslator> createTranslators(IGameDataLookup lookup, org.sokybot.network.IPacketPublisher publisher);
 }

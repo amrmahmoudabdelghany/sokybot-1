@@ -5,12 +5,9 @@ import java.io.Serializable;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class TrainingArea implements Serializable {
@@ -21,19 +18,38 @@ public class TrainingArea implements Serializable {
 	private Integer id = null;
 
 	@Setter(value = AccessLevel.NONE)
-	@Getter(value = AccessLevel.NONE)
 	private TrainingAreaSettings areaSettings;
 
 	private String name;
-
-    public String getName() {
-        return name;
-    }
 
 	private int areaX = 0;
 	private int areaY = 0;
 	private int areaR = 0;
 
+	public Integer getId() {
+		return id;
+	}
+	
+	public String getName() {
+		return name;
+	}
+	
+	public int getAreaX() {
+		return areaX;
+	}
+	
+	public int getAreaY() {
+		return areaY;
+	}
+	
+	public int getAreaR() {
+		return areaR;
+	}
+	
+	public TrainingAreaSettings getAreaSettings() {
+		return areaSettings;
+	}
+	
 	public TrainingArea(TrainingAreaSettings areaSettings, String name, int areaX, int areaY, int areaR) {
 		super();
 		this.areaSettings = areaSettings;

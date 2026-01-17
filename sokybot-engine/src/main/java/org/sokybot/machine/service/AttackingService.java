@@ -7,18 +7,17 @@ import java.util.Map;
 import java.util.PriorityQueue;
 
 import org.slf4j.Logger;
-import org.sokybot.machine.event.DespawnEvent;
-import org.sokybot.engine.event.SkillCastErrorEvent;
-import org.sokybot.machine.event.SpawnReachDestinationEvent;
-import org.sokybot.machine.event.monsterevent.MonsterHPUpdateEvent;
-import org.sokybot.machine.event.monsterevent.MonsterSelectedEvent;
-import org.sokybot.machine.event.monsterevent.MonsterSpawnEvent;
+import org.sokybot.gameevents.events.spawn.MonsterSpawnEvent;
+import org.sokybot.gameevents.events.entity.EntityHPMPUpdateEvent;
+import org.sokybot.gameevents.events.entity.EntitySelectedEvent;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
-import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machinegroup.gamemodel.npc.Monster;
-import org.sokybot.persistence.entities.MonsterType;
+import org.sokybot.game.dto.Skill;
+import org.sokybot.game.enums.SkillCastErrorType;
+import org.sokybot.gameevents.events.skill.SkillCastErrorEvent;
+import org.sokybot.machine.model.Trainer;
+import org.sokybot.machine.model.Monster;
+import org.sokybot.settings.MonsterType;
 import org.sokybot.settings.Settings;
-import org.sokybot.machinegroup.gamemodel.skill.Skill;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -34,6 +33,9 @@ public class AttackingService implements IAttackingService {
 
 	@Autowired
 	private Trainer trainer;
+	
+    @Autowired
+    private org.sokybot.machine.model.IGameModel gameModel;
 
 	@Autowired
 	private Logger log;
@@ -93,26 +95,28 @@ public class AttackingService implements IAttackingService {
 	}
 
 	@EventListener
-	public void onMonsterSelected(MonsterSelectedEvent event) {
-		this.selectedMonster = event.getSelectedMonster();
-		initAttackSkills();
-
+	public void onMonsterSelected(EntitySelectedEvent event) {
+        this.gameModel.find(event.getSelectedEntityId()).ifPresent(spawn -> {
+            if (spawn instanceof Monster) {
+                this.selectedMonster = (Monster) spawn;
+                initAttackSkills();
+            }
+        });
 	}
 
 	
 
 	
 
-	@EventListener
 	public void onCastError(SkillCastErrorEvent event) {
 		String error = "";
 
-		if (event.getErrorType() == SkillCastErrorEvent.OBSTACLE) {
+		if (event.getErrorType() == SkillCastErrorType.OBSTACLE) {
 			error = "Counter Obstacle";
 			// here we can get the path between target monster and trainer go to it 
-		} else if (event.getErrorType() == SkillCastErrorEvent.INVALID_TARGET) {
+		} else if (event.getErrorType() == SkillCastErrorType.INVALID_TARGET) {
 			error = "Invalid Target";
-		} else if (event.getErrorType() == SkillCastErrorEvent.SKILL_ON_COOLDOWN) {
+		} else if (event.getErrorType() == SkillCastErrorType.SKILL_ON_COOLDOWN) {
 			error = "Skill On Cooldown";
 		}
 

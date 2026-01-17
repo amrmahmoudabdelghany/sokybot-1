@@ -1,12 +1,11 @@
 package org.sokybot.proxy;
 
-import org.sokybot.network.IPacketPublisher;
+import org.osgi.service.event.EventAdmin;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.proxy.internal.ClientChannelInitializer;
 import org.sokybot.proxy.internal.HandshakeHandler;
 import org.sokybot.proxy.internal.NetworkComponents;
 import org.sokybot.proxy.internal.ServerChannelInitializer;
-import org.sokybot.proxy.internal.SimplePacketPublisher;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
@@ -30,9 +29,10 @@ public class ProxyConnection implements IProxyConnection {
     private volatile IConnectionListener listener;
     private final EventLoopGroup bossGroup;
     private final EventLoopGroup workerGroup;
+    private final EventAdmin eventAdmin;
+    private final SimplePacketPublisher packetPublisher;
     
     private final ChannelGroup channelGroup;
-    private final SimplePacketPublisher packetPublisher;
     private final NetworkComponents networkComponents;
     
     private Channel serverChannel;  // Listening for client
@@ -46,14 +46,17 @@ public class ProxyConnection implements IProxyConnection {
     private HandshakeHandler handshakeHandler;
     
     public ProxyConnection(String machineId, IConnectionListener listener, 
-                          EventLoopGroup bossGroup, EventLoopGroup workerGroup) {
+                          EventLoopGroup bossGroup, EventLoopGroup workerGroup,
+                          EventAdmin eventAdmin) {
         this.machineId = machineId;
         this.listener = listener;
         this.bossGroup = bossGroup;
         this.workerGroup = workerGroup;
+        this.eventAdmin = eventAdmin;
+        
+        this.packetPublisher = new SimplePacketPublisher();
         
         this.channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
-        this.packetPublisher = new SimplePacketPublisher();
         this.networkComponents = new NetworkComponents();
     }
     
@@ -62,7 +65,7 @@ public class ProxyConnection implements IProxyConnection {
         ServerBootstrap bootstrap = new ServerBootstrap();
         bootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
-                .childHandler(new ClientChannelInitializer(this, networkComponents, packetPublisher, channelGroup))
+                .childHandler(new ClientChannelInitializer(this, networkComponents, eventAdmin, channelGroup))
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
         
         try {
@@ -80,7 +83,7 @@ public class ProxyConnection implements IProxyConnection {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
-                .handler(new ServerChannelInitializer(this, networkComponents, packetPublisher, channelGroup))
+                .handler(new ServerChannelInitializer(this, networkComponents, eventAdmin, channelGroup))
                 .option(ChannelOption.SO_KEEPALIVE, true);
         
         try {
@@ -132,11 +135,6 @@ public class ProxyConnection implements IProxyConnection {
         if (clientChannel != null && clientChannel.isActive()) {
             clientChannel.writeAndFlush(packet);
         }
-    }
-    
-    @Override
-    public IPacketPublisher getPacketPublisher() {
-        return packetPublisher;
     }
     
     @Override
@@ -248,5 +246,9 @@ public class ProxyConnection implements IProxyConnection {
         if (handshakeHandler != null) {
             handshakeHandler.setListener(listener);
         }
+    @Override
+    public IPacketPublisher getPacketPublisher() {
+        return this.packetPublisher;
     }
 }
+

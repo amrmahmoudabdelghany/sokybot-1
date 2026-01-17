@@ -20,8 +20,8 @@ import javax.swing.SwingUtilities;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.tuple.Pair;
-import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machinegroup.gamemodel.npc.Monster;
+import org.sokybot.gamemodel.model.ITrainer;
+import org.sokybot.gamemodel.model.IMonster;
 import org.sokybot.machineui.model.MachineViewModel;
 import org.sokybot.pk2.IPk2Driver;
 import org.sokybot.utils.DDSReader;
@@ -72,7 +72,7 @@ public class SroMapViewer extends JPanel {
     private void bind() {
         // Listen to model updates
         this.viewModel.addTrainerListener(() -> {
-            Trainer t = viewModel.getTrainer();
+            ITrainer t = viewModel.getTrainer();
             if (t != null) {
                 updateTrainerLocation(t.getX(), t.getY());
             }
@@ -86,7 +86,7 @@ public class SroMapViewer extends JPanel {
     
     private void refreshMonsters() {
         // Sync labels with model monsters
-        Map<Integer, Monster> currentMonsters = viewModel.getMonsters();
+        Map<Integer, IMonster> currentMonsters = viewModel.getMonsters();
         
         // Remove dead
         monsters.keySet().removeIf(id -> !currentMonsters.containsKey(id));

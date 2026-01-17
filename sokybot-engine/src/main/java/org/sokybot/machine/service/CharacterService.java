@@ -8,10 +8,10 @@ import org.slf4j.Logger;
 import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineState;
 import org.sokybot.machine.model.ServerFeed;
-import org.sokybot.machinegroup.gamemodel.login.Action;
-import org.sokybot.machinegroup.gamemodel.npc.ACADEMY_MEMBER_CLASS;
-import org.sokybot.machinegroup.gamemodel.npc.GUILD_MEMBER_CLASS;
-import org.sokybot.machinegroup.gamemodel.npc.SelectableCharacter;
+import org.sokybot.game.enums.LoginAction;
+import org.sokybot.game.enums.AcademyMemberClass;
+import org.sokybot.game.enums.GuildMemberClass;
+import org.sokybot.machine.model.SelectableCharacter;
 import org.sokybot.network.IPacketObserver;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.NetworkPeer;
@@ -99,7 +99,7 @@ public class CharacterService implements ICharacterService, IPacketObserver {
 		byte action = reader.getByte();
 		byte res = reader.getByte();
 		if (res == 0x01) {
-			if (Action.getAction(action) == Action.LIST) {
+			if (LoginAction.getAction(action) == LoginAction.LIST) {
 
 				byte charCount = reader.getByte();
 				for (byte i = 0; i < charCount; i++) {
@@ -124,7 +124,7 @@ public class CharacterService implements ICharacterService, IPacketObserver {
 
 					chr.setIsDeleting(isDeleted);
 
-					chr.setGMC(GUILD_MEMBER_CLASS.getGMC(reader.getByte()));
+					chr.setGMC(GuildMemberClass.getGMC(reader.getByte()));
 
 					byte isGuildRenameReq = reader.getByte();
 
@@ -133,7 +133,7 @@ public class CharacterService implements ICharacterService, IPacketObserver {
 						chr.setCurrentGuildName(new String(reader.getBytes(CGNL)));
 					}
 
-					chr.setAMC(ACADEMY_MEMBER_CLASS.getAMC(reader.getByte()));
+					chr.setAMC(AcademyMemberClass.getAMC(reader.getByte()));
 					byte itemCount = reader.getByte();
 
 					// Here we don`t care about character item data

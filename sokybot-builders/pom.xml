@@ -12,9 +12,10 @@
     <name>Sokybot Builders Bundle</name>
 
     <dependencies>
-         <dependency>
+
+        <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-api</artifactId>
+            <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

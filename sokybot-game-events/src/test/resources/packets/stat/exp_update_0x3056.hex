@@ -1,0 +1,13 @@
+# Experience Update
+# Opcode: 0x3056
+# Format: monsterId (int) + currentExp (int) + previousExp (int) + currentSP (int) + previousSP (int)
+# monsterId: 12345 (0x00003039)
+# currentExp: 50000 (0x0000C350)
+# previousExp: 40000 (0x00009C40)
+# currentSP: 1000 (0x000003E8)
+# previousSP: 800 (0x00000320)
+39 30 00 00
+50 C3 00 00
+40 9C 00 00
+E8 03 00 00
+20 03 00 00

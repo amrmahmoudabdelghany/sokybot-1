@@ -11,8 +11,8 @@ import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.table.AbstractTableModel;
 
-import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machinegroup.gamemodel.npc.Monster;
+import org.sokybot.gamemodel.model.ITrainer;
+import org.sokybot.gamemodel.model.IMonster;
 import org.sokybot.machineui.model.MachineViewModel;
 
 import info.clearthought.layout.TableLayout;
@@ -68,7 +68,7 @@ public class MonsterTable extends JPanel {
     private class MonsterTableModel extends AbstractTableModel {
 
         private static final long serialVersionUID = 1L;
-        private Vector<Monster> monsters = new Vector<>();
+        private Vector<IMonster> monsters = new Vector<>();
         private String[] cols = {"Name", "Type", "Lvl", "HP", "Distance"};
 
         public void refresh() {
@@ -92,8 +92,8 @@ public class MonsterTable extends JPanel {
                 return null;
             }
 
-            Monster monster = this.monsters.get(rowIndex);
-            Trainer trainer = viewModel.getTrainer();
+            IMonster monster = this.monsters.get(rowIndex);
+            ITrainer trainer = viewModel.getTrainer();
 
             switch (columnIndex) {
                 case 0: return monster.getName();

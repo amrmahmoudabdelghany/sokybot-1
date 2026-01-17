@@ -16,18 +16,17 @@
     </properties>
 
     <dependencies>
+
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-api</artifactId>
-            			<version>${project.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>tablelayout</groupId>
-			<artifactId>TableLayout</artifactId>
-			<version>20050920</version>
-		</dependency>
-        <!-- Depends on UI? Or just Swing? -->
-        <!-- ViewerPanel might depend on Engine classes (NavMesh). But Engine exports them. -->
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tablelayout</groupId>
+            <artifactId>TableLayout</artifactId>
+            <version>20050920</version>
+        </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-engine</artifactId>

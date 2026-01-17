@@ -20,7 +20,13 @@
 			<artifactId>${project.parent.artifactId}-security</artifactId>
 		</dependency>
 
-
+		<!-- Test dependencies for PK2 testing framework -->
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-params</artifactId>
+			<version>${junit-jupiter-engine.version}</version>
+			<scope>test</scope>
+		</dependency>
 
 	</dependencies>
 

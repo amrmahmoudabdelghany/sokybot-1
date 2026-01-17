@@ -40,12 +40,6 @@ public interface IProxyConnection {
     void sendToClient(MutablePacket packet);
     
     /**
-     * Gets the packet publisher for subscribing to incoming packets.
-     * @return the packet publisher
-     */
-    IPacketPublisher getPacketPublisher();
-    
-    /**
      * Checks if the proxy is connected to both client and server.
      * @return true if both connections are active
      */
@@ -82,4 +76,16 @@ public interface IProxyConnection {
      * @param listener the connection listener (can be null)
      */
     void setConnectionListener(IConnectionListener listener);
+    
+    /**
+     * Gets the packet publisher for subscribing to network packets.
+     * @return the packet publisher
+     */
+    IPacketPublisher getPacketPublisher();
+    
+    /**
+     * Gets the unique machine ID associated with this connection.
+     * @return the machine ID
+     */
+    String getMachineId();
 }

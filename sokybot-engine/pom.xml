@@ -17,11 +17,7 @@
 	</properties>
 
     <dependencies>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-settings</artifactId>
@@ -30,19 +26,7 @@
         
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-ui-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-proxy</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-swing</artifactId>
             <version>${project.version}</version>
         </dependency>
         
@@ -85,15 +69,25 @@
 		</dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-persistence</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
 
+        <!-- Spring State Machine - kept as provided for backward compatibility with old machine package -->
+        <!-- NOTE: New engine architecture (org.sokybot.engine.core) does NOT use Spring State Machine -->
+        <!-- The new EngineCore and workflow system are framework-agnostic -->
+        <!-- Spring State Machine is only used by old org.sokybot.machine package (legacy) -->
         <dependency>
             <groupId>org.springframework.statemachine</groupId>
             <artifactId>spring-statemachine-core</artifactId>
             <version>${dependency.spring-statemachine-core.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -135,15 +129,23 @@
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
+			<artifactId>sokybot-game-model</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-game-asset</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+<!-- 
         <dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-persistence</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>
+-->
 		
 		<!-- Game Events for packet translation -->
 		<dependency>
@@ -153,27 +155,6 @@
 			<scope>provided</scope>
 		</dependency>
 		
-		<!-- UI Dependencies for Machine Pages -->
-		<dependency>
-			<groupId>tablelayout</groupId>
-			<artifactId>TableLayout</artifactId>
-			<version>20050920</version>
-		</dependency>
-		<dependency>
-			<groupId>org.swinglabs.swingx</groupId>
-			<artifactId>swingx-all</artifactId>
-			<version>1.6.4</version>
-		</dependency>
-		<dependency>
-			<groupId>com.formdev</groupId>
-			<artifactId>flatlaf</artifactId>
-			<version>3.2.1</version>
-		</dependency>
-		<dependency>
-			<groupId>com.formdev</groupId>
-			<artifactId>flatlaf-extras</artifactId>
-			<version>3.2.1</version>
-		</dependency>
     </dependencies>
 
     <build>
@@ -186,8 +167,15 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Activator>org.sokybot.engine.EngineActivator</Bundle-Activator>
-                        <Import-Package>*;resolution:=optional</Import-Package>
-                        <Export-Package>org.sokybot.*</Export-Package>
+                        <Import-Package>
+                            !javax.swing.*,
+                            !java.awt.*,
+                            *;resolution:=optional
+                        </Import-Package>
+                        <Export-Package>
+                            org.sokybot.*,
+                            org.sokybot.engine.api.*
+                        </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                     </instructions>

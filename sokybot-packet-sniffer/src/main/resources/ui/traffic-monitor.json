@@ -1,0 +1,128 @@
+{
+  "type": "Card",
+  "className": "w-full h-full",
+  "children": [
+    {
+      "type": "CardHeader",
+      "children": [
+        {
+          "type": "div",
+          "className": "flex justify-between items-center w-full",
+          "children": [
+            {
+              "type": "CardTitle",
+              "props": {
+                "children": "Traffic Monitor"
+              }
+            },
+            {
+              "type": "div",
+              "className": "flex gap-2",
+              "children": [
+                {
+                  "type": "Button",
+                  "variant": "outline",
+                  "size": "sm",
+                  "icon": "Trash2",
+                  "iconProps": {
+                    "size": 16
+                  },
+                  "props": {
+                    "onClick": "clearMonitor",
+                    "children": "Clear"
+                  }
+                },
+                {
+                  "type": "Button",
+                  "variant": "outline",
+                  "size": "sm",
+                  "icon": "${monitorEnabled ? 'Pause' : 'Play'}",
+                  "iconProps": {
+                    "size": 16
+                  },
+                  "props": {
+                    "onClick": "togglePause",
+                    "children": "${monitorEnabled ? 'Pause' : 'Resume'}"
+                  }
+                },
+                {
+                  "type": "Button",
+                  "variant": "default",
+                  "size": "sm",
+                  "icon": "Search",
+                  "iconProps": {
+                    "size": 16
+                  },
+                  "props": {
+                    "onClick": "openAnalyzer",
+                    "id": "analyzeBtn",
+                    "disabled": "${packetCount === 0}",
+                    "children": "Analyze (${packetCount})"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "CardContent",
+      "className": "p-0",
+      "children": [
+        {
+          "type": "div",
+          "className": "overflow-x-auto",
+          "children": [
+            {
+              "type": "table",
+              "className": "w-full border-collapse",
+              "props": {
+                "dataSource": "trafficPackets",
+                "columns": [
+                  {
+                    "field": "source",
+                    "label": "Source",
+                    "className": "text-left p-2 border"
+                  },
+                  {
+                    "field": "encoding",
+                    "label": "Encoding",
+                    "className": "text-left p-2 border"
+                  },
+                  {
+                    "field": "size",
+                    "label": "Size",
+                    "className": "text-right p-2 border"
+                  },
+                  {
+                    "field": "name",
+                    "label": "Name",
+                    "className": "text-left p-2 border"
+                  },
+                  {
+                    "field": "opcode",
+                    "label": "Opcode",
+                    "className": "text-left p-2 border font-mono"
+                  },
+                  {
+                    "field": "count",
+                    "label": "Count",
+                    "className": "text-left p-2 border font-mono"
+                  },
+                  {
+                    "field": "crc",
+                    "label": "CRC",
+                    "className": "text-left p-2 border font-mono"
+                  }
+                ],
+                "onRowClick": "selectPacket",
+                "rowClassName": "hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -17,9 +17,10 @@
     </properties>
 
     <dependencies>
-         <dependency>
+ 
+        <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-api</artifactId>
+            <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
         </dependency>
         <dependency>
@@ -134,6 +135,12 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>sokybot-game-model</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
     </dependencies>
     
     <build>

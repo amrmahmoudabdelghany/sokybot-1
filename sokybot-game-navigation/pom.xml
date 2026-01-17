@@ -24,9 +24,10 @@
         </dependency>
         
         <!-- API for utility classes -->
+
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-api</artifactId>
+            <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>

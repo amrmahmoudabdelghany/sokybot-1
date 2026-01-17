@@ -9,7 +9,7 @@ import javax.swing.JFileChooser;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import org.sokybot.utils.SilkroadUtils;
+import org.sokybot.commons.SilkroadUtils;
 
 public class SilkroadFileBrowser extends JFileChooser {
     private JTextField fileNameTextField;

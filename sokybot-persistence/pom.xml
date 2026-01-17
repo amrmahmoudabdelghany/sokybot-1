@@ -104,7 +104,8 @@
                             org.sokybot.persistence.service,
                             org.sokybot.persistence.entities,
                             org.sokybot.persistence.entities.geo,
-                            org.sokybot.persistence.entities.navmesh
+                            org.sokybot.persistence.entities.navmesh,
+                            org.sokybot.persistence.config
                         </Export-Package>
                         <Private-Package>
                             org.sokybot.persistence.internal,

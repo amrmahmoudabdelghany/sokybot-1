@@ -29,16 +29,6 @@
 
 	<dependencies>
 
-
-		<!--
-		<dependency>
-			<groupId>org.springframework</groupId>
-			<artifactId>spring-framework-bom</artifactId>
-			<version>${spring-boot.version}</version>
-			<type>pom</type>
-			<scope>import</scope>
-		</dependency>
--->
 		<!-- Logging dependencies - needed at runtime for @Slf4j -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -86,13 +76,6 @@
 			<version>${jna.version}</version>
 		</dependency>
 
-
-		<!-- https://mvnrepository.com/artifact/ch.qos.logback/logback-core -->
-
-
-		<!-- MyDoggy removed - only needed in UI bundle -->
-
-
 		<!-- system bundles -->
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -100,18 +83,13 @@
 			<scope>compile</scope>
 		</dependency>
 
-<!--
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>sokybot-dds</artifactId>
-		</dependency>
 
--->
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>sokybot-api</artifactId>
-			<scope>compile</scope>
-		</dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+            <scope>compile</scope>
+        </dependency>
 
 		<dependency>
 			<groupId>${project.groupId}</groupId>
@@ -120,8 +98,6 @@
 		</dependency>
 
 
-		<!-- <dependency> <groupId>${project.groupId}</groupId> <artifactId>${project.parent.artifactId}-game-loader</artifactId> 
-			</dependency> -->
 		<dependency>
 			<groupId>io.vavr</groupId>
 			<artifactId>vavr</artifactId>
@@ -136,7 +112,6 @@
 
 		<!-- OSGI Libs -->
 
-		<!-- https://mvnrepository.com/artifact/org.apache.felix/org.apache.felix.atomos -->
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.atomos</artifactId>
@@ -148,12 +123,6 @@
 			<artifactId>org.apache.felix.fileinstall</artifactId>
 			<version>3.7.4</version>
 
-		</dependency>
-
-		<dependency>
-			<groupId>org.apache.felix</groupId>
-			<artifactId>org.apache.felix.atomos</artifactId>
-			<version>1.0.0</version>
 		</dependency>
 
 		<!-- OSGi Compendium Services -->
@@ -173,11 +142,16 @@
 			<version>1.9.26</version>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.osgi/org.osgi.util.pushstream -->
 		<dependency>
 			<groupId>org.osgi</groupId>
 			<artifactId>org.osgi.util.pushstream</artifactId>
 			<version>1.0.2</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.osgi</groupId>
+			<artifactId>org.osgi.service.component</artifactId>
+			<version>1.5.0</version>
 		</dependency>
 
 
@@ -187,6 +161,13 @@
 			<scope>compile</scope>
 		</dependency>
 
+
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>${project.parent.artifactId}-webview</artifactId>
+			<version>${project.version}</version>
+			<scope>compile</scope>
+		</dependency>
 
 	</dependencies>
 
@@ -293,6 +274,4 @@
 			</build>
 		</profile>
 	</profiles>
-
-
 </project>

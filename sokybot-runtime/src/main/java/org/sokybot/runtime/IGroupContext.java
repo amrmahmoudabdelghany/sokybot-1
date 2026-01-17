@@ -1,5 +1,6 @@
 package org.sokybot.runtime;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.sokybot.IContextAdapter;
@@ -27,5 +28,17 @@ public interface IGroupContext extends IContextAdapter {
 	 * Created once per group using IRuteFinderFactory.
 	 */
 	IRuteFinder getRuteFinder();
+
+    org.sokybot.persistence.service.IGameDataLookup getGameDataLookup();
+    
+    /**
+     * Get the shared translator map for this game.
+     * Created once per game (shared across all bots) for memory optimization.
+     * Translators are thread-safe and can be used concurrently by multiple bots.
+     * 
+     * @return Map of opcode to translator instance, or empty map if not available
+     */
+    Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> getTranslators();
+	
 }
 

@@ -1,6 +1,5 @@
 package org.sokybot.machine.service;
 
-import java.awt.Point;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,16 +16,16 @@ import org.sokybot.machine.MachineState;
 import org.sokybot.machine.StateEntry;
 import org.sokybot.machine.event.DespawnEvent;
 import org.sokybot.machine.event.SpawnReachDestinationEvent;
-import org.sokybot.machine.event.monsterevent.MonsterHPUpdateEvent;
-import org.sokybot.machine.event.monsterevent.MonsterSelectedEvent;
-import org.sokybot.machine.event.monsterevent.MonsterSpawnEvent;
+// import org.sokybot.machine.event.monsterevent.MonsterHPUpdateEvent;
+// import org.sokybot.machine.event.monsterevent.MonsterSelectedEvent;
+// import org.sokybot.machine.event.monsterevent.MonsterSpawnEvent;
 import org.sokybot.machine.event.trainerevent.TrainerLoadedEvent;
 import org.sokybot.machine.event.trainerevent.TrainerReachDestinationEvent;
 import org.sokybot.engine.event.TrainerStuckEvent;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
-import org.sokybot.machine.gamemodel.Trainer;
+import org.sokybot.machine.model.Trainer;
 import org.sokybot.persistence.entities.geo.Vector2D;
-import org.sokybot.machinegroup.gamemodel.npc.Monster;
+import org.sokybot.machine.model.Monster;
 import org.sokybot.settings.MonsterPreference;
 import org.sokybot.settings.Settings;
 import org.sokybot.settings.TrainingArea;
@@ -77,7 +76,7 @@ public class ActiveAreaDriverService implements IMovingService {
 		int targetY = activeArea.getAreaY() ; 
 		
 		this.path = this.dao.findPath(this.trainer.getX(), this.trainer.getY(), targetX,
-				targetY);
+				targetY, 1.0f);
 		this.path.add(new Vector2D(targetX, targetY)) ; 
 	}
 
@@ -122,7 +121,7 @@ public class ActiveAreaDriverService implements IMovingService {
 			int targetY = activeArea.getAreaY() ; 
 			
 			this.path = this.dao.findPath(this.trainer.getX(), this.trainer.getY(), targetX,
-					targetY);
+					targetY, 1.0f);
 			this.path.add(new Vector2D(targetX, targetY)) ; 
 		}
 

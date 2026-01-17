@@ -27,30 +27,40 @@ import org.sokybot.machine.event.MasteryLvlUpEvent;
 import org.sokybot.machine.event.trainerevent.SkillLvlupEvent;
 import org.sokybot.machine.event.trainerevent.TrainerLoadedEvent;
 import org.sokybot.machine.event.userevent.UserUpdateSkillEvent;
-import org.sokybot.machine.gamemodel.Trainer;
+import org.sokybot.machine.model.Trainer;
 import org.sokybot.machine.model.ClientFeed;
-import org.sokybot.machine.parser.ICharacterDataReader;
-import org.sokybot.machinegroup.gamemodel.AttackGainType;
-import org.sokybot.machinegroup.gamemodel.item.Item;
-import org.sokybot.machinegroup.gamemodel.npc.CharacterStatus;
-import org.sokybot.machinegroup.gamemodel.npc.DebuffStatus;
-import org.sokybot.machinegroup.gamemodel.npc.FreePVP;
-import org.sokybot.machinegroup.gamemodel.npc.JobType;
-import org.sokybot.machinegroup.gamemodel.npc.LifeState;
-import org.sokybot.machinegroup.gamemodel.npc.MotionState;
-import org.sokybot.machinegroup.gamemodel.npc.MovementType;
+import org.sokybot.gameevents.ICharacterDataReader;
+import org.sokybot.game.enums.AttackGainType;
+import org.sokybot.machine.model.item.Item;
+import org.sokybot.game.enums.CharacterStatus;
+import org.sokybot.game.enums.DebuffStatus;
+import org.sokybot.game.enums.FreePVP;
+import org.sokybot.game.enums.JobType;
+import org.sokybot.game.enums.LifeState;
+import org.sokybot.game.enums.MotionState;
+import org.sokybot.game.enums.MovementType;
 import org.sokybot.persistence.entities.NPCEntity;
-import org.sokybot.machinegroup.gamemodel.npc.NPCType;
-import org.sokybot.machinegroup.gamemodel.npc.PVPState;
+import org.sokybot.persistence.entities.NPCType;
+import org.sokybot.game.enums.PVPState;
 import org.sokybot.settings.Settings;
-import org.sokybot.machinegroup.gamemodel.skill.Skill;
+import org.sokybot.game.dto.Skill;
 import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.gameevents.events.stat.GoldUpdateEvent;
 import org.sokybot.network.packet.ClientOpcode;
+import org.sokybot.network.PacketListener;
 import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.network.packet.ServerOpcode;
-import org.sokybot.utils.SilkroadUtils;
+import org.sokybot.commons.SilkroadUtils;
+import org.sokybot.game.dto.Skill;
+import org.sokybot.game.enums.AttackGainType;
+import org.sokybot.game.enums.FreePVP;
+import org.sokybot.game.enums.SkillCastErrorType;
+import org.sokybot.gameevents.events.character.TrainerStuckEvent;
+import org.sokybot.gameevents.events.skill.SkillCastErrorEvent;
+import org.sokybot.game.enums.SkillCastErrorType;
+import org.sokybot.gameevents.events.character.TrainerStuckEvent;
+import org.sokybot.gameevents.events.skill.SkillCastErrorEvent;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -219,7 +229,7 @@ public class TrainerHandler {
 
 		// Update basic stats from event
 		trainer.setLevel((byte) event.getLevel());
-		trainer.setMaxlvl((byte) event.getMaxLevel());
+		trainer.setMaxLvl((byte) event.getMaxLevel());
 		trainer.setCharEXPOffset(event.getExperience());
 		trainer.setGold(event.getGold());
 		trainer.setSkillPoint((int) event.getSkillPoints());
@@ -235,8 +245,8 @@ public class TrainerHandler {
 		trainer.setAngle(event.getAngle());
 
 		// Compute world coordinates
-		int x = SilkroadUtils.getXCoord(trainer.getXOffset(), trainer.getXSector(), 10);
-		int y = SilkroadUtils.getYCoord(trainer.getYOffset(), trainer.getYSector(), 10);
+		int x = SilkroadUtils.getXCoord(trainer.getXOffset(), (short)trainer.getXSector(), (short)10);
+		int y = SilkroadUtils.getYCoord(trainer.getYOffset(), (short)trainer.getYSector(), (short)10);
 		trainer.setLocation(x, y);
 
 		// Update speeds
@@ -267,14 +277,14 @@ public class TrainerHandler {
 		this.trainer.setPhyAtkMax(event.getPhyAtkMax());
 		this.trainer.setMagAtkMin(event.getMagAtkMin());
 		this.trainer.setMagAtkMax(event.getMagAtkMax());
-		this.trainer.setPhyDef(event.getPhyDef());
-		this.trainer.setMagDef(event.getMagDef());
-		this.trainer.setHitRate(event.getHitRate());
-		this.trainer.setParryRate(event.getParryRate());
+		this.trainer.setPhyDef((short) event.getPhyDef());
+		this.trainer.setMagDef((short) event.getMagDef());
+		this.trainer.setHitRate((short) event.getHitRate());
+		this.trainer.setParryRate((short) event.getParryRate());
 		this.trainer.setMaxHP(event.getMaxHP());
 		this.trainer.setMaxMP(event.getMaxMP());
-		this.trainer.setCharSTR(event.getStrength());
-		this.trainer.setCharINT(event.getIntelligence());
+		this.trainer.setCharSTR((short) event.getStrength());
+		this.trainer.setCharINT((short) event.getIntelligence());
 	}
 
 	/**
@@ -402,30 +412,33 @@ public class TrainerHandler {
 				.findNPC(refId)
 				.orElse(NPCEntity.builder().refId(refId).Type(NPCType.UNKNOWN).build());
 
-		trainer.setEntity(entity);
-
+		trainer.setCharSTR((short) 10);
+		trainer.setCharINT((short) 10);
 		trainer.setCharScale(reader.getByte());
 		trainer.setLevel(reader.getByte());
-		trainer.setMaxlvl(reader.getByte());
+		trainer.setMaxLvl(reader.getByte());
 		trainer.setCharEXPOffset(reader.getLong());
-		trainer.setSexpOffSet(reader.getInt());
+		trainer.setSExpOffset(reader.getInt());
 		trainer.setGold(reader.getLong());
 		trainer.setSkillPoint(reader.getInt());
 		trainer.setCharStatPoint(reader.getShort());
 		trainer.setZerkCount(reader.getByte());
 		trainer.setGatheredExpPoint(reader.getInt());
-		trainer.setCharHP(reader.getInt());
-		trainer.setCharMP(reader.getInt());
+		trainer.setMaxHP(reader.getInt());
+		trainer.setCurrentHP(reader.getInt());
+		trainer.setMaxMP(reader.getInt());
+		trainer.setCurrentMP(reader.getInt());
 		trainer.setAutoInverstExp(reader.getByte());
 		trainer.setDailyPK(reader.getByte());
 		trainer.setTotalPK(reader.getShort());
 		trainer.setPkPenaltyPoint(reader.getInt());
 		trainer.setZerkLvl(reader.getByte());
-		trainer.setFreePVP(FreePVP.of(reader.getByte()));
-
-		trainer.setItemInventorySize(reader.getByte());
-		trainer.setItemCount(reader.getByte());
-
+		
+		int pvpFlag = reader.getByte();
+		
+		trainer.setPvpFlag((byte) pvpFlag); // TODO mapping
+		// trainer.setFreePVP(FreePVP.of(pvpFlag)); 
+		
 		this.ctx.getBean(IGameDataLookup.class).findNPC(trainer.getRefId()).ifPresent((npc) -> {
 			log.info("Trainer NPC Entity : " + npc);
 		});
@@ -483,8 +496,8 @@ public class TrainerHandler {
 		}
 
 		trainer.setUniqueId(reader.getInt());
-		trainer.setXSector(reader.getUnsignedByte());
-		trainer.setYSector(reader.getUnsignedByte());
+		trainer.setXSector((byte) reader.getUnsignedByte());
+		trainer.setYSector((byte) reader.getUnsignedByte());
 		trainer.setXOffset(reader.getFloat());
 		trainer.setZOffset(reader.getFloat());
 		trainer.setYOffset(reader.getFloat());
@@ -492,8 +505,8 @@ public class TrainerHandler {
 
 		// log.info("XOffset : {} , XSector {} " , trainer.getXOffset() ,
 		// trainer.getXSector() ) ;
-		int x = SilkroadUtils.getXCoord(trainer.getXOffset(), trainer.getXSector(), 10);
-		int y = SilkroadUtils.getYCoord(trainer.getYOffset(), trainer.getYSector(), 10);
+		int x = SilkroadUtils.getXCoord(trainer.getXOffset(), (short)trainer.getXSector(), (short)10);
+		int y = SilkroadUtils.getYCoord(trainer.getYOffset(), (short)trainer.getYSector(), (short)10);
 		// log.info("Trainer Location ({} , {})", x, y);
 		trainer.setLocation(x, y);
 
@@ -502,14 +515,14 @@ public class TrainerHandler {
 
 		if (trainer.isHasDestination()) {
 
-			trainer.setDestXSector(reader.getUnsignedByte());
-			trainer.setDestYSector(reader.getUnsignedByte());
+			trainer.setDestXSector((byte) reader.getUnsignedByte());
+			trainer.setDestYSector((byte) reader.getUnsignedByte());
 
 			if (trainer.isInCave()) {
 
-				trainer.setDestXOffset(reader.getInt());
-				trainer.setDestZOffset(reader.getInt());
-				trainer.setDestYOffset(reader.getInt());
+				trainer.setDestXOffset((short) reader.getInt());
+				trainer.setDestZOffset((short) reader.getInt());
+				trainer.setDestYOffset((short) reader.getInt());
 				;
 			} else {
 
@@ -518,8 +531,8 @@ public class TrainerHandler {
 				trainer.setDestYOffset(reader.getShort());
 
 			}
-			trainer.setDestX(SilkroadUtils.getXCoord(trainer.getXOffset(), trainer.getXSector(), 10));
-			trainer.setDestY(SilkroadUtils.getYCoord(trainer.getYOffset(), trainer.getYSector(), 10));
+			trainer.setDestX(SilkroadUtils.getXCoord(trainer.getXOffset(), (short)trainer.getXSector(), (short)10));
+			trainer.setDestY(SilkroadUtils.getYCoord(trainer.getYOffset(), (short)trainer.getYSector(), (short)10));
 
 		} else {
 
@@ -766,4 +779,58 @@ public class TrainerHandler {
 	
 	
 	
+	@PacketListener(opcode = ServerOpcode.SKILL_CAST_STARTED)
+	public void onSkillCastStarted(ImmutablePacket packet) {
+		IStreamReader reader = packet.getStreamReader();
+		boolean success = reader.getBoolean();
+		if (!success) {
+			byte errorByte = reader.getByte();
+			// Legacy logic: if errorByte == 0x0D, read subType
+			// We replicate this to be safe, assuming 0x0D is "Unknown" or generic error flag requiring subtype
+			int finalError = errorByte;
+			if (errorByte == 0x0D) {
+				finalError = reader.getByte();
+			}
+			
+			SkillCastErrorType errorType = SkillCastErrorType.of(finalError);
+			log.warn("Skill cast failed. Error: {} (0x{})", errorType, Integer.toHexString(finalError));
+			
+			publishOsgiEvent("skill/error", new SkillCastErrorEvent(machineFullName(), errorType, finalError));
+		}
+	}
+	
+	@PacketListener(opcode = ServerOpcode.SPAWN_STUCK)
+	public void onSpawnStuck(ImmutablePacket packet) {
+		IStreamReader reader = packet.getStreamReader();
+		int uniqueId = reader.getInt();
+		
+		if (uniqueId == trainer.getUniqueId()) {
+			byte xSector = (byte) reader.getUnsignedByte();
+			byte ySector = (byte) reader.getUnsignedByte();
+			float xOffset = reader.getFloat();
+			float zOffset = reader.getFloat();
+			float yOffset = reader.getFloat();
+			short angle = reader.getShort();
+			
+			int x = SilkroadUtils.getXCoord(xOffset, (short)xSector, (short)10);
+			int y = SilkroadUtils.getYCoord(yOffset, (short)ySector, (short)10);
+			
+			// Update trainer position?
+			// Usually stuck packet forces position update.
+			trainer.setXSector(xSector);
+			trainer.setYSector(ySector);
+			trainer.setXOffset(xOffset);
+			trainer.setYOffset(yOffset);
+			trainer.setZOffset(zOffset);
+			trainer.setLocation(x, y);
+			
+			log.warn("Trainer stuck detected. Position reset to ({}, {})", x, y);
+			
+			publishOsgiEvent("character/stuck", new TrainerStuckEvent(
+					machineFullName(), 
+					xSector, ySector, xOffset, yOffset, zOffset, angle, x, y));
+		}
+	}
+
+
 }

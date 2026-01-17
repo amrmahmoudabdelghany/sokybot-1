@@ -8,7 +8,6 @@ import org.sokybot.IMachinePageViewer;
 import org.sokybot.app.domain.MachineInfo;
 import org.sokybot.engine.IEngine;
 import org.sokybot.engine.IEngineFactory;
-import org.sokybot.network.IPacketPublisher;
 import org.sokybot.proxy.IConnectionListener;
 import org.sokybot.proxy.IProxyConnection;
 import org.sokybot.proxy.IProxyConnectionFactory;
@@ -34,11 +33,25 @@ public class MachineContextImpl implements IMachineContext {
     
     private IEngine engine;
     private IProxyConnection proxyConnection;
+    private org.sokybot.gamemodel.IGameModel gameModel;
+    private java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators;
+    private org.sokybot.gameevents.ChunkedPacketManager chunkManager;
+    private java.util.List<org.sokybot.network.IPacketSubscription> subscriptions = new java.util.ArrayList<>();
     
-    public MachineContextImpl(MachineInfo machineInfo, IGroupContext groupContext, BundleContext bundleContext) {
+    public MachineContextImpl(MachineInfo machineInfo, 
+                              IGroupContext groupContext, 
+                              BundleContext bundleContext,
+                              IProxyConnection proxyConnection,
+                              org.sokybot.gamemodel.IGameModel gameModel,
+                              java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators,
+                              org.sokybot.gameevents.ChunkedPacketManager chunkManager) {
         this.machineInfo = machineInfo;
         this.groupContext = groupContext;
         this.bundleContext = bundleContext;
+        this.proxyConnection = proxyConnection;
+        this.gameModel = gameModel;
+        this.sharedTranslators = sharedTranslators;
+        this.chunkManager = chunkManager;
         initializeMachineComponents();
     }
     
@@ -48,28 +61,56 @@ public class MachineContextImpl implements IMachineContext {
         
         try {
             // Get factories from OSGi service registry
-            IProxyConnectionFactory proxyFactory = getService(IProxyConnectionFactory.class);
             IEngineFactory engineFactory = getService(IEngineFactory.class);
+            org.osgi.service.event.EventAdmin eventAdmin = getService(org.osgi.service.event.EventAdmin.class);
             
-            if (proxyFactory == null) {
-                throw new IllegalStateException("IProxyConnectionFactory not available");
-            }
             if (engineFactory == null) {
                 throw new IllegalStateException("IEngineFactory not available");
             }
             
-            // 1. Create proxy connection without listener initially
-            // The listener (ConnectionHandler) will be set later by the engine
-            proxyConnection = proxyFactory.createConnection(machineId);
-            
             // 2. Create engine instance (engine factory creates Spring context internally)
-            // The engine will create ConnectionHandler as a Spring bean and wire it to the proxy
             engine = engineFactory.createEngine(
                     machineId,
                     proxyConnection,
                     machineInfo.getGroup().getName(),
                     machineInfo.getMachineName()
             );
+            
+            // 3. Wire shared translators if available (per-game, shared across bots)
+            // Each bot has its own ChunkedPacketManager (per-bot state)
+            if (sharedTranslators != null && !sharedTranslators.isEmpty() && proxyConnection != null) {
+                 org.sokybot.network.IPacketPublisher publisher = proxyConnection.getPacketPublisher();
+                 if (publisher != null) {
+                     sharedTranslators.forEach((opcode, translator) -> {
+                         org.sokybot.network.IPacketSubscription sub = publisher.subscribe((packet) -> {
+                             try {
+                                 // Translate packet - chunk manager accessed via registry
+                                 java.util.List<org.sokybot.gameevents.events.core.IGameEvent> events = 
+                                     translator.translate(machineId, packet, null);
+                                 
+                                 if (events != null && eventAdmin != null) {
+                                     events.forEach(event -> {
+                                         java.util.Map<String, Object> props = new java.util.HashMap<>();
+                                         props.put("event", event);
+                                         // Enforce machine affiliation in event or properties?
+                                         // Event usually carries it.
+                                         // Post to EventAdmin
+                                         // Topic convention: sokybot/game/<machineId>/<SimpleClassName>
+                                         String topic = "sokybot/game/" + machineId + "/" + event.getClass().getSimpleName();
+                                         eventAdmin.postEvent(new org.osgi.service.event.Event(topic, props));
+                                     });
+                                 }
+                             } catch (Exception e) {
+                                 log.error("Error translating packet opcode 0x{} for machine {}", 
+                                          Integer.toHexString(opcode).toUpperCase(), machineId, e);
+                             }
+                         }, opcode);
+                         subscriptions.add(sub);
+                     });
+                     log.info("Wired {} shared translators for machine {} (using per-bot chunk manager)", 
+                             sharedTranslators.size(), machineId);
+                 }
+            }
             
             log.info("Machine context initialized: {}", machineId);
             
@@ -101,18 +142,10 @@ public class MachineContextImpl implements IMachineContext {
     }
     
     @Override
-    public IPacketPublisher packetPublisher() {
-        // Get from proxy connection
-        if (proxyConnection != null) {
-            return proxyConnection.getPacketPublisher();
-        }
-        return null;
-    }
-    
-    @Override
     public String name() {
         return machineInfo.getMachineName();
     }
+
     
     @Override
     public String fullName() {
@@ -137,10 +170,25 @@ public class MachineContextImpl implements IMachineContext {
         return null; // Or throw generic exception? Returning null for now to be safe.
     }
     
+    @Override
+    public org.sokybot.proxy.IProxyConnection getProxyConnection() {
+        return this.proxyConnection;
+    }
+    
+    @Override
+    public org.sokybot.gamemodel.IGameModel getGameModel() {
+        return this.gameModel;
+    }
+    
     public void destroy() {
         log.info("Destroying machine context: {}", fullName());
         
         try {
+            // Unregister chunk manager from registry
+            if (chunkManager != null) {
+                org.sokybot.gameevents.ChunkedPacketManagerRegistry.getInstance().unregister(fullName());
+            }
+            
             // Stop engine (destroys Spring context internally)
             if (engine != null) {
                 IEngineFactory engineFactory = getService(IEngineFactory.class);

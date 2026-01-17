@@ -7,6 +7,7 @@ import org.osgi.service.event.EventAdmin;
 import org.osgi.service.event.EventHandler;
 import org.sokybot.settings.event.SettingsUpdatedEvent;
 import org.sokybot.settings.UpdateAttackSkillsCommand;
+import org.sokybot.settings.Settings;
 
 import java.util.HashMap;
 import java.util.Map;

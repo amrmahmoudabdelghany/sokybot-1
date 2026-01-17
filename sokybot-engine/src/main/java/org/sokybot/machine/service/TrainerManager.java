@@ -1,12 +1,12 @@
 package org.sokybot.machine.service;
 
 import org.slf4j.Logger;
-import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machinegroup.gamemodel.skill.Skill;
+import org.sokybot.machine.model.Trainer;
+import org.sokybot.game.dto.Skill;
 import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.packet.ServerOpcode;
-import org.sokybot.utils.SilkroadUtils;
+import org.sokybot.commons.SilkroadUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

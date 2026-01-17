@@ -17,25 +17,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sokybot.gameevents.events.entity.EntityHPMPUpdateEvent;
 import org.sokybot.gameevents.events.entity.EntityMovementEvent;
-import org.sokybot.machine.event.monsterevent.MonsterDespawnEvent;
-import org.sokybot.machine.event.monsterevent.MonsterSpawnEvent;
+import org.sokybot.gameevents.events.entity.EntityDespawnEvent;
+import org.sokybot.gameevents.events.spawn.MonsterSpawnEvent;
 import org.sokybot.machine.event.trainerevent.TrainerLoadedEvent;
-import org.sokybot.machine.gamemodel.Trainer;
-import org.sokybot.machinegroup.gamemodel.npc.Monster;
+import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.gamemodel.model.ITrainer;
+import org.sokybot.gamemodel.model.IMonster;
 import org.sokybot.persistence.entities.navmesh.Position;
-import org.sokybot.utils.SilkroadUtils;
+import org.sokybot.commons.SilkroadUtils;
 
 public class MachineViewModel implements EventHandler {
 
     private static final Logger log = LoggerFactory.getLogger(MachineViewModel.class);
     
-    // Observable pattern or simple getters?
-    // For Swing, maybe PropertyChangeSupport?
-    // For now, let's just keep state for polling/painting.
-    
-    private Trainer trainer;
-    private final Map<Integer, Monster> monsters = new ConcurrentHashMap<>();
-    
+    private IGameModel gameModel;
+    // private final Map<Integer, Monster> monsters = new ConcurrentHashMap<>(); // Removed: Use IGameModel
     private final String machineFullName;
     private final BundleContext bundleContext;
     private ServiceRegistration<EventHandler> eventRegistration;
@@ -43,27 +39,17 @@ public class MachineViewModel implements EventHandler {
     private final Vector<Runnable> monsterListeners = new Vector<>();
     private final Vector<Runnable> trainerListeners = new Vector<>();
 
-    public MachineViewModel(String machineFullName, BundleContext bundleContext) {
         this.machineFullName = machineFullName;
         this.bundleContext = bundleContext;
-        // Initialize default trainer
-        this.trainer = new Trainer(); 
+        // Logic will inject model or lookup model service from machine context
+        // Assuming IGameModel is available as OSGi service for this machine
+        // Using declarative services or manual lookup in init
         init();
     }
     
     private void init() {
+         // Register to listen to UI-relevant events
          Dictionary<String, Object> props = new Hashtable<>();
-         props.put(EventConstants.EVENT_TOPIC, "sokybot/game/" + machineFullName + "/*");
-         // Also listen to specific spawn topics if published differently
-         // "sokybot/machine/spawn/monster" was used in EnvironmentHandler
-         // Pattern was: "sokybot/machine/" + subTopic.
-         // Wait, EnvironmentHandler publishes to "sokybot/machine/..." with props "machineId=..."
-         // The topic pattern in EnvironmentHandler init was "sokybot/game/" + machineFullName + "/*"
-         // But my publishOsgiEvent used "sokybot/machine/" + subTopic
-         // This is inconsistent. I should fix EnvironmentHandler to use consistent topic.
-         // Or listen to BOTH.
-         // Let's listen to both for now.
-         
          String[] topics = new String[] {
              "sokybot/game/" + machineFullName + "/*",
              "sokybot/machine/spawn/monster",
@@ -72,24 +58,30 @@ public class MachineViewModel implements EventHandler {
          };
          props.put(EventConstants.EVENT_TOPIC, topics);
          
-         // Filter by machineId for "sokybot/machine/*" topics
-         String filter = "(machineId=" + machineFullName + ")";
-         // props.put(EventConstants.EVENT_FILTER, filter); // Filter applies to all topics?
-         // Filter applies if properties match.
-         
          eventRegistration = bundleContext.registerService(EventHandler.class, this, props);
+         
+         // Lookup GameModel service?
+         // Or pass it in constructor? 
+         // Since this is UI, created by UIActivator maybe?
+         // For now, let's assume we can lookup IGameModelFactory or IGameModel directly
+         // But IGameModel is one per machine. 
+         // We need to filter by machineName?  
+         // Actually, if we use OSGi, better to Reference it.
+         // But MachineViewModel seems to be manually instantiated.
+         // We will lookup the service using machineName filter.
+         findGameModel();
     }
     
     public void dispose() {
         if (eventRegistration != null) eventRegistration.unregister();
     }
     
-    public Trainer getTrainer() {
-        return trainer;
+    public ITrainer getTrainer() {
+        return gameModel != null ? gameModel.getTrainer() : null;
     }
     
-    public Map<Integer, Monster> getMonsters() {
-        return monsters; 
+    public Map<Integer, IMonster> getMonsters() {
+        return gameModel != null ? gameModel.findAll(IMonster.class) : Collections.emptyMap(); 
     }
     
     public void addMonsterListener(Runnable r) {
@@ -104,68 +96,38 @@ public class MachineViewModel implements EventHandler {
     public void handleEvent(Event event) {
         String topic = event.getTopic();
         Object eventObj = event.getProperty("event");
-        String eventMachineId = (String) event.getProperty("machineId");
         
-        // Check machine ID if present (for generic topics)
-        if (eventMachineId != null && !eventMachineId.equals(machineFullName)) {
-            return;
-        }
-        
-        // Handle publishing logic from EnvironmentHandler
         if (eventObj instanceof MonsterSpawnEvent) {
-            Monster m = ((MonsterSpawnEvent) eventObj).getMonster();
-            monsters.put(m.getUniqueId(), m);
             notifyMonsterListeners();
-        } else if (eventObj instanceof MonsterDespawnEvent) {
-            Monster m = ((MonsterDespawnEvent) eventObj).getMonster();
-            monsters.remove(m.getUniqueId());
+        } else if (eventObj instanceof EntityDespawnEvent) {
             notifyMonsterListeners();
         } else if (eventObj instanceof TrainerLoadedEvent) {
-             this.trainer = ((TrainerLoadedEvent) eventObj).getTraienr();
              notifyTrainerListeners();
-        }
-        
-        // Handle game-events (EntityMovement, HPMP, etc)
-        // These wraps raw packets usually? No, game-events are POJOs.
-         if (eventObj instanceof EntityMovementEvent) {
+        } else if (eventObj instanceof EntityMovementEvent) {
              EntityMovementEvent move = (EntityMovementEvent) eventObj;
-             // Update trainer pos if it matches
-             // We don't know uniqueId of trainer unless we have it.
-             // Trainer object has uniqueId.
+             ITrainer trainer = getTrainer();
              if (trainer != null && move.getEntityId() == trainer.getUniqueId()) {
-                 updateTrainerPos(move);
                  notifyTrainerListeners();
              }
-             // For monsters, we might assume they are updated by reference? 
-             // IF Monster objects in 'monsters' map are the SAME instances as in the event (passed by ref in OSGi same JVM),
-             // then updates might happen automatically if the publisher updates the object.
-             // EnvironmentHandler updates the object in GameModel.
-             // Does it publish the SAME object? Yes.
-             // So if we hold reference, we see updates.
-             // Except Position?
-             // EntityMovementEvent has pos data. EnvironmentHandler updates the fighter object.
-             // So yes, we should rely on object reference updates mostly, 
-             // but 'repaint' triggers are needed.
          }
-         
-         // Repaint on any event?
-         // Maybe too frequent.
-         
     }
     
-    private void updateTrainerPos(EntityMovementEvent event) {
-        // Logic similar to EnvironmentHandler to calc world pos
-        Position currentPos = event.getCurrentPosition();
-        if (currentPos != null && event.getCurrentXSector() != null) {
-             // trainer.set...
-             // Simplified: rely on shared object state if possible, or update simply.
-             // Actually, EnvironmentHandler logic is needed to convert offset+sector to world X/Y.
-             // SilkroadUtils.getXCoord...
-             int x = SilkroadUtils.getXCoord(currentPos.getX(), event.getCurrentXSector().byteValue());
-             int y = SilkroadUtils.getYCoord(currentPos.getY(), event.getCurrentYSector().byteValue());
-             trainer.setX(x);
-             trainer.setY(y);
-        }
+    private void findGameModel() {
+         // Manual lookup hack for now, assuming 1:1 match or filter later
+         // Or use ServiceTracker
+         try {
+             org.osgi.framework.ServiceReference<IGameModel>[] refs = (org.osgi.framework.ServiceReference<IGameModel>[])
+                 bundleContext.getServiceReferences(IGameModel.class.getName(), null);
+             if (refs != null) {
+                 for(org.osgi.framework.ServiceReference<IGameModel> ref : refs) {
+                     // Check machine property if set in GameModelImpl
+                     // For now just grab first
+                     this.gameModel = bundleContext.getService(ref);
+                 }
+             }
+         } catch(Exception e) {
+             log.error("Failed to lookup GameModel", e);
+         }
     }
 
     private void notifyMonsterListeners() {

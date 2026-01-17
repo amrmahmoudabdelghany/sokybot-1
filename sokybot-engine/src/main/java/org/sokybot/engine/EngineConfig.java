@@ -7,7 +7,6 @@ import org.sokybot.machine.model.UserAction;
 import org.sokybot.settings.Settings;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
-import org.sokybot.IMachinePageViewer;
 import org.sokybot.proxy.IConnectionListener;
 import org.sokybot.proxy.IProxyConnection;
 import org.sokybot.proxy.IProxyConnectionFactory;
@@ -44,12 +43,6 @@ public class EngineConfig {
             log.warn("BundleContext not available - running outside OSGi container");
         }
         return context; // May be null if not running in OSGi
-    }
-
-    @Bean
-    public IMachinePageViewer machinePageViewer(BundleContext bundleContext) {
-        if (bundleContext == null) return null;
-        return bundleContext.getService(bundleContext.getServiceReference(IMachinePageViewer.class));
     }
 
     /**

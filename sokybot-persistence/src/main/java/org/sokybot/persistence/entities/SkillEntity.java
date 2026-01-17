@@ -2,8 +2,6 @@ package org.sokybot.persistence.entities;
 
 import javax.persistence.Entity;
 
-import org.sokybot.persistence.entities.SilkroadEntity;
-
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,14 +25,9 @@ public class SkillEntity extends SilkroadEntity {
 	private int duration ; 
 	private int masteryId ; 
 	private int MP ; 
-	private String iconPath; 
 	
 	//private ItemType requiredWeapon ;
 	
 	private boolean targetRequired ; 
-	
-
-
-
 	
 }

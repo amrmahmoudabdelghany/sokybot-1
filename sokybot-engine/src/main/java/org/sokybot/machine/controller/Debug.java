@@ -1,7 +1,7 @@
 package org.sokybot.machine.controller;
 
 import org.slf4j.Logger;
-import org.sokybot.machine.network.PacketListener;
+import org.sokybot.network.PacketListener;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;

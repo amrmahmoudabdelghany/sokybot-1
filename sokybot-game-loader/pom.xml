@@ -20,11 +20,7 @@
 			<scope>provided</scope>
 		</dependency>
 
-		<dependency>
-			<groupId>io.github.sokybot</groupId>
-			<artifactId>sokybot-api</artifactId>
-			<scope>provided</scope>
-		</dependency>
+
 
 
 		<!-- https://mvnrepository.com/artifact/com.kichik.pecoff4j/pecoff4j -->
@@ -40,6 +36,11 @@
 		<!-- <artifactId>jna</artifactId> -->
 		<!-- <version>3.0.9</version> -->
 		<!-- </dependency> -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 	</dependencies>
 
 

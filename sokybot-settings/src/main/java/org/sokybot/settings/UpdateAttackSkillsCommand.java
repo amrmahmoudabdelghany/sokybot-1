@@ -2,7 +2,7 @@ package org.sokybot.settings;
 
 import java.io.Serializable;
 import java.util.List;
-import org.sokybot.persistence.entities.MonsterType;
+import org.sokybot.settings.MonsterType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

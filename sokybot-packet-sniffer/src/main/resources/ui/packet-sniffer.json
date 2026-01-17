@@ -1,0 +1,73 @@
+{
+  "type": "layout",
+  "layout": "column",
+  "gap": 4,
+  "className": "p-6 h-full",
+  "children": [
+    {
+      "type": "div",
+      "className": "border-b border-slate-200 dark:border-slate-700 flex space-x-1",
+      "children": [
+        {
+          "type": "Button",
+          "variant": "ghost",
+          "className": "rounded-t-lg data-[active=true]:bg-white data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r",
+          "props": {
+            "onClick": "switchTab",
+            "actionData": {
+              "tab": "traffic"
+            },
+            "data-active": "${activeTab === 'traffic'}",
+            "children": "Traffic Monitor"
+          }
+        },
+        {
+          "type": "Button",
+          "variant": "ghost",
+          "className": "rounded-t-lg data-[active=true]:bg-white data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r",
+          "props": {
+            "onClick": "switchTab",
+            "actionData": {
+              "tab": "tracer"
+            },
+            "data-active": "${activeTab === 'tracer'}",
+            "children": "Packet Tracer"
+          }
+        }
+      ]
+    },
+    {
+      "type": "div",
+      "className": "flex-1 overflow-auto",
+      "props": {
+        "id": "tabContent"
+      },
+      "children": [
+        {
+          "type": "div",
+          "props": {
+            "id": "trafficContent",
+            "hidden": "${activeTab !== 'traffic'}"
+          },
+          "children": [
+            {
+              "$ref": "traffic-monitor.json"
+            }
+          ]
+        },
+        {
+          "type": "div",
+          "props": {
+            "id": "tracerContent",
+            "hidden": "${activeTab !== 'tracer'}"
+          },
+          "children": [
+            {
+              "$ref": "packet-tracer.json"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

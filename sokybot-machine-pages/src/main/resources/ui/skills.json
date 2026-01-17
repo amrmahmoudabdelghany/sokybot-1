@@ -1,0 +1,89 @@
+{
+  "type": "div",
+  "className": "h-full flex flex-col space-y-4",
+  "children": [
+    {
+      "type": "div",
+      "className": "flex justify-between items-center",
+      "children": [
+        {
+          "type": "h3",
+          "className": "text-slate-700 dark:text-slate-300 font-bold",
+          "props": {
+            "children": "Skills (${skills.length})"
+          }
+        },
+        {
+          "type": "Button",
+          "variant": "outline",
+          "size": "sm",
+          "props": {
+            "onClick": "refresh",
+            "children": "Refresh"
+          }
+        }
+      ]
+    },
+    {
+      "type": "div",
+      "className": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2",
+      "props": {
+        "dataSource": "skills",
+        "renderItem": {
+          "type": "div",
+          "className": "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-2 rounded flex items-center space-x-3 hover:border-slate-400 dark:hover:border-slate-600 transition-colors shadow-sm dark:shadow-none",
+          "children": [
+            {
+              "type": "div",
+              "className": "w-8 h-8 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs text-slate-500 dark:text-slate-400",
+              "props": {
+                "children": "SK"
+              }
+            },
+            {
+              "type": "div",
+              "className": "flex-1 overflow-hidden",
+              "children": [
+                {
+                  "type": "div",
+                  "className": "text-sm font-medium text-slate-700 dark:text-slate-300 truncate",
+                  "props": {
+                    "title": "${item.name}",
+                    "children": "${item.name}"
+                  }
+                },
+                {
+                  "type": "div",
+                  "className": "text-xs text-slate-500 flex justify-between",
+                  "children": [
+                    {
+                      "type": "span",
+                      "props": {
+                        "children": "Lv.${item.level}"
+                      }
+                    },
+                    {
+                      "type": "span",
+                      "className": "${item.enabled ? 'text-green-600 dark:text-green-500' : 'text-gray-500 dark:text-gray-600'}",
+                      "props": {
+                        "children": "${item.enabled ? 'Active' : 'Disabled'}"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "div",
+      "className": "text-center text-slate-600 py-8 italic",
+      "props": {
+        "hidden": "${skills.length > 0}",
+        "children": "No skills learnt"
+      }
+    }
+  ]
+}

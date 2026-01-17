@@ -1,13 +1,12 @@
 package org.sokybot.gameevents.internal;
 
 import java.util.List;
-
 import org.sokybot.gameevents.events.entity.EntityHPMPUpdateEvent;
+import org.sokybot.gameevents.ChunkedPacketManager;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;
-
 /**
  * Translates HP/MP update packets (opcode 0x3057) to EntityHPMPUpdateEvent.
  * Based on EnvironmentHandler.onHPMPUpdate() pattern.
@@ -15,30 +14,26 @@ import org.sokybot.persistence.service.IGameDataLookup;
 public class HPMPUpdateTranslator extends AbstractTranslator {
     
     private static final int HPMP_UPDATE_OPCODE = 0x3057;
-    
     public HPMPUpdateTranslator(IGameDataLookup lookup) {
         super(lookup);
     }
-    
     @Override
     public int getOpcode() {
         return HPMP_UPDATE_OPCODE;
     }
     
     @Override
-    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
+    protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
             int entityId = reader.getInt();
             reader.getShort(); // Skip unknown short
             byte changeTypeByte = reader.getByte();
-            
             EntityHPMPUpdateEvent.ChangeType changeType = mapChangeType(changeTypeByte);
             Integer newHP = null;
             Integer newMP = null;
             Integer badStatus = null;
-            
             switch (changeType) {
                 case HP_CHANGED:
                     newHP = reader.getInt();
@@ -62,10 +57,8 @@ public class HPMPUpdateTranslator extends AbstractTranslator {
                     badStatus = reader.getInt();
                     break;
             }
-            
             return singleEvent(new EntityHPMPUpdateEvent(machineFullName, entityId, changeType, 
                                             newHP, newMP, badStatus));
-            
         } catch (Exception e) {
             return noEvents();
         }

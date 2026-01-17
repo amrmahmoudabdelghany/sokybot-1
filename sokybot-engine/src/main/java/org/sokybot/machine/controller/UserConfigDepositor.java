@@ -13,11 +13,10 @@ import org.sokybot.ICacheStorage;
 import org.sokybot.app.AppConstants;
 import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineState;
-import org.sokybot.machine.Transition;
+import org.sokybot.machine.workflow.Transition;
 import org.sokybot.machine.event.userevent.UserConfigUpdatedEvent;
 import org.sokybot.machine.model.UserAction;
 import org.sokybot.settings.Settings;
-import org.sokybot.persistence.service.SettingsRepository;
 import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,7 +50,7 @@ public class UserConfigDepositor {
 	private StateMachine<MachineState, IMachineEvent> machine;
 
 	@Autowired
-	private SettingsRepository settingsRepo;
+	private org.sokybot.settings.ISettingsManager settingsManager;
 
 	@Autowired
 	private Settings userConfig;
@@ -112,29 +111,12 @@ public class UserConfigDepositor {
 		this.invocations.clear();
 
 		try {
-			this.settingsRepo.save(getTargetObject(this.userConfig, Settings.class)) ;
+			this.settingsManager.saveSettings(groupName, machineName, "core", getTargetObject(this.userConfig, Settings.class)) ;
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
-		//try {
-		//	this.goupCacheStorage.store(groupName + "." + machineName,
-		//			getTargetObject(this.userConfig, Settings.class));
-		//} catch (Exception e) {
-		//	e.printStackTrace();
-	//	}
-		// this.cacheStorage.flush();
-		// Document machineDoc =
-		// this.machineRegister.find(FluentFilter.where(Constants.GROUP_NAME)
-		// .eq(this.groupName)
-		// .and(FluentFilter.where(Constants.MACHINE_NAME).eq(this.machineName))).firstOrNull();
-
-		// if (machineDoc == null)
-		// throw new IllegalStateException("Machine configuration is missing");
-
-		// this.machineRegister.update(machineDoc);
-
 		log.info("User configuration updated");
 	}
 

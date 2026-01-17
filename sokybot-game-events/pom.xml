@@ -17,17 +17,23 @@
 
     <dependencies>
         <!-- Sokybot API for network packet types -->
+
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-api</artifactId>
+            <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Sokybot Persistence for Position and entity types -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-persistence</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-settings</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -61,6 +67,12 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.7.36</version>
         </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.30</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -76,7 +88,9 @@
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Export-Package>
                             org.sokybot.gameevents,
-                            org.sokybot.gameevents.events.*
+                            org.sokybot.gameevents.events.*,
+                            org.sokybot.game.dto,
+                            org.sokybot.game.enums
                         </Export-Package>
                         <Private-Package>
                             org.sokybot.gameevents.internal.*

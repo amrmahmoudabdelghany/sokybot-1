@@ -2,6 +2,7 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
+import org.sokybot.gameevents.ChunkedPacketManager;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
@@ -26,11 +27,16 @@ public class CharacterDataChunkTranslator extends AbstractTranslator {
     }
     
     @Override
-    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
+    protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             // Append chunk data to the accumulator
-            if (chunkManager != null && chunkManager.isActive(getOpcode())) {
-                chunkManager.appendChunk(getOpcode(), packet.toBytes());
+            // Get the BEGIN opcode for this chunk opcode (0x3013 → 0x34A5)
+            ChunkedPacketManager chunkManager = getChunkManager(machineFullName);
+            if (chunkManager != null) {
+                Integer beginOpcode = ChunkedPacketManager.getBeginOpcode(getOpcode());
+                if (beginOpcode != null && chunkManager.isActive(beginOpcode)) {
+                    chunkManager.appendChunk(getOpcode(), packet.toBytes());
+                }
             }
             
             // Don't emit events for intermediate chunks - wait for END packet

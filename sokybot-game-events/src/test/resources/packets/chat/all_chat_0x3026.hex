@@ -1,0 +1,11 @@
+# Chat Message - ALL
+# Opcode: 0x3026
+# Format: chatType (byte) + senderName (string) + message (string)
+# chatType: 0x01 (ALL)
+# senderName: "PlayerName" (10 bytes)
+# message: "Hello world!" (12 bytes)
+01
+0A 00
+50 6C 61 79 65 72 4E 61 6D 65
+0C 00
+48 65 6C 6C 6F 20 77 6F 72 6C 64 21

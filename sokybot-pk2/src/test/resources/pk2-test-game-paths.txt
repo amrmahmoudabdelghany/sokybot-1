@@ -1,0 +1,10 @@
+# Game directories for PK2 compatibility testing
+# One path per line, empty lines and comments (starting with #) are ignored
+#
+# Example paths (uncomment and modify as needed):
+# C:\Games\Silkroad\Server1
+# C:\Games\Silkroad\Server2
+# /path/to/linux/server
+#
+# Relative paths are resolved relative to project root
+/home/amr/sokybot-workspace/Cyper Online Official Client

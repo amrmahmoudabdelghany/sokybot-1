@@ -1,0 +1,9 @@
+# Damage Effect
+# Opcode: 0x3058
+# Format: targetEntityId (int) + damageType (byte) + damageAmount (int)
+# targetEntityId: 12345 (0x00003039)
+# damageType: 0x00 (NORMAL)
+# damageAmount: 2500 (0x000009C4)
+39 30 00 00
+00
+C4 09 00 00

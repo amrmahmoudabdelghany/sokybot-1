@@ -1,0 +1,71 @@
+{
+  "type": "div",
+  "className": "h-full flex flex-col",
+  "children": [
+    {
+      "type": "div",
+      "className": "flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700",
+      "children": [
+        {
+          "type": "div",
+          "className": "flex items-center gap-4",
+          "children": [
+            {
+              "type": "span",
+              "className": "text-sm",
+              "props": {
+                "children": "Selected: ${selectedByteCount} byte(s)"
+              }
+            },
+            {
+              "type": "span",
+              "className": "text-sm",
+              "props": {
+                "children": "Matches: ${matchCount}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "Button",
+          "variant": "outline",
+          "size": "sm",
+          "props": {
+            "onClick": "closeAnalyzer",
+            "children": "Close"
+          }
+        }
+      ]
+    },
+    {
+      "type": "hex-viewer",
+      "className": "flex-1",
+      "props": {
+        "dataSource": "packets",
+        "onSelectHex": "selectHex",
+        "onDefineVariable": "defineVariable"
+      }
+    },
+    {
+      "type": "div",
+      "className": "border-t border-slate-200 dark:border-slate-700",
+      "children": [
+        {
+          "type": "table",
+          "className": "h-[200px]",
+          "props": {
+            "dataSource": "variables",
+            "columns": [
+              { "field": "packet", "label": "Packet", "className": "w-[150px]" },
+              { "field": "varName", "label": "Var", "className": "w-[150px]", "editable": true },
+              { "field": "value", "label": "Value", "className": "w-[120px]" },
+              { "field": "comment", "label": "Comment", "className": "flex-1", "editable": true }
+            ],
+            "onRowClick": "selectVariable",
+            "onCellEdit": "updateVariable"
+          }
+        }
+      ]
+    }
+  ]
+}

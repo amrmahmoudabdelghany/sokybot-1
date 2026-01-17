@@ -2,15 +2,11 @@ package org.sokybot.settings;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
-import org.apache.commons.lang3.builder.ToStringExclude;
-
-import lombok.AccessLevel;
-import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 
 @Getter
 @NoArgsConstructor
@@ -23,16 +19,23 @@ public class TrainingAreaSettings {
 	private Map<String, TrainingArea> areas  = new HashMap<>(); 
 	
 	private String activeArea ; 
-
+	
+	public int getId() { return id; }
+	public Settings getSettings() { return settings; }
+	public Map<String, TrainingArea> getAreas() { return areas; }
+	public String getActiveArea() { return activeArea; }
+	
+	public void setId(int id) { this.id = id; }
+	public void setSettings(Settings settings) { this.settings = settings; }
+	public void setAreas(Map<String, TrainingArea> areas) { this.areas = areas; }
+	
 	public TrainingAreaSettings(Settings settings , String trainerName) { 
 		this.settings = settings ; 
 		TrainingArea defaultArea = getArea(trainerName);
 		this.activeArea = defaultArea.getName() ; 
 
 		System.out.println(" Default Training Area is : " + this.activeArea) ;
-	
 	}
-	
 	
 	public TrainingArea removeTrainingArea(String name) { 
 		if(name == null || name.isBlank() )
@@ -45,8 +48,6 @@ public class TrainingAreaSettings {
 			throw new IllegalArgumentException("Could not remove active area") ; 
 		
 		return this.areas.remove(name) ; 
-		
-		
 	}
 	
 	public boolean containsAreaName(String name) { 
@@ -57,20 +58,19 @@ public class TrainingAreaSettings {
 		if(name == null || name.isBlank() )
 			throw new IllegalArgumentException("Training Area Name is not valid ") ; 
 		
-		
 		if(!this.areas.containsKey(name))  {
 			TrainingArea x =  new TrainingArea(this, name, 0, 0, 0) ; 
 			this.areas.put(x.getName(), x) ; 
 			return x ; 
 		}
-
+		
 		return this.areas.get(name) ;
 	}
 	
-	public TrainingArea getActiveArea() { 
+	public TrainingArea getActiveAreaInstance() { 
 		return getArea(this.activeArea) ;
 	}
-
+	
 	public String[] getTrainingAreaNames() { 
 		return this.areas.keySet().toArray((n)->new String[n]) ; 
 	}
@@ -79,6 +79,10 @@ public class TrainingAreaSettings {
 		return this.activeArea ; 
 	}
  	
+ 	public Set<String> getAreaNames() {
+ 		return this.areas.keySet();
+ 	}
+
  	public boolean isActiveArea(TrainingArea area) { 
  		return this.activeArea.equals(area.getName()) ; 
  	}
@@ -92,5 +96,4 @@ public class TrainingAreaSettings {
 		
 		this.activeArea = name ; 
 	}
-	
 }

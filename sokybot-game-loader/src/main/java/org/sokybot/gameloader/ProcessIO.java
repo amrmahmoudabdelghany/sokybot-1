@@ -1,6 +1,6 @@
 package org.sokybot.gameloader;
 
-import org.sokybot.IKernel32;
+import org.sokybot.commons.jna.IKernel32;
 
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;

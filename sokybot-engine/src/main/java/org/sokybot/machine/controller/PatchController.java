@@ -5,7 +5,7 @@ import org.sokybot.machine.IMachineEvent;
 import org.sokybot.machine.MachineState;
 import org.sokybot.machine.StateEntry;
 import org.sokybot.machine.model.ServerFeed;
-import org.sokybot.machine.network.PacketListener;
+import org.sokybot.network.PacketListener;
 import org.sokybot.machine.service.IPatchService;
 import org.sokybot.settings.BotType;
 import org.sokybot.settings.Settings;

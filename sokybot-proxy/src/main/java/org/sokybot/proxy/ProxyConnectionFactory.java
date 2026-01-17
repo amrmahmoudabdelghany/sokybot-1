@@ -3,6 +3,8 @@ package org.sokybot.proxy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.osgi.service.event.EventAdmin;
+
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 
@@ -15,11 +17,13 @@ public class ProxyConnectionFactory implements IProxyConnectionFactory {
     private final EventLoopGroup bossGroup;
     private final EventLoopGroup workerGroup;
     private final Map<String, ProxyConnection> connections;
+    private final EventAdmin eventAdmin;
     
-    public ProxyConnectionFactory() {
+    public ProxyConnectionFactory(EventAdmin eventAdmin) {
         this.bossGroup = new NioEventLoopGroup(1);
         this.workerGroup = new NioEventLoopGroup();
         this.connections = new ConcurrentHashMap<>();
+        this.eventAdmin = eventAdmin;
     }
     
     @Override
@@ -28,7 +32,7 @@ public class ProxyConnectionFactory implements IProxyConnectionFactory {
             throw new IllegalStateException("Connection already exists for machine: " + machineId);
         }
         
-        ProxyConnection connection = new ProxyConnection(machineId, listener, bossGroup, workerGroup);
+        ProxyConnection connection = new ProxyConnection(machineId, listener, bossGroup, workerGroup, eventAdmin);
         connections.put(machineId, connection);
         
         System.out.println("Sokybot Proxy: Created connection for machine: " + machineId);
@@ -62,3 +66,4 @@ public class ProxyConnectionFactory implements IProxyConnectionFactory {
         connections.remove(machineId);
     }
 }
+

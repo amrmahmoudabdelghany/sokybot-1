@@ -9,16 +9,24 @@ import org.sokybot.gameevents.events.core.ITranslatorFactory;
 import org.sokybot.gameevents.internal.*;
 import org.sokybot.persistence.service.IGameDataLookup;
 
+import org.sokybot.network.IPacketPublisher;
+
 /**
  * Factory implementation that creates all translator instances.
  * Each game gets its own set of translator instances with game-specific lookup.
- * Published as OSGi service for PacketDispatcher to use.
+ * 
+ * @deprecated Use ExtensibleTranslatorFactory instead. This factory is kept for backward compatibility
+ * but will be removed in a future version. ExtensibleTranslatorFactory provides:
+ * - Plugin-based extensibility (Open/Closed Principle)
+ * - Per-game shared translators (memory optimization)
+ * - Dynamic provider discovery via OSGi
  */
-@Component(service = ITranslatorFactory.class)
+@Deprecated
+@Component(service = ITranslatorFactory.class, enabled = false)
 public class TranslatorFactoryImpl implements ITranslatorFactory {
     
     @Override
-    public Map<Integer, IPacketTranslator> createTranslators(IGameDataLookup lookup) {
+    public Map<Integer, IPacketTranslator> createTranslators(IGameDataLookup lookup, IPacketPublisher publisher) {
         Map<Integer, IPacketTranslator> translators = new HashMap<>();
         
         // Create shared ChunkedPacketManager for translators that need it
@@ -70,8 +78,10 @@ public class TranslatorFactoryImpl implements ITranslatorFactory {
         // for backward compatibility when not in chunked mode
         
         // Authentication Events
+        translators.put(0x6102, new LoginRequestTranslator(lookup));
         translators.put(0xA101, new AgentListTranslator(lookup));
         translators.put(0xA102, new LoginResponseTranslator(lookup));
+        translators.put(0xA103, new AuthResponseTranslator(lookup));
         
         // Social Events
         translators.put(0x3026, new ChatMessageTranslator(lookup));

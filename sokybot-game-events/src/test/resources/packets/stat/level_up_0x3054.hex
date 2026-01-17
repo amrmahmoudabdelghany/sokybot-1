@@ -1,0 +1,5 @@
+# Level Up Event
+# Opcode: 0x3054
+# Format: entityId (int)
+# entityId: 54321 (0x0000D431)
+31 D4 00 00

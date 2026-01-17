@@ -1,0 +1,11 @@
+# Login Request
+# Opcode: 0x6102
+# Format: local (byte) + username (string) + password (string)
+# local: 0x00
+# username: "testuser" (8 bytes)
+# password: "testpass123" (11 bytes)
+00
+08 00
+74 65 73 74 75 73 65 72
+0B 00
+74 65 73 74 70 61 73 73 31 32 33

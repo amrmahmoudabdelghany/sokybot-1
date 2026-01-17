@@ -1,6 +1,6 @@
 package org.sokybot.machine.service;
 
-import org.sokybot.machinegroup.gamemodel.skill.Skill;
+import org.sokybot.game.dto.Skill;
 
 public interface ITrainerManager {
 

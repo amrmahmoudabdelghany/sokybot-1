@@ -1,0 +1,11 @@
+# HP/MP Update - HP Changed
+# Opcode: 0x3057
+# Format: entityId (int) + unknownShort (short) + changeType (byte) + data...
+# entityId: 12345 (0x00003039)
+# unknownShort: 0
+# changeType: 0x01 (HP_CHANGED)
+# newHP: 5000 (0x00001388)
+39 30 00 00
+00 00
+01
+88 13 00 00

@@ -2,6 +2,7 @@ package org.sokybot.gameevents.internal;
 
 import java.util.List;
 
+import org.sokybot.gameevents.ChunkedPacketManager;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.events.stat.StatPointsUpdateEvent;
 import org.sokybot.gameevents.events.stat.StatPointsUpdateEvent.StatType;
@@ -45,7 +46,7 @@ public class StatPointsUpdateTranslator extends AbstractTranslator {
     }
     
     @Override
-    public List<IGameEvent> translate(String machineFullName, ImmutablePacket packet) {
+    protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
             
