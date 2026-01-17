@@ -26,7 +26,8 @@ class WaitingStateManagerTest extends WorkflowTestBase {
     private AtomicBoolean stopRequested;
     
     @BeforeEach
-    void setUp() {
+    @Override
+    public void setUp() {
         super.setUp();
         scheduler = Executors.newScheduledThreadPool(2);
         timerExpired = new AtomicBoolean(false);

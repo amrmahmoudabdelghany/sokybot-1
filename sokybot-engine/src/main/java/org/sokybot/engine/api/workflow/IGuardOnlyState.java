@@ -3,7 +3,7 @@ package org.sokybot.engine.api.workflow;
 /**
  * Guard-only state - check condition without action.
  */
-public interface IGuardOnlyState extends IWorkflowState {
+public interface IGuardOnlyState extends ICycleState {
     
     /**
      * Guard to evaluate.

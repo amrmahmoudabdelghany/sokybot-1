@@ -3,7 +3,7 @@ package org.sokybot.engine.api.workflow;
 /**
  * Loop state - handles repetitive execution with protection.
  */
-public interface ILoopState extends IWorkflowState {
+public interface ILoopState extends ICycleState {
     
     /**
      * State to loop back to.

@@ -75,4 +75,11 @@ public interface IWorkflowContext {
      * @param args Optional arguments for message formatting
      */
     void log(String level, String message, Object... args);
+
+    /**
+     * Gets the machine ID.
+     * 
+     * @return The machine ID
+     */
+    String getMachineId();
 }

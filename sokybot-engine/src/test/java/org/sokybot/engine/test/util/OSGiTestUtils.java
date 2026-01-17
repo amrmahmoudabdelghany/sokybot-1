@@ -109,7 +109,7 @@ public class OSGiTestUtils {
          * @return The service reference
          */
         @SuppressWarnings("unchecked")
-        public <S> ServiceReference<S> registerService(Class<S> clazz, S service, Map<String, Object> properties) {
+        public <S> ServiceReference<S> registerMockService(Class<S> clazz, S service, Map<String, Object> properties) {
             MockServiceReference<S> ref = new MockServiceReference<>(clazz, serviceIdCounter++, properties);
             ServiceEntry entry = new ServiceEntry(service, ref, properties != null ? properties : new HashMap<>());
             
@@ -133,6 +133,10 @@ public class OSGiTestUtils {
         
         // Stub implementations for other BundleContext methods (not used in tests)
         @Override
+        public Bundle installBundle(String location) throws BundleException { return null; }
+        @Override
+        public Bundle installBundle(String location, java.io.InputStream input) throws BundleException { return null; }
+
         public <S> S getService(ServiceReference<S> reference, ServiceObjects<S> serviceObjects) {
             return getService(reference);
         }
@@ -141,6 +145,16 @@ public class OSGiTestUtils {
         public Bundle getBundle() { return null; }
         @Override
         public Bundle getBundle(long id) { return null; }
+        @Override
+        public Bundle getBundle(String location) { return null; }
+        @Override
+        public ServiceReference<?> getServiceReference(String clazz) { return null; }
+        @Override
+        public ServiceReference<?>[] getServiceReferences(String clazz, String filter) { return null; }
+        @Override
+        public ServiceReference<?>[] getAllServiceReferences(String clazz, String filter) { return null; }
+        @Override
+        public <S> ServiceObjects<S> getServiceObjects(ServiceReference<S> reference) { return null; }
         @Override
         public Bundle[] getBundles() { return new Bundle[0]; }
         @Override
@@ -154,7 +168,11 @@ public class OSGiTestUtils {
                     props.put(key, properties.get(key));
                 }
             }
-            return new MockServiceRegistration<>(registerService(clazz, service, props));
+            return new MockServiceRegistration<>(registerMockService(clazz, service, props));
+        }
+        @Override
+        public ServiceRegistration<?> registerService(String clazz, Object service, Dictionary<String, ?> properties) {
+             return registerService(new String[]{clazz}, service, properties);
         }
         @Override
         public ServiceRegistration<?> registerService(String[] clazzes, Object service, Dictionary<String, ?> properties) {

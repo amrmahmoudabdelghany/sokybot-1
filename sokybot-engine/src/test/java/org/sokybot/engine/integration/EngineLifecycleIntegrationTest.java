@@ -20,7 +20,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class EngineLifecycleIntegrationTest extends EngineTestBase {
     
     @BeforeEach
-    void setUp() {
+    @Override
+    public void setUp() {
         super.setUp();
     }
     
@@ -37,7 +38,7 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                        null)
                 .build());
         
-        mockBundleContext.registerService(IActuator.class, actuator, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator, null);
         
         EngineCore engine = createTestEngine();
         
@@ -71,7 +72,7 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                        null)
                 .build());
         
-        mockBundleContext.registerService(IActuator.class, actuator, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator, null);
         
         EngineCore engine = createTestEngine();
         engine.start();
@@ -122,7 +123,7 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                        null)
                 .build());
         
-        mockBundleContext.registerService(IActuator.class, actuator1, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator1, null);
         EngineCore engine1 = createTestEngine();
         
         // Create second engine with different ID
@@ -137,7 +138,7 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                        null)
                 .build());
         
-        mockBundle2.registerService(IActuator.class, actuator2, null);
+        mockBundle2.registerMockService(IActuator.class, actuator2, null);
         EngineCore engine2 = new EngineCore(
             "test-group.test-machine-2",
             TEST_GROUP_NAME,

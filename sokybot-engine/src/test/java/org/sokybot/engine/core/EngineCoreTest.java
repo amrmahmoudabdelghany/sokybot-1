@@ -20,7 +20,8 @@ class EngineCoreTest extends EngineTestBase {
     private EngineCore engine;
     
     @BeforeEach
-    void setUp() {
+    @Override
+    public void setUp() {
         super.setUp();
         // Engine will be created in individual tests
     }

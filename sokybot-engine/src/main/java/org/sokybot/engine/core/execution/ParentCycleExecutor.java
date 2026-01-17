@@ -44,7 +44,7 @@ public class ParentCycleExecutor {
      * Sets the waiting manager.
      * Used for circular dependency resolution.
      */
-    void setWaitingManager(WaitingStateManager waitingManager) {
+    public void setWaitingManager(WaitingStateManager waitingManager) {
         this.waitingManager = waitingManager;
     }
     

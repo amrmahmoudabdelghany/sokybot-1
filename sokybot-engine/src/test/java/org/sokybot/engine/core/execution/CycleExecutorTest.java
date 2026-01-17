@@ -26,7 +26,8 @@ class CycleExecutorTest extends WorkflowTestBase {
     private WorkflowRegistryImpl registry;
     
     @BeforeEach
-    void setUp() {
+    @Override
+    public void setUp() {
         super.setUp();
         registry = new WorkflowRegistryImpl();
         interruptionManager = new InterruptionManager(registry);

@@ -3,7 +3,7 @@ package org.sokybot.engine.api.workflow;
 /**
  * Delay state - explicit delay/throttling point.
  */
-public interface IDelayState extends IWorkflowState {
+public interface IDelayState extends ICycleState {
     
     /**
      * Delay duration in milliseconds.

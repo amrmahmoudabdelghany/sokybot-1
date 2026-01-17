@@ -29,13 +29,19 @@ public class EngineFactory implements IEngineFactory {
     
     private final Map<String, EngineCore> engines = new ConcurrentHashMap<>();
 
-    @Reference
     private ISettingsManager settingsManager;
-    
-    @Reference
     private IGameModelFactory gameModelFactory;
-
     private BundleContext bundleContext;
+
+    @Reference
+    public void setSettingsManager(ISettingsManager settingsManager) {
+        this.settingsManager = settingsManager;
+    }
+
+    @Reference
+    public void setGameModelFactory(IGameModelFactory gameModelFactory) {
+        this.gameModelFactory = gameModelFactory;
+    }
 
     @Activate
     public void activate(BundleContext bundleContext) {

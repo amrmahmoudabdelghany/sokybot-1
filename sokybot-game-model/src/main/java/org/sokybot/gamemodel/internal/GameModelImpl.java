@@ -30,7 +30,7 @@ import org.sokybot.gameevents.events.spawn.MonsterSpawnEvent;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.ITrainer;
-import org.sokybot.machine.event.trainerevent.TrainerLoadedEvent;
+
 import org.sokybot.persistence.entities.navmesh.Position;
 
 public class GameModelImpl implements IGameModel, EventHandler {
@@ -133,10 +133,11 @@ public class GameModelImpl implements IGameModel, EventHandler {
                 handleMonsterSpawn((MonsterSpawnEvent) eventObj);
             } else if (eventObj instanceof EntityDespawnEvent) {
                 handleDespawn((EntityDespawnEvent) eventObj);
-            } else if (eventObj instanceof TrainerLoadedEvent) {
-                // handleTrainerLoaded((TrainerLoadedEvent) eventObj); 
-                // TrainerLoaded logic usually complex, involves setting ID etc.
-                // For now, assume trainer is persistent and we just update it.
+            /* } else if (eventObj instanceof TrainerLoadedEvent) {
+                 // handleTrainerLoaded((TrainerLoadedEvent) eventObj); 
+                 // TrainerLoaded logic usually complex, involves setting ID etc.
+                 // For now, assume trainer is persistent and we just update it. */
+
             } else if (eventObj instanceof EntityMovementEvent) {
                 handleMovement((EntityMovementEvent) eventObj);
             } else if (eventObj instanceof EntityStoppedEvent) {
@@ -158,9 +159,9 @@ public class GameModelImpl implements IGameModel, EventHandler {
         Monster m = new Monster(md);
         // Initial pos calculation?
         // md likely has sectors/offsets.
-        int x = SilkroadUtils.getXCoord(md.getXOffset(), md.getXSector());
-        int y = SilkroadUtils.getYCoord(md.getYOffset(), md.getYSector());
-        m.setDescription(md.getRefId() + ""); // hack?
+        int x = SilkroadUtils.getXCoord(md.getXOffset(), (short) md.getXSector());
+        int y = SilkroadUtils.getYCoord(md.getYOffset(), (short) md.getYSector());
+        // m.setDescription(md.getRefId() + ""); // hack?
         m.setLocation(x, y);
         m.setX(x); // Explicit internal setter
         m.setY(y);
@@ -226,7 +227,7 @@ public class GameModelImpl implements IGameModel, EventHandler {
 			fighter.setHasDestination(hasDestination);
 			
 			if (event.getMovementType() != null) {
-				fighter.setMovementType(event.getMovementType()); // Enum type check? Assuming shared package or same enum
+				fighter.setMovementType(org.sokybot.game.enums.MovementType.of(event.getMovementType())); 
                 // MovementType is in game-enums, so it matches.
 			}
 

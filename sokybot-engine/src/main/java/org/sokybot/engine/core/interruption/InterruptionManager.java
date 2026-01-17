@@ -1,7 +1,7 @@
 package org.sokybot.engine.core.interruption;
 
 import org.sokybot.engine.api.workflow.*;
-import org.sokybot.engine.core.workflow.CycleStateSaver.SavedState;
+import org.sokybot.engine.core.interruption.CycleStateSaver.SavedState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

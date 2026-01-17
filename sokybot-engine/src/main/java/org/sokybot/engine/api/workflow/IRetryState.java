@@ -3,7 +3,7 @@ package org.sokybot.engine.api.workflow;
 /**
  * Retry state - retry previous state with limits.
  */
-public interface IRetryState extends IWorkflowState {
+public interface IRetryState extends ICycleState {
     
     /**
      * State to retry.

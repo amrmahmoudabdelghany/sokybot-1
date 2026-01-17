@@ -1,7 +1,6 @@
 package org.sokybot.engine.core;
 
 import org.sokybot.engine.IEngine;
-import org.sokybot.engine.Settings;
 import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.core.dispatcher.DispatcherImpl;
@@ -15,6 +14,7 @@ import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.proxy.IProxyConnection;
 import org.sokybot.settings.ISettingsManager;
+import org.sokybot.settings.Settings;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

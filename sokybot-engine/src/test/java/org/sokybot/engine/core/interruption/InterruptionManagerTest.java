@@ -9,7 +9,11 @@ import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.engine.test.WorkflowTestBase;
 import org.sokybot.engine.test.util.WorkflowTestBuilders;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for InterruptionManager.
@@ -21,7 +25,8 @@ class InterruptionManagerTest extends WorkflowTestBase {
     private WorkflowRegistryImpl registry;
     
     @BeforeEach
-    void setUp() {
+    @Override
+    public void setUp() {
         super.setUp();
         registry = new WorkflowRegistryImpl();
         interruptionManager = new InterruptionManager(registry);

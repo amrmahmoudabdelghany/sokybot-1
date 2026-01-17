@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Conditional state - complex routing with multiple paths.
  */
-public interface IConditionalState extends IWorkflowState {
+public interface IConditionalState extends ICycleState {
     
     /**
      * Multiple conditional transitions.

@@ -14,11 +14,10 @@ import org.sokybot.settings.Settings;
  * - Priority-based interruption handler
  * 
  * This interface allows other bundles to interact with engines
- * without depending on engine implementation details or Spring framework.
+ * without depending on engine implementation details or any specific framework.
  * 
- * Note: IPacketPublisher is accessed via IMachineContext.packetPublisher()
- * Note: State machine access (if needed) should be through IMachineContext
- *       to avoid exposing Spring framework types in the API.
+ * The new engine architecture is framework-agnostic and uses OSGi for service
+ * discovery. Legacy Spring State Machine dependencies have been removed.
  */
 public interface IEngine {
     

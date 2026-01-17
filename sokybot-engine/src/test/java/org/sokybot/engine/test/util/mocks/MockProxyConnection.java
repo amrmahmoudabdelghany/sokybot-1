@@ -13,7 +13,16 @@ import java.util.List;
  * Tracks connection state and sent packets.
  */
 public class MockProxyConnection implements IProxyConnection {
+
+    @Override
+    public void setConnectionListener(org.sokybot.proxy.IConnectionListener listener) {}
     
+    @Override
+    public boolean isClientlessMode() { return false; }
+    
+    @Override
+    public void setClientlessMode(boolean clientlessMode) {}
+
     private boolean connected = false;
     private boolean clientConnected = false;
     private boolean serverConnected = false;

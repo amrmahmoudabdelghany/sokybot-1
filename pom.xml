@@ -55,6 +55,7 @@
 		<module>${project.artifactId}-settings</module>
 
 		<module>${project.artifactId}-engine</module>
+		<module>${project.artifactId}-engine-legacy</module>
 		<module>${project.artifactId}-ui</module>
 
 		<module>${project.artifactId}-runtime</module>

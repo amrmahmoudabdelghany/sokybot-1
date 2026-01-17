@@ -3,7 +3,7 @@ package org.sokybot.engine.api.workflow;
 /**
  * Exit state - explicit cycle exit point.
  */
-public interface IExitState extends IWorkflowState {
+public interface IExitState extends ICycleState {
     
     /**
      * Guard that determines if cycle should exit.

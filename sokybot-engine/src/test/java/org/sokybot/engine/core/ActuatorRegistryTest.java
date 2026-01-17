@@ -28,7 +28,7 @@ class ActuatorRegistryTest {
     private OSGiTestUtils.MockBundleContext mockBundleContext;
     
     @BeforeEach
-    void setUp() {
+    public void setUp() {
         workflowRegistry = new WorkflowRegistryImpl();
         workflowContext = mock(WorkflowContextImpl.class);
         when(workflowContext.getGameModel()).thenReturn(mock(org.sokybot.gamemodel.IGameModel.class));
@@ -36,7 +36,7 @@ class ActuatorRegistryTest {
         
         engineCore = mock(EngineCore.class);
         when(engineCore.getMachineId()).thenReturn("test-machine");
-        when(engineCore.getDispatcher()).thenReturn(mock(org.sokybot.engine.api.IDispatcher.class));
+        when(engineCore.getDispatcher()).thenReturn(mock(org.sokybot.engine.core.dispatcher.DispatcherImpl.class));
         when(engineCore.getSettingsManager()).thenReturn(mock(org.sokybot.settings.ISettingsManager.class));
         
         mockBundleContext = OSGiTestUtils.createMockBundleContext();
@@ -70,8 +70,8 @@ class ActuatorRegistryTest {
                 .build());
         
         // Register actuators as OSGi services
-        mockBundleContext.registerService(IActuator.class, actuator1, null);
-        mockBundleContext.registerService(IActuator.class, actuator2, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator1, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator2, null);
         
         // Initialize actuators
         registry.initializeActuators();
@@ -92,7 +92,7 @@ class ActuatorRegistryTest {
         MockActuator failingActuator = new MockActuator("failing-actuator")
             .withInitializationException(initException);
         
-        mockBundleContext.registerService(IActuator.class, failingActuator, null);
+        mockBundleContext.registerMockService(IActuator.class, failingActuator, null);
         
         // Should not throw exception, but log error
         assertDoesNotThrow(() -> {
@@ -128,8 +128,8 @@ class ActuatorRegistryTest {
         MockActuator actuator1 = new MockActuator("actuator1");
         MockActuator actuator2 = new MockActuator("actuator2");
         
-        mockBundleContext.registerService(IActuator.class, actuator1, null);
-        mockBundleContext.registerService(IActuator.class, actuator2, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator1, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator2, null);
         
         registry.initializeActuators();
         

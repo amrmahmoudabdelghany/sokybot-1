@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.BundleException;
 import org.sokybot.engine.core.EngineCore;
-import org.sokybot.engine.core.WorkflowRegistryImpl;
+import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
 import org.sokybot.engine.test.EngineTestBase;
 import org.sokybot.engine.test.util.MockActuator;
 import org.sokybot.engine.test.util.WorkflowTestBuilders;
@@ -22,7 +22,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
     private EngineCore engine;
     
     @BeforeEach
-    void setUp() {
+    @Override
+    public void setUp() {
         super.setUp();
     }
     
@@ -50,8 +51,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
                        null)
                 .build());
         
-        mockBundleContext.registerService(IActuator.class, actuator1, null);
-        mockBundleContext.registerService(IActuator.class, actuator2, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator1, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator2, null);
         
         // Create and start engine
         engine = createTestEngine();
@@ -85,8 +86,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
                        null)
                 .build());
         
-        mockBundleContext.registerService(IActuator.class, failingActuator, null);
-        mockBundleContext.registerService(IActuator.class, workingActuator, null);
+        mockBundleContext.registerMockService(IActuator.class, failingActuator, null);
+        mockBundleContext.registerMockService(IActuator.class, workingActuator, null);
         
         // Engine should still start even if one actuator fails
         engine = createTestEngine();
@@ -111,8 +112,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
         MockActuator actuator1 = new MockActuator("actuator1");
         MockActuator actuator2 = new MockActuator("actuator2");
         
-        mockBundleContext.registerService(IActuator.class, actuator1, null);
-        mockBundleContext.registerService(IActuator.class, actuator2, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator1, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator2, null);
         
         engine = createTestEngine();
         engine.start();
@@ -161,9 +162,9 @@ class ActuatorIntegrationTest extends EngineTestBase {
                        null)
                 .build());
         
-        mockBundleContext.registerService(IActuator.class, actuator1, null);
-        mockBundleContext.registerService(IActuator.class, actuator2, null);
-        mockBundleContext.registerService(IActuator.class, actuator3, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator1, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator2, null);
+        mockBundleContext.registerMockService(IActuator.class, actuator3, null);
         
         engine = createTestEngine();
         engine.start();
@@ -199,8 +200,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
                        null)
                 .build());
         
-        mockBundleContext.registerService(IActuator.class, failingActuator, null);
-        mockBundleContext.registerService(IActuator.class, workingActuator, null);
+        mockBundleContext.registerMockService(IActuator.class, failingActuator, null);
+        mockBundleContext.registerMockService(IActuator.class, workingActuator, null);
         
         engine = createTestEngine();
         
