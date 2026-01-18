@@ -1,7 +1,7 @@
 package org.sokybot.game.navigation.internal;
 
-import static org.sokybot.utils.SilkroadUtils.getSectorOffset;
-import static org.sokybot.utils.SilkroadUtils.getSectorYX;
+import static org.sokybot.commons.SilkroadUtils.getSectorOffset;
+import static org.sokybot.commons.SilkroadUtils.getSectorYX;
 
 import org.sokybot.persistence.entities.ObjectNavMesh;
 import org.sokybot.persistence.entities.SectorRef;

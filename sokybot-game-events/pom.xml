@@ -102,13 +102,9 @@
                             org.sokybot.gameevents.internal.*
                         </Private-Package>
                         <Import-Package>
-                            !com.ibm.websphere.jtaextensions,
-                            !com.oracle.svm.*,
-                            org.sokybot.network.packet,
-                            org.osgi.service.event,
-                            org.osgi.service.component.annotations,
-                            org.slf4j,
-                            *
+                            org.sokybot.*,
+                            org.osgi.*,
+                            *;resolution:=optional
                         </Import-Package>
                         <Service-Component>OSGI-INF/*.xml</Service-Component>
                     </instructions>

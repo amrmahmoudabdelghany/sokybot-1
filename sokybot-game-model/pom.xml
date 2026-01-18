@@ -63,7 +63,7 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>org.sokybot.gamemodel.*</Export-Package>
-                        <Import-Package>!com.ibm.websphere.jtaextensions*,!com.oracle.svm.*,*</Import-Package>
+                        <Import-Package>org.sokybot.*,org.osgi.*,*;resolution:=optional</Import-Package>
                         <_dsannotations>*</_dsannotations>
                     </instructions>
                 </configuration>

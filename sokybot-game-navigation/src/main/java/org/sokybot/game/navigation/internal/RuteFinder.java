@@ -34,8 +34,8 @@ import org.sokybot.game.navigation.internal.triangulation.Line;
 import org.sokybot.game.navigation.IRuteFinder;
 import org.sokybot.persistence.service.IGameDataLookup;
 
-import static org.sokybot.utils.SilkroadUtils.getSectorYX;
-import static org.sokybot.utils.SilkroadUtils.getSectorOffset;
+import static org.sokybot.commons.SilkroadUtils.getSectorYX;
+import static org.sokybot.commons.SilkroadUtils.getSectorOffset;
 
 public class RuteFinder implements IRuteFinder {
 
