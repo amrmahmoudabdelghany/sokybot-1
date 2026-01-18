@@ -49,6 +49,7 @@ public class SokybotLauncher {
         Map<String, String> config = new HashMap<>();
         config.put(Constants.FRAMEWORK_STORAGE_CLEAN, Constants.FRAMEWORK_STORAGE_CLEAN_ONFIRSTINIT);
         config.put(Constants.FRAMEWORK_STORAGE, "felix-cache");
+        config.put(Constants.FRAMEWORK_BOOTDELEGATION, "*");
         
         // FileInstall Configuration
         config.put("felix.fileinstall.dir", "./plugins");
@@ -57,16 +58,27 @@ public class SokybotLauncher {
         config.put("felix.fileinstall.log.level", "3"); // INFO level
 
         config.put(Constants.FRAMEWORK_SYSTEMPACKAGES_EXTRA, 
-            "org.slf4j;version=1.7.36,org.slf4j.helpers;version=1.7.36,org.slf4j.spi;version=1.7.36," +
-            "com.sun.jna;version=5.12.1,com.sun.jna.win32;version=5.12.1," +
-            "com.sun.jna.platform;version=5.12.1,com.sun.jna.platform.win32;version=5.12.1," +
-            "com.sun.jna.ptr;version=5.12.1,com.sun.jna.structure;version=5.12.1," +
-            "org.osgi.service.component;version=1.5.0,org.osgi.service.component.runtime;version=1.5.0," +
-            "org.osgi.service.component.runtime.dto;version=1.5.0," +
-            "org.osgi.service.component.annotations;version=1.5.0," +
-            "org.osgi.util.promise;version=1.1.1," +
-            "org.osgi.util.function;version=1.1.0," +
-            "javax.annotation;version=1.3.2"
+            "org.slf4j;version=\"1.7.36\",org.slf4j.helpers;version=\"1.7.36\",org.slf4j.spi;version=\"1.7.36\"," +
+            "com.sun.jna;version=\"5.12.1\",com.sun.jna.win32;version=\"5.12.1\"," +
+            "com.sun.jna.platform;version=\"5.12.1\",com.sun.jna.platform.win32;version=\"5.12.1\"," +
+            "com.sun.jna.ptr;version=\"5.12.1\",com.sun.jna.structure;version=\"5.12.1\"," +
+            "org.osgi.service.component;version=\"1.5.0\",org.osgi.service.component.runtime;version=\"1.5.0\"," +
+            "org.osgi.service.component.runtime.dto;version=\"1.5.0\"," +
+            "org.osgi.service.component.annotations;version=\"1.5.0\"," +
+            "javax.annotation;version=\"1.3.2\"," +
+            "com.aayushatharva.brotli4j;version=\"1.12.0\"," +
+            "com.aayushatharva.brotli4j.common;version=\"1.12.0\"," +
+            "com.aayushatharva.brotli4j.decoder;version=\"1.12.0\"," +
+            "com.aayushatharva.brotli4j.encoder;version=\"1.12.0\"," +
+            "com.jcraft.jzlib;version=\"1.1.3\"," +
+            "com.google.protobuf.nano;version=\"3.1.0\"," +
+            "com.google.protobuf;version=\"3.25.1\"," +
+            "com.github.luben.zstd;version=\"1.5.5\"," +
+            "com.ning.compress;version=\"1.1.2\"," +
+            "com.ning.compress.gzip;version=\"1.1.2\"," +
+            "com.ning.compress.lzf;version=\"1.1.2\"," +
+            "com.ning.compress.lzf.util;version=\"1.1.2\"," +
+            "com.ning.compress.lzf.impl;version=\"1.1.2\""
         );
 
         FrameworkFactory factory = ServiceLoader.load(FrameworkFactory.class).iterator().next();
@@ -85,14 +97,19 @@ public class SokybotLauncher {
             "sokybot-bootstrap/target/dependency/org.apache.felix.scr-2.2.6.jar",
             "sokybot-bootstrap/target/dependency/org.apache.felix.eventadmin-1.6.4.jar",
             "sokybot-bootstrap/target/dependency/org.apache.felix.configadmin-1.9.26.jar",
-            "sokybot-bootstrap/target/dependency/org.apache.felix.fileinstall-3.7.4.jar"
+            "sokybot-bootstrap/target/dependency/org.apache.felix.fileinstall-3.7.4.jar",
+            "sokybot-bootstrap/target/dependency/icu4j-73.2.jar",
+            "sokybot-bootstrap/target/dependency/bcprov-jdk18on-1.78.jar",
+            "sokybot-bootstrap/target/dependency/bctls-jdk18on-1.78.jar",
+            "sokybot-bootstrap/target/dependency/bcutil-jdk18on-1.78.jar",
+            "sokybot-bootstrap/target/dependency/native-linux-x86_64-1.12.0.jar"
         };
         
         // Level 1: Core API & Data
-        String[] core = { "sokybot-security", "sokybot-pk2", "sokybot-game-loader", "sokybot-persistence" };
+        String[] core = { "sokybot-security", "sokybot-pk2", "sokybot-loader-api", "sokybot-game-loader", "sokybot-persistence", "sokybot-proxy", "sokybot-game-events", "sokybot-game-model", "sokybot-engine-api" };
         
         // Level 2: Functional Logic & UI
-        String[] apps = { "sokybot-packet-sniffer", "sokybot-engine", "sokybot-ui", "sokybot-builders", "sokybot-webview" };
+        String[] apps = { "sokybot-packet-sniffer", "sokybot-engine", "sokybot-ui", "sokybot-builders", "sokybot-webview", "sokybot-dev-tools" };
 
         loadBundles(ctx, infra, true); // Direct paths
         loadBundles(ctx, core, false); // Discoverable modules
@@ -119,15 +136,49 @@ public class SokybotLauncher {
             String path = isDirectPath ? target : discoverBundle(target);
             if (path != null) {
                 String fileUrl = Paths.get(path).toAbsolutePath().toUri().toString();
-                System.out.println("[Bootstrap] Loading " + target + " from " + path);
+                System.err.println("[Bootstrap-ERR] Check " + target);
+                System.err.println("[Bootstrap-ERR] Loading " + target + " from " + path);
                 Bundle b = ctx.installBundle(fileUrl);
-                b.start();
+                
+                if ("sokybot-engine".equals(target)) {
+                     try {
+                        // Diagnostic for ClassCastException
+                        Class<?> activatorClass = b.loadClass("org.sokybot.engine.EngineActivator");
+                        System.err.println("[DEBUG-ERR] EngineActivator ClassLoader: " + activatorClass.getClassLoader());
+                        
+                        Class<?> bundleActivatorClass = b.loadClass("org.osgi.framework.BundleActivator");
+                        System.err.println("[DEBUG-ERR] Engine Bundle resolves BundleActivator from: " + bundleActivatorClass.getClassLoader());
+                        
+                        Class<?> sysBundleActivator = org.osgi.framework.BundleActivator.class;
+                        System.err.println("[DEBUG-ERR] System BundleActivator ClassLoader: " + sysBundleActivator.getClassLoader());
+                        
+                        if (bundleActivatorClass == sysBundleActivator) {
+                             System.err.println("[DEBUG-ERR] BundleActivator classes MATCH.");
+                        } else {
+                             System.err.println("[DEBUG-ERR] BundleActivator classes DO NOT MATCH!");
+                        }
+                     } catch (Throwable t) {
+                        System.err.println("[DEBUG-ERR] Diagnosis failed: " + t.getMessage());
+                        t.printStackTrace();
+                     }
+                }
+
+                try {
+                    b.start();
+                } catch (Throwable t) {
+                    System.err.println("[Bootstrap-ERR] Failed to start bundle: " + target);
+                    t.printStackTrace();
+                    // Don't abort, try to load others? Or abort? 
+                    // Better to continue and see what else breaks, or dependencies might be fine later?
+                    // But core dependencies usually block.
+                }
+                
                 // Wait a bit for bundle to fully start before loading next
                 if (target.contains("promise") || target.contains("function")) {
                     Thread.sleep(100); // Small delay for dependency bundles
                 }
             } else {
-                System.err.println("[Bootstrap] WARNING: Could not discover bundle for " + target);
+                System.err.println("[Bootstrap-ERR] WARNING: Could not discover bundle for " + target);
             }
         }
     }

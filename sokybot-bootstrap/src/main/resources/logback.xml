@@ -14,16 +14,33 @@
 		class="org.sokybot.app.logger.AppenderWrapper" /> -->
 
 
+	<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>logs/sokybot.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+			<!-- daily rollover -->
+			<fileNamePattern>logs/sokybot.%d{yyyy-MM-dd}.log</fileNamePattern>
+			<!-- keep 30 days' worth of history -->
+			<maxHistory>30</maxHistory>
+		</rollingPolicy>
+		<encoder>
+			<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+		</encoder>
+	</appender>
+
 	<logger name="org.sokybot" level="INFO">
 		<!-- <appender-ref ref="WRAPPER" /> -->
-
-
 	</logger>
+	
+	<!-- Silence noisy libraries -->
+	<logger name="io.netty" level="INFO" />
+	<logger name="io.rsocket" level="INFO" />
+	<logger name="reactor" level="INFO" />
+	<logger name="org.apache.felix" level="INFO" />
 
 	<root level="DEBUG">
 		<!-- <appender-ref ref="WRAPPER" /> -->
 		<appender-ref ref="STDOUT" />
-
+		<appender-ref ref="FILE" />
 	</root>
 
 </configuration>

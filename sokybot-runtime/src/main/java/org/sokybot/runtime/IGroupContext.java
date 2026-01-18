@@ -2,7 +2,7 @@ package org.sokybot.runtime;
 
 import java.util.Optional;
 
-import org.sokybot.IContextAdapter;
+
 import org.sokybot.ui.api.IPageViewer;
 import org.sokybot.game.navigation.IRuteFinder;
 

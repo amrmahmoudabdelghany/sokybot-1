@@ -24,6 +24,11 @@
             <artifactId>sokybot-settings</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-game-model</artifactId>
+            <version>${project.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -34,9 +39,13 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <Import-Package>
+                            *;resolution:=optional
+                        </Import-Package>
                         <Export-Package>
                             org.sokybot.engine,
-                            org.sokybot.engine.api.*
+                            org.sokybot.engine.api.*,
+                            org.sokybot.engine.api.event
                         </Export-Package>
                     </instructions>
                 </configuration>

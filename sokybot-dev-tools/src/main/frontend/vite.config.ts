@@ -21,7 +21,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: '../../../../../target/webapp',
+    outDir: '../../../target/webapp',
     emptyOutDir: true,
   },
   base: '/devtools/',

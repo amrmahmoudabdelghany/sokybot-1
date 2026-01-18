@@ -45,8 +45,9 @@ import org.sokybot.gameevents.events.spawn.MonsterSpawnEvent;
 import org.sokybot.gameevents.events.spawn.ItemSpawnEvent;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.events.skill.SkillCastStartEvent;
-import org.sokybot.machine.event.trainerevent.TrainerReachDestinationEvent;
-import org.sokybot.machine.event.trainerevent.TrainerStuckEvent;
+import org.sokybot.engine.api.event.TrainerReachDestinationEvent;
+import org.sokybot.gameevents.events.character.TrainerStuckEvent;
+
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.gamemodel.model.ITrainer;
 import org.sokybot.gamemodel.model.IMonster;
@@ -55,7 +56,7 @@ import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.IPlayer;
 // import org.sokybot.machine.parser.ISpawnParser; // Removed
 import org.sokybot.persistence.service.IGameDataLookup;
-import org.sokybot.app.AppConstants;
+import org.sokybot.commons.AppConstants;
 import org.sokybot.network.PacketListener;
 // import org.sokybot.machine.network.PacketListener.PacketSource;
 import org.sokybot.network.IPacketPublisher;

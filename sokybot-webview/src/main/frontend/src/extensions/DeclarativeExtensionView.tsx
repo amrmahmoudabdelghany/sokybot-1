@@ -37,8 +37,8 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
     // Performance: Debounce state updates
     const updateTimeoutRef = useRef<NodeJS.Timeout>();
-    const lastUpdateRef = useRef<number>(0);
-    const pendingUpdatesRef = useRef<Map<string, any>>(new Map());
+    // const lastUpdateRef = useRef<number>(0);
+    // const pendingUpdatesRef = useRef<Map<string, any>>(new Map());
     const streamSubscriptionsRef = useRef<Map<string, any>>(new Map());
 
     // Performance: Memoize action handler

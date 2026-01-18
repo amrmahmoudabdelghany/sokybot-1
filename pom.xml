@@ -55,17 +55,17 @@
 		<module>${project.artifactId}-settings</module>
 
 		<module>${project.artifactId}-engine</module>
-		<module>${project.artifactId}-engine-legacy</module>
+
 		<module>${project.artifactId}-ui</module>
 		
 		<module>${project.artifactId}-engine-api</module>
 		<module>${project.artifactId}-game-events-api</module>
 
 		<module>${project.artifactId}-runtime</module>
-		<module>${project.artifactId}-builders</module>
+
 		<module>${project.artifactId}-pk2-extractor</module>
 		<module>${project.artifactId}-game-events</module>
-		<module>${project.artifactId}-map-debug</module>
+
 		<module>${project.artifactId}-ui-api</module>
 		<module>${project.artifactId}-game-navigation</module>
 		<module>${project.artifactId}-game-asset</module>

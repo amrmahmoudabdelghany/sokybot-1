@@ -234,7 +234,7 @@ public class GroupContextImpl implements IGroupContext {
                     if (lookup != null) {
                         org.sokybot.gameevents.events.core.ITranslatorFactory factory = getTranslatorFactory();
                         if (factory != null) {
-                            sharedTranslators = factory.createTranslators(lookup);
+                            sharedTranslators = factory.createTranslators(lookup, null);
                             log.info("Created {} shared translators for game: {} (version: {})", 
                                     sharedTranslators.size(), groupInfo.getGamePath(), lookup.getVersion());
                         } else {

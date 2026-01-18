@@ -37,12 +37,86 @@ public class LogStreamingService {
         "^(\\d{2}:\\d{2}:\\d{2}\\.\\d{3})\\s+\\[(.*?)\\]\\s+(\\w+)\\s+(.*?)\\s+-\\s+(.*)$"
     );
     
+    private volatile boolean running = true;
+    private Thread tailerThread;
+
     public LogStreamingService() {
         // Create event sink for log streaming
         this.logEventSink = Sinks.many().multicast().onBackpressureBuffer(1000);
         
         // Try to detect log files from common locations
         logger.info("LogStreamingService initialized - will search for log files in common locations");
+        
+        // Start tailing the main log file
+        startLogTailer();
+    }
+    
+    private void startLogTailer() {
+        this.tailerThread = new Thread(() -> {
+            File logFile = new File("logs/sokybot.log");
+            long lastPointer = 0;
+            
+            // Wait for file to exist
+            while (running && !logFile.exists()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+            
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(logFile, "r")) {
+                // Start from end of file
+                lastPointer = raf.length();
+                raf.seek(lastPointer);
+                
+                while (running) {
+                    long length = raf.length();
+                    if (length < lastPointer) {
+                        // File was rotated or truncated
+                        lastPointer = 0;
+                        raf.seek(0);
+                    }
+                    
+                    if (length > lastPointer) {
+                        String line;
+                        while ((line = raf.readLine()) != null) {
+                            Map<String, Object> event = parseLogLine(line);
+                            if (event != null) {
+                                // Add file info
+                                event.put("file", logFile.getName());
+                                Map<String, Object> wrapper = new ConcurrentHashMap<>();
+                                wrapper.put("type", "log");
+                                wrapper.put("data", event);
+                                wrapper.put("timestamp", System.currentTimeMillis());
+                                emitLogEvent(wrapper);
+                            }
+                        }
+                        lastPointer = raf.getFilePointer();
+                    }
+                    
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                logger.error("Error tailing log file", e);
+            }
+        });
+        this.tailerThread.setDaemon(true);
+        this.tailerThread.setName("LogTailer-Thread");
+        this.tailerThread.start();
+    }
+
+    public void stop() {
+        this.running = false;
+        if (tailerThread != null) {
+            tailerThread.interrupt();
+        }
     }
     
     /**

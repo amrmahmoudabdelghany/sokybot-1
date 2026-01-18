@@ -163,11 +163,13 @@ public class MachineContextImpl implements IMachineContext {
     }
 
     @Override
-    public org.sokybot.settings.Settings getSettings() {
-        if (this.engine != null) {
-            return this.engine.getSettings();
-        }
-        return null; // Or throw generic exception? Returning null for now to be safe.
+    public String getMachineName() {
+        return machineInfo.getMachineName();
+    }
+    
+    @Override
+    public String getGroupName() {
+        return groupContext.name();
     }
     
     @Override

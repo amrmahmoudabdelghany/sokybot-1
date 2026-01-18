@@ -1,23 +1,26 @@
 import { useEffect, useState } from 'react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 import { rsocketService } from './lib/rsocket-client'
 import { BundlesView } from './views/BundlesView'
 import { ServicesView } from './views/ServicesView'
 import { MetricsView } from './views/MetricsView'
 import { LogsView } from './views/LogsView'
-import { Settings, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Sidebar } from './components/layout/sidebar'
+import { cn } from './lib/utils'
 import './App.css'
 
 function App() {
   const [connected, setConnected] = useState(false)
   const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [activeView, setActiveView] = useState("bundles")
 
   useEffect(() => {
     let mounted = true
     let retryTimeout: NodeJS.Timeout | null = null
-    
+
     const connect = () => {
       rsocketService.connect()
         .then(() => {
@@ -40,7 +43,7 @@ function App() {
           }
         })
     }
-    
+
     connect()
 
     return () => {
@@ -75,47 +78,34 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Settings className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">Sokybot Dev Tools</h1>
+    <div className="flex h-screen bg-background text-foreground transition-colors duration-300">
+      {/* Sidebar Navigation */}
+      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="border-b bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold capitalize">{activeView}</h1>
+            <div className="flex items-center gap-2">
+              <div className={cn("h-2.5 w-2.5 rounded-full", connected ? "bg-green-500 animate-pulse" : "bg-red-500")} />
+              <span className="text-sm text-muted-foreground font-medium">
+                {connected ? "Connected" : "Disconnected"}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-            <span className="text-sm text-muted-foreground">Connected</span>
+        </header>
+
+        {/* View Content */}
+        <main className="flex-1 overflow-auto p-6 bg-muted/20">
+          <div className="mx-auto max-w-6xl space-y-6">
+            {activeView === 'bundles' && <BundlesView />}
+            {activeView === 'services' && <ServicesView />}
+            {activeView === 'metrics' && <MetricsView />}
+            {activeView === 'logs' && <LogsView />}
           </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-hidden p-6">
-        <Tabs defaultValue="bundles" className="h-full flex flex-col">
-          <TabsList className="mb-4">
-            <TabsTrigger value="bundles">Bundles</TabsTrigger>
-            <TabsTrigger value="services">Services</TabsTrigger>
-            <TabsTrigger value="metrics">Metrics</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="bundles" className="flex-1 overflow-auto">
-            <BundlesView />
-          </TabsContent>
-
-          <TabsContent value="services" className="flex-1 overflow-auto">
-            <ServicesView />
-          </TabsContent>
-
-          <TabsContent value="metrics" className="flex-1 overflow-auto">
-            <MetricsView />
-          </TabsContent>
-
-          <TabsContent value="logs" className="flex-1 overflow-auto">
-            <LogsView />
-          </TabsContent>
-        </Tabs>
+        </main>
       </div>
     </div>
   )

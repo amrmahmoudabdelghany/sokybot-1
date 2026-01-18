@@ -2,7 +2,7 @@ package org.sokybot.runtime;
 
 import java.util.Optional;
 
-import org.sokybot.IContextAdapter;
+
 
 
 public interface ISokybotContext extends IContextAdapter {

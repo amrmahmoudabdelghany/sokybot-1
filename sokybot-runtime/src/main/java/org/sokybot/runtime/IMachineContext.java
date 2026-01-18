@@ -1,6 +1,6 @@
 package org.sokybot.runtime;
 
-import org.sokybot.IContextAdapter;
+
 import org.sokybot.ui.api.IMachinePageViewer;
 import org.sokybot.engine.IEngine;
 

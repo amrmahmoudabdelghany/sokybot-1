@@ -67,7 +67,7 @@ export const UIComponentLibrary: Record<string, React.ComponentType<any>> = {
 /**
  * Icon Library - Maps icon names to Lucide React icons
  */
-export const IconLibrary: Record<string, React.ComponentType<any>> = {
+export const IconLibrary: Record<string, any> = {
     ...LucideIcons,
 };
 

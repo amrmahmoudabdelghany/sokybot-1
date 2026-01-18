@@ -70,3 +70,4 @@ cp.txt
 *.log
 *.launch
 *.dat
+legacy/

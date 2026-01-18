@@ -211,13 +211,14 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         const layoutType = props.layout || 'column';
         const gap = props.gap || 4;
         const padding = props.padding || 4;
+        const cols = props.cols; // Assuming cols might be passed in props
 
-        const layoutClass = {
+        const layoutClass = ({
             row: 'flex flex-row',
-            column: 'flex flex-col',
-            grid: 'grid',
+            col: 'flex flex-col',
+            grid: `grid ${cols ? `grid-cols-${cols}` : 'grid-cols-2'} gap-${gap}`,
             stack: `space-y-${gap}`
-        }[layoutType] || 'flex flex-col';
+        } as Record<string, string>)[layoutType] || 'flex flex-col';
 
         return (
             <div

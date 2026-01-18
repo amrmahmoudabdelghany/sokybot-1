@@ -16,13 +16,13 @@ interface HexViewerProps {
 
 export const HexViewer: React.FC<HexViewerProps> = ({
   packets,
-  selectedHex = '',
-  selectedByteCount = 0,
-  matchCount = 0,
+  // selectedHex = '',
+  // selectedByteCount = 0,
+  // matchCount = 0,
   matches = [],
   onSelectHex,
   onDefineVariable,
-  groupLen = 16,
+  // groupLen = 16,
   className,
   style
 }) => {
@@ -35,7 +35,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
     return (e: React.UIEvent<HTMLDivElement>) => {
       const scrollTop = e.currentTarget.scrollTop;
       const scrollLeft = e.currentTarget.scrollLeft;
-      
+
       if (source !== 'line' && lineRef.current) {
         lineRef.current.scrollTop = scrollTop;
       }
@@ -49,22 +49,19 @@ export const HexViewer: React.FC<HexViewerProps> = ({
     };
   }, []);
 
-  const handleHexSelection = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+  const handleHexSelection = useCallback(() => {
     const selection = window.getSelection();
     if (selection && selection.toString().trim()) {
       const selectedText = selection.toString().trim();
       // Check if it's a valid hex string
       if (/^([A-Fa-f0-9]{2}\s*)+$/.test(selectedText)) {
-        const range = selection.getRangeAt(0);
-        const hexElement = hexRef.current;
-        if (hexElement) {
-          // Calculate offsets (simplified - would need more complex logic for exact byte positions)
-          const startOffset = 0; // TODO: Calculate actual byte offset
-          const endOffset = selectedText.replace(/\s+/g, '').length / 2;
-          
-          if (onSelectHex) {
-            onSelectHex(selectedText, startOffset, endOffset);
-          }
+        // const range = selection.getRangeAt(0);
+        // Calculate offsets (simplified - would need more complex logic for exact byte positions)
+        const startOffset = 0; // TODO: Calculate actual byte offset
+        const endOffset = selectedText.replace(/\s+/g, '').length / 2;
+
+        if (onSelectHex) {
+          onSelectHex(selectedText, startOffset, endOffset);
         }
       }
     }
@@ -87,7 +84,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
     const handleClickOutside = () => {
       setContextMenu(null);
     };
-    
+
     if (contextMenu) {
       document.addEventListener('click', handleClickOutside);
       return () => document.removeEventListener('click', handleClickOutside);
@@ -96,7 +93,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
 
   const renderPacketRows = () => {
     const rows: JSX.Element[] = [];
-    
+
     packets.forEach((packetRow: any, packetIndex: number) => {
       if (packetRow.type === 'header') {
         // Header row
@@ -120,28 +117,28 @@ export const HexViewer: React.FC<HexViewerProps> = ({
         );
       } else if (packetRow.type === 'data') {
         // Data row
-        const isHighlighted = matches?.some(m => 
-          m.packetIndex === packetIndex && 
-          m.byteOffset >= packetRow.startOffset && 
+        const isHighlighted = matches?.some(m =>
+          m.packetIndex === packetIndex &&
+          m.byteOffset >= packetRow.startOffset &&
           m.byteOffset < packetRow.endOffset
         );
-        
+
         rows.push(
-          <div 
+          <div
             key={`data-${packetIndex}-${packetRow.startOffset}`}
             className={cn(
               "flex border-b border-slate-200 dark:border-slate-700 py-0.5",
               isHighlighted && "bg-blue-200 dark:bg-blue-900"
             )}
           >
-            <div 
+            <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? lineRef : undefined}
               className="w-24 px-2 text-xs text-slate-500 dark:text-slate-400 select-none"
               onScroll={handleScroll('line')}
             >
               {packetRow.lineNumber}
             </div>
-            <div 
+            <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? hexRef : undefined}
               className="flex-1 px-2 font-mono text-sm select-text"
               onScroll={handleScroll('hex')}
@@ -150,7 +147,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
             >
               {packetRow.hex}
             </div>
-            <div 
+            <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? asciiRef : undefined}
               className="w-64 px-2 font-mono text-sm text-slate-400 dark:text-slate-500 select-none"
               onScroll={handleScroll('ascii')}
@@ -166,7 +163,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
         );
       }
     });
-    
+
     return rows;
   };
 
@@ -194,7 +191,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
           </div>
         </div>
       </div>
-      
+
       {contextMenu && (
         <div
           className="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-lg py-1"

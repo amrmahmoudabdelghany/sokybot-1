@@ -104,7 +104,7 @@ public class RSocketServerService {
                                  } else {
                                       // Fallback: get first available machine
                                       if (groupContext != null && groupContext.getMachines().length > 0) {
-                                          machineId = groupContext.getMachines()[0].name(); // or fullName?
+                                          machineId = groupContext.getMachines()[0].getMachineName(); // or fullName?
                                           // groupContext.getMachines() are IMachineContext objects
                                           // check findMachineCtx expects just name?
                                       }
@@ -226,11 +226,11 @@ public class RSocketServerService {
                                   if (groupName != null && sokybotContext != null) {
                                        IGroupContext grpCtx = sokybotContext.findGroupCtx(groupName).orElse(null);
                                        if (grpCtx != null) {
-                                           org.sokybot.service.ISroDAO gameDao = grpCtx.getGameDAO();
-                                           Map<String, Object> details = new HashMap<>();
-                                           details.put("version", gameDao.getVersion());
-                                           details.put("hosts", gameDao.getDivHosts());
-                                           return Mono.just(DefaultPayload.create(mapper.writeValueAsString(details)));
+                                           // org.sokybot.service.ISroDAO gameDao = grpCtx.getGameDAO();
+                                           // Map<String, Object> details = new HashMap<>();
+                                           // details.put("version", gameDao.getVersion());
+                                           // details.put("hosts", gameDao.getDivHosts());
+                                           // return Mono.just(DefaultPayload.create(mapper.writeValueAsString(details)));
                                        }
                                   }
                                   return Mono.just(DefaultPayload.create("{}"));

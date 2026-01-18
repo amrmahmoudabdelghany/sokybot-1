@@ -1,4 +1,4 @@
-package org.sokybot;
+package org.sokybot.runtime;
 
 public interface IContextAdapter {
 

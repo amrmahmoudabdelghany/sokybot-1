@@ -94,6 +94,10 @@ public class DevToolsActivator implements BundleActivator {
                 rsocketHandler.stop();
             }
             
+            if (logService != null) {
+                logService.stop();
+            }
+            
             logger.info("DevTools bundle deactivated");
         } catch (Exception e) {
             logger.error("Error during deactivation", e);

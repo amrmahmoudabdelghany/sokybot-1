@@ -9,6 +9,10 @@ export default defineConfig({
     react(),
     // nodePolyfills temporarily removed - was overwriting source files
   ],
+  build: {
+    outDir: '../../../target/frontend/dist',
+    emptyOutDir: true,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
