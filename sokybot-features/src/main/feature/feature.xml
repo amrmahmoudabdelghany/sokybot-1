@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<features name="sokybot-${project.version}" 
+          xmlns="http://karaf.apache.org/xmlns/features/v1.6.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 
+                              http://karaf.apache.org/xmlns/features/v1.6.0">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- CORE FEATURE: Base bundles required for all configurations              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-core" version="${project.version}" description="Sokybot Core">
+        
+        <!-- APIs (must load first) -->
+        <bundle>mvn:io.github.sokybot/sokybot-loader-api/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-engine-api/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-game-events-api/${project.version}</bundle>
+        
+        <!-- Infrastructure -->
+        <bundle>mvn:io.github.sokybot/sokybot-commons/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-security/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-settings/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-persistence/${project.version}</bundle>
+        
+        <!-- Game Data -->
+        <bundle>mvn:io.github.sokybot/sokybot-pk2/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-pk2-extractor/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-game-loader/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-game-model/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-game-asset/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-game-navigation/${project.version}</bundle>
+        
+        <!-- Network & Events -->
+        <bundle>mvn:io.github.sokybot/sokybot-proxy/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-game-events/${project.version}</bundle>
+        
+        <!-- Engine -->
+        <bundle>mvn:io.github.sokybot/sokybot-engine/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-runtime/${project.version}</bundle>
+        
+        <!-- UI (Webview-based) -->
+        <bundle>mvn:io.github.sokybot/sokybot-webview/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-machine-pages/${project.version}</bundle>
+        
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- ACTUATORS FEATURE: Bot automation modules                               -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-actuators" version="${project.version}" description="Sokybot Actuator Bundles">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:io.github.sokybot/sokybot-actuator-connector/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-actuator-login/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-actuator-training/${project.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- DEV FEATURE: Development and debugging tools (not for production)       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-dev" version="${project.version}" description="Sokybot Development Tools">
+        <feature>sokybot-actuators</feature>
+        <!-- Karaf shell and SSH for development -->
+        <feature version="${karaf.version}">shell</feature>
+        <feature version="${karaf.version}">ssh</feature>
+        <!-- Development bundles -->
+        <bundle>mvn:io.github.sokybot/sokybot-dev-tools/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-packet-sniffer/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-bundle-manager/${project.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- FULL FEATURE: Complete production application for end users             -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-full" version="${project.version}" description="Sokybot Full Application">
+        <feature>sokybot-actuators</feature>
+    </feature>
+
+</features>

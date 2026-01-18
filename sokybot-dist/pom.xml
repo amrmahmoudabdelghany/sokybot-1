@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.sokybot</groupId>
+        <artifactId>sokybot</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>sokybot-dist</artifactId>
+    <packaging>karaf-assembly</packaging>
+    <name>Sokybot :: Distribution</name>
+    <description>Custom Karaf distribution for Sokybot desktop application</description>
+
+    <dependencies>
+        <!-- Karaf framework base -->
+        <dependency>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>framework</artifactId>
+            <version>${karaf.version}</version>
+            <type>kar</type>
+        </dependency>
+        
+        <!-- Karaf standard features -->
+        <dependency>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>standard</artifactId>
+            <version>${karaf.version}</version>
+            <classifier>features</classifier>
+            <type>xml</type>
+        </dependency>
+        
+        <!-- Sokybot features -->
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-features</artifactId>
+            <version>${project.version}</version>
+            <classifier>features</classifier>
+            <type>xml</type>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.karaf.tooling</groupId>
+                <artifactId>karaf-maven-plugin</artifactId>
+                <version>${karaf.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <!-- Minimal Karaf - strip heavy server features for desktop use -->
+                    <installedFeatures>
+                        <feature>wrapper</feature>
+                    </installedFeatures>
+                    
+                    <!-- Features that boot on startup (production mode) -->
+                    <bootFeatures>
+                        <feature>bundle</feature>
+                        <feature>config</feature>
+                        <feature>scr</feature>
+                        <feature>log</feature>
+                        <feature>sokybot-full</feature>
+                    </bootFeatures>
+                    
+                    <!-- Archive settings -->
+                    <archiveTarGz>false</archiveTarGz>
+                    <archiveZip>true</archiveZip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- 
+            Development profile: includes shell, SSH and dev tools 
+            Usage: mvn clean install -P dev
+        -->
+        <profile>
+            <id>dev</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.karaf.tooling</groupId>
+                        <artifactId>karaf-maven-plugin</artifactId>
+                        <version>${karaf.version}</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <installedFeatures>
+                                <feature>wrapper</feature>
+                            </installedFeatures>
+                            <bootFeatures>
+                                <feature>bundle</feature>
+                                <feature>config</feature>
+                                <feature>scr</feature>
+                                <feature>log</feature>
+                                <feature>shell</feature>
+                                <feature>ssh</feature>
+                                <feature>sokybot-dev</feature>
+                            </bootFeatures>
+                            <archiveTarGz>false</archiveTarGz>
+                            <archiveZip>true</archiveZip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

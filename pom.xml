@@ -20,6 +20,7 @@
 		<dependency.mockito-junit-jupter.version>4.8.0</dependency.mockito-junit-jupter.version>
 		<dependency.gc4s.version>1.6.0</dependency.gc4s.version>
 		<dependency.felix.version>7.0.5</dependency.felix.version>
+		<karaf.version>4.4.6</karaf.version>
 		<vavr.version>0.10.4</vavr.version>
 		<commons-lang3.version>3.12.0</commons-lang3.version>
 		<commons-io.version>2.11.0</commons-io.version>
@@ -43,7 +44,6 @@
 	<modules>
 
 		<module>${project.artifactId}-swing</module>
-		<module>${project.artifactId}-bootstrap</module>
 		<module>${project.artifactId}-pk2</module>
 		<module>${project.artifactId}-security</module>
 		<module>${project.artifactId}-proxy</module>
@@ -82,6 +82,10 @@
 		<!-- Extension bundles -->
 		<module>${project.artifactId}-bundle-manager</module>
 		<module>${project.artifactId}-dev-tools</module>
+		
+		<!-- Karaf distribution -->
+		<module>${project.artifactId}-features</module>
+		<module>${project.artifactId}-dist</module>
 
 
 
