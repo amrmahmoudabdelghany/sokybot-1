@@ -24,9 +24,11 @@ public class StorageOpenTranslator extends AbstractTranslator {
     }
     public StorageOpenTranslator(IGameDataLookup lookup) {
         this(lookup, 0x3047, StorageOpenEvent.TYPE_PERSONAL);
+    }
     @Override
     public int getOpcode() {
         return opcode;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -36,4 +38,5 @@ public class StorageOpenTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

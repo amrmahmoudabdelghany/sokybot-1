@@ -20,6 +20,7 @@ public class JobLeaveTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0xB0E2;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -32,4 +33,5 @@ public class JobLeaveTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

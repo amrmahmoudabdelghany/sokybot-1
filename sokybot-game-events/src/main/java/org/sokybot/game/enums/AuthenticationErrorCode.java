@@ -1,8 +1,7 @@
 package org.sokybot.game.enums;
 
-import org.sokybot.machine.IMachineEvent;
 
-public enum AuthenticationErrorCode implements IMachineEvent {
+public enum AuthenticationErrorCode  {
 
 	UNKNOWN(0) , 
 	ServerIsFull(4) , 

@@ -22,6 +22,7 @@ public class EntityMovementTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return SPAWN_MOVEMENT_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -84,6 +85,7 @@ public class EntityMovementTranslator extends AbstractTranslator {
                 currentXSector = xSector;
                 currentYSector = ySector;
                 currentAngle = angle;
+            }
             return singleEvent(new EntityMovementEvent(machineFullName, entityId, hasDestination, 
                                           destination, destXSector, destYSector,
                                           currentPosition, currentXSector, currentYSector,
@@ -91,4 +93,5 @@ public class EntityMovementTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

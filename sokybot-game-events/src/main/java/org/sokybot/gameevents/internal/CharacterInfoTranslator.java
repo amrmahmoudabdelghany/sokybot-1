@@ -21,6 +21,7 @@ public class CharacterInfoTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return CHAR_INFO_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -45,4 +46,5 @@ public class CharacterInfoTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

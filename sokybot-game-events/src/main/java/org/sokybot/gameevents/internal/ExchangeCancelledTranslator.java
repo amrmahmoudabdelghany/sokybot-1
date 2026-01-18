@@ -19,6 +19,8 @@ public class ExchangeCancelledTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0x3088;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         return singleEvent(new ExchangeCancelledEvent(machineFullName));
+}
 }

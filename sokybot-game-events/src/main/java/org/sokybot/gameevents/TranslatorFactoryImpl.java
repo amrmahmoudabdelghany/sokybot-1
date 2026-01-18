@@ -66,8 +66,6 @@ public class TranslatorFactoryImpl implements ITranslatorFactory {
         // which emits multiple fine-grained events plus the summary CharacterLoadedEvent
         CharacterDataBeginTranslator beginTranslator = new CharacterDataBeginTranslator(lookup);
         CharacterDataEndTranslator endTranslator = new CharacterDataEndTranslator(lookup);
-        beginTranslator.setChunkManager(chunkManager);
-        endTranslator.setChunkManager(chunkManager);
         
         translators.put(0x34A5, beginTranslator);  // CHAR_DATA_BEGIN
         translators.put(0x34A6, endTranslator);    // CHAR_DATA_END - emits fine-grained events

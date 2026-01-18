@@ -20,6 +20,7 @@ public class JobAliasUpdateTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return JOB_ALIAS_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -35,4 +36,5 @@ public class JobAliasUpdateTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

@@ -21,6 +21,7 @@ public class SkillCastConfirmTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return SKILL_CAST_CONFIRM_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -34,4 +35,5 @@ public class SkillCastConfirmTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

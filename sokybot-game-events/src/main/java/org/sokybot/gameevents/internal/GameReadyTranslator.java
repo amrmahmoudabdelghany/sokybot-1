@@ -21,6 +21,7 @@ public class GameReadyTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return GAME_READY_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -38,9 +39,11 @@ public class GameReadyTranslator extends AbstractTranslator {
             int skillCount = reader.getUnsignedByte();
             for (int i = 0; i < skillCount; i++) {
                 int skillId = reader.getInt();
-                skillCooldowns.add(new GameReadyEvent.CooldownInfo(skillId, milliseconds));
+                skillCooldowns.add(new GameReadyEvent.CooldownInfo(skillId, reader.getInt()));;
+            }
             return singleEvent(new GameReadyEvent(machineFullName, itemCooldowns, skillCooldowns));
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

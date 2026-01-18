@@ -20,6 +20,7 @@ public class QuestAbandonTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return QUEST_ABANDON_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -34,4 +35,5 @@ public class QuestAbandonTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

@@ -20,6 +20,7 @@ public class EmotionTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return EMOTION_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -32,4 +33,5 @@ public class EmotionTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

@@ -20,6 +20,7 @@ public class ItemUseTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0xB04C;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -33,4 +34,5 @@ public class ItemUseTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

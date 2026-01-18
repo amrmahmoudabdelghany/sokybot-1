@@ -21,6 +21,7 @@ public class LifeStateUpdateTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0x30BF;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -33,4 +34,6 @@ public class LifeStateUpdateTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
+
 }

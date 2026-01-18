@@ -20,6 +20,7 @@ public class NpcTalkTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0xB046;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -35,4 +36,5 @@ public class NpcTalkTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

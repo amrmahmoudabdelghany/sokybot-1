@@ -20,6 +20,7 @@ public class EntityDeselectedTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0xB04B;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -32,4 +33,5 @@ public class EntityDeselectedTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

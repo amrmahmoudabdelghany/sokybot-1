@@ -21,6 +21,7 @@ public class CharacterDataTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return CHAR_DATA_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -51,4 +52,5 @@ public class CharacterDataTranslator extends AbstractTranslator {
             // CHAR_DATA packet is complex - return basic event on parsing issues
             return singleEvent(new CharacterDataEvent(machineFullName, 0, 0, 0, 0, 0));
         }
+}
 }

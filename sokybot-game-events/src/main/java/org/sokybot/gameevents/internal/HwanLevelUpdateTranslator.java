@@ -21,6 +21,7 @@ public class HwanLevelUpdateTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return HWAN_UPDATE_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -35,4 +36,5 @@ public class HwanLevelUpdateTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

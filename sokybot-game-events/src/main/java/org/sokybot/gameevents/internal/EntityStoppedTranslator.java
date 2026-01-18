@@ -20,6 +20,7 @@ public class EntityStoppedTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return SPAWN_STUCK_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -31,4 +32,5 @@ public class EntityStoppedTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

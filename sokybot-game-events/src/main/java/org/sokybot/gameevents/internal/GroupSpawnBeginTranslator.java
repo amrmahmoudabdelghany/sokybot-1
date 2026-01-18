@@ -20,6 +20,7 @@ public class GroupSpawnBeginTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return GROUP_SPAWN_BEGIN_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -30,4 +31,6 @@ public class GroupSpawnBeginTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
+
 }

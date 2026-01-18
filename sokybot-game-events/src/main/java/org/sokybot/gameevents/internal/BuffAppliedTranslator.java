@@ -21,6 +21,7 @@ public class BuffAppliedTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return BUFF_ADDED_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -39,4 +40,5 @@ public class BuffAppliedTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

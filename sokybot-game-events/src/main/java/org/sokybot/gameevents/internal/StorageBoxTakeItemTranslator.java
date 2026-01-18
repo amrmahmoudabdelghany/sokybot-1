@@ -20,6 +20,7 @@ public class StorageBoxTakeItemTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return STORAGE_BOX_TAKE_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -34,4 +35,6 @@ public class StorageBoxTakeItemTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
+
 }

@@ -20,6 +20,7 @@ public class SkillWithdrawTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return SKILL_WITHDRAW_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -35,4 +36,5 @@ public class SkillWithdrawTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

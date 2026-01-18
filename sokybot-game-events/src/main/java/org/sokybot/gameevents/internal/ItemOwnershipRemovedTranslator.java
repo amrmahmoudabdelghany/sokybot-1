@@ -20,6 +20,7 @@ public class ItemOwnershipRemovedTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return ITEM_OWNERSHIP_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -29,4 +30,5 @@ public class ItemOwnershipRemovedTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

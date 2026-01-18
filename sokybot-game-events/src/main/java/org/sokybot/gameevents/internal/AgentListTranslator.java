@@ -53,7 +53,7 @@ public class AgentListTranslator extends AbstractTranslator {
                     resList.add(agent);
                 }
             }
-            return singleEvent(new AgentListEvent(machineFullName, (byte)resList.size(), resList));
+            return singleEvent(new AgentListEvent(machineFullName, (byte)resList.size()));
         } catch (Exception e) {
             return noEvents();
         }

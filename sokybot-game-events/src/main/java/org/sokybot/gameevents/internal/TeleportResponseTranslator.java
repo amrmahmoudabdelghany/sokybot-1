@@ -20,6 +20,7 @@ public class TeleportResponseTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return TELEPORT_RESPONSE_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -34,4 +35,5 @@ public class TeleportResponseTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

@@ -38,3 +38,4 @@ public class CharacterDataBeginTranslator extends AbstractTranslator {
             return noEvents();
         }
     }
+}

@@ -64,6 +64,8 @@ public class SokybotLauncher {
             "org.osgi.service.component;version=1.5.0,org.osgi.service.component.runtime;version=1.5.0," +
             "org.osgi.service.component.runtime.dto;version=1.5.0," +
             "org.osgi.service.component.annotations;version=1.5.0," +
+            "org.osgi.util.promise;version=1.1.1," +
+            "org.osgi.util.function;version=1.1.0," +
             "javax.annotation;version=1.3.2"
         );
 
@@ -76,8 +78,10 @@ public class SokybotLauncher {
 
         // === SMART DYNAMIC LOADING SEQUENCE ===
         
-        // Level 0: Infrastructure
+        // Level 0: Infrastructure (must load in order)
         String[] infra = {
+            "sokybot-bootstrap/target/dependency/org.osgi.util.promise-1.1.1.jar",  // Required by SCR
+            "sokybot-bootstrap/target/dependency/org.osgi.util.function-1.1.0.jar", // Required by promise
             "sokybot-bootstrap/target/dependency/org.apache.felix.scr-2.2.6.jar",
             "sokybot-bootstrap/target/dependency/org.apache.felix.eventadmin-1.6.4.jar",
             "sokybot-bootstrap/target/dependency/org.apache.felix.configadmin-1.9.26.jar",
@@ -118,6 +122,10 @@ public class SokybotLauncher {
                 System.out.println("[Bootstrap] Loading " + target + " from " + path);
                 Bundle b = ctx.installBundle(fileUrl);
                 b.start();
+                // Wait a bit for bundle to fully start before loading next
+                if (target.contains("promise") || target.contains("function")) {
+                    Thread.sleep(100); // Small delay for dependency bundles
+                }
             } else {
                 System.err.println("[Bootstrap] WARNING: Could not discover bundle for " + target);
             }

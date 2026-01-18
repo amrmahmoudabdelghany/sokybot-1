@@ -20,6 +20,7 @@ public class ItemRepairTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return ITEM_REPAIR_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -36,4 +37,6 @@ public class ItemRepairTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
+
 }

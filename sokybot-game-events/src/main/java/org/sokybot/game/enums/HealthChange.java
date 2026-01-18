@@ -2,9 +2,8 @@ package org.sokybot.game.enums;
 
 import java.util.Map;
 
-import org.sokybot.machine.IMachineEvent;
 
-public enum HealthChange implements IMachineEvent {
+public enum HealthChange  {
 
 	HPChanged, MPChanged, 
 	HPAndMPChanged, BadStatus, 

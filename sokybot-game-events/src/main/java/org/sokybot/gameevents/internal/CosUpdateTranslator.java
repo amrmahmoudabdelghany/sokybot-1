@@ -22,6 +22,7 @@ public class CosUpdateTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0x30C9;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -60,10 +61,12 @@ public class CosUpdateTranslator extends AbstractTranslator {
                     reader.getLong();  // skill exp
                     reader.getInt();   // total SP
                     sourceUniqueId = reader.getInt();  // mob id
+            }
             return singleEvent(new CosUpdateEvent(
                 machineFullName, uniqueId, updateType,
                 experience, sourceUniqueId, hungerPoints, newName, newObjectId));
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

@@ -21,6 +21,7 @@ public class InventoryOperationTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0xB034;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -66,10 +67,13 @@ public class InventoryOperationTranslator extends AbstractTranslator {
                 case InventoryOperationEvent.OP_WITHDRAW_GOLD: // Withdraw gold from storage
                 default:
                     // Other operation types - emit basic event
+            }
             return singleEvent(new InventoryOperationEvent(
                 machineFullName, operationType, true, (byte)0,
                 sourceSlot, destSlot, amount, itemId, goldAmount));
         } catch (Exception e) {
             return noEvents();
         }
+}
+
 }

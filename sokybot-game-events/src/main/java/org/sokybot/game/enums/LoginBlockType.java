@@ -1,9 +1,8 @@
 package org.sokybot.game.enums;
 
-import org.sokybot.machine.IMachineEvent;
 
 //ref - https://github.com/sokybot/SilkroadDoc/blob/master/Packets/GATEWAY/LoginErrorCode.cs
-public enum LoginBlockType  implements IMachineEvent{
+public enum LoginBlockType  {
 	
 	
 	

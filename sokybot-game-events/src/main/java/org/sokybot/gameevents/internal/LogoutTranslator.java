@@ -19,7 +19,9 @@ public class LogoutTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0x300A;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         // Logout packet has no payload to parse
         return singleEvent(new LogoutEvent(machineFullName));
+}
 }

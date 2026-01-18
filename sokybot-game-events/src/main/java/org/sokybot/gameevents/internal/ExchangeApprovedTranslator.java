@@ -20,6 +20,7 @@ public class ExchangeApprovedTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return EXCHANGE_APPROVED_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -33,4 +34,6 @@ public class ExchangeApprovedTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
+
 }

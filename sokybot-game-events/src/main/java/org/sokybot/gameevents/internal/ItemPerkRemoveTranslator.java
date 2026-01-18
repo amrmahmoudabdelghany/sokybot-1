@@ -20,6 +20,7 @@ public class ItemPerkRemoveTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return ITEM_PERK_REMOVE_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -31,4 +32,6 @@ public class ItemPerkRemoveTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
+
 }

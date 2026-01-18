@@ -81,6 +81,7 @@
 		
 		<!-- Extension bundles -->
 		<module>${project.artifactId}-bundle-manager</module>
+		<module>${project.artifactId}-dev-tools</module>
 
 
 

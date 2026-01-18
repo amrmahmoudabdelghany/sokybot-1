@@ -21,6 +21,7 @@ public class FellowStatUpdateTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0x3422;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -51,4 +52,5 @@ public class FellowStatUpdateTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

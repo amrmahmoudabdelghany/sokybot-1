@@ -20,6 +20,7 @@ public class MagicOptionUpdateTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return MAGIC_OPTION_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -35,7 +36,10 @@ public class MagicOptionUpdateTranslator extends AbstractTranslator {
                 byte slot = reader.getByte();
                 // Item data follows but we just emit basic event
                 return singleEvent(MagicOptionUpdateEvent.success(machineFullName, slot));
+            }
             return noEvents();
         } catch (Exception e) {
+            return noEvents();
         }
+}
 }

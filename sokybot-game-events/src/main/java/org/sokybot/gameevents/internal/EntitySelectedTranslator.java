@@ -20,6 +20,7 @@ public class EntitySelectedTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return SPAWN_SELECTED_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -39,5 +40,7 @@ public class EntitySelectedTranslator extends AbstractTranslator {
             // No selection - entity deselected
             return noEvents();
         } catch (Exception e) {
+                    return noEvents();
         }
+}
 }

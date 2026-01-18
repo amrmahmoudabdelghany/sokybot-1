@@ -21,6 +21,7 @@ public class UnequipItemTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return UNEQUIP_ITEM_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -33,4 +34,5 @@ public class UnequipItemTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

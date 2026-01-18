@@ -20,7 +20,9 @@ public class TeleportCompleteTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0x34B5;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         // Game reset complete packet - no payload to parse
         return singleEvent(new TeleportCompleteEvent(machineFullName));
+}
 }

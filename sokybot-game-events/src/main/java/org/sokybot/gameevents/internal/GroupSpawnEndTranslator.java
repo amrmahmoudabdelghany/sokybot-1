@@ -20,8 +20,11 @@ public class GroupSpawnEndTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0x3018;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         // Group spawn end signals completion of batch
         // The actual spawn parsing is handled by chunked packet mechanism
         return singleEvent(new GroupSpawnEndEvent(machineFullName));
+}
+
 }

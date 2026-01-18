@@ -23,6 +23,7 @@ public class CosDataTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return 0x30C8;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -56,4 +57,5 @@ public class CosDataTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

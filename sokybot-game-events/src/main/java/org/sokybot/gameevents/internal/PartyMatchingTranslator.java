@@ -24,13 +24,17 @@ public class PartyMatchingTranslator extends AbstractTranslator {
     }
     public static PartyMatchingTranslator forPlayerJoinRequest(IGameDataLookup lookup) {
         return new PartyMatchingTranslator(lookup, 0x306E, MatchingEventType.PLAYER_JOIN_REQUEST);
+    }
     public static PartyMatchingTranslator forPartyCreated(IGameDataLookup lookup) {
         return new PartyMatchingTranslator(lookup, 0x3065, MatchingEventType.PARTY_CREATED);
+    }
     public static PartyMatchingTranslator forMemberCountUpdate(IGameDataLookup lookup) {
         return new PartyMatchingTranslator(lookup, 0xB067, MatchingEventType.MEMBER_COUNT_UPDATE);
+    }
     @Override
     public int getOpcode() {
         return opcode;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -58,4 +62,5 @@ public class PartyMatchingTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

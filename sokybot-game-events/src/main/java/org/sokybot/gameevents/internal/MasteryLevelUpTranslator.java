@@ -21,6 +21,7 @@ public class MasteryLevelUpTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return CHAR_MASTERY_LVL_UP_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -43,4 +44,5 @@ public class MasteryLevelUpTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

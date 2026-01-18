@@ -1,0 +1,239 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>io.github.sokybot</groupId>
+        <artifactId>sokybot</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>sokybot-dev-tools</artifactId>
+    <packaging>bundle</packaging>
+    <name>sokybot-dev-tools</name>
+    <description>Development tools bundle with standalone React app for bundle management, service inspection, and runtime metrics</description>
+
+    <properties>
+        <rsocket.version>1.1.4</rsocket.version>
+        <node.version>v20.10.0</node.version>
+        <npm.version>10.2.3</npm.version>
+        <!-- OSGi bundle deployment directory (relative to project root)
+             FileInstall watches this directory and auto-installs bundles -->
+        <osgi.plugins.dir>../plugins</osgi.plugins.dir>
+    </properties>
+
+    <dependencies>
+        <!-- RSocket for communication -->
+        <dependency>
+            <groupId>io.rsocket</groupId>
+            <artifactId>rsocket-core</artifactId>
+            <version>${rsocket.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.rsocket</groupId>
+            <artifactId>rsocket-transport-netty</artifactId>
+            <version>${rsocket.version}</version>
+        </dependency>
+        
+        <!-- Netty HTTP server for serving React app -->
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-codec-http</artifactId>
+            <version>4.1.93.Final</version>
+        </dependency>
+        <dependency>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-handler</artifactId>
+            <version>4.1.93.Final</version>
+        </dependency>
+        
+        <!-- Reactor for streams -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>3.5.9</version>
+        </dependency>
+        
+        <!-- Reactive Streams (required by Reactor) -->
+        <dependency>
+            <groupId>org.reactivestreams</groupId>
+            <artifactId>reactive-streams</artifactId>
+            <version>1.0.4</version>
+        </dependency>
+        
+        <!-- Jackson for JSON -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+        
+        <!-- OSGi -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.framework</artifactId>
+            <version>1.9.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.5.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.event</artifactId>
+            <version>1.4.0</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${dependency.slf4j-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>target/webapp</directory>
+                <targetPath>webapp</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-Activator>org.sokybot.devtools.DevToolsActivator</Bundle-Activator>
+                        <Import-Package>
+                            !io.netty.*,
+                            !reactor.*,
+                            !org.reactivestreams.*,
+                            !sun.reflect.*,
+                            !jdk.internal.*,
+                            !javax.annotation.meta.*,
+                            *
+                        </Import-Package>
+                        <Export-Package>org.sokybot.devtools</Export-Package>
+                        <Embed-Dependency>
+                            rsocket-core,
+                            rsocket-transport-netty,
+                            reactor-core,
+                            reactive-streams,
+                            netty-codec-http,
+                            netty-handler,
+                            netty-buffer,
+                            netty-codec,
+                            netty-common,
+                            netty-resolver,
+                            netty-transport,
+                            jackson-annotations,
+                            jackson-core,
+                            jackson-databind
+                        </Embed-Dependency>
+                        <Embed-Transitive>true</Embed-Transitive>
+                    </instructions>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <version>1.15.0</version>
+                <configuration>
+                    <workingDirectory>src/main/frontend</workingDirectory>
+                    <installDirectory>target</installDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install node and npm</id>
+                        <goals>
+                            <goal>install-node-and-npm</goal>
+                        </goals>
+                        <configuration>
+                            <nodeVersion>${node.version}</nodeVersion>
+                            <npmVersion>${npm.version}</npmVersion>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm install</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>install</arguments>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>npm run build</id>
+                        <goals>
+                            <goal>npm</goal>
+                        </goals>
+                        <configuration>
+                            <arguments>run build</arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Copy bundle to OSGi plugins directory for FileInstall auto-deployment -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-bundle-to-plugins</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <property name="bundle.jar" value="${project.build.directory}/${project.build.finalName}.jar"/>
+                                <property name="plugins.dir" location="${osgi.plugins.dir}"/>
+                                <property name="destination.jar" value="${plugins.dir}/${project.build.finalName}.jar"/>
+                                
+                                <echo message=""/>
+                                <echo message="=========================================="/>
+                                <echo message="Copying bundle to OSGi plugins directory"/>
+                                <echo message="=========================================="/>
+                                <echo message="Source:      ${bundle.jar}"/>
+                                <echo message="Destination: ${destination.jar}"/>
+                                <echo message="Plugins dir: ${plugins.dir}"/>
+                                <echo message=""/>
+                                
+                                <!-- Create plugins directory if it doesn't exist -->
+                                <mkdir dir="${plugins.dir}"/>
+                                
+                                <!-- Copy bundle JAR -->
+                                <copy file="${bundle.jar}"
+                                      tofile="${destination.jar}"
+                                      overwrite="true"
+                                      verbose="true"/>
+                                
+                                <echo message="✓ Bundle copied successfully!"/>
+                                <echo message="FileInstall will detect and install the bundle automatically"/>
+                                <echo message="=========================================="/>
+                                <echo message=""/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

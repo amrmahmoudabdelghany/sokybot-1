@@ -20,6 +20,7 @@ public class AttackSpeedUpdateTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return ATTACK_SPEED_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -32,4 +33,5 @@ public class AttackSpeedUpdateTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

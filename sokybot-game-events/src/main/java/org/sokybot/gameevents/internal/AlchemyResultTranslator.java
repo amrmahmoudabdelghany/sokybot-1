@@ -24,6 +24,7 @@ public class AlchemyResultTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return opcode;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
@@ -51,6 +52,7 @@ public class AlchemyResultTranslator extends AbstractTranslator {
                  // Assuming 1 is Cancel based on common patterns, simplified here.
                  // Actually event supports 'cancelled' flag.
                  return singleEvent(new AlchemyResultEvent(machineFullName, false, alchemyType, (byte)0, false, true, null));
+            }
             boolean isSuccess = reader.getBoolean();
             // Skip Chinese client check (packet.ReadByte()) as we don't know client type easily here, assume not Chinese for now or handle gracefully?
             // RSBot: if (Game.ClientType >= GameClientType.Chinese) packet.ReadByte();
@@ -61,7 +63,7 @@ public class AlchemyResultTranslator extends AbstractTranslator {
             Integer newItemId = null;
             if (!isSuccess) {
                 destroyed = reader.getBoolean(); // isDestroyed
-            } else {
+            }
                 // Success - parse item
                 // RSBot: InventoryItem.FromPacket(packet, slot)
                 // Item parsing is complex (Rent type, ItemID, OptLevel, Variance, Durability, MagParams etc.)
@@ -78,4 +80,5 @@ public class AlchemyResultTranslator extends AbstractTranslator {
         } catch (Exception e) {
             return noEvents();
         }
+}
 }

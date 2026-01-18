@@ -22,6 +22,7 @@ public class SkillPointsUpdateTranslator extends AbstractTranslator {
     @Override
     public int getOpcode() {
         return ATTACK_GAINS_UPDATE_OPCODE;
+    }
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
@@ -34,5 +35,7 @@ public class SkillPointsUpdateTranslator extends AbstractTranslator {
             }
             return noEvents();
         } catch (Exception e) {
+            return noEvents();
         }
+}
 }
