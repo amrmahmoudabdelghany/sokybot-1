@@ -155,6 +155,12 @@
             <version>${dependency.mockito-junit-jupter.version}</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>javax.transaction</groupId>
+            <artifactId>javax.transaction-api</artifactId>
+            <version>1.3</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
     
     <build>
@@ -188,8 +194,8 @@
                             jandex,
                             classmate,
                             byte-buddy,
-                            jakarta.persistence-api,
-                            jakarta.transaction-api,
+                            javax.persistence-api,
+                            javax.transaction-api,
                             jakarta.activation-api,
                             jaxb-runtime,
                             txw2,
