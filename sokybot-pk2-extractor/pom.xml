@@ -83,11 +83,7 @@
                             *;resolution:=optional
                         </Import-Package>
                         <Export-Package>
-                            org.sokybot.pk2extractor,
-                            org.sokybot.pk2extractor.dto,
-                            org.sokybot.pk2extractor.exception,
-                            org.sokybot.pk2extractor.datapk2,
-                            org.sokybot.pk2extractor.mediapk2
+                            org.sokybot.pk2extractor*
                         </Export-Package>
                         <_dsannotations>*</_dsannotations>
                     </instructions>

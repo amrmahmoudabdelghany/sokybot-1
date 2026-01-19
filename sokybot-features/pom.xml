@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-features</artifactId>
-    <packaging>feature</packaging>
+    <packaging>pom</packaging>
     <name>Sokybot :: Features</name>
     <description>Karaf feature descriptors for Sokybot bundles</description>
 
@@ -26,6 +26,15 @@
                 <configuration>
                     <enableGeneration>true</enableGeneration>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>generate-features</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>features-generate-descriptor</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

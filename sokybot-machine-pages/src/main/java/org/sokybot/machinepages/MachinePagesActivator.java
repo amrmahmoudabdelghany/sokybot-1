@@ -6,16 +6,18 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.stream.Stream;
+
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
-import org.sokybot.IGroupListener;
-import org.sokybot.IMachineListener;
+import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 import org.sokybot.runtime.ISokybotContext;
@@ -37,23 +39,45 @@ import org.sokybot.settings.security.ICredentialEncryptor;
  * Activator for Machine Pages bundle.
  * Registers declarative UI pages for Inventory, Skills, Training, Environment, and Log.
  */
-@Component(immediate = true)
-public class MachinePagesActivator implements IGroupListener, IMachineListener {
+@Component(
+    immediate = true,
+    property = {
+        "event.topics=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_CREATED,
+        "event.topics=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED
+    }
+)
+public class MachinePagesActivator implements EventHandler {
     
-    @Reference
     private ISokybotContext appCtx;
-    
-    @Reference
     private IWebviewConfigurator webviewConfigurator;
-    
-    @Reference
     private ISettingsRegistry settingsRegistry;
-    
-    @Reference
     private IProfileManager profileManager;
+    private ICredentialEncryptor credentialEncryptor;
     
     @Reference
-    private ICredentialEncryptor credentialEncryptor;
+    public void setAppCtx(ISokybotContext appCtx) {
+        this.appCtx = appCtx;
+    }
+    
+    @Reference
+    public void setWebviewConfigurator(IWebviewConfigurator webviewConfigurator) {
+        this.webviewConfigurator = webviewConfigurator;
+    }
+    
+    @Reference
+    public void setSettingsRegistry(ISettingsRegistry settingsRegistry) {
+        this.settingsRegistry = settingsRegistry;
+    }
+    
+    @Reference
+    public void setProfileManager(IProfileManager profileManager) {
+        this.profileManager = profileManager;
+    }
+    
+    @Reference
+    public void setCredentialEncryptor(ICredentialEncryptor credentialEncryptor) {
+        this.credentialEncryptor = credentialEncryptor;
+    }
     
     private BundleContext bundleContext;
     
@@ -71,7 +95,7 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
     private Map<String, Object> healingSchema;
     
     @Activate
-    public void activate(org.osgi.service.component.ComponentContext componentContext) {
+    public void activate(ComponentContext componentContext) {
         System.out.println("Starting Machine Pages Bundle");
         this.bundleContext = componentContext.getBundleContext();
         
@@ -80,7 +104,7 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
         
         // Install for existing machines
         if (appCtx != null && appCtx.isRunning()) {
-            installMachinePages(appCtx);
+            installExistingMachines(appCtx);
         }
     }
     
@@ -88,22 +112,46 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
     public void deactivate() {
         System.out.println("Stopping Machine Pages Bundle");
         if (appCtx != null) {
-            uninstallMachinePages(appCtx);
+            uninstallAllMachines();
         }
         
-        // Shutdown all services
-        for (MachineServices services : machineServices.values()) {
-            services.shutdown();
-        }
         machineServices.clear();
     }
     
+    @Override
+    public void handleEvent(Event event) {
+        String topic = event.getTopic();
+        
+        if (ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_CREATED.equals(topic)) {
+            IMachineContext machineContext = (IMachineContext) event.getProperty(ContextLifecycleEvents.PROP_CONTEXT);
+            if (machineContext != null) {
+                installMachinePages(machineContext);
+            }
+        } else if (ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED.equals(topic)) {
+            String fullName = (String) event.getProperty(ContextLifecycleEvents.PROP_FULL_NAME);
+            if (fullName != null) {
+                uninstallMachinePages(fullName);
+            }
+        }
+    }
+    
+    private void installExistingMachines(ISokybotContext ctx) {
+        Stream.of(ctx.getGroups())
+             .filter(IGroupContext::isRunning)
+             .flatMap(g -> Stream.of(g.getMachines()))
+             .filter(IMachineContext::isRunning)
+             .forEach(this::installMachinePages);
+    }
+    
+    private void uninstallAllMachines() {
+        // Create a copy of keys to avoid concurrent modification if uninstall removes from map
+        new ArrayList<>(machineServices.keySet()).forEach(this::uninstallMachinePages);
+    }
+
     private void loadUISchemas() {
         try {
             inventorySchema = SchemaLoader.loadSchema("/ui/inventory.json", getClass());
             skillsSchema = SchemaLoader.loadSchema("/ui/skills.json", getClass());
-            trainingSchema = SchemaLoader.loadSchema("/ui/training.json", getClass());
-            environmentSchema = SchemaLoader.loadSchema("/ui/environment.json", getClass());
             trainingSchema = SchemaLoader.loadSchema("/ui/training.json", getClass());
             environmentSchema = SchemaLoader.loadSchema("/ui/environment.json", getClass());
             logSchema = SchemaLoader.loadSchema("/ui/log.json", getClass());
@@ -118,58 +166,12 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
         }
     }
     
-    @Override
-    public void onGroupInstalled(IGroupContext groupCtx) {
-        installMachinePages(groupCtx);
-    }
-    
-    @Override
-    public void onGroupUninstalled(IGroupContext groupCtx) {
-        uninstallMachinePages(groupCtx);
-    }
-    
-    @Override
-    public void onMachineInstalled(IMachineContext machineCtx) {
-        installMachinePages(machineCtx);
-    }
-    
-    @Override
-    public void onMachineUninstalled(IMachineContext machineCtx) {
-        uninstallMachinePages(machineCtx);
-    }
-    
-    private void installMachinePages(ISokybotContext ctx) {
-        if (ctx.isRunning()) {
-            Stream.of(ctx.getGroups())
-                .filter(IGroupContext::isRunning)
-                .forEach(this::installMachinePages);
-            ctx.addGroupListener(this);
-        }
-    }
-    
-    private void uninstallMachinePages(ISokybotContext ctx) {
-        Stream.of(ctx.getGroups())
-            .filter(IGroupContext::isRunning)
-            .forEach(this::uninstallMachinePages);
-        ctx.removeGroupListener(this);
-    }
-    
-    private void installMachinePages(IGroupContext ctx) {
-        Stream.of(ctx.getMachines())
-            .filter(IMachineContext::isRunning)
-            .forEach(this::installMachinePages);
-        ctx.addMachineListener(this);
-    }
-    
-    private void uninstallMachinePages(IGroupContext ctx) {
-        Stream.of(ctx.getMachines())
-            .filter(IMachineContext::isRunning)
-            .forEach(this::uninstallMachinePages);
-        ctx.removeMachineListener(this);
-    }
-    
     private void installMachinePages(IMachineContext ctx) {
         String machineFullName = ctx.fullName();
+        if (machineServices.containsKey(machineFullName)) {
+            return; // Already installed
+        }
+        
         System.out.println("Installing Machine Pages for: " + machineFullName);
         
         // Create service instances
@@ -199,37 +201,33 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
         registerPages(machineFullName, services);
     }
     
-    private void uninstallMachinePages(IMachineContext ctx) {
-        String machineFullName = ctx.fullName();
-        
+    private void uninstallMachinePages(String machineFullName) {
         MachineServices services = machineServices.remove(machineFullName);
         if (services != null) {
             // Unregister EventHandlers
-            if (services.inventoryHandlerRegistration != null) {
-                services.inventoryHandlerRegistration.unregister();
-            }
-            if (services.skillHandlerRegistration != null) {
-                services.skillHandlerRegistration.unregister();
-            }
-            if (services.trainingHandlerRegistration != null) {
-                services.trainingHandlerRegistration.unregister();
-            }
-            if (services.environmentHandlerRegistration != null) {
-                services.environmentHandlerRegistration.unregister();
-            }
-            if (services.logHandlerRegistration != null) {
-                services.logHandlerRegistration.unregister();
-            }
+            if (services.inventoryHandlerRegistration != null) services.inventoryHandlerRegistration.unregister();
+            if (services.skillHandlerRegistration != null) services.skillHandlerRegistration.unregister();
+            if (services.trainingHandlerRegistration != null) services.trainingHandlerRegistration.unregister();
+            if (services.environmentHandlerRegistration != null) services.environmentHandlerRegistration.unregister();
+            if (services.logHandlerRegistration != null) services.logHandlerRegistration.unregister();
+            if (services.connectionHandlerRegistration != null) services.connectionHandlerRegistration.unregister();
+            if (services.navigationHandlerRegistration != null) services.navigationHandlerRegistration.unregister();
+            if (services.healingHandlerRegistration != null) services.healingHandlerRegistration.unregister();
             
             // Shutdown services
             services.shutdown();
             
             // Remove pages
-            webviewConfigurator.removePage("inventory_" + machineFullName);
-            webviewConfigurator.removePage("skills_" + machineFullName);
-            webviewConfigurator.removePage("training_" + machineFullName);
-            webviewConfigurator.removePage("environment_" + machineFullName);
-            webviewConfigurator.removePage("log_" + machineFullName);
+            if (webviewConfigurator != null) {
+                webviewConfigurator.removePage("inventory_" + machineFullName);
+                webviewConfigurator.removePage("skills_" + machineFullName);
+                webviewConfigurator.removePage("training_" + machineFullName);
+                webviewConfigurator.removePage("environment_" + machineFullName);
+                webviewConfigurator.removePage("log_" + machineFullName);
+                webviewConfigurator.removePage("connection_" + machineFullName);
+                webviewConfigurator.removePage("navigation_" + machineFullName);
+                webviewConfigurator.removePage("healing_" + machineFullName);
+            }
         }
     }
     
@@ -320,6 +318,8 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
     }
     
     private void registerPages(String machineFullName, MachineServices services) {
+        if (webviewConfigurator == null) return;
+
         // Register Inventory page
         if (inventorySchema != null) {
             webviewConfigurator.addDeclarativePage(
@@ -493,7 +493,7 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
                 "state"
             );
         }
-
+        
         // Register Navigation page
         if (navigationSchema != null) {
             webviewConfigurator.addDeclarativePage(
@@ -522,7 +522,7 @@ public class MachinePagesActivator implements IGroupListener, IMachineListener {
                 "state"
             );
         }
-
+        
         // Register Healing page
         if (healingSchema != null) {
             webviewConfigurator.addDeclarativePage(

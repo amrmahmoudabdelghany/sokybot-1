@@ -1,6 +1,7 @@
 package org.sokybot.actuator.training;
 
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.IActuatorContext;
 import org.sokybot.engine.api.extension.BundleException;
@@ -44,8 +45,12 @@ public class TrainingActuator implements IActuator {
         return "training";
     }
 
-    @Reference
     private ISettingsRegistry settingsRegistry;
+
+    @Reference
+    public void setSettingsRegistry(ISettingsRegistry settingsRegistry) {
+        this.settingsRegistry = settingsRegistry;
+    }
     
     @Override
     public void initialize(IActuatorContext context) throws BundleException {

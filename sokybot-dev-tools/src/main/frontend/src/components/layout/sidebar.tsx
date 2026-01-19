@@ -1,4 +1,4 @@
-import { Package, Activity, FileText, Server, Settings } from "lucide-react"
+import { Package, Activity, FileText, Server, Settings, Database } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "../theme-toggle"
@@ -51,6 +51,14 @@ export function Sidebar({ className, activeView, onViewChange }: SidebarProps) {
                         >
                             <FileText className="mr-2 h-4 w-4" />
                             Logs
+                        </Button>
+                        <Button
+                            variant={activeView === "database" ? "secondary" : "ghost"}
+                            className="w-full justify-start"
+                            onClick={() => onViewChange("database")}
+                        >
+                            <Database className="mr-2 h-4 w-4" />
+                            Database
                         </Button>
                     </div>
                 </div>

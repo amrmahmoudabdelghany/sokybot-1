@@ -1,6 +1,7 @@
 package org.sokybot.actuator.connector;
 
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.IActuatorContext;
 import org.sokybot.engine.api.extension.BundleException;
@@ -10,6 +11,9 @@ import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.Encoding;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.NetworkPeer;
+import org.sokybot.settings.api.ISettingsRegistry;
+import org.sokybot.settings.api.ISettingsProvider;
+import org.sokybot.actuator.login.LoginSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,9 +26,16 @@ public class ConnectorActuator implements IActuator {
     
     private static final Logger log = LoggerFactory.getLogger(ConnectorActuator.class);
     
+    private ISettingsRegistry settingsRegistry;
+    
     @Override
     public String getName() {
         return "connector";
+    }
+    
+    @Reference
+    public void setSettingsRegistry(ISettingsRegistry settingsRegistry) {
+        this.settingsRegistry = settingsRegistry;
     }
     
     @Override
@@ -32,6 +43,16 @@ public class ConnectorActuator implements IActuator {
         log.info("Initializing connector actuator for machine: {}", context.getMachineId());
         
         try {
+            // Get settings provider for login settings (where target gateway is stored)
+            // Note: LoginSettings should be registered by LoginActuator. 
+            // We assume LoginActuator is present if we need connection settings.
+            ISettingsProvider<LoginSettings> settingsProvider = settingsRegistry.getProvider(
+                context.getGroupName(),
+                context.getMachineName(),
+                "login",
+                LoginSettings.class
+            );
+
             // Register connector cycle
             ICycleDefinition cycle = new CycleDefinitionBuilder()
                 .name("connector-cycle")
@@ -39,9 +60,10 @@ public class ConnectorActuator implements IActuator {
                 .entryState("CHECK_CONNECTION")
                 .entryGuard(ctx -> {
                     // Only enter if not connected and settings are available
+                    LoginSettings settings = settingsProvider.get();
                     return !ctx.getDispatcher().isConnected() 
-                        && ctx.getSettings().getTargetGateway() != null
-                        && !ctx.getSettings().getTargetGateway().isEmpty();
+                        && settings.getTargetGateway() != null
+                        && !settings.getTargetGateway().isEmpty();
                 })
                 .state("CHECK_CONNECTION", builder -> builder
                     .guard(ctx -> {
@@ -56,11 +78,13 @@ public class ConnectorActuator implements IActuator {
                 .state("CONNECT_TO_SERVER", builder -> builder
                     .guard(ctx -> {
                         // Check if settings have connection info
-                        String gateway = ctx.getSettings().getTargetGateway();
+                        LoginSettings settings = settingsProvider.get();
+                        String gateway = settings.getTargetGateway();
                         return gateway != null && !gateway.isEmpty();
                     })
                     .action(ctx -> {
-                        String gateway = ctx.getSettings().getTargetGateway();
+                        LoginSettings settings = settingsProvider.get();
+                        String gateway = settings.getTargetGateway();
                         log.info("Connecting to gateway: {}", gateway);
                         // Parse gateway (format: host:port)
                         String[] parts = gateway.split(":");

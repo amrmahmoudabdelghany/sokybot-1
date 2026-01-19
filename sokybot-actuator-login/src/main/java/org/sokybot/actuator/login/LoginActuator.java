@@ -14,7 +14,6 @@ import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.NetworkPeer;
 import org.sokybot.settings.api.ISettingsRegistry;
 import org.sokybot.settings.api.ISettingsProvider;
-import org.sokybot.persistence.service.IGameDataLookup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,11 +28,12 @@ public class LoginActuator implements IActuator {
     
     private static final Logger log = LoggerFactory.getLogger(LoginActuator.class);
     
-    @Reference
-    private IGameDataLookup gameDataLookup;
+    private ISettingsRegistry settingsRegistry;
 
     @Reference
-    private ISettingsRegistry settingsRegistry;
+    public void setSettingsRegistry(ISettingsRegistry settingsRegistry) {
+        this.settingsRegistry = settingsRegistry;
+    }
     
     @Override
     public String getName() {
@@ -90,8 +90,10 @@ public class LoginActuator implements IActuator {
                         String password = settings.getPassword();
                         log.info("Sending login request for user: {}", username);
                         
-                        // Get locale from game data lookup
-                        byte locale = gameDataLookup.getLocal().orElse((byte) 22);
+                        log.info("Sending login request for user: {}", username);
+                        
+                        // Get locale from settings
+                        byte locale = (byte) settings.getLocale();
                         
                         // Parse agent ID from settings (if available)
                         short agentId = parseAgentId(settings.getTargetAgent());

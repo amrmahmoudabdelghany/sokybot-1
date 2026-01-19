@@ -25,34 +25,52 @@ import java.util.function.Function;
  * RSocket handler for dev-tools requests.
  * Handles request-response and stream requests prefixed with "devtools:".
  */
+@org.osgi.service.component.annotations.Component(service = DevToolsRSocketHandler.class, immediate = true)
 public class DevToolsRSocketHandler {
     
     private static final Logger logger = LoggerFactory.getLogger(DevToolsRSocketHandler.class);
     
     private final ObjectMapper mapper = new ObjectMapper();
-    private final BundleManagementService bundleService;
-    private final ServiceInspectionService serviceService;
-    private final RuntimeMetricsService metricsService;
-    private final LogStreamingService logService;
+    private BundleManagementService bundleService;
+    private ServiceInspectionService serviceService;
+    private RuntimeMetricsService metricsService;
+    private LogStreamingService logService;
+    
+    @org.osgi.service.component.annotations.Reference
+    private DatabaseExplorerService databaseService;
     
     private CloseableChannel server;
-    private final Sinks.Many<Map<String, Object>> bundleEventSink;
-    private final Sinks.Many<Map<String, Object>> metricsEventSink;
+    private Sinks.Many<Map<String, Object>> bundleEventSink;
+    private Sinks.Many<Map<String, Object>> metricsEventSink;
+
+    private static final int PORT = 7002;
     
-    public DevToolsRSocketHandler(BundleManagementService bundleService,
-                                  ServiceInspectionService serviceService,
-                                  RuntimeMetricsService metricsService,
-                                  LogStreamingService logService) {
-        this.bundleService = bundleService;
-        this.serviceService = serviceService;
-        this.metricsService = metricsService;
-        this.logService = logService;
+    @org.osgi.service.component.annotations.Activate
+    public void activate(org.osgi.framework.BundleContext bundleContext) {
+        logger.info("DevToolsRSocketHandler activating...");
+        
+        // Initialize services
+        this.bundleService = new BundleManagementService(bundleContext);
+        this.serviceService = new ServiceInspectionService(bundleContext);
+        this.metricsService = new RuntimeMetricsService();
+        this.logService = new LogStreamingService();
         
         // Create event sinks for streaming
         this.bundleEventSink = Sinks.many().multicast().onBackpressureBuffer(100);
         this.metricsEventSink = Sinks.many().multicast().onBackpressureBuffer(100);
+
+        // Start server
+        start(PORT);
     }
-    
+
+    @org.osgi.service.component.annotations.Deactivate
+    public void deactivate() {
+        stop();
+        if (logService != null) {
+            logService.stop();
+        }
+    }
+
     /**
      * Start the RSocket server.
      */
@@ -101,6 +119,7 @@ public class DevToolsRSocketHandler {
             logger.info("DevTools RSocket Server stopped");
         }
     }
+
     
     /**
      * Handle request-response requests.
@@ -232,6 +251,54 @@ public class DevToolsRSocketHandler {
                     response.put("error", "File path required");
                 }
                 
+            } else if ("devtools:database.contexts".equals(requestData)) {
+                if (databaseService != null) {
+                    response.put("success", true);
+                    response.put("data", databaseService.listContexts());
+                } else {
+                    response.put("success", false);
+                    response.put("error", "Database Explorer Service not available");
+                }
+
+            } else if (requestData.startsWith("devtools:database.tables:")) {
+                String gamePath = requestData.substring("devtools:database.tables:".length());
+                if (databaseService != null) {
+                    try {
+                        response.put("success", true);
+                        response.put("data", databaseService.listTables(gamePath));
+                    } catch (Exception e) {
+                        response.put("success", false);
+                        response.put("error", e.getMessage());
+                    }
+                } else {
+                    response.put("success", false);
+                    response.put("error", "Database Explorer Service not available");
+                }
+
+            } else if (requestData.startsWith("devtools:database.query:")) {
+                // Format: devtools:database.query:gamePath:sql
+                String params = requestData.substring("devtools:database.query:".length());
+                int firstColon = params.indexOf(':');
+                if (firstColon > 0) {
+                    String gamePath = params.substring(0, firstColon);
+                    String sql = params.substring(firstColon + 1);
+                    if (databaseService != null) {
+                        try {
+                            response.put("success", true);
+                            response.put("data", databaseService.executeQuery(gamePath, sql));
+                        } catch (Exception e) {
+                            response.put("success", false);
+                            response.put("error", e.getMessage());
+                        }
+                    } else {
+                        response.put("success", false);
+                        response.put("error", "Database Explorer Service not available");
+                    }
+                } else {
+                    response.put("success", false);
+                    response.put("error", "Invalid format");
+                }
+
             } else {
                 response.put("success", false);
                 response.put("error", "Unknown request: " + requestData);
@@ -251,7 +318,7 @@ public class DevToolsRSocketHandler {
             }
         }
     }
-    
+
     /**
      * Handle request-stream requests.
      */
@@ -281,7 +348,6 @@ public class DevToolsRSocketHandler {
                             return DefaultPayload.create("{}");
                         }
                     });
-                    
             } else if ("devtools:stream:logs".equals(requestData)) {
                 return logService.getLogEventSink().asFlux()
                     .map(event -> {

@@ -125,6 +125,7 @@
                             !sun.reflect.*,
                             !jdk.internal.*,
                             !javax.annotation.meta.*,
+                            !java.nio.file.spi,
                             *
                         </Import-Package>
                         <Export-Package>org.sokybot.devtools</Export-Package>

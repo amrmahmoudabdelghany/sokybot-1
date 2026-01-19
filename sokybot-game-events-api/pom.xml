@@ -18,11 +18,13 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-proxy</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-persistence</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -32,12 +34,18 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
+                        <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>
                             org.sokybot.gameevents,
                             org.sokybot.gameevents.events.*
                         </Export-Package>
+                        <Import-Package>
+                            org.sokybot.*,
+                            org.osgi.*,
+                            *;resolution:=optional
+                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

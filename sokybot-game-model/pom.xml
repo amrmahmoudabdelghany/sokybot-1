@@ -17,6 +17,7 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-game-events</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -40,16 +41,19 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-persistence</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-settings</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
 
@@ -59,12 +63,23 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Export-Package>org.sokybot.gamemodel.*</Export-Package>
-                        <Import-Package>org.sokybot.*,org.osgi.*,*;resolution:=optional</Import-Package>
-                        <_dsannotations>*</_dsannotations>
+                        <Private-Package>org.sokybot.gamemodel.internal.*</Private-Package>
+                        <Import-Package>
+                            !com.aayushatharva.brotli4j,
+                            !com.aayushatharva.brotli4j.*,
+                            org.sokybot.gameevents,
+                            org.sokybot.gameevents.events.*,
+                            org.sokybot.persistence.*,
+                            org.sokybot.commons.*,
+                            org.sokybot.settings.*,
+                            org.osgi.*,
+                            *;resolution:=optional
+                        </Import-Package>
+                        <_dsannotations>org.sokybot.gamemodel.*</_dsannotations>
                     </instructions>
                 </configuration>
             </plugin>

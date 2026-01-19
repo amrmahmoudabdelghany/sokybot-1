@@ -14,12 +14,15 @@
         <bundle>mvn:io.github.sokybot/sokybot-loader-api/${project.version}</bundle>
         <bundle>mvn:io.github.sokybot/sokybot-engine-api/${project.version}</bundle>
         <bundle>mvn:io.github.sokybot/sokybot-game-events-api/${project.version}</bundle>
+        <bundle>mvn:io.github.sokybot/sokybot-ui-api/${project.version}</bundle>
         
         <!-- Infrastructure -->
         <bundle>mvn:io.github.sokybot/sokybot-commons/${project.version}</bundle>
         <bundle>mvn:io.github.sokybot/sokybot-security/${project.version}</bundle>
         <bundle>mvn:io.github.sokybot/sokybot-settings/${project.version}</bundle>
         <bundle>mvn:io.github.sokybot/sokybot-persistence/${project.version}</bundle>
+        <!-- H2 Database (Separate bundle to avoid embedding issues) -->
+        <bundle>mvn:com.h2database/h2/2.1.214</bundle>
         
         <!-- Game Data -->
         <bundle>mvn:io.github.sokybot/sokybot-pk2/${project.version}</bundle>
@@ -61,6 +64,8 @@
         <!-- Karaf shell and SSH for development -->
         <feature version="${karaf.version}">shell</feature>
         <feature version="${karaf.version}">ssh</feature>
+        <!-- Web console for browser-based management (http://localhost:8181/system/console) -->
+        <feature version="${karaf.version}">webconsole</feature>
         <!-- Development bundles -->
         <bundle>mvn:io.github.sokybot/sokybot-dev-tools/${project.version}</bundle>
         <bundle>mvn:io.github.sokybot/sokybot-packet-sniffer/${project.version}</bundle>

@@ -44,6 +44,13 @@ case "$1" in
         ;;
     *)
         echo "Starting Sokybot in interactive mode..."
+        # Enable hot reload (bundle:watch) in shell init script
+        INIT_SCRIPT="$KARAF_HOME/etc/shell.init.script"
+        if [ -f "$INIT_SCRIPT" ]; then
+            if ! grep -q "bundle:watch" "$INIT_SCRIPT"; then
+                echo "bundle:watch *" >> "$INIT_SCRIPT"
+            fi
+        fi
         "$KARAF_HOME/bin/karaf"
         ;;
 esac

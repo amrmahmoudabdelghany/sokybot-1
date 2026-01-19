@@ -1,6 +1,12 @@
-import { RSocketClient } from 'rsocket-core';
+import { RSocketClient, IdentitySerializer } from 'rsocket-core';
 import RSocketWebSocketClient from 'rsocket-websocket-client';
 
+
+
+const getRSocketUrl = () => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}/rsocket`;
+};
 
 export class RSocketService {
     private client: any;
@@ -8,6 +14,10 @@ export class RSocketService {
     connect(): Promise<void> {
         return new Promise((resolve, reject) => {
             const client = new RSocketClient({
+                serializers: {
+                    data: IdentitySerializer,
+                    metadata: IdentitySerializer,
+                },
                 setup: {
                     keepAlive: 60000,
                     lifetime: 180000,
@@ -15,7 +25,7 @@ export class RSocketService {
                     metadataMimeType: 'text/plain',
                 },
                 transport: new RSocketWebSocketClient({
-                    url: `ws://${window.location.hostname}:7000`,
+                    url: getRSocketUrl(),
                     wsCreator: (url: string) => new WebSocket(url),
                 }),
             });
@@ -94,7 +104,7 @@ export class RSocketService {
             }
         };
     }
-    
+
     /**
      * Request a stream from the server
      */
@@ -105,21 +115,21 @@ export class RSocketService {
     ): { unsubscribe: () => void } {
         if (!this.client) {
             console.error("Client not connected");
-            return { unsubscribe: () => {} };
+            return { unsubscribe: () => { } };
         }
-        
+
         const payload = {
             data: message,
             metadata: ""
         };
-        
+
         let subscription: any;
-        
+
         this.client.requestStream(payload).subscribe({
             onNext: (payload: any) => {
                 try {
-                    const data = typeof payload.data === 'string' 
-                        ? JSON.parse(payload.data) 
+                    const data = typeof payload.data === 'string'
+                        ? JSON.parse(payload.data)
                         : payload.data;
                     onNext(data);
                 } catch (e) {
@@ -138,7 +148,7 @@ export class RSocketService {
                 subscription.request(2147483647); // Request unlimited
             }
         });
-        
+
         return {
             unsubscribe: () => {
                 if (subscription) {
@@ -147,7 +157,7 @@ export class RSocketService {
             }
         };
     }
-    
+
     /**
      * Request a stream with automatic state updates
      */

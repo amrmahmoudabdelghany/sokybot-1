@@ -185,19 +185,27 @@ public class GroupContextImpl implements IGroupContext {
         if (this.gameDataLookup == null) {
             synchronized (this) {
                 if (this.gameDataLookup == null) {
-                    if (this.gamePersistenceFactory == null) {
+                    IGamePersistenceFactory factory = this.gamePersistenceFactory;
+                    
+                    if (factory == null) {
                         // Try lazy fetch if services were not ready during init
                         if (bundleContext != null) {
-                            ServiceReference<IGamePersistenceFactory> ref = bundleContext.getServiceReference(IGamePersistenceFactory.class);
-                            if (ref != null) {
-                                IGamePersistenceFactory factory = bundleContext.getService(ref);
-                                if (factory != null) {
-                                    this.gameDataLookup = factory.getLookup(this.groupInfo.getGamePath());
+                            try {
+                                ServiceReference<IGamePersistenceFactory> ref = bundleContext.getServiceReference(IGamePersistenceFactory.class);
+                                if (ref != null) {
+                                    factory = bundleContext.getService(ref);
                                 }
+                            } catch (Exception e) {
+                                log.warn("Failed to lookup IGamePersistenceFactory", e);
                             }
                         }
+                    }
+                    
+                    if (factory != null) {
+                        // Register game to ensure EMF is created
+                        this.gameDataLookup = factory.registerGame(this.groupInfo.getGamePath());
                     } else {
-                        this.gameDataLookup = this.gamePersistenceFactory.getLookup(this.groupInfo.getGamePath());
+                        log.warn("IGamePersistenceFactory not available - cannot load GameDataLookup");
                     }
                 }
             }

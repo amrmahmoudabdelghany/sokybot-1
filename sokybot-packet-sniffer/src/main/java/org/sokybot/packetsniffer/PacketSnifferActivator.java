@@ -1,35 +1,44 @@
 package org.sokybot.packetsniffer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.stream.Stream;
+
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Deactivate;
-import org.sokybot.runtime.IGroupContext;
-import org.sokybot.IGroupListener;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventConstants;
+import org.osgi.service.event.EventHandler;
+import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.runtime.IMachineContext;
-import org.sokybot.IMachineListener;
-import org.sokybot.runtime.ISokybotContext;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.IPacketSubscription;
+import org.sokybot.proxy.IProxyConnection;
 import org.sokybot.webview.api.IWebviewConfigurator;
 import org.sokybot.webview.api.util.SchemaLoader;
 import org.sokybot.packetsniffer.storage.JsonPacketStorage;
 
 /**
  * Packet Sniffer Bundle Activator
- * Refactored to use declarative UI system
+ * Uses EventAdmin to listen for machine context lifecycle events
  */
-@Component(immediate = true)
-public class PacketSnifferActivator implements IGroupListener, IMachineListener {
-
-    @Reference
-    private ISokybotContext appCtx;
+@Component(
+    immediate = true,
+    property = {
+        "event.topics=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_CREATED,
+        "event.topics=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED
+    }
+)
+public class PacketSnifferActivator implements EventHandler {
+    
+    private IWebviewConfigurator webviewConfigurator;
     
     @Reference
-    private IWebviewConfigurator webviewConfigurator;
+    public void setWebviewConfigurator(IWebviewConfigurator webviewConfigurator) {
+        this.webviewConfigurator = webviewConfigurator;
+    }
 
     private final Map<String, PacketSnifferService> services = new HashMap<>();
     private final Map<String, IPacketSubscription> subscriptions = new HashMap<>();
@@ -48,24 +57,40 @@ public class PacketSnifferActivator implements IGroupListener, IMachineListener 
         
         // Load UI schemas from resources
         loadUISchemas();
-        
-        if (appCtx != null && appCtx.isRunning()) {
-            installPacketSniffer(appCtx);
-        }
     }
 
     @Deactivate
     public void deactivate() {
         System.out.println("Stopping PacketSniffer Bundle");
-        if (appCtx != null) {
-            uninstallPacketSniffer(appCtx);
-        }
         
-        // Shutdown services
+        // Unsubscribe all subscriptions
+        for (IPacketSubscription subscription : subscriptions.values()) {
+            subscription.unsubscribe();
+        }
+        subscriptions.clear();
+        
+        // Shutdown all services
         for (PacketSnifferService service : services.values()) {
             service.shutdown();
         }
         services.clear();
+    }
+
+    @Override
+    public void handleEvent(Event event) {
+        String topic = event.getTopic();
+        
+        if (ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_CREATED.equals(topic)) {
+            IMachineContext machineContext = (IMachineContext) event.getProperty(ContextLifecycleEvents.PROP_CONTEXT);
+            if (machineContext != null) {
+                installPacketSniffer(machineContext);
+            }
+        } else if (ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED.equals(topic)) {
+            String fullName = (String) event.getProperty(ContextLifecycleEvents.PROP_FULL_NAME);
+            if (fullName != null) {
+                uninstallPacketSniffer(fullName);
+            }
+        }
     }
 
     private void loadUISchemas() {
@@ -107,80 +132,40 @@ public class PacketSnifferActivator implements IGroupListener, IMachineListener 
         return schema;
     }
 
-    @Override
-    public void onGroupInstalled(IGroupContext groupCtx) {
-        installPacketSniffer(groupCtx);
-    }
-
-    @Override
-    public void onGroupUninstalled(IGroupContext groupCtx) {
-        uninstallPacketSniffer(groupCtx);
-    }
-
-    @Override
-    public void onMachineInstalled(IMachineContext machineCtx) {
-        installPacketSniffer(machineCtx);
-    }
-
-    @Override
-    public void onMachineUninstalled(IMachineContext machineCtx) {
-        uninstallPacketSniffer(machineCtx);
-    }
-
-    private void installPacketSniffer(ISokybotContext ctx) {
-        if (ctx.isRunning()) {
-            Stream.of(ctx.getGroups())
-                .filter(IGroupContext::isRunning)
-                .forEach(this::installPacketSniffer);
-            ctx.addGroupListener(this);
-        }
-    }
-
-    private void uninstallPacketSniffer(ISokybotContext ctx) {
-        Stream.of(ctx.getGroups())
-            .filter(IGroupContext::isRunning)
-            .forEach(this::uninstallPacketSniffer);
-        ctx.removeGroupListener(this);
-    }
-
-    private void installPacketSniffer(IGroupContext ctx) {
-        Stream.of(ctx.getMachines())
-            .filter(IMachineContext::isRunning)
-            .forEach(this::installPacketSniffer);
-        ctx.addMachineListener(this);
-    }
-
-    private void uninstallPacketSniffer(IGroupContext ctx) {
-        Stream.of(ctx.getMachines())
-            .filter(IMachineContext::isRunning)
-            .forEach(this::uninstallPacketSniffer);
-        ctx.removeMachineListener(this);
-    }
-
     private void installPacketSniffer(IMachineContext ctx) {
         String machineName = ctx.fullName();
         System.out.println("Install Packet Sniffer On Machine: " + machineName);
+        
+        // Get proxy connection and packet publisher
+        IProxyConnection proxyConnection = ctx.getProxyConnection();
+        if (proxyConnection == null) {
+            System.err.println("No proxy connection available for " + machineName);
+            return;
+        }
+        
+        IPacketPublisher packetPublisher = proxyConnection.getPacketPublisher();
+        if (packetPublisher == null) {
+            System.err.println("No packet publisher available for " + machineName);
+            return;
+        }
         
         // Create service for this machine
         PacketSnifferService service = new PacketSnifferService(storage, machineName);
         services.put(machineName, service);
         
-        // Subscribe to packets
+        // Subscribe to all packets
         PacketSnifferObserver observer = new PacketSnifferObserver(service, machineName);
-        IPacketSubscription subscription = ctx.packetPublisher()
-            .subscribe(observer, IPacketPublisher.ANY);
+        IPacketSubscription subscription = packetPublisher.subscribeAll(observer);
         subscriptions.put(machineName, subscription);
         
         // Register webview page with declarative schema
         registerPacketSnifferPage(machineName, service);
     }
 
-    private void uninstallPacketSniffer(IMachineContext ctx) {
-        String machineName = ctx.fullName();
-        
+    private void uninstallPacketSniffer(String machineName) {
         IPacketSubscription subscription = subscriptions.remove(machineName);
         if (subscription != null) {
-            subscription.cancel();
+            subscription.unsubscribe();
         }
         
         PacketSnifferService service = services.remove(machineName);
@@ -189,10 +174,17 @@ public class PacketSnifferActivator implements IGroupListener, IMachineListener 
         }
         
         // Remove page from webview
-        webviewConfigurator.removePage("packetSniffer_" + machineName);
+        if (webviewConfigurator != null) {
+            webviewConfigurator.removePage("packetSniffer_" + machineName);
+        }
     }
 
     private void registerPacketSnifferPage(String machineName, PacketSnifferService service) {
+        if (webviewConfigurator == null) {
+            System.err.println("Webview configurator not available");
+            return;
+        }
+        
         // Create a copy of the schema for this machine instance
         Map<String, Object> machineSchema = deepCopySchema(mainSchema);
         

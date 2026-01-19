@@ -90,6 +90,12 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-persistence</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -112,6 +118,8 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Activator>org.sokybot.webview.WebviewActivator</Bundle-Activator>
+                        <_dsannotations>*</_dsannotations>
+                        <_removeheaders>Require-Capability</_removeheaders>
                         <Export-Package>org.sokybot.webview,org.sokybot.webview.api,org.sokybot.webview.api.util</Export-Package>
                         <Import-Package>
                             !io.netty.*,
@@ -120,6 +128,9 @@
                             !javax.annotation.meta,
                             !sun.reflect.*,
                             !jdk.internal.*,
+                            !java.nio.file.spi,
+                            !org.bouncycastle.*,
+                            !sun.security.ssl,
                             *
                         </Import-Package>
                         <Embed-Dependency>

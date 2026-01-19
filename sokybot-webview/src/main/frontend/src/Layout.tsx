@@ -3,7 +3,7 @@ import { rsocketService } from './RSocketClient';
 import { CharacterStatus } from './CharacterStatus';
 import { useTheme } from './components/theme-provider';
 import { CreateGroupDialog } from './components/CreateGroupDialog';
-import { CreateMachineDialog } from './components/CreateMachineDialog';
+import CreateMachineDialog from './components/CreateMachineDialog';
 import { ToolbarExtensions } from './components/ToolbarExtensions';
 import { Plus, Bot, Monitor, Moon, Sun, Maximize, Minimize } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,30 +16,36 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMachineSelect }) => {
+    const [groups, setGroups] = useState<string[]>([]);
     const [machines, setMachines] = useState<string[]>([]);
     const { theme, setTheme } = useTheme();
     const [isCreateGroupOpen, setCreateGroupOpen] = useState(false);
     const [isCreateMachineOpen, setCreateMachineOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
 
-    const fetchMachines = async () => {
+    const fetchData = async () => {
         try {
-            const response = await rsocketService.requestResponse("getMachines");
-            const data = typeof response === 'string' ? JSON.parse(response) : response;
-            if (Array.isArray(data)) {
-                setMachines(data);
-                // Select first machine if none selected
-                // if (!selectedMachine && data.length > 0) {
-                //     onMachineSelect(data[0]);
-                // }
+            // Fetch Groups
+            const groupsResp = await rsocketService.requestResponse("getGroups");
+            const groupsData = typeof groupsResp === 'string' ? JSON.parse(groupsResp) : groupsResp;
+            if (Array.isArray(groupsData)) {
+                setGroups(groupsData);
+            }
+
+            // Fetch Machines
+            const machinesResp = await rsocketService.requestResponse("getMachines");
+            const machinesData = typeof machinesResp === 'string' ? JSON.parse(machinesResp) : machinesResp;
+            if (Array.isArray(machinesData)) {
+                setMachines(machinesData);
             }
         } catch (err) {
-            console.error("Failed to fetch machines", err);
+            console.error("Failed to fetch data", err);
         }
     };
 
     useEffect(() => {
-        fetchMachines();
+        fetchData();
+        // Optional: Set up interval for refreshing or listen to events
     }, []);
 
     const toggleFullscreen = () => {
@@ -50,6 +56,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
             document.exitFullscreen();
             setIsFullscreen(false);
         }
+    };
+
+    // Helper to get machine simple name
+    const getSimpleName = (fullName: string) => {
+        return fullName.includes('.') ? fullName.split('.').pop() || fullName : fullName;
+    };
+
+    // Helper to get machine group
+    const getMachineGroup = (fullName: string) => {
+        return fullName.includes('.') ? fullName.split('.')[0] : '';
     };
 
     return (
@@ -73,36 +89,71 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
                     </Button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {machines.map(m => (
-                        <Button
-                            key={m}
-                            variant={selectedMachine === m ? "secondary" : "ghost"}
-                            className={cn("w-full justify-start font-normal", selectedMachine === m && "font-medium")}
-                            onClick={() => onMachineSelect(m)}
-                        >
-                            <Bot className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {m}
-                        </Button>
-                    ))}
-                    {machines.length === 0 && (
-                        <div className="text-muted-foreground text-xs italic p-4 text-center">No machines found</div>
+                <div className="flex-1 overflow-y-auto p-2 space-y-4">
+                    {groups.map(group => {
+                        const groupMachines = machines.filter(m => getMachineGroup(m) === group);
+                        return (
+                            <div key={group} className="space-y-1">
+                                <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                                    {group}
+                                    <span className="text-[10px] bg-secondary px-1 rounded text-foreground">{groupMachines.length}</span>
+                                </div>
+                                {groupMachines.map(m => (
+                                    <Button
+                                        key={m}
+                                        variant={selectedMachine === m ? "secondary" : "ghost"}
+                                        className={cn("w-full justify-start font-normal pl-4 h-8", selectedMachine === m && "font-medium bg-accent")}
+                                        onClick={() => onMachineSelect(m)}
+                                    >
+                                        <Bot className="h-4 w-4 mr-2 text-muted-foreground" />
+                                        {getSimpleName(m)}
+                                    </Button>
+                                ))}
+                                {groupMachines.length === 0 && (
+                                    <div className="pl-4 text-xs text-muted-foreground italic py-1">No bots</div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {/* Orphaned machines or if no groups defined yet (legacy fallback) */}
+                    {groups.length === 0 && machines.length > 0 && (
+                        <div className="space-y-1">
+                            <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Default</div>
+                            {machines.map(m => (
+                                <Button
+                                    key={m}
+                                    variant={selectedMachine === m ? "secondary" : "ghost"}
+                                    className={cn("w-full justify-start font-normal", selectedMachine === m && "font-medium")}
+                                    onClick={() => onMachineSelect(m)}
+                                >
+                                    <Bot className="h-4 w-4 mr-2 text-muted-foreground" />
+                                    {m}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
+
+                    {groups.length === 0 && machines.length === 0 && (
+                        <div className="text-muted-foreground text-xs italic p-4 text-center">
+                            No groups or bots found.<br />Create a group to start.
+                        </div>
                     )}
                 </div>
                 <div className="p-4 border-t text-xs text-muted-foreground">
-                    {machines.length} Machines Active
+                    {machines.length} Total Bots
                 </div>
             </div>
 
             <CreateGroupDialog
                 isOpen={isCreateGroupOpen}
                 onClose={() => setCreateGroupOpen(false)}
-                onCreated={fetchMachines}
+                onCreated={fetchData}
             />
             <CreateMachineDialog
                 isOpen={isCreateMachineOpen}
                 onClose={() => setCreateMachineOpen(false)}
-                onCreated={fetchMachines}
+                onSuccess={fetchData}
             />
 
             {/* Main Content */}
@@ -121,8 +172,16 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
                         {/* Extension Toolbar Actions */}
                         <ToolbarExtensions />
 
-                        <Button variant="ghost" size="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
-                            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                        <Button variant="ghost" size="icon" onClick={() => {
+                            if (theme === 'light') setTheme('dark');
+                            else if (theme === 'dark') setTheme('desktop');
+                            else if (theme === 'desktop') setTheme('desktop-dark');
+                            else setTheme('light');
+                        }} title={`Theme: ${theme}`}>
+                            {theme === 'dark' ? <Moon className="h-4 w-4" /> :
+                                theme === 'desktop' ? <Monitor className="h-4 w-4" /> :
+                                    theme === 'desktop-dark' ? <Monitor className="h-4 w-4 text-foreground/70" /> :
+                                        <Sun className="h-4 w-4" />}
                         </Button>
 
                         <Button variant="ghost" size="icon" onClick={toggleFullscreen}>

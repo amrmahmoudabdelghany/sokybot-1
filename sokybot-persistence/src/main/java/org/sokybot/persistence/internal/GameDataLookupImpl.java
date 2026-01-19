@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManagerFactory;
@@ -60,6 +61,7 @@ public class GameDataLookupImpl implements IGameDataLookup {
     // PK2 extraction handlers with decorators
     private final IPk2ExtractionHandler<NPCData, NPCEntity> npcExtractionHandler;
     private final IPk2ExtractionHandler<ItemData, ItemEntity> itemExtractionHandler;
+    private final org.sokybot.persistence.internal.extraction.GameInfoExtractionHandler gameInfoExtractionHandler;
     
     public GameDataLookupImpl(String gamePath, EntityManagerFactory emf) {
         this.gamePath = gamePath;
@@ -99,6 +101,12 @@ public class GameDataLookupImpl implements IGameDataLookup {
             retryableItemHandler,
             () -> itemRepository.count() > 0
         );
+        
+        // GameInfo extraction handler (no decorator needed as we check existence in findGameInfo)
+        this.gameInfoExtractionHandler = new org.sokybot.persistence.internal.extraction.GameInfoExtractionHandler(emf, gamePath);
+        
+        // Eagerly trigger GameInfo extraction in background to ensure server list is available
+        CompletableFuture.runAsync(this::importGameInfo);
     }
     
     @Override
@@ -253,7 +261,20 @@ public class GameDataLookupImpl implements IGameDataLookup {
     
     private Optional<GameInfo> findGameInfo() {
         // GameInfo uses gamePath as ID
-        return gameInfoRepository.findById(this.gamePath); 
+        Optional<GameInfo> info = gameInfoRepository.findById(this.gamePath);
+        if (info.isPresent()) {
+            return info;
+        }
+        
+        synchronized(this) {
+             info = gameInfoRepository.findById(this.gamePath);
+             if (info.isPresent()) {
+                 return info;
+             }
+             
+             importGameInfo();
+             return gameInfoRepository.findById(this.gamePath);
+        }
     }
     
     /**
@@ -277,6 +298,21 @@ public class GameDataLookupImpl implements IGameDataLookup {
         } catch (PersistenceException e) {
             logger.error("Failed to import Items for game: " + gamePath, e);
             throw new RuntimeException("Failed to import Items", e);
+        }
+    }
+
+    /**
+     * Import GameInfo from PK2 file.
+     */
+    private void importGameInfo() {
+        try {
+             // GameInfo usually in Media.pk2
+            gameInfoExtractionHandler.extractAndPersist(gamePath, "Media.pk2");
+        } catch (PersistenceException e) {
+            logger.error("Failed to import GameInfo for game: " + gamePath, e);
+            // Don't throw exception to allow partial startup? 
+            // But without GameInfo we can't show servers.
+            throw new RuntimeException("Failed to import GameInfo", e);
         }
     }
 }

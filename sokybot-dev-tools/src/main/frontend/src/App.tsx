@@ -5,6 +5,7 @@ import { BundlesView } from './views/BundlesView'
 import { ServicesView } from './views/ServicesView'
 import { MetricsView } from './views/MetricsView'
 import { LogsView } from './views/LogsView'
+import { DatabaseView } from './views/DatabaseView'
 import { AlertCircle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -104,6 +105,7 @@ function App() {
             {activeView === 'services' && <ServicesView />}
             {activeView === 'metrics' && <MetricsView />}
             {activeView === 'logs' && <LogsView />}
+            {activeView === 'database' && <DatabaseView />}
           </div>
         </main>
       </div>

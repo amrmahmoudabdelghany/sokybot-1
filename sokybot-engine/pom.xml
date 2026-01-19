@@ -145,13 +145,7 @@
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>osgi.core</artifactId>
-            <version>6.0.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.framework</artifactId>
-            <version>1.10.0</version>
+            <version>8.0.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -167,12 +161,14 @@
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Activator>org.sokybot.engine.EngineActivator</Bundle-Activator>
                         <Import-Package>
+                            org.osgi.framework;version="[1.8,2.0)",
                             !javax.swing.*,
                             !java.awt.*,
                             *;resolution:=optional
                         </Import-Package>
                         <Export-Package>
-                            org.sokybot.engine.core.*
+                            org.sokybot.engine.core.*,
+                            org.sokybot.engine.api.extension
                         </Export-Package>
                         <Embed-Dependency>
                             *;scope=compile|runtime;artifactId=!org.osgi.core&amp;!org.osgi.framework&amp;!org.osgi.compendium

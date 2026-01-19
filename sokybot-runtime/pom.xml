@@ -161,18 +161,18 @@
                         <Service-Component>OSGI-INF/*.xml</Service-Component>
                         <_dsannotations>*</_dsannotations>
                         <Import-Package>
-                            *;resolution:=optional,
                             org.osgi.framework,
                             org.osgi.framework.launch,
-                            org.osgi.service.component.annotations,
                             org.osgi.service.event,
-                            org.osgi.service.event.admin
+                            org.sokybot.*,
+                            *;resolution:=optional
                         </Import-Package>
                         <Export-Package>
-                            org.sokybot.runtime
+                            org.sokybot.runtime,
+                            org.sokybot.exception
                         </Export-Package>
                         <Private-Package>
-                            org.sokybot.runtime.internal
+                            org.sokybot.runtime.internal.*
                         </Private-Package>
                     </instructions>
                 </configuration>

@@ -1,208 +1,330 @@
 import React, { useState, useEffect } from 'react';
 import { rsocketService } from '../RSocketClient';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { X, Server, Gamepad2, Settings2, User } from 'lucide-react';
 
-interface CreateMachineDialogProps {
+interface Props {
     isOpen: boolean;
     onClose: () => void;
-    onCreated: () => void;
+    onSuccess: () => void;
 }
 
-export const CreateMachineDialog: React.FC<CreateMachineDialogProps> = ({ isOpen, onClose, onCreated }) => {
+interface GameData {
+    version: number;
+    hosts: Record<string, string[]>; // Map<DivisionName, List<HostIP>>
+}
+
+const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
     const [groups, setGroups] = useState<string[]>([]);
     const [selectedGroup, setSelectedGroup] = useState('');
-
-    // Machine Details
-    const [name, setName] = useState('');
-    const [autoLogin, setAutoLogin] = useState(false);
-
-    // Host Selection (Fetched from Group Details)
-    const [hosts, setHosts] = useState<Record<string, string>>({});
-    const [selectedHost, setSelectedHost] = useState('');
-
-    // Credentials (if auto login)
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [passcode, setPasscode] = useState('');
-    const [agentServer, setAgentServer] = useState('');
-
+    const [gameData, setGameData] = useState<GameData | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch Groups on Open
+    // UI Logic Sate
+    const [selectedDivision, setSelectedDivision] = useState<string>('');
+
+    const [formData, setFormData] = useState({
+        name: '',
+        type: 'Client', // Default legacy behavior
+        host: '',
+        autoLogin: false,
+        username: '',
+        password: '',
+        passcode: '',
+        agentServer: ''
+    });
+
     useEffect(() => {
         if (isOpen) {
-            rsocketService.requestResponse('getGroups').then(resp => {
-                const list = typeof resp === 'string' ? JSON.parse(resp) : resp;
-                setGroups(list);
-                if (list.length > 0) setSelectedGroup(list[0]);
-            }).catch(e => console.error("Failed to fetch groups", e));
+            setLoading(true);
+            setError(null);
+            // Fetch groups on open
+            rsocketService.requestResponse('getGroups')
+                .then((payload: any) => {
+                    // Fix: parse payload string directly
+                    const groupList = typeof payload === 'string' ? JSON.parse(payload) : payload;
+                    setGroups(groupList);
+                    if (Array.isArray(groupList) && groupList.length > 0) {
+                        setSelectedGroup(groupList[0]); // Default to first
+                    } else {
+                        setSelectedGroup('');
+                    }
+                })
+                .catch(err => setError("Failed to load groups: " + err.message))
+                .finally(() => setLoading(false));
         }
     }, [isOpen]);
 
-    // Fetch Group Details when Group Selected
+    // Fetch Game Data when Group Changes
     useEffect(() => {
         if (selectedGroup) {
-            rsocketService.requestResponse(`getGroupDetails:${selectedGroup}`).then(resp => {
-                const details = typeof resp === 'string' ? JSON.parse(resp) : resp;
-                if (details.hosts) {
-                    setHosts(details.hosts);
-                    const keys = Object.keys(details.hosts);
-                    if (keys.length > 0) setSelectedHost(details.hosts[keys[0]]); // Default to first host
-                }
-            }).catch(e => console.error("Failed to fetch group details", e));
+            setLoading(true);
+            rsocketService.requestResponse(`getGroupDetails:${selectedGroup}`)
+                .then((payload: any) => {
+                    const data = (typeof payload === 'string' ? JSON.parse(payload) : payload) as GameData;
+                    setGameData(data);
+
+                    // Default Logic for Division/Host
+                    if (data.hosts) {
+                        const divs = Object.keys(data.hosts);
+                        if (divs.length > 0) {
+                            const firstDiv = divs[0];
+                            setSelectedDivision(firstDiv);
+                            const hosts = data.hosts[firstDiv];
+                            if (hosts && hosts.length > 0) {
+                                setFormData(prev => ({ ...prev, host: hosts[0] }));
+                            }
+                        }
+                    }
+                })
+                .catch(err => setError("Failed to load game data: " + err.message))
+                .finally(() => setLoading(false));
+        } else {
+            setGameData(null);
         }
     }, [selectedGroup]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError(null);
-
-        const options = [];
-        // Construct options list similar to legacy builder
-        // "gateway=IP"
-        if (selectedHost) {
-            options.push(`gateway=${selectedHost}`);
+    const handleDivisionChange = (newDiv: string) => {
+        setSelectedDivision(newDiv);
+        if (gameData && gameData.hosts[newDiv] && gameData.hosts[newDiv].length > 0) {
+            setFormData(prev => ({ ...prev, host: gameData.hosts[newDiv][0] }));
+        } else {
+            setFormData(prev => ({ ...prev, host: '' }));
         }
+    };
 
-        if (autoLogin) {
-            options.push("--auto-login");
-            if (username) options.push(`username=${username}`);
-            if (password) options.push(`password=${password}`);
-            if (passcode) options.push(`passcode=${passcode}`);
-            if (agentServer) options.push(`agent=${agentServer}`);
-        }
-
+    const handleCreate = async () => {
         try {
+            setLoading(true);
+            setError(null);
+
+            // Build options array for backend
+            const options: string[] = [];
+
+            // Legacy Logic: MACHINE_TARGET_GATEWAY=host
+            if (formData.host) {
+                options.push(`MACHINE_TARGET_GATEWAY=${formData.host}`);
+            }
+
+            if (formData.autoLogin) {
+                options.push("--MACHINE_AUTO_LOGIN");
+                options.push(`MACHINE_USER_NAME=${formData.username}`);
+                options.push(`MACHINE_PASSWORD=${formData.password}`);
+                options.push(`MACHINE_PASSCODE=${formData.passcode}`);
+                options.push(`MACHINE_TARGET_AGENT=${formData.agentServer}`);
+            }
+
             const payload = {
                 group: selectedGroup,
-                name: name,
+                name: formData.name, // "Trainer" name
                 options: options
             };
-            await rsocketService.requestResponse(`createMachine:${JSON.stringify(payload)}`);
-            onCreated();
+
+            await rsocketService.requestResponse("createMachine:" + JSON.stringify(payload));
+            onSuccess();
             onClose();
-            setName('');
-        } catch (err) {
-            console.error("Failed to create machine", err);
-            setError("Failed to create machine.");
+        } catch (err: any) {
+            setError("Creation failed: " + err.message);
         } finally {
             setLoading(false);
         }
     };
 
+    if (!isOpen) return null;
+
+    // Shared input class
+    const inputClass = "flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
+    const labelClass = "text-xs font-medium leading-none text-foreground/80 block mb-1";
+
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle>Create New Bot</DialogTitle>
-                    <DialogDescription>
-                        Configure a new bot instance.
-                    </DialogDescription>
-                </DialogHeader>
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-0">
+            <div className="w-full max-w-md bg-card border border-border rounded-lg shadow-lg flex flex-col animate-in zoom-in-95 duration-200">
 
-                {error && (
-                    <div className="p-2 bg-destructive/15 text-destructive text-sm rounded">
-                        {error}
-                    </div>
-                )}
+                {/* Header */}
+                <div className="flex items-center justify-between p-4 border-b border-border bg-muted/30 rounded-t-lg">
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                        <Settings2 className="h-5 w-5 text-primary" />
+                        Machine Builder
+                    </h3>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onClose}>
+                        <X className="h-4 w-4" />
+                    </Button>
+                </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="p-4 space-y-4 overflow-y-auto max-h-[80vh]">
+                    {error && (
+                        <div className="bg-destructive/15 text-destructive text-xs p-2 rounded border border-destructive/20 font-medium">
+                            {error}
+                        </div>
+                    )}
 
                     {/* Group Selection */}
-                    <div className="grid w-full gap-1.5">
-                        <Label htmlFor="group-select">Group</Label>
+                    <div>
+                        <label className={labelClass}>Group(s)</label>
                         <select
-                            id="group-select"
                             value={selectedGroup}
                             onChange={(e) => setSelectedGroup(e.target.value)}
-                            className={cn(
-                                "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            )}
+                            disabled={loading}
+                            className={inputClass}
                         >
-                            {groups.map(g => <option key={g} value={g}>{g}</option>)}
-                        </select>
-                    </div>
-
-                    {/* Character Name */}
-                    <div className="grid w-full gap-1.5">
-                        <Label htmlFor="bot-name">Character Name</Label>
-                        <Input
-                            id="bot-name"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                        />
-                    </div>
-
-                    {/* Host Selection */}
-                    <div className="grid w-full gap-1.5">
-                        <Label htmlFor="host-select">Server/Host</Label>
-                        <select
-                            id="host-select"
-                            value={selectedHost}
-                            onChange={(e) => setSelectedHost(e.target.value)}
-                            className={cn(
-                                "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            )}
-                        >
-                            {Object.entries(hosts).map(([key, val]) => (
-                                <option key={key} value={val}>{key}</option>
+                            {groups.map(g => (
+                                <option key={g} value={g}>{g}</option>
                             ))}
                         </select>
                     </div>
 
-                    {/* Auto Login Toggle */}
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            id="auto-login"
-                            checked={autoLogin}
-                            onChange={(e) => setAutoLogin(e.target.checked)}
-                            className="h-4 w-4 rounded border-primary text-primary focus:ring-primary"
-                        />
-                        <Label htmlFor="auto-login">Enable Auto Login</Label>
-                    </div>
+                    {/* Game Data Fieldset */}
+                    <fieldset className="border border-border rounded-md p-3 relative bg-card/50">
+                        <legend className="text-xs font-bold px-2 text-foreground/80 flex items-center gap-1">
+                            <Server className="h-3 w-3" />
+                            Game Data
+                        </legend>
+                        <div className="space-y-3 pt-1">
+                            <div>
+                                <label className={labelClass}>Division(s)</label>
+                                <select
+                                    value={selectedDivision}
+                                    onChange={(e) => handleDivisionChange(e.target.value)}
+                                    disabled={!gameData || !gameData.hosts}
+                                    className={inputClass}
+                                >
+                                    {gameData && gameData.hosts && Object.keys(gameData.hosts).map(div => (
+                                        <option key={div} value={div}>{div}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Host(s)</label>
+                                <select
+                                    value={formData.host}
+                                    onChange={(e) => setFormData({ ...formData, host: e.target.value })}
+                                    disabled={!selectedDivision}
+                                    className={inputClass}
+                                >
+                                    {gameData && selectedDivision && gameData.hosts[selectedDivision]?.map((host) => (
+                                        <option key={host} value={host}>{host}</option>
+                                    ))}
+                                </select>
+                            </div>
 
-                    {/* Auto Login Fields */}
-                    {autoLogin && (
-                        <div className="space-y-3 pl-4 border-l-2 border-muted">
-                            <div className="grid w-full gap-1.5">
-                                <Label htmlFor="username" className="text-xs">Username</Label>
-                                <Input id="username" value={username} onChange={e => setUsername(e.target.value)} className="h-8" />
-                            </div>
-                            <div className="grid w-full gap-1.5">
-                                <Label htmlFor="password" className="text-xs">Password</Label>
-                                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="h-8" />
-                            </div>
-                            <div className="grid w-full gap-1.5">
-                                <Label htmlFor="passcode" className="text-xs">Second Passcode</Label>
-                                <Input id="passcode" type="password" value={passcode} onChange={e => setPasscode(e.target.value)} className="h-8" />
-                            </div>
-                            <div className="grid w-full gap-1.5">
-                                <Label htmlFor="agent" className="text-xs">Agent Server</Label>
-                                <Input id="agent" value={agentServer} onChange={e => setAgentServer(e.target.value)} className="h-8" />
+                            {/* Detailed Info */}
+                            <div className="flex justify-end gap-4 pt-2 border-t border-dashed border-border/50 text-[10px] text-muted-foreground">
+                                <div><span className="font-bold">Version:</span> {gameData?.version || 'N/A'}</div>
+                                <div><span className="font-bold">Port:</span> 15779</div>
                             </div>
                         </div>
-                    )}
+                    </fieldset>
 
-                    <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={onClose}>
-                            Cancel
-                        </Button>
-                        <Button type="submit" disabled={loading}>
-                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            {loading ? 'Creating...' : 'Create Bot'}
-                        </Button>
-                    </DialogFooter>
-                </form>
-            </DialogContent>
-        </Dialog>
+                    {/* Bot Data Fieldset */}
+                    <fieldset className="border border-border rounded-md p-3 relative bg-card/50">
+                        <legend className="text-xs font-bold px-2 text-foreground/80 flex items-center gap-1">
+                            <Gamepad2 className="h-3 w-3" />
+                            Bot Data
+                        </legend>
+                        <div className="space-y-3 pt-1">
+                            {/* Type */}
+                            <div>
+                                <label className={labelClass}>Type</label>
+                                <div className="flex gap-4 items-center">
+                                    <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="type"
+                                            value="Client"
+                                            checked={formData.type === 'Client'}
+                                            onChange={() => setFormData({ ...formData, type: 'Client' })}
+                                            className="text-primary focus:ring-primary h-3 w-3"
+                                        /> Client
+                                    </label>
+                                    <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-not-allowed">
+                                        <input
+                                            type="radio"
+                                            name="type"
+                                            value="Clientless"
+                                            disabled={true}
+                                            checked={formData.type === 'Clientless'}
+                                            className="text-muted h-3 w-3"
+                                        /> Clientless
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Trainer Name */}
+                            <div>
+                                <label className={labelClass}>Trainer</label>
+                                <input
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    className={inputClass}
+                                    placeholder="Character Name"
+                                />
+                            </div>
+
+                            {/* Auto Login */}
+                            <div>
+                                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer select-none">
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.autoLogin}
+                                        onChange={(e) => setFormData({ ...formData, autoLogin: e.target.checked })}
+                                        className="h-3 w-3 rounded border-gray-300 text-primary focus:ring-primary"
+                                    />
+                                    Auto Login
+                                </label>
+                            </div>
+
+                            {/* Account Info (Nested) */}
+                            {formData.autoLogin && (
+                                <div className="space-y-2 p-3 border-l-2 border-border/50 ml-2 animate-in slide-in-from-top-2 duration-200">
+                                    <div className="relative">
+                                        <User className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                                        <input
+                                            type="text"
+                                            placeholder="Username"
+                                            value={formData.username}
+                                            onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                                            className={cn(inputClass, "pl-8")}
+                                        />
+                                    </div>
+                                    <input
+                                        type="password"
+                                        placeholder="Password"
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        className={inputClass}
+                                    />
+                                    <input
+                                        type="password"
+                                        placeholder="Passcode"
+                                        value={formData.passcode}
+                                        onChange={(e) => setFormData({ ...formData, passcode: e.target.value })}
+                                        className={inputClass}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Server"
+                                        value={formData.agentServer}
+                                        onChange={(e) => setFormData({ ...formData, agentServer: e.target.value })}
+                                        className={inputClass}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </fieldset>
+                </div>
+
+                <div className="p-4 border-t border-border bg-muted/10 rounded-b-lg flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>Cancel</Button>
+                    <Button size="sm" onClick={handleCreate} disabled={loading || !formData.name} className="min-w-[80px]">
+                        {loading ? 'Creating...' : 'Create'}
+                    </Button>
+                </div>
+            </div>
+        </div>
     );
 };
+
+export default CreateMachineDialog;

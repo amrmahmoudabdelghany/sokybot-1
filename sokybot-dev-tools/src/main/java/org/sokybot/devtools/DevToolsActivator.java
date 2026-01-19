@@ -17,50 +17,37 @@ import java.nio.file.Paths;
  * Bundle activator for dev-tools bundle.
  * Initializes all services and starts HTTP and RSocket servers.
  */
-@Component(immediate = true)
+// @Component(immediate = true) // Removed: DevToolsRSocketHandler is now a component
 public class DevToolsActivator implements BundleActivator {
     
     private static final Logger logger = LoggerFactory.getLogger(DevToolsActivator.class);
     
     private BundleContext bundleContext;
-    private BundleManagementService bundleService;
-    private ServiceInspectionService serviceService;
-    private RuntimeMetricsService metricsService;
-    private LogStreamingService logService;
-    private DevToolsRSocketHandler rsocketHandler;
     private DevToolsHttpServer httpServer;
-    private ServiceRegistration<DevToolsRSocketHandler> rsocketHandlerRegistration;
     
-    private static final int RSOCKET_PORT = 7002; // Different from main webview RSocket (7000)
     private static final int HTTP_PORT = 7001;
     
     @Activate
     public void activate(ComponentContext componentContext) {
         this.bundleContext = componentContext.getBundleContext();
+        startInternal();
+    }
+    
+    @Override
+    public void start(BundleContext context) throws Exception {
+        this.bundleContext = context;
+        startInternal();
+    }
+
+    private void startInternal() {
         logger.info("DevTools bundle activating...");
         
         try {
-            // Initialize services
-            this.bundleService = new BundleManagementService(bundleContext);
-            this.serviceService = new ServiceInspectionService(bundleContext);
-            this.metricsService = new RuntimeMetricsService();
-            this.logService = new LogStreamingService();
-            
-            // Create RSocket handler
-            this.rsocketHandler = new DevToolsRSocketHandler(
-                bundleService, serviceService, metricsService, logService);
-            
-            // Register RSocket handler as OSGi service (for listeners)
-            this.rsocketHandlerRegistration = bundleContext.registerService(
-                DevToolsRSocketHandler.class, rsocketHandler, null);
-            
-            // Start RSocket server
-            rsocketHandler.start(RSOCKET_PORT);
-            
             // Determine webapp path
             Path webappPath = getWebappPath();
             
             // Start HTTP server
+            // Note: services are now initialized by DevToolsRSocketHandler component
             this.httpServer = new DevToolsHttpServer(HTTP_PORT, webappPath);
             httpServer.start();
             
@@ -68,7 +55,6 @@ public class DevToolsActivator implements BundleActivator {
             logger.info("Dev Tools Bundle Activated Successfully");
             logger.info("========================================");
             logger.info("HTTP Server: http://localhost:{}/devtools", HTTP_PORT);
-            logger.info("RSocket Server: ws://localhost:{}", RSOCKET_PORT);
             logger.info("========================================");
             
         } catch (Exception e) {
@@ -79,25 +65,21 @@ public class DevToolsActivator implements BundleActivator {
     
     @Deactivate
     public void deactivate() {
+        stopInternal();
+    }
+
+    @Override
+    public void stop(BundleContext context) throws Exception {
+        stopInternal();
+    }
+    
+    private void stopInternal() {
         logger.info("DevTools bundle deactivating...");
         
         try {
-            if (rsocketHandlerRegistration != null) {
-                rsocketHandlerRegistration.unregister();
-            }
-            
             if (httpServer != null) {
                 httpServer.stop();
             }
-            
-            if (rsocketHandler != null) {
-                rsocketHandler.stop();
-            }
-            
-            if (logService != null) {
-                logService.stop();
-            }
-            
             logger.info("DevTools bundle deactivated");
         } catch (Exception e) {
             logger.error("Error during deactivation", e);
@@ -183,31 +165,4 @@ public class DevToolsActivator implements BundleActivator {
     
     // BundleActivator methods (for compatibility if needed)
     
-    @Override
-    public void start(BundleContext context) throws Exception {
-        // Already handled by @Activate
-    }
-    
-    @Override
-    public void stop(BundleContext context) throws Exception {
-        // Already handled by @Deactivate
-    }
-    
-    // Getters for services (useful for testing or other bundles)
-    
-    public DevToolsRSocketHandler getRSocketHandler() {
-        return rsocketHandler;
-    }
-    
-    public BundleManagementService getBundleService() {
-        return bundleService;
-    }
-    
-    public ServiceInspectionService getServiceService() {
-        return serviceService;
-    }
-    
-    public RuntimeMetricsService getMetricsService() {
-        return metricsService;
-    }
 }

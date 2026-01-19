@@ -89,12 +89,20 @@ public class PersistenceContextManagerImpl implements IPersistenceContextManager
             properties.put("hibernate.hikari.connectionTimeout", "30000");
             properties.put("hibernate.hikari.idleTimeout", "600000");
             
-            EntityManagerFactory emf = Persistence.createEntityManagerFactory(
-                "sokybot-persistence-unit", properties);
-            
-            logger.info("Successfully created EntityManagerFactory for game: {} at {}", 
-                gamePath, dbPath);
-            return emf;
+            // Context ClassLoader switch for OSGi/Hibernate
+            ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+            try {
+                Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+                
+                EntityManagerFactory emf = Persistence.createEntityManagerFactory(
+                    "sokybot-persistence-unit", properties);
+                
+                logger.info("Successfully created EntityManagerFactory for game: {} at {}", 
+                    gamePath, dbPath);
+                return emf;
+            } finally {
+                Thread.currentThread().setContextClassLoader(originalClassLoader);
+            }
             
         } catch (Exception e) {
             logger.error("Failed to create EntityManagerFactory for game: {}", gamePath, e);

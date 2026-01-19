@@ -172,7 +172,7 @@ public class ConnectionService implements EventHandler {
         }
         
         // Connection state
-        boolean connected = machineContext.getDispatcher().isConnected();
+        boolean connected = machineContext.getProxyConnection().isConnected();
         data.put("connected", connected);
         
         // Profiles

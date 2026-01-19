@@ -9,8 +9,8 @@
         <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
         
         <!-- Application entities -->
-        <class>org.sokybot.app.domain.GroupInfo</class>
-        <class>org.sokybot.app.domain.MachineInfo</class>
+        <!-- Note: GroupInfo and MachineInfo are currently managed via file/JSON repository -->
+
         
         <!-- Game entities -->
         <class>org.sokybot.persistence.entities.GameInfo</class>

@@ -15,18 +15,21 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-engine</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-proxy</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-settings</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
@@ -56,6 +59,12 @@
             <version>1.5.0</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-actuator-login</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -68,6 +77,8 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Activator>org.sokybot.actuator.connector.ConnectorActuatorActivator</Bundle-Activator>
+                        <Embed-Dependency>!*</Embed-Dependency>
+                        <Embed-Transitive>false</Embed-Transitive>
                         <Import-Package>
                             !javax.swing.*,
                             !java.awt.*,
@@ -79,6 +90,7 @@
                             *;resolution:=optional
                         </Import-Package>
                         <Export-Package>org.sokybot.actuator.connector.*</Export-Package>
+                        <_dsannotations>org.sokybot.actuator.connector.*</_dsannotations>
                     </instructions>
                 </configuration>
             </plugin>

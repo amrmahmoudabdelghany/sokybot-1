@@ -15,18 +15,21 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-engine</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-proxy</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-settings</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
@@ -58,6 +61,13 @@
         </dependency>
         
         <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.component.annotations</artifactId>
             <version>1.5.0</version>
@@ -75,18 +85,23 @@
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Activator>org.sokybot.actuator.login.LoginActuatorActivator</Bundle-Activator>
+                        <Embed-Dependency>!*</Embed-Dependency>
+                        <Embed-Transitive>false</Embed-Transitive>
                         <Import-Package>
                             !javax.swing.*,
                             !java.awt.*,
+                            !javax.persistence.*,
                             org.sokybot.engine.api.*,
                             org.sokybot.network.*,
                             org.sokybot.proxy.*,
                             org.sokybot.settings.*,
                             org.sokybot.gamemodel.*,
+                            !org.sokybot.persistence.internal.*,
                             org.sokybot.persistence.*,
                             *;resolution:=optional
                         </Import-Package>
                         <Export-Package>org.sokybot.actuator.login.*</Export-Package>
+                        <_dsannotations>org.sokybot.actuator.login.*</_dsannotations>
                     </instructions>
                 </configuration>
             </plugin>

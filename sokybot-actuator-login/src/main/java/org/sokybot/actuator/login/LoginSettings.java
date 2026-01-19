@@ -21,5 +21,6 @@ public class LoginSettings {
     private String passcode = "";
     
     private String targetAgent = "";
+    private int locale = 22;
     private boolean autoLogin = false;
 }

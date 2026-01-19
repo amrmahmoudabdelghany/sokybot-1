@@ -77,6 +77,33 @@ export const DirectoryPickerDialog: React.FC<DirectoryPickerDialogProps> = ({ is
         onClose();
     };
 
+
+    // Replicates logic from SilkroadUtils.isSilkraodDirectory
+    const isValidGameDirectory = (files: FileEntry[]) => {
+        const requiredFiles = new Set([
+            "sro_client.exe",
+            "data.pk2",
+            "map.pk2",
+            "media.pk2",
+            "music.pk2",
+            "particles.pk2",
+            "gfxfilemanager.dll"
+        ]);
+
+        // Convert listings to lower case for case-insensitive check
+        const currentFileNames = new Set(files.map(f => f.name.toLowerCase()));
+
+        let valid = true;
+        requiredFiles.forEach(req => {
+            if (!currentFileNames.has(req)) {
+                valid = false;
+            }
+        });
+        return valid;
+    };
+
+    const isCurrentDirValid = isValidGameDirectory(files);
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="sm:max-w-lg h-[80vh] flex flex-col">
@@ -88,7 +115,18 @@ export const DirectoryPickerDialog: React.FC<DirectoryPickerDialogProps> = ({ is
                 </DialogHeader>
 
                 <div className="flex gap-2 mb-2 items-center">
-                    <Button variant="outline" size="icon" onClick={() => handleNavigate("..")} disabled={loading} title="Up">
+                    <Button variant="outline" size="icon" onClick={() => {
+                        const parent = files.find(f => f.name === "..");
+                        if (parent) {
+                            handleNavigate(parent.path);
+                        } else {
+                            // Fallback using string manipulation
+                            const parts = currentPath.split('/');
+                            parts.pop();
+                            const parentPath = parts.join('/') || "/";
+                            handleNavigate(parentPath);
+                        }
+                    }} disabled={loading} title="Up">
                         <ArrowUp className="h-4 w-4" />
                     </Button>
                     <div className="flex-1 text-sm bg-muted p-2 rounded truncate font-mono border">
@@ -103,7 +141,7 @@ export const DirectoryPickerDialog: React.FC<DirectoryPickerDialogProps> = ({ is
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 gap-1">
-                            {/* Roots Quick Access (if at root or separate section? maybe just show at top if desired, but sticking to nav list) */}
+                            {/* Roots Quick Access */}
                             {currentPath === "." && roots.length > 0 && (
                                 <div className="text-xs font-semibold text-muted-foreground mb-1">Drives</div>
                             )}
@@ -137,7 +175,7 @@ export const DirectoryPickerDialog: React.FC<DirectoryPickerDialogProps> = ({ is
                                     {f.isDirectory ? (
                                         <Folder className="h-4 w-4 text-yellow-500" />
                                     ) : (
-                                        <div className="h-4 w-4 opacity-0" /> // Spacer for alignment if mixed files (but backend filters hidden)
+                                        <div className="h-4 w-4 opacity-0" />
                                     )}
                                     <span className="text-sm truncate flex-1">{f.name}</span>
                                 </div>
@@ -149,15 +187,17 @@ export const DirectoryPickerDialog: React.FC<DirectoryPickerDialogProps> = ({ is
                     )}
                 </div>
 
-                <div className="text-xs text-muted-foreground">
-                    Selected: {selectedPath || currentPath}
+                <div className="text-xs text-muted-foreground min-h-[1.25rem]">
+                    {selectedPath ? `Selected: ${selectedPath}` : (
+                        !isCurrentDirValid && !loading ? "Not a valid Silkroad directory" : ""
+                    )}
                 </div>
 
                 <DialogFooter>
                     <Button variant="secondary" onClick={onClose}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSelect}>
+                    <Button onClick={handleSelect} disabled={!isCurrentDirValid || loading}>
                         Select Current Folder
                     </Button>
                 </DialogFooter>

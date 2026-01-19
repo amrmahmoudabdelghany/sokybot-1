@@ -57,12 +57,17 @@
                         <feature>wrapper</feature>
                     </installedFeatures>
                     
+                    <startupFeatures>
+                        <feature>eventadmin</feature>
+                        <feature>log</feature>
+                    </startupFeatures>
+
                     <!-- Features that boot on startup (production mode) -->
                     <bootFeatures>
-                        <feature>bundle</feature>
-                        <feature>config</feature>
+                        <feature>standard</feature>
                         <feature>scr</feature>
-                        <feature>log</feature>
+                        <feature>http</feature>
+                        <feature>webconsole</feature>
                         <feature>sokybot-full</feature>
                     </bootFeatures>
                     
@@ -90,7 +95,7 @@
                         <extensions>true</extensions>
                         <configuration>
                             <installedFeatures>
-                                <feature>wrapper</feature>
+                                <!-- <feature>wrapper</feature> -->
                             </installedFeatures>
                             <bootFeatures>
                                 <feature>bundle</feature>

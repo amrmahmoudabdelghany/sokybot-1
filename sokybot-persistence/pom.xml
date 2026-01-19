@@ -38,6 +38,48 @@
             <version>5.6.15.Final</version>
         </dependency>
         
+        <dependency>
+            <groupId>net.bytebuddy</groupId>
+            <artifactId>byte-buddy</artifactId>
+            <version>1.12.18</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.hibernate.common</groupId>
+            <artifactId>hibernate-commons-annotations</artifactId>
+            <version>5.1.2.Final</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss.logging</groupId>
+            <artifactId>jboss-logging</artifactId>
+            <version>3.4.3.Final</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.fasterxml</groupId>
+            <artifactId>classmate</artifactId>
+            <version>1.5.1</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.jboss</groupId>
+            <artifactId>jandex</artifactId>
+            <version>2.4.2.Final</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>antlr</groupId>
+            <artifactId>antlr</artifactId>
+            <version>2.7.7</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.dom4j</groupId>
+            <artifactId>dom4j</artifactId>
+            <version>2.1.3</version>
+        </dependency>
+        
         <!-- H2 Database -->
         <dependency>
             <groupId>com.h2database</groupId>
@@ -169,7 +211,7 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
                         <Bundle-SymbolicName>${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Activator>org.sokybot.persistence.PersistenceActivator</Bundle-Activator>
@@ -183,13 +225,12 @@
                             javax.transaction.*
                         </Export-Package>
                         <Private-Package>
-                            org.sokybot.persistence.internal,
+                            org.sokybot.persistence.internal.*,
                             org.sokybot.persistence
                         </Private-Package>
                         <Embed-Dependency>
                             hibernate-core,
                             hibernate-osgi,
-                            h2,
                             hibernate-commons-annotations,
                             jboss-logging,
                             antlr,
@@ -204,18 +245,28 @@
                             istack-commons-runtime,
                             stax-ex,
                             FastInfoset,
-                            jakarta.xml.bind-api
+                            jakarta.xml.bind-api,
+                            dom4j
                         </Embed-Dependency>
                         <Import-Package>
+                            org.h2,
                             javax.persistence;version="[2.1,3)",
                             javax.persistence.spi;version="[2.1,3)",
                             javax.transaction;version="[1.1,2)",
                             org.osgi.framework;version="[1.8,2)",
                             org.osgi.service.component.annotations;version="[1.3,2)";resolution:=optional,
                             org.slf4j;version="[1.7,2)";resolution:=optional,
+                            org.jboss.logmanager;resolution:=optional,
+                            org.objectweb.jonas_tm;resolution:=optional,
+                            org.relaxng.datatype;resolution:=optional,
+                            org.xmlpull.v1;resolution:=optional,
                             *;resolution:=optional
                         </Import-Package>
-                        <_dsannotations>*</_dsannotations>
+                        <!-- Restrict DS scanning to only our packages -->
+                        <_dsannotations>org.sokybot.persistence.*</_dsannotations>
+                        <!-- Remove osgi.service requirements generated from embedded Hibernate -->
+                        <Provide-Capability>osgi.service;objectClass:List&lt;String&gt;="org.sokybot.persistence.service.IPersistenceContextManager,org.sokybot.persistence.service.IGamePersistenceFactory"</Provide-Capability>
+                        <_removeheaders>Require-Capability</_removeheaders>
                     </instructions>
                 </configuration>
             </plugin>

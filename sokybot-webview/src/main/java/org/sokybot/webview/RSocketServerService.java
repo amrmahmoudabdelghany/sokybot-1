@@ -221,19 +221,23 @@ public class RSocketServerService {
                                   }
                                   return Mono.just(DefaultPayload.create("[]"));
                                   
-                              } else if (requestData.startsWith("getGroupDetails")) {
-                                  String groupName = requestData.contains(":") ? requestData.split(":")[1] : null;
-                                  if (groupName != null && sokybotContext != null) {
-                                       IGroupContext grpCtx = sokybotContext.findGroupCtx(groupName).orElse(null);
-                                       if (grpCtx != null) {
-                                           // org.sokybot.service.ISroDAO gameDao = grpCtx.getGameDAO();
-                                           // Map<String, Object> details = new HashMap<>();
-                                           // details.put("version", gameDao.getVersion());
-                                           // details.put("hosts", gameDao.getDivHosts());
-                                           // return Mono.just(DefaultPayload.create(mapper.writeValueAsString(details)));
-                                       }
-                                  }
-                                  return Mono.just(DefaultPayload.create("{}"));
+                                  } else if (requestData.startsWith("getGroupDetails")) {
+                                      String groupName = requestData.contains(":") ? requestData.split(":")[1] : null;
+                                      if (groupName != null && sokybotContext != null) {
+                                           IGroupContext grpCtx = sokybotContext.findGroupCtx(groupName).orElse(null);
+                                           if (grpCtx != null) {
+                                               org.sokybot.persistence.service.IGameDataLookup lookup = grpCtx.getGameDataLookup();
+                                               Map<String, Object> details = new HashMap<>();
+                                               details.put("version", lookup.getVersion());
+
+                                               // Send full divHosts map to UI to support legacy Division -> Host selection
+                                               Map<String, List<String>> divHosts = lookup.getDivHosts();
+                                               details.put("hosts", divHosts != null ? divHosts : new HashMap<>());
+                                               
+                                               return Mono.just(DefaultPayload.create(mapper.writeValueAsString(details)));
+                                           }
+                                      }
+                                      return Mono.just(DefaultPayload.create("{}"));
                               } else if ("getMachines".equals(requestData) && sokybotContext != null) {
                                   // Global machines list? or per groups?
                                   // Legacy behavior: list all machines or grouped?
@@ -251,8 +255,11 @@ public class RSocketServerService {
                                    if (path == null || path.trim().isEmpty()) path = ".";
                                    
                                    java.io.File dir = new java.io.File(path);
-                                   if (!dir.exists()) {
-                                       // Try parsing assuming it might be a drive letter or root if '.' fails or standardizes
+                                   try {
+                                       dir = dir.getCanonicalFile();
+                                   } catch (java.io.IOException e) {
+                                       // Fallback or log?
+                                       dir = dir.getAbsoluteFile();
                                    }
                                    
                                    List<Map<String, Object>> files = new ArrayList<>();

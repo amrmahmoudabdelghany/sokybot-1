@@ -18,6 +18,7 @@ import io.netty.channel.ChannelHandler.Sharable;
 public class SimplePacketPublisher extends SimpleChannelInboundHandler<ImmutablePacket> implements IPacketPublisher {
 
     private final Map<Integer, CopyOnWriteArrayList<IPacketObserver>> observers = new ConcurrentHashMap<>();
+    private final CopyOnWriteArrayList<IPacketObserver> globalObservers = new CopyOnWriteArrayList<>();
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ImmutablePacket packet) throws Exception {
@@ -58,7 +59,23 @@ public class SimplePacketPublisher extends SimpleChannelInboundHandler<Immutable
         };
     }
 
+    @Override
+    public IPacketSubscription subscribeAll(IPacketObserver observer) {
+        globalObservers.add(observer);
+        return () -> globalObservers.remove(observer);
+    }
+
     public void publish(ImmutablePacket packet) {
+        // Notify global observers (subscribed to all packets)
+        for (IPacketObserver observer : globalObservers) {
+            try {
+                observer.onPacket(packet);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        
+        // Notify opcode-specific observers
         CopyOnWriteArrayList<IPacketObserver> list = observers.get(packet.getOpcode());
         if (list != null) {
             for (IPacketObserver observer : list) {
