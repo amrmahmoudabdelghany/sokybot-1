@@ -77,9 +77,9 @@ description: Project architecture and module overview
 ## 3. Communication Patterns
 
 ### Frontend ↔ Backend
-- **Protocol**: HTTP REST + WebSocket
-- **Port**: Configured in Karaf (default 8181)
-- **Format**: JSON
+- **Protocol**: RSocket over WebSocket (NOT raw REST/HTTP)
+- **Port**: 8182 (configured in Karaf)
+- **Format**: JSON with structured request/response protocol
 
 ### Inter-Bundle Communication
 - **Pattern**: OSGi Services (Declarative Services)

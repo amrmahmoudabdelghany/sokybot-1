@@ -53,6 +53,7 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-proxy</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <!-- Engine for IEngineFactory -->

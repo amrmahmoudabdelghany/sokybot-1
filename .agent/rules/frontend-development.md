@@ -46,25 +46,58 @@ The frontend communicates with the Java backend ONLY via RSocket.
 
 **Do NOT use**: REST, HTTP fetch, or raw WebSockets directly.
 
+### Protocol Format
+Requests use a structured JSON format with `method` and `params`:
+
+```typescript
+// Request format
+{ "method": "group.list", "params": { "filter": "active" }, "id": "optional-correlation-id" }
+
+// Response format
+{ "result": { ... }, "id": "correlation-id" }       // Success
+{ "error": { "code": -32601, "message": "..." } }   // Error
+```
+
 ### Usage
-Use the `rsocketService` singleton:
+Use the `rsocketService` singleton with typed methods:
 
 ```typescript
 import { rsocketService } from './RSocketClient';
 
-// Request-Response (Single response)
-const result = await rsocketService.requestResponse(JSON.stringify({
-    command: 'myCommand',
-    payload: { ... }
-}));
+// Preferred: Use typed convenience methods
+const groups = await rsocketService.getGroups();
+const machines = await rsocketService.getMachines();
+const state = await rsocketService.getCharacterState(machineId);
 
-// Request-Stream (Streaming updates)
-rsocketService.requestStream(
-    JSON.stringify({ command: 'monitorEvents' }),
-    (data) => console.log('Received:', data),
-    (error) => console.error('Error:', error)
+// Generic request-response
+const result = await rsocketService.request<MyType>('my.method', { param1: 'value' });
+
+// Request-stream (for real-time updates)
+const subscription = rsocketService.subscribe<EventType>(
+    'game.events',
+    (event) => console.log('Received:', event),
+    (error) => console.error('Error:', error),
+    { machineId: 'optional-filter' }
 );
+
+// Cleanup
+subscription.unsubscribe();
 ```
+
+### Available Methods
+Common RSocket methods (see `SystemInfoHandler` for full list):
+
+| Method | Description |
+|--------|-------------|
+| `group.list` | List all groups |
+| `machine.list` | List all machines |
+| `machine.start` | Start a machine |
+| `machine.stop` | Stop a machine |
+| `character.state` | Get character state |
+| `fs.list` | List directory contents |
+| `fs.roots` | Get filesystem roots |
+| `extension.registry` | Get registered extensions |
+| `system.methods` | List all available methods |
 
 ## 4. Component Guidelines
 1. **Functional Components**: Use React Functional Components with Hooks.

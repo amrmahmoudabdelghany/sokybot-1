@@ -250,7 +250,82 @@ Config file: `etc/org.sokybot.myservice.cfg`
 3. **Bundle-Version**: Must be `${project.version}`
 4. **Bundle-Description**: Must be `${project.description}`
 
-## 11. Best Practices
+## 11. Whiteboard Pattern (RSocket Handlers)
+
+The webview module uses the whiteboard pattern for RSocket handlers. Handlers register as OSGi services and are automatically discovered.
+
+### Request-Response Handler
+
+```java
+@Component(
+    service = IRSocketHandler.class,
+    property = {
+        IRSocketHandler.METHOD_PROPERTY + "=my.method1",
+        IRSocketHandler.METHOD_PROPERTY + "=my.method2"
+    }
+)
+public class MyHandler implements IRSocketHandler {
+    
+    // Use setter injection for optional/dynamic references
+    private volatile IMyDependency dependency;
+    
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void setDependency(IMyDependency dep) {
+        this.dependency = dep;
+    }
+    
+    protected void unsetDependency(IMyDependency dep) {
+        this.dependency = null;
+    }
+    
+    @Override
+    public String[] getMethods() {
+        return new String[] { "my.method1", "my.method2" };
+    }
+    
+    @Override
+    public Mono<RSocketResponse> handle(RSocketRequest request) {
+        switch (request.getMethod()) {
+            case "my.method1":
+                return handleMethod1(request);
+            case "my.method2":
+                return handleMethod2(request);
+            default:
+                return Mono.just(RSocketResponse.methodNotFound(request.getMethod()));
+        }
+    }
+}
+```
+
+### Stream Handler
+
+```java
+@Component(
+    service = IRSocketStreamHandler.class,
+    property = IRSocketStreamHandler.STREAM_PROPERTY + "=my.stream"
+)
+public class MyStreamHandler implements IRSocketStreamHandler {
+    
+    @Override
+    public String getStreamName() {
+        return "my.stream";
+    }
+    
+    @Override
+    public Flux<Object> handleStream(RSocketRequest request) {
+        return Flux.interval(Duration.ofSeconds(1))
+            .map(tick -> Map.of("tick", tick));
+    }
+}
+```
+
+### Important Notes
+
+1. **Use setter injection** for `@Reference` with `volatile` fields (not field injection)
+2. **Return explicit methods** in `getMethods()` - wildcards don't work
+3. **Handle all methods** declared in the component properties
+
+## 12. Best Practices
 
 1. **Export only API packages** - Keep implementation private
 2. **Use DS over Activators** - Cleaner lifecycle management
@@ -258,3 +333,4 @@ Config file: `etc/org.sokybot.myservice.cfg`
 4. **Handle service dynamics** - Services can come and go
 5. **Version packages** - Use semantic versioning for exported packages
 6. **Test in OSGi** - Unit tests may miss OSGi-specific issues
+7. **Use setter injection** - For `volatile` fields with `@Reference`, use setter methods
