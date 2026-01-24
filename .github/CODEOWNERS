@@ -1,0 +1,74 @@
+# =============================================================================
+# CODEOWNERS - Defines code owners for automatic PR review requests
+# =============================================================================
+# These owners will be requested for review when someone opens a pull request
+# that modifies code that they own.
+#
+# Order matters! The last matching pattern takes precedence.
+# =============================================================================
+
+# Default owners for everything in the repo
+*                                   @sokybot/maintainers
+
+# =============================================================================
+# Core Components
+# =============================================================================
+/sokybot-engine/                    @sokybot/core-team
+/sokybot-engine-api/                @sokybot/core-team
+/sokybot-proxy/                     @sokybot/core-team
+/sokybot-security/                  @sokybot/core-team
+
+# =============================================================================
+# Game Data & Assets
+# =============================================================================
+/sokybot-pk2/                       @sokybot/game-data-team
+/sokybot-pk2-extractor/             @sokybot/game-data-team
+/sokybot-game-loader/               @sokybot/game-data-team
+/sokybot-game-model/                @sokybot/game-data-team
+/sokybot-game-asset/                @sokybot/game-data-team
+/sokybot-game-events/               @sokybot/game-data-team
+/sokybot-game-navigation/           @sokybot/game-data-team
+
+# =============================================================================
+# UI & Frontend
+# =============================================================================
+/sokybot-webview/                   @sokybot/frontend-team
+/sokybot-swing/                     @sokybot/frontend-team
+/sokybot-dev-tools/                 @sokybot/frontend-team
+**/frontend/**                      @sokybot/frontend-team
+*.tsx                               @sokybot/frontend-team
+*.ts                                @sokybot/frontend-team
+*.css                               @sokybot/frontend-team
+
+# =============================================================================
+# Infrastructure & Build
+# =============================================================================
+/sokybot-dist/                      @sokybot/devops-team
+/sokybot-features/                  @sokybot/devops-team
+/.github/                           @sokybot/devops-team
+/.mvn/                              @sokybot/devops-team
+pom.xml                             @sokybot/devops-team
+mvnw                                @sokybot/devops-team
+mvnw.cmd                            @sokybot/devops-team
+
+# =============================================================================
+# Documentation
+# =============================================================================
+*.md                                @sokybot/docs-team
+/docs/                              @sokybot/docs-team
+
+# =============================================================================
+# Configuration & Quality
+# =============================================================================
+checkstyle.xml                      @sokybot/maintainers
+.gitignore                          @sokybot/maintainers
+.gitattributes                      @sokybot/maintainers
+versions-rules.xml                  @sokybot/maintainers
+
+# =============================================================================
+# Security-sensitive files - require maintainer approval
+# =============================================================================
+/sokybot-security/                  @sokybot/security-team @sokybot/maintainers
+**/security/**                      @sokybot/security-team @sokybot/maintainers
+.github/dependabot.yml              @sokybot/maintainers
+SECURITY.md                         @sokybot/maintainers

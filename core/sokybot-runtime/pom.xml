@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>io.github.sokybot</groupId>
+        <artifactId>sokybot</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>sokybot-runtime</artifactId>
+    <packaging>bundle</packaging>
+    <name>sokybot-runtime</name>
+    <description>Runtime context implementations for ISokybotContext, IGroupContext, and IMachineContext</description>
+
+    <properties>
+        <lombok.version>1.18.30</lombok.version>
+    </properties>
+
+    <dependencies>
+        <!-- Sokybot API for interfaces -->
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-game-events-api</artifactId>
+            <version>${project.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-ui-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <!-- Loader API for IGameLoader/IGameLoaderService -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-loader-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-proxy</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        
+        <!-- Engine for IEngineFactory -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-engine</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Persistence bundle for domain classes and repositories -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-persistence</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+             <groupId>${project.groupId}</groupId>
+             <artifactId>sokybot-game-model</artifactId>
+             <version>${project.version}</version>
+             <scope>provided</scope>
+        </dependency>
+        
+        <dependency>
+             <groupId>${project.groupId}</groupId>
+             <artifactId>sokybot-game-events</artifactId>
+             <version>${project.version}</version>
+             <scope>provided</scope>
+        </dependency>
+        
+        <!-- Game Navigation for IRuteFinder -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-game-navigation</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+
+        <!-- OSGi Declarative Services annotations -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.5.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- OSGi Event Admin for lifecycle events -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.event</artifactId>
+            <version>1.4.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${dependency.slf4j-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Lombok -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.10.1</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.11.0</version>
+            <scope>test</scope>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-junit-jupiter</artifactId>
+            <version>5.11.0</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
+                        <Bundle-Name>${project.name}</Bundle-Name>
+                        <Bundle-Version>${project.version}</Bundle-Version>
+                        <Bundle-Description>${project.description}</Bundle-Description>
+                        <Bundle-Activator>org.sokybot.runtime.internal.RuntimeActivator</Bundle-Activator>
+                        <Service-Component>OSGI-INF/*.xml</Service-Component>
+                        <_dsannotations>*</_dsannotations>
+                        <Import-Package>
+                            org.osgi.framework,
+                            org.osgi.framework.launch,
+                            org.osgi.service.event,
+                            org.sokybot.*,
+                            *;resolution:=optional
+                        </Import-Package>
+                        <Export-Package>
+                            org.sokybot.runtime,
+                            org.sokybot.exception
+                        </Export-Package>
+                        <Private-Package>
+                            org.sokybot.runtime.internal.*
+                        </Private-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

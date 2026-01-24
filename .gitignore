@@ -1,3 +1,10 @@
+# =============================================================================
+# Sokybot .gitignore
+# =============================================================================
+
+# =============================================================================
+# Maven
+# =============================================================================
 target/
 pom.xml.tag
 pom.xml.releaseBackup
@@ -7,29 +14,36 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 .mvn/timing.properties
-# https://github.com/takari/maven-wrapper#usage-without-binary-jar
+.flattened-pom.xml
+
+# Maven wrapper - keep scripts, ignore jar
 .mvn/wrapper/maven-wrapper.jar
-!.mvn/wrapper/maven-wrapper.jar
+
+# Exceptions for source/test directories
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# =============================================================================
+# IDEs and Editors
+# =============================================================================
+
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+.idea/
+!.idea/runConfigurations/
 *.iws
 *.iml
 *.ipr
+out/
 
 ### Eclipse ###
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
 .sts4-cache
+bin/
 
 ### NetBeans ###
 /nbproject/private/
@@ -37,37 +51,171 @@ buildNumber.properties
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
 ### VS Code ###
 .vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
 
-### Mac OS ###
+### Vim ###
+*.swp
+*.swo
+*~
+
+### Emacs ###
+*~
+\#*\#
+.#*
+
+# =============================================================================
+# Operating Systems
+# =============================================================================
+
+### macOS ###
 .DS_Store
-/.metadata/
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+### Windows ###
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+### Linux ###
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# =============================================================================
+# Build & Compilation
+# =============================================================================
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+*.war
+*.ear
+*.nar
+
+# =============================================================================
+# Logs & Databases
+# =============================================================================
+*.log
+*.log.*
+logs/
+*.db
+*.sqlite
+*.h2.db
+*.mv.db
+*.trace.db
+
+# =============================================================================
+# Application Specific
+# =============================================================================
+
+### Karaf/OSGi ###
+felix-cache/
+data/
+instances/
+*.kar
+
+### Sokybot ###
 sokybot-core/sokybot.data
 sokybot-core/felix-cache
 sokybot-core/sokybot-cache
-Sokybot-1.0-SNAPSHOT
+Sokybot-*/
 sokybot-static-resources/felix-cache
 sokybot-static-resources/sokybot-osgi-platform
-*.db
 *.pk2
 *.data
 *.mv
 *.trace
 
 ### Generated/Cache files ###
-felix-cache/
 build_output.txt
 debug_output.txt
 cp.txt
 /resources/
-
-### Common generated extensions ###
-*.log
-*.launch
 *.dat
+*.launch
 legacy/
+
+# =============================================================================
+# Frontend (Node.js)
+# =============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# =============================================================================
+# Security - Never commit these!
+# =============================================================================
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.truststore
+credentials.json
+secrets.json
+*.secret
+.env.production
+
+# =============================================================================
+# OWASP Dependency Check
+# =============================================================================
+dependency-check-report.*
+.dependency-check/
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.rej
+
+# =============================================================================
+# Coverage & Reports
+# =============================================================================
+coverage/
+*.lcov
+.nyc_output/
+jacoco.exec
+
+# =============================================================================
+# Misc
+# =============================================================================
+/.metadata/
+*.class
+DiagnosticDriver.class

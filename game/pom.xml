@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.sokybot</groupId>
+        <artifactId>sokybot</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    
+    <artifactId>sokybot-game-aggregator</artifactId>
+    <packaging>pom</packaging>
+    <name>Sokybot :: Game</name>
+    <description>Game data, logic, and models</description>
+    
+    <modules>
+        <module>sokybot-game-asset</module>
+        <module>sokybot-game-events</module>
+        <module>sokybot-game-events-api</module>
+        <module>sokybot-game-loader</module>
+        <module>sokybot-game-model</module>
+        <module>sokybot-game-navigation</module>
+        <module>sokybot-pk2</module>
+        <module>sokybot-pk2-extractor</module>
+        <module>sokybot-loader-api</module>
+    </modules>
+</project>

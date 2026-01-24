@@ -1,0 +1,206 @@
+import React, { useEffect, useState } from 'react';
+import { rsocketService } from './RSocketClient';
+import { CharacterStatus } from './CharacterStatus';
+import { useTheme } from './components/theme-provider';
+import { CreateGroupDialog } from './components/CreateGroupDialog';
+import CreateMachineDialog from './components/CreateMachineDialog';
+import { ToolbarExtensions } from './components/ToolbarExtensions';
+import { Plus, Bot, Monitor, Moon, Sun, Maximize, Minimize } from 'lucide-react';
+import { Button } from '@sokybot/frontend-shared';
+import { cn } from '@sokybot/frontend-shared';
+
+interface LayoutProps {
+    children: React.ReactNode;
+    selectedMachine?: string;
+    onMachineSelect: (machine: string) => void;
+}
+
+export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMachineSelect }) => {
+    const [groups, setGroups] = useState<string[]>([]);
+    const [machines, setMachines] = useState<string[]>([]);
+    const { theme, setTheme } = useTheme();
+    const [isCreateGroupOpen, setCreateGroupOpen] = useState(false);
+    const [isCreateMachineOpen, setCreateMachineOpen] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const fetchData = async () => {
+        try {
+            // Fetch Groups
+            const groupsResp = await rsocketService.requestResponse("getGroups");
+            const groupsData = typeof groupsResp === 'string' ? JSON.parse(groupsResp) : groupsResp;
+            if (Array.isArray(groupsData)) {
+                setGroups(groupsData);
+            }
+
+            // Fetch Machines
+            const machinesResp = await rsocketService.requestResponse("getMachines");
+            const machinesData = typeof machinesResp === 'string' ? JSON.parse(machinesResp) : machinesResp;
+            if (Array.isArray(machinesData)) {
+                setMachines(machinesData);
+            }
+        } catch (err) {
+            console.error("Failed to fetch data", err);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+        // Optional: Set up interval for refreshing or listen to events
+    }, []);
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+            setIsFullscreen(true);
+        } else {
+            document.exitFullscreen();
+            setIsFullscreen(false);
+        }
+    };
+
+    // Helper to get machine simple name
+    const getSimpleName = (fullName: string) => {
+        return fullName.includes('.') ? fullName.split('.').pop() || fullName : fullName;
+    };
+
+    // Helper to get machine group
+    const getMachineGroup = (fullName: string) => {
+        return fullName.includes('.') ? fullName.split('.')[0] : '';
+    };
+
+    return (
+        <div className="flex h-screen bg-background text-foreground font-sans transition-colors duration-300">
+            {/* Sidebar */}
+            <div className="w-64 border-r bg-card flex flex-col transition-colors duration-300">
+                <div className="p-4 border-b flex items-center justify-between">
+                    <div className="font-bold text-lg text-primary font-mono flex items-center gap-2">
+                        <Monitor className="h-5 w-5" />
+                        Sokybot v2
+                    </div>
+                </div>
+
+                {/* Actions */}
+                <div className="p-2 grid grid-cols-2 gap-2 border-b">
+                    <Button variant="outline" size="sm" onClick={() => setCreateGroupOpen(true)} className="h-8">
+                        <Plus className="h-3 w-3 mr-1" /> Group
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setCreateMachineOpen(true)} className="h-8">
+                        <Plus className="h-3 w-3 mr-1" /> Bot
+                    </Button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-2 space-y-4">
+                    {groups.map(group => {
+                        const groupMachines = machines.filter(m => getMachineGroup(m) === group);
+                        return (
+                            <div key={group} className="space-y-1">
+                                <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                                    {group}
+                                    <span className="text-[10px] bg-secondary px-1 rounded text-foreground">{groupMachines.length}</span>
+                                </div>
+                                {groupMachines.map(m => (
+                                    <Button
+                                        key={m}
+                                        variant={selectedMachine === m ? "secondary" : "ghost"}
+                                        className={cn("w-full justify-start font-normal pl-4 h-8", selectedMachine === m && "font-medium bg-accent")}
+                                        onClick={() => onMachineSelect(m)}
+                                    >
+                                        <Bot className="h-4 w-4 mr-2 text-muted-foreground" />
+                                        {getSimpleName(m)}
+                                    </Button>
+                                ))}
+                                {groupMachines.length === 0 && (
+                                    <div className="pl-4 text-xs text-muted-foreground italic py-1">No bots</div>
+                                )}
+                            </div>
+                        );
+                    })}
+
+                    {/* Orphaned machines or if no groups defined yet (legacy fallback) */}
+                    {groups.length === 0 && machines.length > 0 && (
+                        <div className="space-y-1">
+                            <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Default</div>
+                            {machines.map(m => (
+                                <Button
+                                    key={m}
+                                    variant={selectedMachine === m ? "secondary" : "ghost"}
+                                    className={cn("w-full justify-start font-normal", selectedMachine === m && "font-medium")}
+                                    onClick={() => onMachineSelect(m)}
+                                >
+                                    <Bot className="h-4 w-4 mr-2 text-muted-foreground" />
+                                    {m}
+                                </Button>
+                            ))}
+                        </div>
+                    )}
+
+                    {groups.length === 0 && machines.length === 0 && (
+                        <div className="text-muted-foreground text-xs italic p-4 text-center">
+                            No groups or bots found.<br />Create a group to start.
+                        </div>
+                    )}
+                </div>
+                <div className="p-4 border-t text-xs text-muted-foreground">
+                    {machines.length} Total Bots
+                </div>
+            </div>
+
+            <CreateGroupDialog
+                isOpen={isCreateGroupOpen}
+                onClose={() => setCreateGroupOpen(false)}
+                onCreated={fetchData}
+            />
+            <CreateMachineDialog
+                isOpen={isCreateMachineOpen}
+                onClose={() => setCreateMachineOpen(false)}
+                onSuccess={fetchData}
+            />
+
+            {/* Main Content */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Header */}
+                <div className="bg-card border-b p-4 shadow-sm flex justify-between items-center h-16 transition-colors duration-300">
+                    <div className="font-semibold text-lg flex items-center gap-2">
+                        {selectedMachine ? (
+                            <>
+                                <Bot className="h-5 w-5 text-primary" />
+                                {selectedMachine}
+                            </>
+                        ) : "Select a Machine"}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {/* Extension Toolbar Actions */}
+                        <ToolbarExtensions />
+
+                        <Button variant="ghost" size="icon" onClick={() => {
+                            if (theme === 'light') setTheme('dark');
+                            else if (theme === 'dark') setTheme('desktop');
+                            else if (theme === 'desktop') setTheme('desktop-dark');
+                            else setTheme('light');
+                        }} title={`Theme: ${theme}`}>
+                            {theme === 'dark' ? <Moon className="h-4 w-4" /> :
+                                theme === 'desktop' ? <Monitor className="h-4 w-4" /> :
+                                    theme === 'desktop-dark' ? <Monitor className="h-4 w-4 text-foreground/70" /> :
+                                        <Sun className="h-4 w-4" />}
+                        </Button>
+
+                        <Button variant="ghost" size="icon" onClick={toggleFullscreen}>
+                            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-auto p-6 bg-secondary/20 transition-colors duration-300">
+                    {/* Machine Specific Header (Character Status) */}
+                    {selectedMachine && (
+                        <div className="mb-6">
+                            <CharacterStatus machineId={selectedMachine} />
+                        </div>
+                    )}
+
+                    {children}
+                </div>
+            </div>
+        </div>
+    );
+};

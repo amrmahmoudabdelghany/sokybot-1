@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.sokybot</groupId>
+        <artifactId>sokybot</artifactId>
+        <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>sokybot-features</artifactId>
+    <packaging>feature</packaging>
+    <name>Sokybot :: Features</name>
+    <description>Karaf feature descriptors for Sokybot bundles</description>
+
+    <dependencies>
+        <!-- JNA (required by sokybot-commons) -->
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.java.dev.jna</groupId>
+            <artifactId>jna-platform</artifactId>
+        </dependency>
+        
+        <!-- Jackson bundles (shared via feature) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- Sokybot bundles referenced in features -->
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-loader-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-engine-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-game-events-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-http-server</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-webview</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.sokybot</groupId>
+            <artifactId>sokybot-dev-tools</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/feature</directory>
+                <filtering>true</filtering>
+                <targetPath>${project.build.directory}/feature</targetPath>
+            </resource>
+        </resources>
+        <plugins>
+            <!-- Filter the feature.xml to substitute version properties -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>filter-features</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>resources</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.karaf.tooling</groupId>
+                <artifactId>karaf-maven-plugin</artifactId>
+                <version>${karaf.version}</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <enableGeneration>false</enableGeneration>
+                    <includeProjectArtifact>false</includeProjectArtifact>
+                    <primaryFeatureFile>${project.build.directory}/feature/feature.xml</primaryFeatureFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>package-features</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>features-generate-descriptor</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

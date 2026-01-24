@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions & Discussions
+    url: https://github.com/sokybot/sokybot/discussions
+    about: Ask questions and discuss ideas in GitHub Discussions
+  - name: Documentation
+    url: https://github.com/sokybot/sokybot/wiki
+    about: Check the Wiki for documentation and guides

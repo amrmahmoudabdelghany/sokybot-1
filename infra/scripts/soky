@@ -1,0 +1,490 @@
+#!/bin/bash
+# =============================================================================
+# Sokybot Development CLI ("soky")
+# =============================================================================
+# A unified tool to manage the Sokybot development environment.
+#
+# Usage:
+#   soky [subcommand] [args...]
+#
+# =============================================================================
+
+set -e
+
+# =============================================================================
+# Configuration
+# =============================================================================
+
+# Resolve true path of this script (handle symlinks)
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" # if $SOURCE was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
+ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Karaf Paths (Absolute)
+KARAF_DIST="$ROOT_DIR/infra/sokybot-dist/target/assembly"
+KARAF_BIN="$KARAF_DIST/bin"
+KARAF_DATA="$KARAF_DIST/data"
+KARAF_LOG="$KARAF_DATA/log/karaf.log"
+
+# UI Paths
+UI_DIR="$ROOT_DIR/ui"
+
+# Colors
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# =============================================================================
+# Helper Functions
+# =============================================================================
+log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
+log_success() { echo -e "${GREEN}[OK]${NC} $1"; }
+log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
+log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
+log_header() { echo -e "\n${CYAN}=== $1 ===${NC}"; }
+
+check_karaf_dist() {
+    if [ ! -d "$KARAF_BIN" ]; then
+        log_error "Karaf distribution not found at: $KARAF_DIST"
+        log_warn "Please build the project first: soky build backend"
+        exit 1
+    fi
+}
+
+is_process_running() {
+    if pgrep -f "$1" > /dev/null; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+check_port() {
+    # Check if a port is listening ($1)
+    if ss -lnt | grep -q ":$1 "; then
+        echo -e "${GREEN}Running (Port $1)${NC}"
+    else
+        echo -e "${RED}Stopped (Port $1)${NC}"
+    fi
+}
+
+# =============================================================================
+# Subcommands: Backend
+# =============================================================================
+
+cmd_backend_start() {
+    check_karaf_dist
+    
+    if is_process_running "org.apache.karaf.main.Main"; then
+        log_warn "Sokybot Backend appears to be running already."
+        return
+    fi
+    
+    log_info "Starting Sokybot Backend (Server Mode)..."
+    "$KARAF_BIN/start"
+    
+    log_success "Backend started in background."
+    log_info "Tail logs with: soky backend logs"
+    log_info "Attach shell with: soky backend shell"
+}
+
+cmd_backend_stop() {
+    check_karaf_dist
+    
+    log_info "Stopping Sokybot Backend..."
+    if [ -x "$KARAF_BIN/stop" ]; then
+        "$KARAF_BIN/stop" 2>/dev/null || true
+    fi
+    
+    # Wait for shutdown
+    retry=0
+    while is_process_running "org.apache.karaf.main.Main"; do
+        sleep 1
+        ((retry++))
+        if [ $retry -gt 10 ]; then
+            log_warn "Backend did not stop gracefully. Forcing kill..."
+            pkill -f "org.apache.karaf.main.Main"
+            break
+        fi
+    done
+    log_success "Backend stopped."
+}
+
+cmd_backend_restart() {
+    cmd_backend_stop
+    sleep 2
+    cmd_backend_start
+}
+
+cmd_backend_debug() {
+    check_karaf_dist
+    
+    if is_process_running "org.apache.karaf.main.Main"; then
+        log_warn "Sokybot Backend appears to be running already."
+        log_warn "Stop it first with: soky backend stop"
+        return
+    fi
+    
+    log_info "Starting Sokybot Backend in DEBUG mode (Port 5005)..."
+    log_info "Attach your debugger to localhost:5005"
+    export KARAF_DEBUG=true
+    "$KARAF_BIN/karaf" debug
+}
+
+cmd_backend_logs() {
+    log_info "Tailing logs (Ctrl+C to exit)..."
+    if [ -f "$KARAF_LOG" ]; then
+        tail -f "$KARAF_LOG"
+    else
+        log_warn "Log file not found yet ($KARAF_LOG). Waiting..."
+        while [ ! -f "$KARAF_LOG" ]; do sleep 1; done
+        tail -f "$KARAF_LOG"
+    fi
+}
+
+cmd_backend_shell() {
+    check_karaf_dist
+    log_info "Connecting to Karaf Shell..."
+    "$KARAF_BIN/client"
+}
+
+cmd_backend_clean() {
+    cmd_backend_stop
+    
+    if [ -d "$KARAF_DATA" ]; then
+        log_info "Cleaning Karaf data directory..."
+        rm -rf "$KARAF_DATA"
+        log_success "Cache cleaned."
+    else
+        log_info "Nothing to clean."
+    fi
+}
+
+cmd_backend_features() {
+    check_karaf_dist
+    log_info "Listing Sokybot Karaf features..."
+    "$KARAF_BIN/client" "feature:list | grep -E '(sokybot|State)'"
+}
+
+# =============================================================================
+# Subcommands: Frontend
+# =============================================================================
+
+cmd_ui_dev() {
+    log_info "Starting Frontend Development Servers..."
+    log_info "NOTE: You can access the UI at http://localhost:8182 (Backend HTTP Server)"
+    log_info "      Webview dev server: http://localhost:5173"
+    log_info "      DevTools dev server: http://localhost:3000"
+    cd "$UI_DIR"
+    npm run dev
+}
+
+# =============================================================================
+# Subcommands: Build
+# =============================================================================
+
+cmd_build() {
+    local TARGET=$1
+    shift || true
+    local FAST_FLAG=false
+    
+    # Parse remaining arguments for flags
+    for arg in "$@"; do
+        case "$arg" in
+            --fast) FAST_FLAG=true ;;
+        esac
+    done
+    
+    case "$TARGET" in
+        backend)
+            log_header "Building Backend"
+            log_info "Running Maven install..."
+            cd "$ROOT_DIR"
+            if [ ! -f "./mvnw" ]; then
+                log_error "Maven Wrapper (mvnw) not found in $ROOT_DIR"
+                exit 1
+            fi
+            if [ "$FAST_FLAG" = true ]; then
+                log_info "Using fast profile (skipping tests and quality checks)..."
+                ./mvnw clean install -P fast
+            else
+                log_info "Using dev profile..."
+                ./mvnw clean install -P dev
+            fi
+            ;;
+        ui)
+            log_header "Building UI"
+            cd "$UI_DIR"
+            npm install
+            npm run build
+            ;;
+        module)
+            if [ -z "$1" ]; then
+                log_error "Usage: soky build module <module-name>"
+                log_info "Example: soky build module sokybot-webview"
+                exit 1
+            fi
+            MODULE_NAME=$1
+            log_header "Building Module: $MODULE_NAME"
+            cd "$ROOT_DIR"
+            if [ ! -f "./mvnw" ]; then
+                log_error "Maven Wrapper (mvnw) not found in $ROOT_DIR"
+                exit 1
+            fi
+            ./mvnw clean install -pl "$MODULE_NAME" -am -P dev
+            ;;
+        all)
+            cmd_build backend "$@"
+            cmd_build ui
+            ;;
+        *)
+            echo "Usage: soky build [backend|ui|module|all] [--fast]"
+            echo ""
+            echo "Options:"
+            echo "  backend        - Build all Java modules"
+            echo "  backend --fast - Build with fast profile (skip tests/checks)"
+            echo "  ui             - Build all frontend modules"
+            echo "  module <name>  - Build a specific Maven module"
+            echo "  all            - Build everything"
+            ;;
+    esac
+}
+
+cmd_clean() {
+    TARGET=$1
+    
+    case "$TARGET" in
+        backend)
+            cmd_backend_clean
+            ;;
+        maven)
+            log_header "Cleaning Maven Build"
+            cd "$ROOT_DIR"
+            ./mvnw clean
+            log_success "Maven targets cleaned."
+            ;;
+        all)
+            cmd_backend_stop 2>/dev/null || true
+            
+            log_header "Cleaning Everything"
+            
+            # Clean Karaf data
+            if [ -d "$KARAF_DATA" ]; then
+                log_info "Cleaning Karaf data directory..."
+                rm -rf "$KARAF_DATA"
+            fi
+            
+            # Clean Maven targets
+            log_info "Cleaning Maven build targets..."
+            cd "$ROOT_DIR"
+            ./mvnw clean
+            
+            log_success "All cleaned."
+            ;;
+        *)
+            echo "Usage: soky clean [backend|maven|all]"
+            echo ""
+            echo "Options:"
+            echo "  backend - Clean Karaf data directory only"
+            echo "  maven   - Run mvn clean"
+            echo "  all     - Clean both Karaf data and Maven targets"
+            ;;
+    esac
+}
+
+# =============================================================================
+# Subcommands: Status & Diagnostics
+# =============================================================================
+
+cmd_status() {
+    log_header "Sokybot Status"
+    
+    echo -n "Backend Process (Java): "
+    if is_process_running "org.apache.karaf.main.Main"; then
+        echo -e "${GREEN}Running (PID $(pgrep -f org.apache.karaf.main.Main | head -1))${NC}"
+    else
+        echo -e "${RED}Stopped${NC}"
+    fi
+
+    echo -n "Backend API (Port 8182): "
+    check_port 8182
+    
+    echo -n "Backend Debug (Port 5005): "
+    if ss -lnt | grep -q ":5005 "; then
+        echo -e "${GREEN}Running (Debug Mode)${NC}"
+    else
+        echo -e "${YELLOW}Not Active${NC} (start with: soky backend debug)"
+    fi
+    
+    echo ""
+    echo -e "${YELLOW}Frontend Dev Servers:${NC}"
+    echo -n "  DevTools (Port 3000): "
+    check_port 3000
+    
+    echo -n "  Webview (Port 5173): "
+    check_port 5173
+}
+
+cmd_setup() {
+    log_header "Environment Setup Check"
+    
+    # Java
+    echo -n "Java (11+): "
+    if type -p java > /dev/null; then
+        JAVA_VER=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
+        echo -e "${GREEN}Found ($JAVA_VER)${NC}"
+    else
+        echo -e "${RED}Not Found${NC}"
+    fi
+    
+    # Maven
+    echo -n "Maven: "
+    if [ -f "$ROOT_DIR/mvnw" ]; then
+        echo -e "${GREEN}Found (Wrapper)${NC}"
+    else
+        echo -e "${RED}Not Found (Missing mvnw)${NC}"
+    fi
+    
+    # Node
+    echo -n "Node.js (18+): "
+    if type -p node > /dev/null; then
+        NODE_VER=$(node -v)
+        echo -e "${GREEN}Found ($NODE_VER)${NC}"
+    else
+        echo -e "${RED}Not Found${NC}"
+    fi
+    
+    # npm
+    echo -n "npm: "
+    if type -p npm > /dev/null; then
+        NPM_VER=$(npm -v)
+        echo -e "${GREEN}Found ($NPM_VER)${NC}"
+    else
+        echo -e "${RED}Not Found${NC}"
+    fi
+}
+
+cmd_install() {
+    log_header "Installing 'soky' CLI"
+    
+    BIN_DIR="$HOME/bin"
+    TARGET_LINK="$BIN_DIR/soky"
+    
+    if [ ! -d "$BIN_DIR" ]; then
+        log_info "Creating $BIN_DIR..."
+        mkdir -p "$BIN_DIR"
+    fi
+    
+    if [ -L "$TARGET_LINK" ]; then
+        rm "$TARGET_LINK"
+    fi
+    
+    ln -s "$SCRIPT_DIR/soky" "$TARGET_LINK"
+    log_success "Linked 'soky' to $TARGET_LINK"
+    
+    # Check PATH
+    if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
+        log_warn "Directory $BIN_DIR is not in your PATH."
+        log_warn "Add the following to your ~/.bashrc or ~/.zshrc:"
+        echo -e "${YELLOW}export PATH=\"\$HOME/bin:\$PATH\"${NC}"
+    else
+        log_success "Directory $BIN_DIR is already in PATH."
+    fi
+    
+    log_info "You can now run 'soky status' from anywhere!"
+}
+
+# =============================================================================
+# Global
+# =============================================================================
+
+cmd_kill() {
+    log_warn "Force killing all Sokybot processes..."
+    pkill -f "org.apache.karaf.main.Main" && log_success "Killed Karaf (Java)" || log_info "No Karaf process found."
+    pkill -f "vite" && log_success "Killed Vite (Node)" || log_info "No Vite process found."
+    log_success "Cleanup complete."
+}
+
+cmd_help() {
+    echo "Sokybot Management CLI"
+    echo ""
+    echo "Usage: soky [command] [subcommand]"
+    echo ""
+    echo "Core:"
+    echo "  install       - Install 'soky' to ~/bin for global access"
+    echo "  setup         - Verify environment requirements"
+    echo "  status        - Show status of all services"
+    echo "  kill          - Force kill all processes"
+    echo ""
+    echo "Backend:"
+    echo "  backend start    - Start server in background"
+    echo "  backend stop     - Stop server"
+    echo "  backend restart  - Restart server"
+    echo "  backend debug    - Start in debug mode (port 5005)"
+    echo "  backend logs     - Tail logs"
+    echo "  backend clean    - Clean Karaf cache"
+    echo "  backend shell    - Connect to Karaf shell"
+    echo "  backend features - List installed Sokybot features"
+    echo ""
+    echo "Frontend:"
+    echo "  ui dev           - Start dev servers (webview + devtools)"
+    echo ""
+    echo "Build:"
+    echo "  build backend [--fast]  - Build Java project"
+    echo "  build ui                - Build Frontend"
+    echo "  build module <name>     - Build specific Maven module"
+    echo "  build all [--fast]      - Build everything"
+    echo ""
+    echo "Clean:"
+    echo "  clean backend    - Clean Karaf data directory"
+    echo "  clean maven      - Run mvn clean"
+    echo "  clean all        - Clean everything"
+    echo ""
+}
+
+# =============================================================================
+# Main Dispatch
+# =============================================================================
+
+case "$1" in
+    backend)
+        case "$2" in
+            start)    cmd_backend_start ;;
+            stop)     cmd_backend_stop ;;
+            restart)  cmd_backend_restart ;;
+            debug)    cmd_backend_debug ;;
+            clean)    cmd_backend_clean ;;
+            logs)     cmd_backend_logs ;;
+            shell)    cmd_backend_shell ;;
+            features) cmd_backend_features ;;
+            *)        cmd_help ;;
+        esac
+        ;;
+    ui)
+        case "$2" in
+            dev)     cmd_ui_dev ;;
+            *)       cmd_help ;;
+        esac
+        ;;
+    build)
+        shift
+        cmd_build "$@"
+        ;;
+    clean)
+        shift
+        cmd_clean "$@"
+        ;;
+    status)   cmd_status ;;
+    setup)    cmd_setup ;;
+    kill)     cmd_kill ;;
+    install)  cmd_install ;;
+    *)        cmd_help ;;
+esac

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Assembly descriptor for creating desktop distribution bundle.
+    This creates a self-contained distribution with:
+    - Karaf runtime
+    - Application bundles
+    - Launch scripts
+    - Configuration files
+    
+    JRE should be bundled separately (either via jlink or by copying a JRE distribution)
+-->
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.2.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 
+                              http://maven.apache.org/xsd/assembly-2.2.0.xsd">
+    
+    <id>desktop</id>
+    <formats>
+        <format>zip</format>
+        <format>dir</format>
+    </formats>
+    
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>${app.name}-${project.version}</baseDirectory>
+    
+    <fileSets>
+        <!-- Include Karaf assembly -->
+        <fileSet>
+            <directory>${project.build.directory}/assembly</directory>
+            <outputDirectory>/runtime</outputDirectory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+            <excludes>
+                <!-- Exclude server-only files -->
+                <exclude>**/bin/karaf.bat</exclude>
+                <exclude>**/bin/karaf</exclude>
+                <exclude>**/bin/start*</exclude>
+                <exclude>**/bin/stop*</exclude>
+            </excludes>
+        </fileSet>
+        
+        <!-- Include launch scripts -->
+        <fileSet>
+            <directory>${project.basedir}/src/main/scripts</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>sokybot.bat</include>
+                <include>sokybot.sh</include>
+                <include>sokybot.ps1</include>
+            </includes>
+            <fileMode>0755</fileMode>
+            <filtered>true</filtered>
+        </fileSet>
+        
+        <!-- Include README and license -->
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources/dist</directory>
+            <outputDirectory>/</outputDirectory>
+            <includes>
+                <include>README.txt</include>
+                <include>LICENSE.txt</include>
+            </includes>
+            <filtered>true</filtered>
+        </fileSet>
+    </fileSets>
+    
+    <!-- Placeholder for JRE - to be populated by packaging script -->
+    <fileSets>
+        <fileSet>
+            <directory>${project.basedir}/src/main/resources/jre-placeholder</directory>
+            <outputDirectory>/jre</outputDirectory>
+            <includes>
+                <include>README-JRE.txt</include>
+            </includes>
+        </fileSet>
+    </fileSets>
+</assembly>

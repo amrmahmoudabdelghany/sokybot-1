@@ -1,0 +1,2 @@
+nohup: ignoring input
+karaf: There is a Root instance already running with name root and pid 1358150. If you know what you are doing and want to force the run anyway, export CHECK_ROOT_INSTANCE_RUNNING=false and re run the command.

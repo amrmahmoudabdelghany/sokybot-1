@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Version update rules for versions-maven-plugin.
+    
+    Usage:
+        ./mvnw versions:display-dependency-updates -Dmaven.version.rules=file:///${project.basedir}/versions-rules.xml
+        ./mvnw versions:display-plugin-updates -Dmaven.version.rules=file:///${project.basedir}/versions-rules.xml
+    
+    Or configure in settings.xml for automatic use.
+-->
+<ruleset xmlns="http://mojo.codehaus.org/versions-maven-plugin/rule/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         comparisonMethod="maven"
+         xsi:schemaLocation="http://mojo.codehaus.org/versions-maven-plugin/rule/2.0.0
+                             https://www.mojohaus.org/versions-maven-plugin/xsd/rule-2.0.0.xsd">
+
+    <rules>
+        <!-- Ignore alpha, beta, milestone, and release candidate versions -->
+        <rule groupId="*" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">.*[-.]alpha.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]Alpha.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]ALPHA.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]beta.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]Beta.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]BETA.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]b[0-9]+.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]M[0-9]+.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]m[0-9]+.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]milestone.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]rc.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]RC.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]cr.*</ignoreVersion>
+                <ignoreVersion type="regex">.*[-.]CR.*</ignoreVersion>
+                <ignoreVersion type="regex">.*-pr-.*</ignoreVersion>
+                <ignoreVersion type="regex">.*-preview.*</ignoreVersion>
+                <ignoreVersion type="regex">.*-ea.*</ignoreVersion>
+                <ignoreVersion type="regex">.*-incubating.*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+
+        <!-- Specific rules for known libraries -->
+        
+        <!-- Stay on SLF4J 1.7.x for compatibility -->
+        <rule groupId="org.slf4j" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">2\..*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+
+        <!-- Stay on Logback 1.x for SLF4J 1.7 compatibility -->
+        <rule groupId="ch.qos.logback" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">1\.5\..*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+
+        <!-- Hibernate: stay on 5.x for Java 11 compatibility -->
+        <rule groupId="org.hibernate" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">6\..*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+
+        <!-- Spring: stay on 5.x for Java 11 compatibility -->
+        <rule groupId="org.springframework" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">6\..*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+
+        <!-- Spring Data: stay on 2.x for Spring 5 compatibility -->
+        <rule groupId="org.springframework.data" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">3\..*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+
+        <!-- JUnit: prefer 5.x stable releases -->
+        <rule groupId="org.junit.jupiter" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">.*-M.*</ignoreVersion>
+                <ignoreVersion type="regex">.*-RC.*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+
+        <!-- OSGi: stay on compatible versions -->
+        <rule groupId="org.osgi" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">8\..*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+
+        <!-- Karaf: stay on 4.4.x for compatibility -->
+        <rule groupId="org.apache.karaf" artifactId="*">
+            <ignoreVersions>
+                <ignoreVersion type="regex">4\.5\..*</ignoreVersion>
+            </ignoreVersions>
+        </rule>
+    </rules>
+</ruleset>

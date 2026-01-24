@@ -12,89 +12,98 @@
 		<maven.compiler.source>11</maven.compiler.source>
 		<maven.compiler.target>11</maven.compiler.target>
 
-		<jna.version>5.12.1</jna.version>
+		<!-- Dependency Versions - Updated to latest stable versions -->
+		<jna.version>5.13.0</jna.version>
 		<swingx-all.version>1.6.5-1</swingx-all.version>
 		<mydoggy.version>1.5.0</mydoggy.version>
-		<junit-jupiter-engine.version>5.9.0-M1</junit-jupiter-engine.version>
-		<dependency.mockito-core.version>4.8.0</dependency.mockito-core.version>
-		<dependency.mockito-junit-jupter.version>4.8.0</dependency.mockito-junit-jupter.version>
+		<junit-jupiter.version>5.10.1</junit-jupiter.version>
+		<!-- Backward compatibility: keep old property name for child modules -->
+		<junit-jupiter-engine.version>${junit-jupiter.version}</junit-jupiter-engine.version>
+		<mockito.version>5.11.0</mockito.version>
+		<!-- Backward compatibility: keep old property names for child modules -->
+		<dependency.mockito-core.version>${mockito.version}</dependency.mockito-core.version>
+		<dependency.mockito-junit-jupter.version>${mockito.version}</dependency.mockito-junit-jupter.version>
 		<dependency.gc4s.version>1.6.0</dependency.gc4s.version>
 		<dependency.felix.version>7.0.5</dependency.felix.version>
 		<karaf.version>4.4.6</karaf.version>
 		<vavr.version>0.10.4</vavr.version>
-		<commons-lang3.version>3.12.0</commons-lang3.version>
-		<commons-io.version>2.11.0</commons-io.version>
-		<commons-csv.version>1.9.0</commons-csv.version>
-		<dependency.logback-classic.version>1.2.11</dependency.logback-classic.version>
-		<dependency.logback-core.version>1.2.11</dependency.logback-core.version>
-		<dependency.slf4j-api.version>1.7.36</dependency.slf4j-api.version>
+		<commons-lang3.version>3.14.0</commons-lang3.version>
+		<commons-io.version>2.16.1</commons-io.version>
+		<commons-csv.version>1.11.0</commons-csv.version>
+		<commons-math3.version>3.6.1</commons-math3.version>
+		<logback.version>1.4.14</logback.version>
+		<!-- Backward compatibility: keep old property names for child modules -->
+		<dependency.logback-classic.version>${logback.version}</dependency.logback-classic.version>
+		<dependency.logback-core.version>${logback.version}</dependency.logback-core.version>
+		<slf4j.version>1.7.36</slf4j.version>
+		<dependency.slf4j-api.version>${slf4j.version}</dependency.slf4j-api.version>
+		<jackson.version>2.15.2</jackson.version>
 		<lombok.version>1.18.30</lombok.version>
 		<nitrite.version>4.1.0-SNAPSHOT</nitrite.version>
 		<nitrite-jackson-mapper.version>4.1.0-SNAPSHOT</nitrite-jackson-mapper.version>
 		<nitrite-mvstore-adapter.version>4.1.0-SNAPSHOT</nitrite-mvstore-adapter.version>
-
 		<dependency.ehcache.version>3.8.1</dependency.ehcache.version>
 
-
+		<!-- Plugin Versions -->
 		<plugin.bundle.version>5.1.8</plugin.bundle.version>
+		<maven.compiler.version>3.11.0</maven.compiler.version>
+		<maven.surefire.version>3.2.2</maven.surefire.version>
+		<maven.enforcer.version>3.4.1</maven.enforcer.version>
+		<maven.versions.version>2.16.2</maven.versions.version>
+		<maven.resources.version>3.3.1</maven.resources.version>
+		<maven.source.version>3.3.0</maven.source.version>
+		<maven.javadoc.version>3.6.3</maven.javadoc.version>
+		<jacoco.version>0.8.11</jacoco.version>
+		<spotbugs.version>4.8.3.1</spotbugs.version>
+		<checkstyle.version>3.3.1</checkstyle.version>
+		<pmd.version>3.21.2</pmd.version>
+		<owasp.version>9.0.9</owasp.version>
+		<maven.dependency.version>3.6.1</maven.dependency.version>
+		<maven.clean.version>3.3.2</maven.clean.version>
+		<maven.install.version>3.1.1</maven.install.version>
+		<maven.deploy.version>3.1.1</maven.deploy.version>
+		<maven.site.version>3.12.1</maven.site.version>
+		<maven.jar.version>3.3.0</maven.jar.version>
+		<maven.failsafe.version>${maven.surefire.version}</maven.failsafe.version>
+		<maven.project.info.version>3.5.0</maven.project.info.version>
+		<maven.jxr.version>3.3.2</maven.jxr.version>
 
+		<!-- Build Optimization Properties -->
+		<maven.compiler.useIncrementalCompilation>true</maven.compiler.useIncrementalCompilation>
+		<maven.build.cache.enabled>false</maven.build.cache.enabled>
+
+		<!-- Build Reproducibility & Metadata -->
+		<git-commit-id.version>7.0.0</git-commit-id.version>
+		<project.build.outputTimestamp>2024-01-01T00:00:00Z</project.build.outputTimestamp>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+		<!-- Desktop Packaging -->
+		<maven.assembly.version>3.6.0</maven.assembly.version>
+		<jre.version>11</jre.version>
+		<app.name>Sokybot</app.name>
+		<app.main.class>org.apache.karaf.main.Main</app.main.class>
+
+		<!-- Reactor -->
+		<reactor-bom.version>2023.0.0</reactor-bom.version>
+
+		<!-- Shared Infrastructure Versions (used by Karaf features) -->
+		<netty.version>4.1.100.Final</netty.version>
+		<reactor.version>3.6.0</reactor.version>
+		<reactor-netty.version>1.1.13</reactor-netty.version>
+		<reactive-streams.version>1.0.4</reactive-streams.version>
+		<rsocket.version>1.1.4</rsocket.version>
 	</properties>
 
 
-	<modules>
-
-		<module>${project.artifactId}-swing</module>
-		<module>${project.artifactId}-pk2</module>
-		<module>${project.artifactId}-security</module>
-		<module>${project.artifactId}-proxy</module>
-
-		<module>${project.artifactId}-loader-api</module>
-		<module>${project.artifactId}-game-loader</module>
-		<module>${project.artifactId}-persistence</module>
-		<module>${project.artifactId}-packet-sniffer</module>
-		<module>${project.artifactId}-settings</module>
-
-		<module>${project.artifactId}-engine</module>
-
-
-		
-		<module>${project.artifactId}-engine-api</module>
-		<module>${project.artifactId}-game-events-api</module>
-
-		<module>${project.artifactId}-runtime</module>
-
-		<module>${project.artifactId}-pk2-extractor</module>
-		<module>${project.artifactId}-game-events</module>
-
-
-		<module>${project.artifactId}-game-navigation</module>
-		<module>${project.artifactId}-game-asset</module>
-		<module>${project.artifactId}-game-model</module>
-
-		<module>${project.artifactId}-commons</module>
-		<module>${project.artifactId}-webview</module>
-       <!-- Actuator bundles -->
-       <module>${project.artifactId}-actuator-connector</module>
-       <module>${project.artifactId}-actuator-login</module>
-       <module>${project.artifactId}-actuator-training</module>
-       
-       <module>${project.artifactId}-machine-pages</module>
-		
-		<!-- Extension bundles -->
-		<module>${project.artifactId}-bundle-manager</module>
-		<module>${project.artifactId}-dev-tools</module>
-		
-		<!-- Karaf distribution -->
-		<module>${project.artifactId}-features</module>
-		<module>${project.artifactId}-dist</module>
-
-
-
-
-
-
-	<!--	<module>sokybot-dds</module> -->
-	</modules>
+    <modules>
+        <module>core</module>
+        <module>network</module>
+        <module>game</module>
+        <module>ui</module>
+        <module>actuators</module>
+        <module>infra</module>
+    </modules>
 	<packaging>pom</packaging>
 
 
@@ -115,6 +124,14 @@
 	<dependencyManagement>
 
 		<dependencies>
+
+			<dependency>
+				<groupId>io.projectreactor</groupId>
+				<artifactId>reactor-bom</artifactId>
+				<version>${reactor-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
 
 
 
@@ -223,73 +240,665 @@
 				<version>20050920</version>
 			</dependency>
 
-			<!-- https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine -->
+			<!-- JNA - Added to dependencyManagement to prevent version conflicts -->
+			<dependency>
+				<groupId>net.java.dev.jna</groupId>
+				<artifactId>jna</artifactId>
+				<version>${jna.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>net.java.dev.jna</groupId>
+				<artifactId>jna-platform</artifactId>
+				<version>${jna.version}</version>
+			</dependency>
 
+			<!-- JUnit Jupiter - Updated to stable version -->
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter</artifactId>
+				<version>${junit-jupiter.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-engine</artifactId>
+				<version>${junit-jupiter.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.junit.jupiter</groupId>
+				<artifactId>junit-jupiter-api</artifactId>
+				<version>${junit-jupiter.version}</version>
+			</dependency>
+
+			<!-- Mockito - Updated and standardized -->
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-core</artifactId>
+				<version>${mockito.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-junit-jupiter</artifactId>
+				<version>${mockito.version}</version>
+			</dependency>
+
+			<!-- Commons Libraries - Updated versions -->
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-lang3</artifactId>
+				<version>${commons-lang3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-io</groupId>
+				<artifactId>commons-io</artifactId>
+				<version>${commons-io.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-csv</artifactId>
+				<version>${commons-csv.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-math3</artifactId>
+				<version>${commons-math3.version}</version>
+			</dependency>
+
+			<!-- Logging - Updated versions -->
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-classic</artifactId>
+				<version>${logback.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>ch.qos.logback</groupId>
+				<artifactId>logback-core</artifactId>
+				<version>${logback.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>${slf4j.version}</version>
+			</dependency>
+
+			<!-- Jackson - Version alignment for dependency convergence -->
+			<dependency>
+				<groupId>com.fasterxml.jackson</groupId>
+				<artifactId>jackson-bom</artifactId>
+				<version>${jackson.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>${jackson.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-databind</artifactId>
+				<version>${jackson.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-annotations</artifactId>
+				<version>${jackson.version}</version>
+			</dependency>
+
+			<!-- Lombok -->
+			<dependency>
+				<groupId>org.projectlombok</groupId>
+				<artifactId>lombok</artifactId>
+				<version>${lombok.version}</version>
+			</dependency>
 
 		</dependencies>
 	</dependencyManagement>
 
 	<build>
+		<pluginManagement>
+			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven.compiler.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-surefire-plugin</artifactId>
+					<version>${maven.surefire.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-enforcer-plugin</artifactId>
+					<version>${maven.enforcer.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.codehaus.mojo</groupId>
+					<artifactId>versions-maven-plugin</artifactId>
+					<version>${maven.versions.version}</version>
+					<dependencies>
+						<dependency>
+							<groupId>${project.groupId}</groupId>
+							<artifactId>sokybot-build-tools</artifactId>
+							<version>${project.version}</version>
+						</dependency>
+					</dependencies>
+					<configuration>
+						<rulesUri>classpath:sokybot-versions-rules.xml</rulesUri>
+						<generateBackupPoms>false</generateBackupPoms>
+					</configuration>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-resources-plugin</artifactId>
+					<version>${maven.resources.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-clean-plugin</artifactId>
+					<version>${maven.clean.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-install-plugin</artifactId>
+					<version>${maven.install.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-deploy-plugin</artifactId>
+					<version>${maven.deploy.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-site-plugin</artifactId>
+					<version>${maven.site.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jar-plugin</artifactId>
+					<version>${maven.jar.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.felix</groupId>
+					<artifactId>maven-bundle-plugin</artifactId>
+					<version>${plugin.bundle.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-source-plugin</artifactId>
+					<version>${maven.source.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-javadoc-plugin</artifactId>
+					<version>${maven.javadoc.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.jacoco</groupId>
+					<artifactId>jacoco-maven-plugin</artifactId>
+					<version>${jacoco.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>com.github.spotbugs</groupId>
+					<artifactId>spotbugs-maven-plugin</artifactId>
+					<version>${spotbugs.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-checkstyle-plugin</artifactId>
+					<version>${checkstyle.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-pmd-plugin</artifactId>
+					<version>${pmd.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.owasp</groupId>
+					<artifactId>dependency-check-maven</artifactId>
+					<version>${owasp.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-dependency-plugin</artifactId>
+					<version>${maven.dependency.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-failsafe-plugin</artifactId>
+					<version>${maven.failsafe.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-project-info-reports-plugin</artifactId>
+					<version>${maven.project.info.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-jxr-plugin</artifactId>
+					<version>${maven.jxr.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>io.github.git-commit-id</groupId>
+					<artifactId>git-commit-id-maven-plugin</artifactId>
+					<version>${git-commit-id.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-assembly-plugin</artifactId>
+					<version>${maven.assembly.version}</version>
+				</plugin>
+			</plugins>
+		</pluginManagement>
 
 		<plugins>
-
+			<!-- Maven Compiler Plugin with Lombok annotation processing -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.11.0</version>
 				<configuration>
 					<source>11</source>
 					<target>11</target>
+					<useIncrementalCompilation>${maven.compiler.useIncrementalCompilation}</useIncrementalCompilation>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+							<version>${lombok.version}</version>
+						</path>
+					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
 
-			<!-- This plugin is responsible to build bundle modules -->
+			<!-- Maven Enforcer Plugin - ensures version consistency and dependency convergence -->
 			<plugin>
-				<groupId>org.apache.felix</groupId>
-				<artifactId>maven-bundle-plugin</artifactId>
-				<version>${plugin.bundle.version}</version>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-enforcer-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>enforce-versions</id>
+						<goals>
+							<goal>enforce</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<requireMavenVersion>
+									<version>3.6.0</version>
+								</requireMavenVersion>
+								<requireJavaVersion>
+									<version>11</version>
+								</requireJavaVersion>
+								<!-- Dependency convergence - warn only for legacy codebase -->
+								<dependencyConvergence>
+									<level>WARN</level>
+								</dependencyConvergence>
+								<requirePluginVersions>
+									<message>All plugins must have versions defined!</message>
+									<banLatest>false</banLatest>
+									<banRelease>false</banRelease>
+									<banSnapshots>false</banSnapshots>
+								</requirePluginVersions>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 
+			<!-- Maven Surefire Plugin - test execution configuration -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
-					<instructions>
-						<Embed-Dependency>
-							*;scope=compile;inline=true
-						</Embed-Dependency>
-						<Embed-Transitive>
-							true
-						</Embed-Transitive>
-					</instructions>
+					<includes>
+						<include>**/*Test.java</include>
+						<include>**/*Tests.java</include>
+					</includes>
+					<parallel>methods</parallel>
+					<threadCount>4</threadCount>
 				</configuration>
 			</plugin>
+
+			<!-- Versions Maven Plugin - check for dependency updates -->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
+			</plugin>
+
+			<!-- Maven Source Plugin - attach source code to artifacts -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar-no-fork</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Maven Javadoc Plugin - generate and attach Javadoc -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<configuration>
+					<doclint>none</doclint>
+					<failOnError>false</failOnError>
+					<additionalOptions>
+						<additionalOption>-Xdoclint:none</additionalOption>
+					</additionalOptions>
+				</configuration>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- JaCoCo Maven Plugin - code coverage -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>test</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>check</id>
+						<goals>
+							<goal>check</goal>
+						</goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>PACKAGE</element>
+									<limits>
+										<limit>
+											<counter>LINE</counter>
+											<value>COVEREDRATIO</value>
+											<minimum>0.30</minimum>
+										</limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- SpotBugs Maven Plugin - bug detection -->
+			<plugin>
+				<groupId>com.github.spotbugs</groupId>
+				<artifactId>spotbugs-maven-plugin</artifactId>
+				<configuration>
+					<effort>Max</effort>
+					<threshold>Low</threshold>
+					<xmlOutput>true</xmlOutput>
+					<spotbugsXmlOutput>true</spotbugsXmlOutput>
+					<failOnError>false</failOnError>
+				</configuration>
+				<executions>
+					<execution>
+						<phase>verify</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Checkstyle Maven Plugin - code style enforcement -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-checkstyle-plugin</artifactId>
+				<dependencies>
+					<dependency>
+						<groupId>${project.groupId}</groupId>
+						<artifactId>sokybot-build-tools</artifactId>
+						<version>${project.version}</version>
+					</dependency>
+				</dependencies>
+				<configuration>
+					<configLocation>sokybot-checkstyle.xml</configLocation>
+					<consoleOutput>true</consoleOutput>
+					<failsOnError>false</failsOnError>
+					<linkXRef>false</linkXRef>
+					<includeTestSourceDirectory>true</includeTestSourceDirectory>
+					<skip>${checkstyle.skip}</skip>
+				</configuration>
+				<executions>
+					<execution>
+						<id>validate</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- PMD Maven Plugin - code analysis -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-pmd-plugin</artifactId>
+				<configuration>
+					<rulesets>
+						<ruleset>/category/java/bestpractices.xml</ruleset>
+						<ruleset>/category/java/codestyle.xml</ruleset>
+						<ruleset>/category/java/design.xml</ruleset>
+						<ruleset>/category/java/errorprone.xml</ruleset>
+						<ruleset>/category/java/performance.xml</ruleset>
+						<ruleset>/category/java/security.xml</ruleset>
+					</rulesets>
+					<targetJdk>11</targetJdk>
+					<failOnViolation>false</failOnViolation>
+					<printFailingErrors>true</printFailingErrors>
+					<skip>${pmd.skip}</skip>
+					<excludeRoots>
+						<excludeRoot>target/generated-sources</excludeRoot>
+					</excludeRoots>
+				</configuration>
+				<executions>
+					<execution>
+						<id>pmd-check</id>
+						<phase>validate</phase>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- OWASP Dependency Check Plugin - security vulnerability scanning -->
+			<plugin>
+				<groupId>org.owasp</groupId>
+				<artifactId>dependency-check-maven</artifactId>
+				<configuration>
+					<failBuildOnCVSS>7</failBuildOnCVSS>
+					<skipProvidedScope>true</skipProvidedScope>
+					<skipRuntimeScope>false</skipRuntimeScope>
+					<skipTestScope>true</skipTestScope>
+					<formats>
+						<format>HTML</format>
+						<format>XML</format>
+						<format>JSON</format>
+					</formats>
+					<skip>${owasp.skip}</skip>
+				</configuration>
+			</plugin>
+
+			<!-- Maven Dependency Plugin - dependency analysis -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-dependency-plugin</artifactId>
+				<configuration>
+					<ignoredUnusedDeclaredDependencies>
+						<ignoredUnusedDeclaredDependency>org.projectlombok:lombok</ignoredUnusedDeclaredDependency>
+						<ignoredUnusedDeclaredDependency>org.osgi:*</ignoredUnusedDeclaredDependency>
+					</ignoredUnusedDeclaredDependencies>
+				</configuration>
+			</plugin>
+
+			<!-- Git Commit ID Plugin - adds git info to build -->
+			<plugin>
+				<groupId>io.github.git-commit-id</groupId>
+				<artifactId>git-commit-id-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>get-git-info</id>
+						<goals>
+							<goal>revision</goal>
+						</goals>
+						<phase>initialize</phase>
+					</execution>
+				</executions>
+				<configuration>
+					<generateGitPropertiesFile>true</generateGitPropertiesFile>
+					<generateGitPropertiesFilename>${project.build.outputDirectory}/git.properties</generateGitPropertiesFilename>
+					<includeOnlyProperties>
+						<includeOnlyProperty>^git.build.(time|version)$</includeOnlyProperty>
+						<includeOnlyProperty>^git.commit.id.(abbrev|full)$</includeOnlyProperty>
+						<includeOnlyProperty>^git.commit.message.short$</includeOnlyProperty>
+						<includeOnlyProperty>^git.branch$</includeOnlyProperty>
+						<includeOnlyProperty>^git.dirty$</includeOnlyProperty>
+					</includeOnlyProperties>
+					<commitIdGenerationMode>full</commitIdGenerationMode>
+					<failOnNoGitDirectory>false</failOnNoGitDirectory>
+					<failOnUnableToExtractRepoInfo>false</failOnUnableToExtractRepoInfo>
+					<skipPoms>true</skipPoms>
+					<skip>${git.skip}</skip>
+				</configuration>
+			</plugin>
+
+		<!-- Maven Bundle Plugin - responsible for building OSGi bundle modules -->
+		<!-- 
+		     Default configuration: NO embedding. Bundles should explicitly declare 
+		     what they embed, or use Karaf features for shared dependencies.
+		     
+		     Shared infrastructure (Netty, Reactor, Jackson, RSocket) is provided 
+		     by Karaf features defined in sokybot-features module.
+		-->
+		<plugin>
+			<groupId>org.apache.felix</groupId>
+			<artifactId>maven-bundle-plugin</artifactId>
+			<extensions>true</extensions>
+			<configuration>
+				<instructions>
+					<!-- Default: embed compile-scoped dependencies that are not OSGi-aware -->
+					<Embed-Dependency>*;scope=compile;inline=true</Embed-Dependency>
+					<Embed-Transitive>true</Embed-Transitive>
+					<!-- Enable DS annotations by default -->
+					<_dsannotations>*</_dsannotations>
+				</instructions>
+			</configuration>
+		</plugin>
 
 		</plugins>
 
 	</build>
 
 	<profiles>
+		<!-- Development profile - active by default, skips test execution but compiles them -->
 		<profile>
-
 			<id>dev</id>
 			<activation>
 				<activeByDefault>true</activeByDefault>
 			</activation>
 			<properties>
-				<maven.test.skip>true</maven.test.skip>
+				<!-- Use skipTests instead of maven.test.skip to still compile tests -->
+				<skipTests>true</skipTests>
+				<!-- Skip quality checks for faster development builds -->
+				<spotbugs.skip>true</spotbugs.skip>
+				<jacoco.skip>true</jacoco.skip>
+				<checkstyle.skip>true</checkstyle.skip>
+				<pmd.skip>true</pmd.skip>
+				<owasp.skip>true</owasp.skip>
+				<git.skip>true</git.skip>
 			</properties>
 			<build>
-
 				<plugins>
-
 					<plugin>
 						<groupId>org.apache.felix</groupId>
 						<artifactId>maven-bundle-plugin</artifactId>
 						<extensions>true</extensions>
 					</plugin>
 				</plugins>
-
-
 			</build>
+		</profile>
 
+		<!-- Fast build profile - skips tests and quality checks for quick iteration -->
+		<profile>
+			<id>fast</id>
+			<properties>
+				<maven.test.skip>true</maven.test.skip>
+				<skipTests>true</skipTests>
+				<spotbugs.skip>true</spotbugs.skip>
+				<jacoco.skip>true</jacoco.skip>
+				<checkstyle.skip>true</checkstyle.skip>
+				<pmd.skip>true</pmd.skip>
+				<owasp.skip>true</owasp.skip>
+				<git.skip>true</git.skip>
+			</properties>
+		</profile>
 
+		<!-- CI profile - runs all tests and quality checks -->
+		<profile>
+			<id>ci</id>
+			<properties>
+				<skipTests>false</skipTests>
+				<maven.test.skip>false</maven.test.skip>
+				<!-- Enable all quality checks in CI -->
+				<spotbugs.skip>false</spotbugs.skip>
+				<jacoco.skip>false</jacoco.skip>
+				<checkstyle.skip>false</checkstyle.skip>
+				<pmd.skip>false</pmd.skip>
+				<owasp.skip>true</owasp.skip>
+				<git.skip>false</git.skip>
+			</properties>
+		</profile>
+
+		<!-- Security profile - runs OWASP dependency check (slow, use sparingly) -->
+		<profile>
+			<id>security</id>
+			<properties>
+				<skipTests>true</skipTests>
+				<spotbugs.skip>true</spotbugs.skip>
+				<jacoco.skip>true</jacoco.skip>
+				<checkstyle.skip>true</checkstyle.skip>
+				<pmd.skip>true</pmd.skip>
+				<owasp.skip>false</owasp.skip>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.owasp</groupId>
+						<artifactId>dependency-check-maven</artifactId>
+						<executions>
+							<execution>
+								<id>security-check</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>aggregate</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
 		</profile>
 		<profile>
 			<id>prod</id>
@@ -325,7 +934,7 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-resources-plugin</artifactId>
-						<version>3.3.0</version>
+						<version>${maven.resources.version}</version>
 						<executions>
 							<execution>
 								<id>copy-resources</id>
@@ -349,6 +958,284 @@
 
 				</plugins>
 			</build>
+		</profile>
+
+		<!-- Release profile - for production releases with optimizations -->
+		<profile>
+			<id>release</id>
+			<properties>
+				<skipTests>false</skipTests>
+				<maven.test.skip>false</maven.test.skip>
+				<!-- Enable quality checks for release -->
+				<spotbugs.skip>false</spotbugs.skip>
+				<jacoco.skip>false</jacoco.skip>
+				<checkstyle.skip>false</checkstyle.skip>
+				<pmd.skip>false</pmd.skip>
+				<owasp.skip>false</owasp.skip>
+				<git.skip>false</git.skip>
+				<!-- Compiler optimizations for release -->
+				<maven.compiler.debug>false</maven.compiler.debug>
+				<maven.compiler.optimize>true</maven.compiler.optimize>
+			</properties>
+			<build>
+				<plugins>
+					<!-- Attach sources for release -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-source-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>attach-sources</id>
+								<goals>
+									<goal>jar-no-fork</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<!-- Attach javadocs for release -->
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-javadoc-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>attach-javadocs</id>
+								<goals>
+									<goal>jar</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+					<!-- Run OWASP check during release -->
+					<plugin>
+						<groupId>org.owasp</groupId>
+						<artifactId>dependency-check-maven</artifactId>
+						<executions>
+							<execution>
+								<id>release-security-check</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>aggregate</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Integration test profile - for running integration tests -->
+		<profile>
+			<id>integration-test</id>
+			<properties>
+				<skipTests>false</skipTests>
+				<skipITs>false</skipITs>
+				<!-- Skip unit tests, run only integration tests -->
+				<maven.test.skip>true</maven.test.skip>
+				<!-- Skip quality checks for faster IT runs -->
+				<spotbugs.skip>true</spotbugs.skip>
+				<jacoco.skip>false</jacoco.skip>
+				<checkstyle.skip>true</checkstyle.skip>
+				<pmd.skip>true</pmd.skip>
+				<owasp.skip>true</owasp.skip>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>${maven.surefire.version}</version>
+						<executions>
+							<execution>
+								<id>integration-tests</id>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+								<configuration>
+									<includes>
+										<include>**/*IT.java</include>
+										<include>**/*IntegrationTest.java</include>
+									</includes>
+									<parallel>classes</parallel>
+									<threadCount>2</threadCount>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+
+		<!-- Reports profile - generates all project reports -->
+		<profile>
+			<id>reports</id>
+			<properties>
+				<skipTests>true</skipTests>
+				<spotbugs.skip>false</spotbugs.skip>
+				<jacoco.skip>false</jacoco.skip>
+				<checkstyle.skip>false</checkstyle.skip>
+				<pmd.skip>false</pmd.skip>
+				<owasp.skip>true</owasp.skip>
+			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-site-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>generate-reports</id>
+								<phase>site</phase>
+								<goals>
+									<goal>site</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+			<reporting>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-project-info-reports-plugin</artifactId>
+						<version>3.5.0</version>
+						<reportSets>
+							<reportSet>
+								<reports>
+									<report>index</report>
+									<report>summary</report>
+									<report>dependencies</report>
+									<report>dependency-convergence</report>
+									<report>modules</report>
+									<report>plugins</report>
+								</reports>
+							</reportSet>
+						</reportSets>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-jxr-plugin</artifactId>
+						<version>3.3.2</version>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-report-plugin</artifactId>
+						<version>${maven.surefire.version}</version>
+					</plugin>
+					<plugin>
+						<groupId>org.jacoco</groupId>
+						<artifactId>jacoco-maven-plugin</artifactId>
+						<version>${jacoco.version}</version>
+						<reportSets>
+							<reportSet>
+								<reports>
+									<report>report</report>
+								</reports>
+							</reportSet>
+						</reportSets>
+					</plugin>
+					<plugin>
+						<groupId>com.github.spotbugs</groupId>
+						<artifactId>spotbugs-maven-plugin</artifactId>
+						<version>${spotbugs.version}</version>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-checkstyle-plugin</artifactId>
+						<version>${checkstyle.version}</version>
+						<configuration>
+							<configLocation>checkstyle.xml</configLocation>
+						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-pmd-plugin</artifactId>
+						<version>${pmd.version}</version>
+					</plugin>
+				</plugins>
+			</reporting>
+		</profile>
+
+		<!-- Offline profile - for building without network access -->
+		<profile>
+			<id>offline</id>
+			<properties>
+				<skipTests>true</skipTests>
+				<spotbugs.skip>true</spotbugs.skip>
+				<jacoco.skip>true</jacoco.skip>
+				<checkstyle.skip>true</checkstyle.skip>
+				<pmd.skip>true</pmd.skip>
+				<owasp.skip>true</owasp.skip>
+			</properties>
+		</profile>
+
+		<!-- ========== Desktop Packaging Profiles ========== -->
+
+		<!-- Windows packaging profile -->
+		<profile>
+			<id>windows</id>
+			<activation>
+				<os>
+					<family>windows</family>
+				</os>
+			</activation>
+			<properties>
+				<os.classifier>windows</os.classifier>
+				<os.script.extension>.bat</os.script.extension>
+				<os.executable.extension>.exe</os.executable.extension>
+				<jre.platform>windows-x64</jre.platform>
+			</properties>
+		</profile>
+
+		<!-- macOS packaging profile -->
+		<profile>
+			<id>mac</id>
+			<activation>
+				<os>
+					<family>mac</family>
+				</os>
+			</activation>
+			<properties>
+				<os.classifier>mac</os.classifier>
+				<os.script.extension>.sh</os.script.extension>
+				<os.executable.extension></os.executable.extension>
+				<jre.platform>macos-x64</jre.platform>
+			</properties>
+		</profile>
+
+		<!-- Linux packaging profile -->
+		<profile>
+			<id>linux</id>
+			<activation>
+				<os>
+					<family>unix</family>
+					<name>Linux</name>
+				</os>
+			</activation>
+			<properties>
+				<os.classifier>linux</os.classifier>
+				<os.script.extension>.sh</os.script.extension>
+				<os.executable.extension></os.executable.extension>
+				<jre.platform>linux-x64</jre.platform>
+			</properties>
+		</profile>
+
+		<!-- Desktop distribution profile - creates bundled distribution -->
+		<profile>
+			<id>desktop</id>
+			<properties>
+				<skipTests>true</skipTests>
+				<spotbugs.skip>true</spotbugs.skip>
+				<jacoco.skip>true</jacoco.skip>
+				<checkstyle.skip>true</checkstyle.skip>
+				<pmd.skip>true</pmd.skip>
+				<owasp.skip>true</owasp.skip>
+				<git.skip>false</git.skip>
+				<!-- Enable compiler optimizations -->
+				<maven.compiler.debug>false</maven.compiler.debug>
+				<maven.compiler.optimize>true</maven.compiler.optimize>
+			</properties>
 		</profile>
 	</profiles>
 
@@ -379,51 +1266,43 @@
 
 -->
 
-		<!-- platform provided dependencies -->
-
+		<!-- Platform provided dependencies - JNA versions managed in dependencyManagement -->
 		<dependency>
 			<groupId>net.java.dev.jna</groupId>
 			<artifactId>jna</artifactId>
-			<version>${jna.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/net.java.dev.jna/jna-platform -->
 		<dependency>
 			<groupId>net.java.dev.jna</groupId>
 			<artifactId>jna-platform</artifactId>
-			<version>${jna.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
 
+		<!-- Commons libraries - versions managed in dependencyManagement -->
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-			<version>${commons-io.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
-			<version>${commons-lang3.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
-
-		<!-- remove this -->
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-csv</artifactId>
-			<version>${commons-csv.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-math3</artifactId>
-			<version>3.5</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<!-- https://mvnrepository.com/artifact/org.osgi/org.osgi.service.cm -->
@@ -482,57 +1361,48 @@
 			<version>1.3.0</version> </dependency> -->
 
 
-		<!-- test dependencies -->
+		<!-- Test dependencies - versions managed in dependencyManagement -->
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
-			<artifactId>junit-jupiter-engine</artifactId>
-			<version>${junit-jupiter-engine.version}</version>
+			<artifactId>junit-jupiter</artifactId>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-core</artifactId>
-			<version>${dependency.mockito-core.version}</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-junit-jupiter</artifactId>
-			<version>${dependency.mockito-junit-jupter.version}</version>
 			<scope>test</scope>
 		</dependency>
 
-		<!-- logging -->
-
+		<!-- Logging - versions managed in dependencyManagement -->
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-classic</artifactId>
-			<version>${dependency.logback-classic.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>ch.qos.logback</groupId>
 			<artifactId>logback-core</artifactId>
-			<version>${dependency.logback-core.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
-		<!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-api -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
-			<version>${dependency.slf4j-api.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
-
+		<!-- Lombok - version managed in dependencyManagement -->
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
-			<version>${lombok.version}</version>
 			<scope>provided</scope>
 		</dependency>
 
