@@ -119,7 +119,22 @@ cmd_backend_stop() {
 }
 
 cmd_backend_restart() {
+    local FRESH_FLAG=false
+    
+    # Parse flags
+    for arg in "$@"; do
+        case "$arg" in
+            --fresh) FRESH_FLAG=true ;;
+        esac
+    done
+    
     cmd_backend_stop
+    
+    if [ "$FRESH_FLAG" = true ]; then
+        log_info "Clearing Karaf cache (--fresh)..."
+        rm -rf "$KARAF_DATA"
+    fi
+    
     sleep 2
     cmd_backend_start
 }
@@ -230,16 +245,39 @@ cmd_build() {
             if [ -z "$1" ]; then
                 log_error "Usage: soky build module <module-name>"
                 log_info "Example: soky build module sokybot-webview"
+                log_info "         soky build module ui/sokybot-webview"
                 exit 1
             fi
             MODULE_NAME=$1
             log_header "Building Module: $MODULE_NAME"
-            cd "$ROOT_DIR"
-            if [ ! -f "./mvnw" ]; then
-                log_error "Maven Wrapper (mvnw) not found in $ROOT_DIR"
-                exit 1
+            
+            # Try to find module directory
+            MODULE_DIR=""
+            if [ -d "$ROOT_DIR/$MODULE_NAME" ]; then
+                MODULE_DIR="$ROOT_DIR/$MODULE_NAME"
+            elif [ -d "$ROOT_DIR/ui/$MODULE_NAME" ]; then
+                MODULE_DIR="$ROOT_DIR/ui/$MODULE_NAME"
+            elif [ -d "$ROOT_DIR/core/$MODULE_NAME" ]; then
+                MODULE_DIR="$ROOT_DIR/core/$MODULE_NAME"
+            elif [ -d "$ROOT_DIR/network/$MODULE_NAME" ]; then
+                MODULE_DIR="$ROOT_DIR/network/$MODULE_NAME"
+            elif [ -d "$ROOT_DIR/infra/$MODULE_NAME" ]; then
+                MODULE_DIR="$ROOT_DIR/infra/$MODULE_NAME"
             fi
-            ./mvnw clean install -pl "$MODULE_NAME" -am -P dev
+            
+            if [ -n "$MODULE_DIR" ] && [ -f "$MODULE_DIR/pom.xml" ]; then
+                log_info "Found module at: $MODULE_DIR"
+                cd "$MODULE_DIR"
+                mvn clean install -DskipTests -Djacoco.skip=true
+            else
+                log_warn "Module directory not found, trying Maven reactor..."
+                cd "$ROOT_DIR"
+                if [ ! -f "./mvnw" ]; then
+                    log_error "Maven Wrapper (mvnw) not found in $ROOT_DIR"
+                    exit 1
+                fi
+                ./mvnw clean install -pl "$MODULE_NAME" -am -DskipTests -Djacoco.skip=true
+            fi
             ;;
         all)
             cmd_build backend "$@"
@@ -298,6 +336,103 @@ cmd_clean() {
             echo "  all     - Clean both Karaf data and Maven targets"
             ;;
     esac
+}
+
+# =============================================================================
+# Subcommands: Deploy (Build + Hot Reload)
+# =============================================================================
+
+cmd_deploy() {
+    local MODULE_NAME=$1
+    local NO_RESTART=false
+    
+    # Parse flags
+    shift || true
+    for arg in "$@"; do
+        case "$arg" in
+            --no-restart) NO_RESTART=true ;;
+        esac
+    done
+    
+    if [ -z "$MODULE_NAME" ]; then
+        echo "Usage: soky deploy <module-name> [--no-restart]"
+        echo ""
+        echo "Builds a module and hot-redeploys it to the running Karaf instance."
+        echo ""
+        echo "Options:"
+        echo "  --no-restart  Skip backend restart (try hot reload via Karaf)"
+        echo ""
+        echo "Examples:"
+        echo "  soky deploy sokybot-webview       # Build and restart backend"
+        echo "  soky deploy sokybot-webview --no-restart  # Try hot reload"
+        exit 1
+    fi
+    
+    log_header "Deploying Module: $MODULE_NAME"
+    
+    # Step 1: Find and build the module
+    MODULE_DIR=""
+    if [ -d "$ROOT_DIR/$MODULE_NAME" ]; then
+        MODULE_DIR="$ROOT_DIR/$MODULE_NAME"
+    elif [ -d "$ROOT_DIR/ui/$MODULE_NAME" ]; then
+        MODULE_DIR="$ROOT_DIR/ui/$MODULE_NAME"
+    elif [ -d "$ROOT_DIR/core/$MODULE_NAME" ]; then
+        MODULE_DIR="$ROOT_DIR/core/$MODULE_NAME"
+    elif [ -d "$ROOT_DIR/network/$MODULE_NAME" ]; then
+        MODULE_DIR="$ROOT_DIR/network/$MODULE_NAME"
+    elif [ -d "$ROOT_DIR/infra/$MODULE_NAME" ]; then
+        MODULE_DIR="$ROOT_DIR/infra/$MODULE_NAME"
+    fi
+    
+    if [ -z "$MODULE_DIR" ] || [ ! -f "$MODULE_DIR/pom.xml" ]; then
+        log_error "Module not found: $MODULE_NAME"
+        log_info "Searched in: $ROOT_DIR, ui/, core/, network/, infra/"
+        exit 1
+    fi
+    
+    log_info "Building module at: $MODULE_DIR"
+    cd "$MODULE_DIR"
+    
+    if ! mvn install -DskipTests -Djacoco.skip=true -q; then
+        log_error "Build failed!"
+        exit 1
+    fi
+    log_success "Module built successfully."
+    
+    # Step 2: Deploy to Karaf
+    if [ "$NO_RESTART" = true ]; then
+        # Try hot reload via Karaf client
+        if is_process_running "org.apache.karaf.main.Main"; then
+            log_info "Attempting hot reload via Karaf..."
+            # Get bundle ID for module
+            BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $MODULE_NAME" 2>/dev/null | awk '{print $1}' | head -1)
+            if [ -n "$BUNDLE_ID" ]; then
+                log_info "Refreshing bundle ID: $BUNDLE_ID"
+                "$KARAF_BIN/client" "bundle:update $BUNDLE_ID"
+                "$KARAF_BIN/client" "bundle:refresh $BUNDLE_ID"
+                log_success "Bundle refreshed!"
+            else
+                log_warn "Bundle not found in Karaf. You may need to restart: soky backend restart --fresh"
+            fi
+        else
+            log_warn "Backend not running. Start with: soky backend start"
+        fi
+    else
+        # Full restart with cache clear
+        if is_process_running "org.apache.karaf.main.Main"; then
+            log_info "Stopping backend..."
+            cmd_backend_stop
+        fi
+        
+        log_info "Clearing Karaf cache..."
+        rm -rf "$KARAF_DATA"
+        
+        log_info "Starting backend..."
+        cmd_backend_start
+        
+        log_success "Module deployed! Backend is starting..."
+        log_info "Check logs with: soky backend logs"
+    fi
 }
 
 # =============================================================================
@@ -425,14 +560,15 @@ cmd_help() {
     echo "  kill          - Force kill all processes"
     echo ""
     echo "Backend:"
-    echo "  backend start    - Start server in background"
-    echo "  backend stop     - Stop server"
-    echo "  backend restart  - Restart server"
-    echo "  backend debug    - Start in debug mode (port 5005)"
-    echo "  backend logs     - Tail logs"
-    echo "  backend clean    - Clean Karaf cache"
-    echo "  backend shell    - Connect to Karaf shell"
-    echo "  backend features - List installed Sokybot features"
+    echo "  backend start         - Start server in background"
+    echo "  backend stop          - Stop server"
+    echo "  backend restart       - Restart server"
+    echo "  backend restart --fresh  - Restart with cache clear (use after code changes)"
+    echo "  backend debug         - Start in debug mode (port 5005)"
+    echo "  backend logs          - Tail logs"
+    echo "  backend clean         - Clean Karaf cache"
+    echo "  backend shell         - Connect to Karaf shell"
+    echo "  backend features      - List installed Sokybot features"
     echo ""
     echo "Frontend:"
     echo "  ui dev           - Start dev servers (webview + devtools)"
@@ -442,6 +578,10 @@ cmd_help() {
     echo "  build ui                - Build Frontend"
     echo "  build module <name>     - Build specific Maven module"
     echo "  build all [--fast]      - Build everything"
+    echo ""
+    echo "Deploy:"
+    echo "  deploy <module>          - Build module and restart backend with fresh cache"
+    echo "  deploy <module> --no-restart  - Build and try hot reload (may not always work)"
     echo ""
     echo "Clean:"
     echo "  clean backend    - Clean Karaf data directory"
@@ -459,7 +599,7 @@ case "$1" in
         case "$2" in
             start)    cmd_backend_start ;;
             stop)     cmd_backend_stop ;;
-            restart)  cmd_backend_restart ;;
+            restart)  shift 2; cmd_backend_restart "$@" ;;
             debug)    cmd_backend_debug ;;
             clean)    cmd_backend_clean ;;
             logs)     cmd_backend_logs ;;
@@ -477,6 +617,10 @@ case "$1" in
     build)
         shift
         cmd_build "$@"
+        ;;
+    deploy)
+        shift
+        cmd_deploy "$@"
         ;;
     clean)
         shift
