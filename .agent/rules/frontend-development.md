@@ -35,8 +35,8 @@ ui/
 To start both applications (Webview: 5173, DevTools: 3000) simultaneously:
 
 ```bash
-cd ui
-npm run dev
+# Start both Webview (5173) and DevTools (3000)
+soky ui dev
 ```
 
 Dependencies common to all projects (React, Vite, TypeScript) are hoisted to the root `ui/node_modules`.

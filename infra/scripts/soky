@@ -155,13 +155,25 @@ cmd_backend_debug() {
 }
 
 cmd_backend_logs() {
-    log_info "Tailing logs (Ctrl+C to exit)..."
-    if [ -f "$KARAF_LOG" ]; then
-        tail -f "$KARAF_LOG"
+    local FILTER=$1
+    if [ -n "$FILTER" ]; then
+        log_info "Tailing logs with filter: '$FILTER' (Ctrl+C to exit)..."
+        if [ -f "$KARAF_LOG" ]; then
+            tail -f "$KARAF_LOG" | grep --line-buffered -i "$FILTER"
+        else
+            log_warn "Log file not found yet ($KARAF_LOG). Waiting..."
+            while [ ! -f "$KARAF_LOG" ]; do sleep 1; done
+            tail -f "$KARAF_LOG" | grep --line-buffered -i "$FILTER"
+        fi
     else
-        log_warn "Log file not found yet ($KARAF_LOG). Waiting..."
-        while [ ! -f "$KARAF_LOG" ]; do sleep 1; done
-        tail -f "$KARAF_LOG"
+        log_info "Tailing logs (Ctrl+C to exit)..."
+        if [ -f "$KARAF_LOG" ]; then
+            tail -f "$KARAF_LOG"
+        else
+            log_warn "Log file not found yet ($KARAF_LOG). Waiting..."
+            while [ ! -f "$KARAF_LOG" ]; do sleep 1; done
+            tail -f "$KARAF_LOG"
+        fi
     fi
 }
 
@@ -294,6 +306,43 @@ cmd_build() {
             echo "  all            - Build everything"
             ;;
     esac
+}
+
+cmd_test() {
+    local TARGET=$1
+    shift || true
+    
+    if [ -z "$TARGET" ]; then
+        log_error "Usage: soky test <module-name> | all"
+        exit 1
+    fi
+
+    if [ "$TARGET" = "all" ]; then
+        log_header "Running All Tests"
+        cd "$ROOT_DIR"
+        ./mvnw test
+    else
+        log_header "Running Tests for: $TARGET"
+        
+        # Try module first
+        if [ -d "$ROOT_DIR/$TARGET" ] || [ -d "$ROOT_DIR/core/$TARGET" ] || [ -d "$ROOT_DIR/game/$TARGET" ] || [ -d "$ROOT_DIR/network/$TARGET" ] || [ -d "$ROOT_DIR/ui/$TARGET" ] || [ -d "$ROOT_DIR/actuators/$TARGET" ] || [ -d "$ROOT_DIR/infra/$TARGET" ]; then
+           cd "$ROOT_DIR"
+           ./mvnw test -pl "$TARGET" -am
+        else
+           # Try searching recursively because user might provide partial name or the directory logic is complex
+           cd "$ROOT_DIR"
+           ./mvnw test -pl "$TARGET" -am
+        fi
+    fi
+}
+
+cmd_generate() {
+    SCAFFOLD_SCRIPT="$SCRIPT_DIR/soky-scaffold.sh"
+    if [ ! -f "$SCAFFOLD_SCRIPT" ]; then
+        log_error "Scaffolding script not found at $SCAFFOLD_SCRIPT"
+        exit 1
+    fi
+    "$SCAFFOLD_SCRIPT" "$@"
 }
 
 cmd_clean() {
@@ -538,6 +587,73 @@ cmd_install() {
 }
 
 # =============================================================================
+# Subcommands: Interactive
+# =============================================================================
+
+cmd_interactive() {
+    log_header "Sokybot Interactive Mode"
+    echo "Select a command to run:"
+    
+    options=(
+        "Status (Check services)"
+        "Start Backend"
+        "Stop Backend"
+        "Restart Backend"
+        "Tail Logs"
+        "Shell (Karaf)"
+        "Start UI Dev Servers"
+        "Build Backend"
+        "Build UI"
+        "Deploy Module..."
+        "Exit"
+    )
+    
+    select opt in "${options[@]}"; do
+        case $opt in
+            "Status (Check services)")
+                cmd_status
+                ;;
+            "Start Backend")
+                cmd_backend_start
+                ;;
+            "Stop Backend")
+                cmd_backend_stop
+                ;;
+            "Restart Backend")
+                cmd_backend_restart
+                ;;
+            "Tail Logs")
+                cmd_backend_logs
+                ;;
+            "Shell (Karaf)")
+                cmd_backend_shell
+                ;;
+            "Start UI Dev Servers")
+                cmd_ui_dev
+                ;;
+            "Build Backend")
+                cmd_build backend
+                ;;
+            "Build UI")
+                cmd_build ui
+                ;;
+            "Deploy Module...")
+                read -p "Enter module name (e.g., sokybot-webview): " mod_name
+                if [ -n "$mod_name" ]; then
+                    cmd_deploy "$mod_name"
+                fi
+                ;;
+            "Exit")
+                break
+                ;;
+            *) echo "Invalid option $REPLY";;
+        esac
+        echo ""
+        echo "Press Enter to see menu again, or Ctrl+C to exit."
+    done
+}
+
+# =============================================================================
 # Global
 # =============================================================================
 
@@ -583,6 +699,13 @@ cmd_help() {
     echo "  deploy <module>          - Build module and restart backend with fresh cache"
     echo "  deploy <module> --no-restart  - Build and try hot reload (may not always work)"
     echo ""
+    echo "Test:"
+    echo "  test <module>    - Run unit tests for a module"
+    echo "  test all         - Run all unit tests"
+    echo ""
+    echo "Generate:"
+    echo "  generate bundle <category> <name>  - Create a new OSGi bundle"
+    echo ""
     echo "Clean:"
     echo "  clean backend    - Clean Karaf data directory"
     echo "  clean maven      - Run mvn clean"
@@ -595,15 +718,15 @@ cmd_help() {
 # =============================================================================
 
 case "$1" in
-    backend)
+    backend|ba)
         case "$2" in
             start)    cmd_backend_start ;;
             stop)     cmd_backend_stop ;;
             restart)  shift 2; cmd_backend_restart "$@" ;;
             debug)    cmd_backend_debug ;;
             clean)    cmd_backend_clean ;;
-            logs)     cmd_backend_logs ;;
-            shell)    cmd_backend_shell ;;
+            logs|l)   shift 2; cmd_backend_logs "$@" ;;
+            shell|sh) cmd_backend_shell ;;
             features) cmd_backend_features ;;
             *)        cmd_help ;;
         esac
@@ -614,21 +737,38 @@ case "$1" in
             *)       cmd_help ;;
         esac
         ;;
-    build)
+    build|b)
         shift
         cmd_build "$@"
         ;;
-    deploy)
+    deploy|d)
         shift
         cmd_deploy "$@"
+        ;;
+    test|t)
+        shift
+        cmd_test "$@"
+        ;;
+    generate|gen|g)
+        shift
+        cmd_generate "$@"
         ;;
     clean)
         shift
         cmd_clean "$@"
         ;;
-    status)   cmd_status ;;
-    setup)    cmd_setup ;;
-    kill)     cmd_kill ;;
-    install)  cmd_install ;;
-    *)        cmd_help ;;
+    status|st)    cmd_status ;;
+    setup)        cmd_setup ;;
+    kill)         cmd_kill ;;
+    install)      cmd_install ;;
+    
+    # Top-level Shortcuts
+    start)   cmd_backend_start ;;
+    stop)    cmd_backend_stop ;;
+    restart) shift; cmd_backend_restart "$@" ;;
+    logs|log|l)   shift; cmd_backend_logs "$@" ;;
+    shell|sh)     cmd_backend_shell ;;
+    
+    "")      cmd_interactive ;;
+    *)       cmd_help ;;
 esac

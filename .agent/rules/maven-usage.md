@@ -11,7 +11,7 @@ description: Maven build system usage and profiles
 **Always use the wrapper** for consistent builds (Maven 3.9.6+ enforced).
 
 ### Essential Plugins (Enforced)
-- **Maven Enforcer**: Requires Java 11+, Maven 3.6.0+, and dependency convergence.
+- **Maven Enforcer**: Requires Java 21+, Maven 3.6.0+, and dependency convergence.
 - **Versions Plugin**: Used to manage and update dependencies/plugins.
 
 

@@ -59,7 +59,7 @@
         <!-- Engine for IEngineFactory -->
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-engine</artifactId>
+            <artifactId>sokybot-engine-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -169,6 +169,8 @@
                             org.osgi.framework,
                             org.osgi.framework.launch,
                             org.osgi.service.event,
+                            org.sokybot.gameevents,
+                            org.sokybot.gameevents.events.core,
                             org.sokybot.*,
                             *;resolution:=optional
                         </Import-Package>

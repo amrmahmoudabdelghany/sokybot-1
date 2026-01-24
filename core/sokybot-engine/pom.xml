@@ -27,6 +27,7 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-engine-api</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
@@ -162,19 +163,22 @@
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Activator>org.sokybot.engine.EngineActivator</Bundle-Activator>
+                        <Bundle-Activator>org.sokybot.engine.internal.EngineActivator</Bundle-Activator>
                         <Import-Package>
                             org.osgi.framework;version="[1.8,2.0)",
                             !javax.swing.*,
                             !java.awt.*,
                             *;resolution:=optional
                         </Import-Package>
+                        <Private-Package>
+                            org.sokybot.engine.internal,
+                            org.sokybot.machine.*
+                        </Private-Package>
                         <Export-Package>
-                            org.sokybot.engine.core.*,
-                            org.sokybot.engine.api.extension
+                            org.sokybot.engine.core.*
                         </Export-Package>
                         <Embed-Dependency>
-                            *;scope=compile|runtime;artifactId=!org.osgi.core&amp;!org.osgi.framework&amp;!org.osgi.compendium
+                            *;scope=compile|runtime;artifactId=!org.osgi.core&amp;!org.osgi.framework&amp;!org.osgi.compendium&amp;!sokybot-engine-api
                         </Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                     </instructions>

@@ -10,7 +10,7 @@ The `soky` CLI is a unified tool for managing the Sokybot development environmen
 
 ```bash
 # From the project root
-./scripts/soky install
+./infra/scripts/soky install
 ```
 
 This creates a symlink in `~/bin/soky`. Ensure `~/bin` is in your PATH.

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.sokybot.http.server.api.IWebSocketRegistry;
+import org.sokybot.webview.api.IWebviewConfigurator;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
 
@@ -31,10 +32,13 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * RSocket server service that registers with the shared HTTP server's WebSocket registry.
+ * RSocket server service that registers with the shared HTTP server's WebSocket
+ * registry.
  * Handles RSocket communication for the webview frontend at the /rsocket path.
  * 
- * <p>This service uses a structured JSON protocol for request/response:
+ * <p>
+ * This service uses a structured JSON protocol for request/response:
+ * 
  * <pre>
  * Request:
  * { "method": "character.state", "params": { "machineId": "..." }, "id": "req-1" }
@@ -45,9 +49,11 @@ import java.util.function.Function;
  * { "error": { "code": -32601, "message": "Method not found" }, "id": "req-1" }
  * </pre>
  * 
- * <p>Handlers are discovered via OSGi whiteboard pattern through {@link RSocketHandlerRegistry}.
+ * <p>
+ * Handlers are discovered via OSGi whiteboard pattern through
+ * {@link RSocketHandlerRegistry}.
  */
-@Component(immediate = true)
+@Component(service = RSocketServerService.class, immediate = true)
 public class RSocketServerService {
 
     private static final Logger logger = LoggerFactory.getLogger(RSocketServerService.class);
@@ -62,15 +68,15 @@ public class RSocketServerService {
     private IWebSocketRegistry wsRegistry;
     private RSocketHandlerRegistry handlerRegistry;
 
-    private volatile WebviewConfigurator extensionConfigurator;
+    private volatile IWebviewConfigurator extensionConfigurator;
 
     // Event sink for extension events
     private final Sinks.Many<Map<String, Object>> extensionEventSink = Sinks.many().multicast()
             .onBackpressureBuffer(100);
 
-    // Stream handlers for dynamic extension streams (registered by WebviewConfigurator)
-    private final Map<String, Function<Map<String, Object>, Flux<Map<String, Object>>>> dynamicStreamHandlers = 
-            new java.util.concurrent.ConcurrentHashMap<>();
+    // Stream handlers for dynamic extension streams (registered by
+    // WebviewConfigurator)
+    private final Map<String, Function<Map<String, Object>, Flux<Map<String, Object>>>> dynamicStreamHandlers = new java.util.concurrent.ConcurrentHashMap<>();
 
     @Reference
     protected void setWsRegistry(IWebSocketRegistry wsRegistry) {
@@ -83,16 +89,17 @@ public class RSocketServerService {
     }
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
-    protected void setExtensionConfigurator(WebviewConfigurator configurator) {
+    protected void setExtensionConfigurator(IWebviewConfigurator configurator) {
         this.extensionConfigurator = configurator;
     }
 
-    protected void unsetExtensionConfigurator(WebviewConfigurator configurator) {
+    protected void unsetExtensionConfigurator(IWebviewConfigurator configurator) {
         this.extensionConfigurator = null;
     }
 
     /**
      * Register extension configurator (called by WebviewConfigurator).
+     * 
      * @deprecated Use OSGi @Reference instead
      */
     @Deprecated
@@ -148,9 +155,8 @@ public class RSocketServerService {
             logger.debug("New RSocket WebSocket connection from {}",
                     ((reactor.netty.Connection) in).channel().remoteAddress());
 
-            io.rsocket.transport.netty.WebsocketDuplexConnection connection = 
-                    new io.rsocket.transport.netty.WebsocketDuplexConnection(
-                            (reactor.netty.Connection) in);
+            io.rsocket.transport.netty.WebsocketDuplexConnection connection = new io.rsocket.transport.netty.WebsocketDuplexConnection(
+                    (reactor.netty.Connection) in);
 
             return connectionAcceptor.apply(connection)
                     .doOnError(error -> logger.error("RSocket connection error", error))
@@ -166,7 +172,7 @@ public class RSocketServerService {
             public Mono<RSocket> accept(ConnectionSetupPayload setup, RSocket sendingSocket) {
                 logger.info("RSocket connection accepted - Data MIME: {}, Metadata MIME: {}",
                         setup.dataMimeType(), setup.metadataMimeType());
-                
+
                 return Mono.just(new RSocket() {
                     @Override
                     public Mono<Payload> requestResponse(Payload payload) {
@@ -190,14 +196,13 @@ public class RSocketServerService {
         try {
             // Parse the request
             RSocketRequest request = parseRequest(requestData);
-            
+
             if (request == null || request.getMethod() == null) {
                 return errorPayload(RSocketResponse.error(
-                    RSocketResponse.ErrorCode.PARSE_ERROR,
-                    "Failed to parse request"
-                ));
+                        RSocketResponse.ErrorCode.PARSE_ERROR,
+                        "Failed to parse request"));
             }
-            
+
             // Delegate to handler registry
             return handlerRegistry.handleRequest(request)
                     .map(this::toPayload)
@@ -205,7 +210,7 @@ public class RSocketServerService {
                         logger.error("Error handling request", error);
                         return errorPayload(RSocketResponse.internalError(error));
                     });
-                    
+
         } catch (Exception e) {
             logger.error("Error processing request", e);
             return errorPayload(RSocketResponse.internalError(e));
@@ -215,21 +220,20 @@ public class RSocketServerService {
     private Flux<Payload> handleRequestStream(String requestData) {
         try {
             RSocketRequest request = parseRequest(requestData);
-            
+
             if (request == null || request.getMethod() == null) {
                 return Flux.just(toPayload(RSocketResponse.error(
-                    RSocketResponse.ErrorCode.PARSE_ERROR,
-                    "Failed to parse request"
-                )));
+                        RSocketResponse.ErrorCode.PARSE_ERROR,
+                        "Failed to parse request")));
             }
-            
+
             String method = request.getMethod();
-            
+
             // Check for dynamic extension streams first
             if (method.startsWith("extension.stream:")) {
                 return handleDynamicExtensionStream(request);
             }
-            
+
             // Delegate to handler registry
             return handlerRegistry.handleStream(request)
                     .map(data -> {
@@ -244,7 +248,7 @@ public class RSocketServerService {
                         logger.error("Error handling stream", error);
                         return Flux.just(toPayload(RSocketResponse.internalError(error)));
                     });
-                    
+
         } catch (Exception e) {
             logger.error("Error processing stream request", e);
             return Flux.just(toPayload(RSocketResponse.internalError(e)));
@@ -258,25 +262,23 @@ public class RSocketServerService {
         // Parse stream key from method: "extension.stream:pageId:streamId"
         String method = request.getMethod();
         String[] parts = method.split(":", 3);
-        
+
         if (parts.length < 3) {
             return Flux.just(toPayload(RSocketResponse.invalidParams(
-                "Invalid stream format. Expected: extension.stream:pageId:streamId"
-            )));
+                    "Invalid stream format. Expected: extension.stream:pageId:streamId")));
         }
-        
+
         String pageId = parts[1];
         String streamId = parts[2];
         String streamKey = pageId + ":" + streamId;
-        
-        Function<Map<String, Object>, Flux<Map<String, Object>>> handler = 
-                dynamicStreamHandlers.get(streamKey);
-        
+
+        Function<Map<String, Object>, Flux<Map<String, Object>>> handler = dynamicStreamHandlers.get(streamKey);
+
         if (handler == null) {
             logger.warn("No dynamic stream handler found for: {}", streamKey);
             return Flux.just(toPayload(RSocketResponse.notFound("Stream not found: " + streamKey)));
         }
-        
+
         return handler.apply(request.getParams())
                 .map(data -> {
                     try {
@@ -293,14 +295,15 @@ public class RSocketServerService {
     }
 
     /**
-     * Parse request data. Supports both new JSON format and legacy string format for backwards compatibility.
+     * Parse request data. Supports both new JSON format and legacy string format
+     * for backwards compatibility.
      */
     @SuppressWarnings("unchecked")
     private RSocketRequest parseRequest(String requestData) {
         if (requestData == null || requestData.isEmpty()) {
             return null;
         }
-        
+
         // Try to parse as JSON first (new format)
         if (requestData.startsWith("{")) {
             try {
@@ -308,18 +311,18 @@ public class RSocketServerService {
                 RSocketRequest request = new RSocketRequest();
                 request.setMethod((String) json.get("method"));
                 request.setId((String) json.get("id"));
-                
+
                 Object params = json.get("params");
                 if (params instanceof Map) {
                     request.setParams((Map<String, Object>) params);
                 }
-                
+
                 return request;
             } catch (Exception e) {
                 logger.debug("Failed to parse as JSON, trying legacy format: {}", e.getMessage());
             }
         }
-        
+
         // Legacy format support: "method:param" or "method"
         return parseLegacyRequest(requestData);
     }
@@ -330,7 +333,7 @@ public class RSocketServerService {
     private RSocketRequest parseLegacyRequest(String requestData) {
         RSocketRequest request = new RSocketRequest();
         Map<String, Object> params = new HashMap<>();
-        
+
         // Map legacy methods to new methods
         if (requestData.startsWith("getCharacterState")) {
             request.setMethod("character.state");
@@ -378,13 +381,17 @@ public class RSocketServerService {
         } else if (requestData.startsWith("extension.schema:")) {
             request.setMethod("extension.schema");
             String[] parts = requestData.split(":", 3);
-            if (parts.length > 1) params.put("pageId", parts[1]);
-            if (parts.length > 2) params.put("machineId", parts[2]);
+            if (parts.length > 1)
+                params.put("pageId", parts[1]);
+            if (parts.length > 2)
+                params.put("machineId", parts[2]);
         } else if (requestData.startsWith("extension.action:")) {
             request.setMethod("extension.action");
             String[] parts = requestData.split(":", 4);
-            if (parts.length > 1) params.put("pageId", parts[1]);
-            if (parts.length > 2) params.put("action", parts[2]);
+            if (parts.length > 1)
+                params.put("pageId", parts[1]);
+            if (parts.length > 2)
+                params.put("action", parts[2]);
             if (parts.length > 3) {
                 try {
                     @SuppressWarnings("unchecked")
@@ -399,8 +406,10 @@ public class RSocketServerService {
         } else if (requestData.startsWith("extension.toolbar.action:")) {
             request.setMethod("extension.toolbar.action");
             String[] parts = requestData.split(":", 4);
-            if (parts.length > 1) params.put("actionId", parts[1]);
-            if (parts.length > 2) params.put("action", parts[2]);
+            if (parts.length > 1)
+                params.put("actionId", parts[1]);
+            if (parts.length > 2)
+                params.put("action", parts[2]);
             if (parts.length > 3) {
                 try {
                     @SuppressWarnings("unchecked")
@@ -417,7 +426,7 @@ public class RSocketServerService {
             // Unknown legacy method - pass through
             request.setMethod(requestData);
         }
-        
+
         request.setParams(params);
         return request;
     }
