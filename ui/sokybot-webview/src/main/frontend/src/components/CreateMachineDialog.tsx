@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { rsocketService } from '../RSocketClient';
+import type { GroupInfo, GroupDetails } from '../RSocketClient';
 import { Button } from '@sokybot/frontend-shared';
 import { cn } from '@sokybot/frontend-shared';
 import { X, Server, Gamepad2, Settings2, User, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -10,16 +11,11 @@ interface Props {
     onSuccess: () => void;
 }
 
-interface GameData {
-    version: number;
-    hosts: Record<string, string[]>; // Map<DivisionName, List<HostIP>>
-}
-
 const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
     const [currentStep, setCurrentStep] = useState(1);
-    const [groups, setGroups] = useState<string[]>([]);
+    const [groups, setGroups] = useState<GroupInfo[]>([]);
     const [selectedGroup, setSelectedGroup] = useState('');
-    const [gameData, setGameData] = useState<GameData | null>(null);
+    const [gameData, setGameData] = useState<GroupDetails | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -42,13 +38,12 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
             setCurrentStep(1);
             setLoading(true);
             setError(null);
-            // Fetch groups on open
-            rsocketService.requestResponse('getGroups')
-                .then((payload: any) => {
-                    const groupList = typeof payload === 'string' ? JSON.parse(payload) : payload;
+            // Fetch groups using new typed API
+            rsocketService.getGroups()
+                .then((groupList) => {
                     setGroups(groupList);
-                    if (Array.isArray(groupList) && groupList.length > 0) {
-                        setSelectedGroup(groupList[0]);
+                    if (groupList.length > 0) {
+                        setSelectedGroup(groupList[0].name);
                     } else {
                         setSelectedGroup('');
                     }
@@ -62,9 +57,9 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
     useEffect(() => {
         if (selectedGroup) {
             setLoading(true);
-            rsocketService.requestResponse(`getGroupDetails:${selectedGroup}`)
-                .then((payload: any) => {
-                    const data = (typeof payload === 'string' ? JSON.parse(payload) : payload) as GameData;
+            // Use new typed API
+            rsocketService.getGroupDetails(selectedGroup)
+                .then((data) => {
                     setGameData(data);
 
                     // Default Logic for Division/Host
@@ -131,13 +126,8 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                 options.push(`MACHINE_TARGET_AGENT=${formData.agentServer}`);
             }
 
-            const payload = {
-                group: selectedGroup,
-                name: formData.name,
-                options: options
-            };
-
-            await rsocketService.requestResponse("createMachine:" + JSON.stringify(payload));
+            // Use new typed API
+            await rsocketService.createMachine(selectedGroup, formData.name, options);
             onSuccess();
             onClose();
         } catch (err: any) {
@@ -208,7 +198,7 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                                     className={inputClass}
                                 >
                                     {groups.map(g => (
-                                        <option key={g} value={g}>{g}</option>
+                                        <option key={g.name} value={g.name}>{g.name}</option>
                                     ))}
                                 </select>
                             </div>
@@ -248,7 +238,7 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                                     </div>
 
                                     <div className="flex justify-end gap-4 pt-2 border-t border-dashed border-border/50 text-[10px] text-muted-foreground">
-                                        <div><span className="font-bold">Version:</span> {gameData?.version !== undefined && gameData.version >= 0 ? gameData.version : 'N/A'}</div>
+                                        <div><span className="font-bold">Version:</span> {gameData?.version !== undefined ? gameData.version : 'N/A'}</div>
                                         <div><span className="font-bold">Port:</span> 15779</div>
                                     </div>
                                 </div>

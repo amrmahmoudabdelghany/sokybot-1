@@ -14,8 +14,8 @@ import reactor.core.publisher.Mono;
  * @Component(property = IRSocketHandler.METHOD_PROPERTY + "=character.state")
  * public class CharacterStateHandler implements IRSocketHandler {
  *     @Override
- *     public String getMethod() {
- *         return "character.state";
+ *     public String[] getMethods() {
+ *         return new String[] { "character.state" };
  *     }
  *     
  *     @Override
@@ -35,12 +35,11 @@ public interface IRSocketHandler {
     String METHOD_PROPERTY = "rsocket.method";
     
     /**
-     * Get the method name this handler responds to.
-     * This should match the "method" field in the RSocketRequest.
+     * Get the method names this handler responds to.
      * 
-     * @return the method name (e.g., "character.state", "machine.start")
+     * @return array of method names (e.g., ["character.state"] or ["machine.start", "machine.stop"])
      */
-    String getMethod();
+    String[] getMethods();
     
     /**
      * Handle an RSocket request.
@@ -56,6 +55,13 @@ public interface IRSocketHandler {
      * @return handler description
      */
     default String getDescription() {
-        return "Handler for " + getMethod();
+        String[] methods = getMethods();
+        if (methods == null || methods.length == 0) {
+            return "Handler";
+        } else if (methods.length == 1) {
+            return "Handler for " + methods[0];
+        } else {
+            return "Handler for " + String.join(", ", methods);
+        }
     }
 }

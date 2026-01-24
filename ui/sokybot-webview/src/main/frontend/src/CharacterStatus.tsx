@@ -1,20 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { rsocketService } from './RSocketClient';
-
-interface CharacterState {
-    entityId?: number;
-    characterName: string;
-    level: number;
-    currentHP: number;
-    maxHP: number;
-    currentMP: number;
-    maxMP: number;
-    gold: number;
-    x: number;
-    y: number;
-    xSector: number;
-    isRunning?: boolean;
-}
+import type { CharacterState } from './RSocketClient';
 
 interface CharacterStatusProps {
     machineId?: string; // Optional machine ID to filter/request
@@ -25,15 +11,11 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Initial Fetch
+    // Initial Fetch using new typed API
     const fetchState = async () => {
         try {
             setLoading(true);
-            const request = machineId ? `getCharacterState:${machineId}` : "getCharacterState";
-            const response = await rsocketService.requestResponse(request);
-
-            // Response might be JSON string
-            const data = typeof response === 'string' ? JSON.parse(response) : response;
+            const data = await rsocketService.getCharacterState(machineId);
             if (data && data.characterName) {
                 setState(data);
             } else {
@@ -54,33 +36,35 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
 
     const handleToggleBot = async () => {
         if (!state || !machineId) return;
-        const action = state.isRunning ? "stopBot" : "startBot";
         try {
-            await rsocketService.requestResponse(`${action}:${machineId}`);
-            // Optimistically update or refetch
+            if (state.isRunning) {
+                await rsocketService.stopBot(machineId);
+            } else {
+                await rsocketService.startBot(machineId);
+            }
+            // Refetch state after action
             fetchState();
         } catch (err) {
-            console.error(`Failed to ${action}`, err);
+            console.error("Failed to toggle bot", err);
         }
     };
 
-    // Event Subscription
+    // Event Subscription using new typed API
     useEffect(() => {
         if (!state?.entityId) return; // Wait until we have entity ID to match updates
 
-        const sub = rsocketService.streamEvents((event: any) => {
+        const sub = rsocketService.subscribeToGameEvents((event) => {
             if (!event || !event.eventType) return;
 
             // Handle EntityHPMPUpdateEvent
             if (event.eventType === 'EntityHPMPUpdateEvent') {
                 // Check if it's for our character (by entityId)
-                // Ensure event.entityId matches state.entityId
                 if (event.entityId === state.entityId) {
                     setState(prev => {
                         if (!prev) return null;
                         const newState = { ...prev };
-                        if (event.newHP !== undefined && event.newHP !== null) newState.currentHP = event.newHP;
-                        if (event.newMP !== undefined && event.newMP !== null) newState.currentMP = event.newMP;
+                        if (event.newHP !== undefined && event.newHP !== null) newState.currentHP = event.newHP as number;
+                        if (event.newMP !== undefined && event.newMP !== null) newState.currentMP = event.newMP as number;
                         return newState;
                     });
                 }
@@ -91,7 +75,7 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
                 fetchState();
             }
 
-        }, (err: any) => console.error("Stream error", err));
+        }, (err) => console.error("Stream error", err));
 
         return () => {
             if (sub && typeof sub.unsubscribe === 'function') {

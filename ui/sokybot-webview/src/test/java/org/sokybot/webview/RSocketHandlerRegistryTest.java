@@ -36,8 +36,8 @@ class RSocketHandlerRegistryTest {
         // Create a test handler
         IRSocketHandler handler = new IRSocketHandler() {
             @Override
-            public String getMethod() {
-                return "test.echo";
+            public String[] getMethods() {
+                return new String[] { "test.echo" };
             }
             
             @Override
@@ -99,8 +99,8 @@ class RSocketHandlerRegistryTest {
     void testHandlerException() {
         IRSocketHandler handler = new IRSocketHandler() {
             @Override
-            public String getMethod() {
-                return "test.error";
+            public String[] getMethods() {
+                return new String[] { "test.error" };
             }
             
             @Override
@@ -156,8 +156,8 @@ class RSocketHandlerRegistryTest {
     void testUnregisterHandler() {
         IRSocketHandler handler = new IRSocketHandler() {
             @Override
-            public String getMethod() {
-                return "test.temp";
+            public String[] getMethods() {
+                return new String[] { "test.temp" };
             }
             
             @Override
@@ -178,8 +178,8 @@ class RSocketHandlerRegistryTest {
     void testRequestIdPreservation() {
         IRSocketHandler handler = new IRSocketHandler() {
             @Override
-            public String getMethod() {
-                return "test.id";
+            public String[] getMethods() {
+                return new String[] { "test.id" };
             }
             
             @Override
@@ -223,8 +223,8 @@ class RSocketHandlerRegistryTest {
     private IRSocketHandler createHandler(String method) {
         return new IRSocketHandler() {
             @Override
-            public String getMethod() {
-                return method;
+            public String[] getMethods() {
+                return new String[] { method };
             }
             
             @Override

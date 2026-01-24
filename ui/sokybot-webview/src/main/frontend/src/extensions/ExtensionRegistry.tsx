@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { rsocketService } from '../RSocketClient';
+import type { ExtensionEvent } from '../RSocketClient';
 
 interface ExtensionPage {
     pageId: string;
@@ -25,17 +26,19 @@ export const useExtensionRegistry = () => {
     });
 
     useEffect(() => {
-        // Load initial registry
-        rsocketService.requestResponse("extension.registry")
+        // Load initial registry using new typed API
+        rsocketService.getExtensionRegistry()
             .then(data => {
-                const reg = typeof data === 'string' ? JSON.parse(data) : data;
-                setRegistry(reg);
+                setRegistry({
+                    pages: data.pages || {},
+                    buttons: {}
+                });
             })
             .catch(err => console.error("Failed to load extension registry", err));
 
-        // Listen for extension events
-        const subscription = rsocketService.streamEvents(
-            (event) => {
+        // Listen for extension events using new typed API
+        const subscription = rsocketService.subscribeToExtensionEvents(
+            (event: ExtensionEvent) => {
                 if (event.type === 'ui.extension' && event.data) {
                     const data = event.data;
                     if (data.type === 'extension.page.added') {
@@ -43,10 +46,10 @@ export const useExtensionRegistry = () => {
                             ...prev,
                             pages: {
                                 ...prev.pages,
-                                [data.pageId]: {
-                                    pageId: data.pageId,
-                                    title: data.title,
-                                    iconPath: data.iconPath,
+                                [data.pageId as string]: {
+                                    pageId: data.pageId as string,
+                                    title: data.title as string,
+                                    iconPath: data.iconPath as string,
                                     schema: data.schema,
                                     componentType: 'declarative',
                                     props: {}
@@ -56,7 +59,7 @@ export const useExtensionRegistry = () => {
                     } else if (data.type === 'extension.page.removed') {
                         setRegistry(prev => {
                             const newPages = { ...prev.pages };
-                            delete newPages[data.pageId];
+                            delete newPages[data.pageId as string];
                             return { ...prev, pages: newPages };
                         });
                     }

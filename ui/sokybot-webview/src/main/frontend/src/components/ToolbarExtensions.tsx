@@ -26,8 +26,8 @@ export const ToolbarExtensions: React.FC = () => {
     useEffect(() => {
         fetchRegistry();
 
-        // Subscribe to extension events for dynamic updates
-        const subscription = rsocketService.requestStream('extension.events', (event: any) => {
+        // Subscribe to extension events for dynamic updates using new typed API
+        const subscription = rsocketService.subscribeToExtensionEvents((event) => {
             if (event.type === 'extension.toolbar.added' || event.type === 'extension.toolbar.removed') {
                 fetchRegistry();
             }
@@ -40,8 +40,8 @@ export const ToolbarExtensions: React.FC = () => {
 
     const fetchRegistry = async () => {
         try {
-            const response = await rsocketService.requestResponse('extension.registry');
-            const data = typeof response === 'string' ? JSON.parse(response) : response;
+            // Use new typed API
+            const data = await rsocketService.getExtensionRegistry();
 
             if (data.toolbarActions) {
                 const actions = Object.values(data.toolbarActions) as ToolbarAction[];
@@ -58,13 +58,10 @@ export const ToolbarExtensions: React.FC = () => {
         setLoading(true);
 
         try {
-            // Trigger initial data load via action
-            const response = await rsocketService.requestResponse(
-                `extension.toolbar.action:${action.actionId}:init:{}`
-            );
-            const data = typeof response === 'string' ? JSON.parse(response) : response;
-            if (data.state) {
-                setModalState(data.state);
+            // Trigger initial data load via action using new typed API
+            const result = await rsocketService.triggerToolbarAction(action.actionId, 'init', {});
+            if (result && (result as any).state) {
+                setModalState((result as any).state);
             }
         } catch (err) {
             console.error('Failed to initialize modal:', err);
@@ -77,12 +74,10 @@ export const ToolbarExtensions: React.FC = () => {
         if (!activeModal) return;
 
         try {
-            const response = await rsocketService.requestResponse(
-                `extension.toolbar.action:${activeModal.actionId}:${actionName}:${JSON.stringify(data)}`
-            );
-            const result = typeof response === 'string' ? JSON.parse(response) : response;
-            if (result.state) {
-                setModalState(prev => ({ ...prev, ...result.state }));
+            // Use new typed API
+            const result = await rsocketService.triggerToolbarAction(activeModal.actionId, actionName, data);
+            if (result && (result as any).state) {
+                setModalState(prev => ({ ...prev, ...(result as any).state }));
             }
             return result;
         } catch (err) {

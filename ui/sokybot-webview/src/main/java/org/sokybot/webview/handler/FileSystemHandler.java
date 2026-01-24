@@ -32,8 +32,8 @@ import reactor.core.publisher.Mono;
 public class FileSystemHandler implements IRSocketHandler {
     
     @Override
-    public String getMethod() {
-        return "fs.*";
+    public String[] getMethods() {
+        return new String[] { "fs.list", "fs.roots" };
     }
     
     @Override

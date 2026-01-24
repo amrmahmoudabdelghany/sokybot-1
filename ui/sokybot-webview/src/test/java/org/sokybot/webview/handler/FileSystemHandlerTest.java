@@ -28,9 +28,12 @@ class FileSystemHandlerTest {
     }
     
     @Test
-    @DisplayName("Should return correct method pattern")
-    void testGetMethod() {
-        assertEquals("fs.*", handler.getMethod());
+    @DisplayName("Should return correct methods")
+    void testGetMethods() {
+        String[] methods = handler.getMethods();
+        assertEquals(2, methods.length);
+        assertEquals("fs.list", methods[0]);
+        assertEquals("fs.roots", methods[1]);
     }
     
     @Test

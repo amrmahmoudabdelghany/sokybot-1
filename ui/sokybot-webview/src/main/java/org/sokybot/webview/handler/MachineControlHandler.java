@@ -59,8 +59,8 @@ public class MachineControlHandler implements IRSocketHandler {
     }
     
     @Override
-    public String getMethod() {
-        return "machine.*";
+    public String[] getMethods() {
+        return new String[] { "machine.start", "machine.stop", "machine.list", "machine.create" };
     }
     
     @Override

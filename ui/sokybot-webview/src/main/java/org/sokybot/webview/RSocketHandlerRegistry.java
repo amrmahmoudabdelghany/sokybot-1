@@ -40,20 +40,29 @@ public class RSocketHandlerRegistry {
         policy = ReferencePolicy.DYNAMIC
     )
     protected void bindHandler(IRSocketHandler handler) {
-        String method = handler.getMethod();
-        if (method != null && !method.isEmpty()) {
-            handlers.put(method, handler);
-            logger.info("Registered RSocket handler: {} -> {}", method, handler.getClass().getSimpleName());
-        } else {
-            logger.warn("Handler {} has null/empty method name, skipping", handler.getClass().getName());
+        String[] methods = handler.getMethods();
+        if (methods == null || methods.length == 0) {
+            logger.warn("Handler {} has no methods defined, skipping", handler.getClass().getName());
+            return;
+        }
+        
+        for (String method : methods) {
+            if (method != null && !method.isEmpty()) {
+                handlers.put(method, handler);
+                logger.info("Registered RSocket handler: {} -> {}", method, handler.getClass().getSimpleName());
+            }
         }
     }
     
     protected void unbindHandler(IRSocketHandler handler) {
-        String method = handler.getMethod();
-        if (method != null) {
-            handlers.remove(method);
-            logger.info("Unregistered RSocket handler: {}", method);
+        String[] methods = handler.getMethods();
+        if (methods != null) {
+            for (String method : methods) {
+                if (method != null) {
+                    handlers.remove(method);
+                    logger.info("Unregistered RSocket handler: {}", method);
+                }
+            }
         }
     }
     

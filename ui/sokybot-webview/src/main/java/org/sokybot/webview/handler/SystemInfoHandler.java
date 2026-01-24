@@ -38,8 +38,8 @@ public class SystemInfoHandler implements IRSocketHandler {
     }
     
     @Override
-    public String getMethod() {
-        return "system.*";
+    public String[] getMethods() {
+        return new String[] { "system.info", "system.methods", "system.streams" };
     }
     
     @Override

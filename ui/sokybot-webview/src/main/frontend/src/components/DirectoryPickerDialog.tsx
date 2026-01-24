@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { rsocketService } from '../RSocketClient';
+import type { FileInfo } from '../RSocketClient';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@sokybot/frontend-shared';
 import { Button } from '@sokybot/frontend-shared';
 import { Folder, HardDrive, ArrowUp, Loader2 } from 'lucide-react';
@@ -12,32 +13,21 @@ interface DirectoryPickerDialogProps {
     initialPath?: string;
 }
 
-interface FileEntry {
-    name: string;
-    path: string;
-    isDirectory: boolean;
-}
-
-interface FsResponse {
-    current: string;
-    files: FileEntry[];
-}
-
 export const DirectoryPickerDialog: React.FC<DirectoryPickerDialogProps> = ({ isOpen, onClose, onSelect, initialPath = "." }) => {
     const [currentPath, setCurrentPath] = useState(initialPath);
-    const [files, setFiles] = useState<FileEntry[]>([]);
-    const [roots, setRoots] = useState<FileEntry[]>([]);
+    const [files, setFiles] = useState<FileInfo[]>([]);
+    const [roots, setRoots] = useState<FileInfo[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
     const fetchPath = async (path: string) => {
         setLoading(true);
         try {
-            const resp = await rsocketService.requestResponse(`fs.list:${path}`);
-            const data: FsResponse = typeof resp === 'string' ? JSON.parse(resp) : resp;
+            // Use new typed API
+            const data = await rsocketService.listFiles(path);
             setCurrentPath(data.current);
             setFiles(data.files);
-            // If fetching new dir, clear selection unless it matches?
+            // If fetching new dir, clear selection
             setSelectedPath(null);
         } catch (err) {
             console.error("Failed to list dir", err);
@@ -48,8 +38,8 @@ export const DirectoryPickerDialog: React.FC<DirectoryPickerDialogProps> = ({ is
 
     const fetchRoots = async () => {
         try {
-            const resp = await rsocketService.requestResponse(`fs.roots`);
-            const data: FileEntry[] = typeof resp === 'string' ? JSON.parse(resp) : resp;
+            // Use new typed API
+            const data = await rsocketService.getFileRoots();
             setRoots(data);
         } catch (err) {
             console.error("Failed to list roots", err);
@@ -79,7 +69,7 @@ export const DirectoryPickerDialog: React.FC<DirectoryPickerDialogProps> = ({ is
 
 
     // Replicates logic from SilkroadUtils.isSilkraodDirectory
-    const isValidGameDirectory = (files: FileEntry[]) => {
+    const isValidGameDirectory = (files: FileInfo[]) => {
         const requiredFiles = new Set([
             "sro_client.exe",
             "data.pk2",

@@ -40,8 +40,8 @@ public class CharacterStateHandler implements IRSocketHandler {
     }
     
     @Override
-    public String getMethod() {
-        return "character.state";
+    public String[] getMethods() {
+        return new String[] { "character.state" };
     }
     
     @Override

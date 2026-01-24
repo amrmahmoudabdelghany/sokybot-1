@@ -25,7 +25,8 @@ export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ isOpen, on
         setLoading(true);
         setError(null);
         try {
-            await rsocketService.requestResponse(`createGroup:${JSON.stringify({ name, path })}`);
+            // Use new typed API
+            await rsocketService.createGroup(name, path);
             onCreated();
             onClose();
             setName('');

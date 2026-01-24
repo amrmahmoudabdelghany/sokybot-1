@@ -50,8 +50,8 @@ public class ExtensionHandler implements IRSocketHandler {
     }
     
     @Override
-    public String getMethod() {
-        return "extension.*";
+    public String[] getMethods() {
+        return new String[] { "extension.schema", "extension.action", "extension.registry", "extension.toolbar.action" };
     }
     
     @Override

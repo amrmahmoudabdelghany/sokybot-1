@@ -51,8 +51,8 @@ public class GroupHandler implements IRSocketHandler {
     }
     
     @Override
-    public String getMethod() {
-        return "group.*";
+    public String[] getMethods() {
+        return new String[] { "group.list", "group.details", "group.create" };
     }
     
     @Override

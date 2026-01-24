@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { rsocketService } from './RSocketClient';
+import type { GroupInfo, MachineInfo } from './RSocketClient';
 import { CharacterStatus } from './CharacterStatus';
 import { useTheme } from './components/theme-provider';
 import { CreateGroupDialog } from './components/CreateGroupDialog';
@@ -16,8 +17,8 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMachineSelect }) => {
-    const [groups, setGroups] = useState<string[]>([]);
-    const [machines, setMachines] = useState<string[]>([]);
+    const [groups, setGroups] = useState<GroupInfo[]>([]);
+    const [machines, setMachines] = useState<MachineInfo[]>([]);
     const { theme, setTheme } = useTheme();
     const [isCreateGroupOpen, setCreateGroupOpen] = useState(false);
     const [isCreateMachineOpen, setCreateMachineOpen] = useState(false);
@@ -25,19 +26,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
 
     const fetchData = async () => {
         try {
-            // Fetch Groups
-            const groupsResp = await rsocketService.requestResponse("getGroups");
-            const groupsData = typeof groupsResp === 'string' ? JSON.parse(groupsResp) : groupsResp;
-            if (Array.isArray(groupsData)) {
-                setGroups(groupsData);
-            }
+            // Fetch Groups using new typed API
+            const groupsData = await rsocketService.getGroups();
+            setGroups(groupsData);
 
-            // Fetch Machines
-            const machinesResp = await rsocketService.requestResponse("getMachines");
-            const machinesData = typeof machinesResp === 'string' ? JSON.parse(machinesResp) : machinesResp;
-            if (Array.isArray(machinesData)) {
-                setMachines(machinesData);
-            }
+            // Fetch Machines using new typed API
+            const machinesData = await rsocketService.getMachines();
+            setMachines(machinesData);
         } catch (err) {
             console.error("Failed to fetch data", err);
         }
@@ -59,14 +54,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
     };
 
     // Helper to get machine simple name
-    const getSimpleName = (fullName: string) => {
-        return fullName.includes('.') ? fullName.split('.').pop() || fullName : fullName;
+    const getSimpleName = (machineId: string) => {
+        return machineId.includes('.') ? machineId.split('.').pop() || machineId : machineId;
     };
 
     // Helper to get machine group
-    const getMachineGroup = (fullName: string) => {
-        return fullName.includes('.') ? fullName.split('.')[0] : '';
+    const getMachineGroup = (machineId: string) => {
+        return machineId.includes('.') ? machineId.split('.')[0] : '';
     };
+
+    // Get group names for display
+    const groupNames = groups.map(g => g.name);
 
     return (
         <div className="flex h-screen bg-background text-foreground font-sans transition-colors duration-300">
@@ -90,8 +88,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-2 space-y-4">
-                    {groups.map(group => {
-                        const groupMachines = machines.filter(m => getMachineGroup(m) === group);
+                    {groupNames.map(group => {
+                        const groupMachines = machines.filter(m => 
+                            m.groupName === group || getMachineGroup(m.machineId) === group
+                        );
                         return (
                             <div key={group} className="space-y-1">
                                 <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
@@ -100,13 +100,13 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
                                 </div>
                                 {groupMachines.map(m => (
                                     <Button
-                                        key={m}
-                                        variant={selectedMachine === m ? "secondary" : "ghost"}
-                                        className={cn("w-full justify-start font-normal pl-4 h-8", selectedMachine === m && "font-medium bg-accent")}
-                                        onClick={() => onMachineSelect(m)}
+                                        key={m.machineId}
+                                        variant={selectedMachine === m.machineId ? "secondary" : "ghost"}
+                                        className={cn("w-full justify-start font-normal pl-4 h-8", selectedMachine === m.machineId && "font-medium bg-accent")}
+                                        onClick={() => onMachineSelect(m.machineId)}
                                     >
-                                        <Bot className="h-4 w-4 mr-2 text-muted-foreground" />
-                                        {getSimpleName(m)}
+                                        <Bot className={cn("h-4 w-4 mr-2", m.isRunning ? "text-green-500" : "text-muted-foreground")} />
+                                        {m.name || getSimpleName(m.machineId)}
                                     </Button>
                                 ))}
                                 {groupMachines.length === 0 && (
@@ -117,24 +117,24 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
                     })}
 
                     {/* Orphaned machines or if no groups defined yet (legacy fallback) */}
-                    {groups.length === 0 && machines.length > 0 && (
+                    {groupNames.length === 0 && machines.length > 0 && (
                         <div className="space-y-1">
                             <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Default</div>
                             {machines.map(m => (
                                 <Button
-                                    key={m}
-                                    variant={selectedMachine === m ? "secondary" : "ghost"}
-                                    className={cn("w-full justify-start font-normal", selectedMachine === m && "font-medium")}
-                                    onClick={() => onMachineSelect(m)}
+                                    key={m.machineId}
+                                    variant={selectedMachine === m.machineId ? "secondary" : "ghost"}
+                                    className={cn("w-full justify-start font-normal", selectedMachine === m.machineId && "font-medium")}
+                                    onClick={() => onMachineSelect(m.machineId)}
                                 >
-                                    <Bot className="h-4 w-4 mr-2 text-muted-foreground" />
-                                    {m}
+                                    <Bot className={cn("h-4 w-4 mr-2", m.isRunning ? "text-green-500" : "text-muted-foreground")} />
+                                    {m.name || m.machineId}
                                 </Button>
                             ))}
                         </div>
                     )}
 
-                    {groups.length === 0 && machines.length === 0 && (
+                    {groupNames.length === 0 && machines.length === 0 && (
                         <div className="text-muted-foreground text-xs italic p-4 text-center">
                             No groups or bots found.<br />Create a group to start.
                         </div>
