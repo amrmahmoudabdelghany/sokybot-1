@@ -120,7 +120,11 @@ public class CoreTranslatorProvider implements ITranslatorProvider {
             // TAP Info Events
             0xB4DF,
             // Batch 4 Events
-            0xB001, 0xB516, 0x3049, 0xB4E0);
+            0xB001, 0xB516, 0x3049, 0xB4E0,
+            // Batch 5 Events
+            0xB06C, 0xB007, 0xB50C, 0xB506, 0x385F,
+            // Batch 6 Events
+            0x3305, 0x3027, 0xB203, 0x3017, 0xB450);
 
     @Override
     public boolean supports(int opcode, IGameDataLookup lookup) {
@@ -143,6 +147,8 @@ public class CoreTranslatorProvider implements ITranslatorProvider {
             case 0x3016:
                 return new EntityDespawnTranslator(lookup);
             case 0x3019:
+                return new GroupSpawnDataTranslator(lookup);
+            case 0x3017:
                 return new GroupSpawnBeginTranslator(lookup);
             case 0xB024:
                 return new EntityAngleUpdateTranslator(lookup);
@@ -455,6 +461,28 @@ public class CoreTranslatorProvider implements ITranslatorProvider {
                 return new StorageDataTranslator();
             case 0xB4E0:
                 return new TapUpdateTranslator();
+
+            // Batch 5 Translators
+            case 0xB06C:
+                return new PartyMatchingListTranslator();
+            case 0xB007:
+                return new CharacterSelectionActionTranslator();
+            case 0xB50C:
+                return new ConsignmentSearchTranslator();
+            case 0xB506:
+                return new ConsignmentDetailTranslator();
+            case 0x385F:
+                return new SiegeUpdateTranslator();
+
+            // Batch 6 Translators
+            case 0x3305:
+                return new FriendListInfoTranslator(lookup);
+            case 0x3027:
+                return new CelestialUpdateTranslator(lookup);
+            case 0xB203:
+                return new MasteryLevelDownTranslator(lookup);
+            case 0xB450:
+                return new CharacterRenameAckTranslator(lookup);
 
             default:
                 return null;

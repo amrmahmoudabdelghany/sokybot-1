@@ -3,39 +3,39 @@ package org.sokybot.gameevents.internal;
 import java.util.List;
 import org.sokybot.gameevents.AbstractTranslator;
 import org.sokybot.gameevents.events.core.IGameEvent;
-import org.sokybot.gameevents.events.entity.GroupSpawnBeginEvent;
+import org.sokybot.gameevents.events.skill.MasteryLevelDownEvent;
 import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
- * Translates group spawn begin packets (opcode 0x3017).
+ * Translates mastery level down response (opcode 0xB203).
  */
-public class GroupSpawnBeginTranslator extends AbstractTranslator {
-
-    private static final int GROUP_SPAWN_BEGIN_OPCODE = 0x3017;
-
-    public GroupSpawnBeginTranslator(IGameDataLookup lookup) {
+public class MasteryLevelDownTranslator extends AbstractTranslator {
+    public MasteryLevelDownTranslator(IGameDataLookup lookup) {
         super(lookup);
     }
 
-    public GroupSpawnBeginTranslator() {
+    public MasteryLevelDownTranslator() {
         this(null);
     }
 
     @Override
     public int getOpcode() {
-        return GROUP_SPAWN_BEGIN_OPCODE;
+        return 0xB203;
     }
 
     @Override
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             IStreamReader reader = packet.getStreamReader();
-            byte spawnType = reader.getByte();
-            short count = reader.getShort();
+            boolean success = reader.getByte() == 1;
+            int errorCode = 0;
+            if (!success) {
+                errorCode = reader.getShort() & 0xFFFF;
+            }
 
-            return singleEvent(new GroupSpawnBeginEvent(machineFullName, spawnType, count));
+            return singleEvent(new MasteryLevelDownEvent(machineFullName, success, errorCode));
         } catch (Exception e) {
             return noEvents();
         }

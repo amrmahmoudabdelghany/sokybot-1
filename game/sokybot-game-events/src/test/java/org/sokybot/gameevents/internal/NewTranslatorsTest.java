@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.sokybot.gameevents.events.academy.AcademyMatchingListEvent;
 import org.sokybot.gameevents.events.arena.BattleArenaOperationEvent;
 import org.sokybot.gameevents.events.guild.GuildEntityUpdateEvent;
+import org.sokybot.gameevents.events.storage.StorageOpenEvent;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.packet.IPacketBuilder;
@@ -64,8 +65,7 @@ class NewTranslatorsTest {
         IPacketBuilder builder = MutablePacket.getBuilder(256, 0x30FF);
         builder.putInt(100); // dwGid
         builder.putInt(1); // guildId
-        builder.putShort((short) 5);
-        builder.putBytes("Guild".getBytes()); // guildName
+        putString(builder, "Guild"); // guildName
         builder.putShort((short) 0); // grandName
         builder.putInt(0); // guildCrestRev
         builder.putInt(0); // unionId
@@ -77,5 +77,27 @@ class NewTranslatorsTest {
         assertEquals(1, events.size());
         GuildEntityUpdateEvent event = (GuildEntityUpdateEvent) events.get(0);
         assertEquals("Guild", event.getGuildName());
+    }
+
+    @Test
+    void testStorageOpenTranslator() {
+        StorageOpenTranslator translator = new StorageOpenTranslator(null, 0x3047, (byte) 0);
+        IPacketBuilder builder = MutablePacket.getBuilder(16, 0x3047);
+        builder.putLong(1000000L); // storageGold
+
+        var events = translator.translate("Group.Machine", ImmutablePacket.wrap(builder.build().unwrap()));
+        assertEquals(1, events.size());
+        StorageOpenEvent event = (StorageOpenEvent) events.get(0);
+        assertEquals(1000000L, event.getStorageGold());
+    }
+
+    private void putString(IPacketBuilder builder, String value) {
+        if (value == null) {
+            builder.putShort((short) 0);
+        } else {
+            byte[] bytes = value.getBytes();
+            builder.putShort((short) bytes.length);
+            builder.putBytes(bytes);
+        }
     }
 }
