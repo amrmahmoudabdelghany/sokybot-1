@@ -1,7 +1,7 @@
 package org.sokybot.gameevents.events.spawn;
 
 import org.sokybot.gameevents.events.core.IGameEvent;
-import org.sokybot.game.dto.PlayerData;
+import org.sokybot.gameevents.dto.PlayerData;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;

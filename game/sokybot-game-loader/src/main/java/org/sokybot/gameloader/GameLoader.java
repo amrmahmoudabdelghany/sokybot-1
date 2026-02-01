@@ -1,96 +1,94 @@
 package org.sokybot.gameloader;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
-import org.osgi.framework.BundleActivator;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceRegistration;
+import org.osgi.service.component.annotations.Component;
 import org.sokybot.loader.IGameLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-//@Component(service = IGameLoader.class  , immediate = true  )
-public class GameLoader implements IGameLoader, BundleActivator {
+/**
+ * Game loader implementation.
+ */
+@Component(service = IGameLoader.class, immediate = true)
+public class GameLoader implements IGameLoader {
 
-	private IProcessLoader processLoader;
+	private static final Logger log = LoggerFactory.getLogger(GameLoader.class);
+	private final IProcessLoader processLoader;
 
 	public GameLoader() {
-
 		this.processLoader = ProcessLoader.createInstance();
 	}
 
 	@Override
 	public int launch(String clientPath) {
-
-		return launch(clientPath, "0 /" + 22 + " 0 0");
-
+		// Default command arguments
+		return launch(clientPath, "0 /22 0 0");
 	}
 
 	@Override
 	public int launch(String clientPath, String command) {
+		log.info("Launching client: {} with args: {}", clientPath, command);
 
-		if (!Files.exists(Paths.get(clientPath)) || !clientPath.endsWith(".exe")) {
-			throw new IllegalArgumentException("Invalid client path");
+		Path clientExecutable = Paths.get(clientPath);
+		if (!Files.exists(clientExecutable) || !clientPath.toLowerCase().endsWith(".exe")) {
+			throw new IllegalArgumentException("Invalid client path: " + clientPath);
 		}
 
-		String dllRef = System.getProperty("user.dir").concat("\\").concat("sokybotpatch.dll");
+		try {
+			ensureDependencies();
 
-		Path dllPath = Paths.get(dllRef);
+			String userDir = System.getProperty("user.dir");
+			Path dllPath = Paths.get(userDir, "sokybotpatch.dll");
+			Path shellPath = Paths.get(userDir, "shell.txt");
 
-		if (!Files.exists(dllPath)) {
-			try {
-				Files.copy(getClass().getClassLoader().getResourceAsStream("sokybotpatch.dll"), dllPath);
-			} catch (IOException e) {
-				throw new UncheckedIOException(e);
+			return this.processLoader.loadProcessImage(
+					clientPath,
+					command,
+					dllPath.toString(),
+					shellPath.toString());
+		} catch (IOException e) {
+			log.error("Failed to prepare dependencies", e);
+			throw new UncheckedIOException("Failed to launch client", e);
+		}
+	}
+
+	private void ensureDependencies() throws IOException {
+		String userDir = System.getProperty("user.dir");
+		copyResource("sokybotpatch.dll", Paths.get(userDir, "sokybotpatch.dll"));
+		copyResource("shell.txt", Paths.get(userDir, "shell.txt"));
+	}
+
+	private void copyResource(String resourceName, Path targetPath) throws IOException {
+		if (!Files.exists(targetPath)) {
+			try (InputStream is = getClass().getClassLoader().getResourceAsStream(resourceName)) {
+				if (is == null) {
+					throw new IOException("Resource not found: " + resourceName);
+				}
+				Files.copy(is, targetPath, StandardCopyOption.REPLACE_EXISTING);
+				log.debug("Copied resource {} to {}", resourceName, targetPath);
 			}
 		}
-
-		String shellRef = System.getProperty("user.dir").concat("\\").concat("shell.txt");
-		Path shellPath = Paths.get(shellRef);
-
-		if (!Files.exists(shellPath)) {
-			try {
-				Files.copy(getClass().getClassLoader().getResourceAsStream("shell.txt"), shellPath);
-			} catch (IOException e) {
-				throw new UncheckedIOException(e);
-			}
-		}
-
-		return this.processLoader.loadProcessImage(clientPath, command, dllRef, shellRef);
-
 	}
 
 	@Override
 	public String getName() {
-		// TODO Auto-generated method stub
 		return "Default";
 	}
 
 	@Override
 	public Integer minimumVersion() {
-		// TODO Auto-generated method stub
 		return 0;
 	}
 
 	@Override
 	public Integer maximumVersion() {
-		// TODO Auto-generated method stub
 		return 0;
-	}
-
-	@Override
-	public void start(BundleContext context) throws Exception {
-
-		System.out.println("On Registering Service");
-		context.registerService(IGameLoader.class, this, null);
-
-	}
-
-	@Override
-	public void stop(BundleContext context) throws Exception {
-
 	}
 }

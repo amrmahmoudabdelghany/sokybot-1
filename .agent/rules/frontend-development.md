@@ -98,6 +98,10 @@ Common RSocket methods (see `SystemInfoHandler` for full list):
 | `fs.roots` | Get filesystem roots |
 | `extension.registry` | Get registered extensions |
 | `system.methods` | List all available methods |
+| `metrics.stream` | Real-time system/game metrics |
+| `script.load` | Load Groovy bot script |
+| `events.stream` | Historical/Real-time event journal |
+| `health.check` | System health status |
 
 ## 4. Component Guidelines
 1. **Functional Components**: Use React Functional Components with Hooks.

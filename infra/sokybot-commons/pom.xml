@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>io.github.sokybot</groupId>
+        <groupId>org.sokybot</groupId>
         <artifactId>sokybot</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -35,6 +35,28 @@
             <groupId>net.java.dev.jna</groupId>
             <artifactId>jna-platform</artifactId>
         </dependency>
+        
+        <!-- Reactor for reactive streams -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>3.5.11</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- OSGi Declarative Services -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.5.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.event</artifactId>
+            <version>1.4.0</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -51,8 +73,18 @@
                         <Bundle-Description>${project.description}</Bundle-Description>
                         <Export-Package>
                             org.sokybot.commons,
-                            org.sokybot.commons.jna
+                            org.sokybot.commons.jna,
+                            org.sokybot.commons.error,
+                            org.sokybot.commons.health,
+                            org.sokybot.commons.metrics,
+                            org.sokybot.commons.event
                         </Export-Package>
+                        <Private-Package>
+                            org.sokybot.commons.error.internal,
+                            org.sokybot.commons.health.internal,
+                            org.sokybot.commons.metrics.internal,
+                            org.sokybot.commons.event.internal
+                        </Private-Package>
                         <Import-Package>
                             *
                         </Import-Package>

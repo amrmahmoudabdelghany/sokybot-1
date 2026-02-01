@@ -17,7 +17,7 @@ description: Project architecture and module overview
 │  └──────────────────────┬────────────────────────────────┘  │
 │                         │ HTTP / WebSocket                   │
 │  ┌──────────────────────▼────────────────────────────────┐  │
-│  │              sokybot-http-server (Vert.x)              │  │
+│  │           sokybot-http-server (Reactor Netty)          │  │
 │  └──────────────────────┬────────────────────────────────┘  │
 │                         │                                    │
 │  ┌──────────────────────▼────────────────────────────────┐  │
@@ -35,9 +35,10 @@ description: Project architecture and module overview
 ### Core Engine
 | Module | Responsibility |
 |--------|----------------|
-| `sokybot-engine` | Main bot logic, state machines |
-| `sokybot-engine-api` | Engine interfaces/contracts |
+| `sokybot-engine` | Main bot logic, state machines, **Groovy scripting** |
+| `sokybot-engine-api` | Engine interfaces/contracts, **scripting API** |
 | `sokybot-runtime` | Context management, lifecycle |
+| `sokybot-scripts` | **(Virtual) Groovy actuator scripts** |
 
 ### Network Layer
 | Module | Responsibility |
@@ -60,9 +61,11 @@ description: Project architecture and module overview
 ### UI Layer
 | Module | Responsibility |
 |--------|----------------|
-| `sokybot-http-server` | HTTP/WebSocket API (Vert.x) |
+| `sokybot-http-server` | HTTP/WebSocket API (Reactor Netty) |
 | `sokybot-webview` | Hybrid Web UI (Java Backend + React Frontend) |
 | `sokybot-dev-tools` | Developer tools UI |
+| `sokybot-machine-pages` | Specific bot machine UI pages |
+| `sokybot-bundle-manager` | OSGi bundle management UI |
 | `sokybot-swing` | Swing UI components |
 
 ### Infrastructure
@@ -96,23 +99,29 @@ description: Project architecture and module overview
 | Interface | Location | Purpose |
 |-----------|----------|---------|
 | `IGameLoader` | `sokybot-loader-api` | Game data loading contract |
-| `IRuteFinder` | `sokybot-game-navigation` | Pathfinding contract |
+| `IRouteFinder` | `sokybot-game-navigation` | Pathfinding contract |
 | `ISokybotContext` | `sokybot-runtime` | Application context |
 | `IMachineContext` | `sokybot-runtime` | Bot instance context |
 
 ## 5. Data Flow
 
 ```
-Game Client ──► Proxy ──► Packet Handler ──► Event Bus ──► Engine
-                 │                                           │
-                 ▼                                           ▼
-            Packet Sniffer                              State Machine
-                 │                                           │
-                 ▼                                           ▼
-            WebSocket ◄──────────────────────────────► HTTP API
-                 │                                           │
-                 ▼                                           ▼
-              Web UI ◄──────────────────────────────► Web UI
+Game Client ──► Proxy ──► Packet Handler ──► Event Bus (EventAdmin)
+                                                  │
+                                                  ▼
+                                            Reactive Bus (Flux) ◄──► Game Model (Reactive)
+                                                  │                        │
+                                                  ▼                        ▼
+            Packet Sniffer                  State Machine (Engine) ◄───────┘
+                 │                                ▲
+                 ▼                                │
+            WebSocket ◄──────────────────────► Script Actuator Loader ◄── Scripts (.groovy)
+                 │                                │
+                 ▼                                ▼
+              Web UI ◄────────────────────────► HTTP API (Reactor Netty)
+                 │                                │
+                 ▼                                ▼
+              Web UI ◄────────────────────────► Web UI (RSocket)
 ```
 
 ## 6. Build Order (Module Dependencies)

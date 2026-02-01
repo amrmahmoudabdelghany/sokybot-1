@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     
     <parent>
-        <groupId>io.github.sokybot</groupId>
+        <groupId>org.sokybot</groupId>
         <artifactId>sokybot</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -19,7 +19,7 @@
     <dependencies>
         <!-- Webview Extension API -->
         <dependency>
-            <groupId>io.github.sokybot</groupId>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-webview</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -27,15 +27,23 @@
         
         <!-- Runtime for IMachineContext -->
         <dependency>
-            <groupId>io.github.sokybot</groupId>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-runtime</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
+        <!-- Proxy for INetworkController -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-proxy</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         
         <!-- Game Model for trainer/skills/inventory data -->
         <dependency>
-            <groupId>io.github.sokybot</groupId>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-game-model</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -43,7 +51,7 @@
         
         <!-- Settings for training settings -->
         <dependency>
-            <groupId>io.github.sokybot</groupId>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-settings</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -51,7 +59,7 @@
         
         <!-- Game Events for event types -->
         <dependency>
-            <groupId>io.github.sokybot</groupId>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-game-events</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -93,13 +101,13 @@
         
         <!-- Actuators -->
         <dependency>
-            <groupId>io.github.sokybot</groupId>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-actuator-login</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>io.github.sokybot</groupId>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-actuator-training</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>

@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     
     <parent>
-        <groupId>io.github.sokybot</groupId>
+        <groupId>org.sokybot</groupId>
         <artifactId>sokybot</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -123,11 +123,12 @@
                         <Export-Package>
                             org.sokybot.gameevents,
                             org.sokybot.gameevents.events.*,
-                            org.sokybot.game.dto,
-                            org.sokybot.game.enums
+                            org.sokybot.gameevents.dto,
+                            org.sokybot.gameevents.enums
                         </Export-Package>
                         <Private-Package>
-                            org.sokybot.gameevents.internal.*
+                            org.sokybot.gameevents.internal.*,
+                            org.sokybot.gameevents.store.internal
                         </Private-Package>
                         <Import-Package>
                             org.sokybot.*,

@@ -1,7 +1,7 @@
 package org.sokybot.gamemodel.internal;
 
-import org.sokybot.game.dto.PlayerData;
-import org.sokybot.game.dto.SpawnData;
+import org.sokybot.gameevents.dto.PlayerData;
+import org.sokybot.gameevents.dto.SpawnData;
 import org.sokybot.gamemodel.model.IPlayer;
 
 import lombok.Data;

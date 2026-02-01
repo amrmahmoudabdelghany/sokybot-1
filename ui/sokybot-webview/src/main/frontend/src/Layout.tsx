@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { rsocketService } from './RSocketClient';
-import type { GroupInfo, MachineInfo } from './RSocketClient';
+import React, { useState } from 'react';
+import { useSokybotStore } from './store';
 import { CharacterStatus } from './CharacterStatus';
 import { useTheme } from './components/theme-provider';
 import { CreateGroupDialog } from './components/CreateGroupDialog';
@@ -12,36 +11,21 @@ import { cn } from '@sokybot/frontend-shared';
 
 interface LayoutProps {
     children: React.ReactNode;
-    selectedMachine?: string;
-    onMachineSelect: (machine: string) => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMachineSelect }) => {
-    const [groups, setGroups] = useState<GroupInfo[]>([]);
-    const [machines, setMachines] = useState<MachineInfo[]>([]);
+export const Layout: React.FC<LayoutProps> = ({ children }) => {
+    const {
+        groups,
+        machines,
+        selectedMachineId,
+        setSelectedMachineId,
+        fetchInitialData
+    } = useSokybotStore();
+
     const { theme, setTheme } = useTheme();
     const [isCreateGroupOpen, setCreateGroupOpen] = useState(false);
     const [isCreateMachineOpen, setCreateMachineOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
-
-    const fetchData = async () => {
-        try {
-            // Fetch Groups using new typed API
-            const groupsData = await rsocketService.getGroups();
-            setGroups(groupsData);
-
-            // Fetch Machines using new typed API
-            const machinesData = await rsocketService.getMachines();
-            setMachines(machinesData);
-        } catch (err) {
-            console.error("Failed to fetch data", err);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-        // Optional: Set up interval for refreshing or listen to events
-    }, []);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -89,7 +73,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
 
                 <div className="flex-1 overflow-y-auto p-2 space-y-4">
                     {groupNames.map(group => {
-                        const groupMachines = machines.filter(m => 
+                        const groupMachines = machines.filter(m =>
                             m.groupName === group || getMachineGroup(m.machineId) === group
                         );
                         return (
@@ -101,9 +85,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
                                 {groupMachines.map(m => (
                                     <Button
                                         key={m.machineId}
-                                        variant={selectedMachine === m.machineId ? "secondary" : "ghost"}
-                                        className={cn("w-full justify-start font-normal pl-4 h-8", selectedMachine === m.machineId && "font-medium bg-accent")}
-                                        onClick={() => onMachineSelect(m.machineId)}
+                                        variant={selectedMachineId === m.machineId ? "secondary" : "ghost"}
+                                        className={cn("w-full justify-start font-normal pl-4 h-8", selectedMachineId === m.machineId && "font-medium bg-accent")}
+                                        onClick={() => setSelectedMachineId(m.machineId)}
                                     >
                                         <Bot className={cn("h-4 w-4 mr-2", m.isRunning ? "text-green-500" : "text-muted-foreground")} />
                                         {m.name || getSimpleName(m.machineId)}
@@ -123,9 +107,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
                             {machines.map(m => (
                                 <Button
                                     key={m.machineId}
-                                    variant={selectedMachine === m.machineId ? "secondary" : "ghost"}
-                                    className={cn("w-full justify-start font-normal", selectedMachine === m.machineId && "font-medium")}
-                                    onClick={() => onMachineSelect(m.machineId)}
+                                    variant={selectedMachineId === m.machineId ? "secondary" : "ghost"}
+                                    className={cn("w-full justify-start font-normal", selectedMachineId === m.machineId && "font-medium")}
+                                    onClick={() => setSelectedMachineId(m.machineId)}
                                 >
                                     <Bot className={cn("h-4 w-4 mr-2", m.isRunning ? "text-green-500" : "text-muted-foreground")} />
                                     {m.name || m.machineId}
@@ -148,12 +132,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
             <CreateGroupDialog
                 isOpen={isCreateGroupOpen}
                 onClose={() => setCreateGroupOpen(false)}
-                onCreated={fetchData}
+                onCreated={fetchInitialData}
             />
             <CreateMachineDialog
                 isOpen={isCreateMachineOpen}
                 onClose={() => setCreateMachineOpen(false)}
-                onSuccess={fetchData}
+                onSuccess={fetchInitialData}
             />
 
             {/* Main Content */}
@@ -161,10 +145,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
                 {/* Header */}
                 <div className="bg-card border-b p-4 shadow-sm flex justify-between items-center h-16 transition-colors duration-300">
                     <div className="font-semibold text-lg flex items-center gap-2">
-                        {selectedMachine ? (
+                        {selectedMachineId ? (
                             <>
                                 <Bot className="h-5 w-5 text-primary" />
-                                {selectedMachine}
+                                {selectedMachineId}
                             </>
                         ) : "Select a Machine"}
                     </div>
@@ -192,9 +176,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, selectedMachine, onMac
 
                 <div className="flex-1 overflow-auto p-6 bg-secondary/20 transition-colors duration-300">
                     {/* Machine Specific Header (Character Status) */}
-                    {selectedMachine && (
+                    {selectedMachineId && (
                         <div className="mb-6">
-                            <CharacterStatus machineId={selectedMachine} />
+                            <CharacterStatus machineId={selectedMachineId} />
                         </div>
                     )}
 

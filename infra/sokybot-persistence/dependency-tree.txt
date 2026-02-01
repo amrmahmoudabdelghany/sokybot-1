@@ -1,0 +1,78 @@
+io.github.sokybot:sokybot-persistence:bundle:1.0-SNAPSHOT
++- javax.persistence:javax.persistence-api:jar:2.2:provided
++- org.hibernate:hibernate-core:jar:5.6.15.Final:compile
+|  +- org.jboss.spec.javax.transaction:jboss-transaction-api_1.2_spec:jar:1.1.1.Final:compile
+|  +- javax.activation:javax.activation-api:jar:1.2.0:compile
+|  +- javax.xml.bind:jaxb-api:jar:2.3.1:compile
+|  \- org.glassfish.jaxb:jaxb-runtime:jar:2.3.1:compile
+|     +- org.glassfish.jaxb:txw2:jar:2.3.1:compile
+|     +- com.sun.istack:istack-commons-runtime:jar:3.0.7:compile
+|     +- org.jvnet.staxex:stax-ex:jar:1.8:compile
+|     \- com.sun.xml.fastinfoset:FastInfoset:jar:1.2.15:compile
++- org.hibernate:hibernate-osgi:jar:5.6.15.Final:compile
+|  +- javax.interceptor:javax.interceptor-api:jar:1.2:compile
+|  +- org.osgi:org.osgi.core:jar:6.0.0:compile
+|  \- org.osgi:org.osgi.compendium:jar:5.0.0:compile
++- net.bytebuddy:byte-buddy:jar:1.12.18:compile
++- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:compile
++- org.jboss.logging:jboss-logging:jar:3.4.3.Final:compile
++- com.fasterxml:classmate:jar:1.5.1:compile
++- org.jboss:jandex:jar:2.4.2.Final:compile
++- antlr:antlr:jar:2.7.7:compile
++- org.dom4j:dom4j:jar:2.1.3:compile
++- com.h2database:h2:jar:2.1.214:compile
++- org.osgi:org.osgi.service.component.annotations:jar:1.5.0:provided
+|  +- org.osgi:osgi.annotation:jar:8.0.1:provided
+|  +- org.osgi:org.osgi.namespace.extender:jar:1.0.1:provided
+|  +- org.osgi:org.osgi.util.function:jar:1.0.0:provided
+|  \- org.osgi:org.osgi.util.promise:jar:1.0.0:provided
++- org.osgi:org.osgi.service.cm:jar:1.6.1:provided
+|  \- org.osgi:org.osgi.namespace.implementation:jar:1.0.0:provided
++- org.osgi:osgi.core:jar:6.0.0:provided
++- org.projectlombok:lombok:jar:1.18.30:provided
++- org.slf4j:slf4j-api:jar:1.7.36:provided
++- io.github.sokybot:sokybot-pk2-extractor:jar:1.0-SNAPSHOT:provided
++- io.github.sokybot:sokybot-pk2:jar:1.0-SNAPSHOT:provided
++- io.github.sokybot:sokybot-security:jar:1.0-SNAPSHOT:provided
++- io.github.sokybot:sokybot-commons:jar:1.0-SNAPSHOT:provided
++- org.springframework:spring-context:jar:5.3.27:provided
+|  +- org.springframework:spring-aop:jar:5.3.27:provided
+|  +- org.springframework:spring-beans:jar:5.3.27:provided
+|  +- org.springframework:spring-core:jar:5.3.27:provided
+|  |  \- org.springframework:spring-jcl:jar:5.3.27:provided
+|  \- org.springframework:spring-expression:jar:5.3.27:provided
++- org.springframework:spring-orm:jar:5.3.27:provided
+|  \- org.springframework:spring-jdbc:jar:5.3.27:provided
++- org.springframework:spring-tx:jar:5.3.27:provided
++- org.springframework.data:spring-data-jpa:jar:2.7.10:provided
+|  \- org.springframework.data:spring-data-commons:jar:2.7.10:provided
++- org.junit.jupiter:junit-jupiter:jar:5.10.1:test
+|  +- org.junit.jupiter:junit-jupiter-api:jar:5.10.1:test
+|  |  +- org.opentest4j:opentest4j:jar:1.3.0:test
+|  |  +- org.junit.platform:junit-platform-commons:jar:1.10.1:test
+|  |  \- org.apiguardian:apiguardian-api:jar:1.1.2:test
+|  +- org.junit.jupiter:junit-jupiter-params:jar:5.10.1:test
+|  \- org.junit.jupiter:junit-jupiter-engine:jar:5.10.1:test
+|     \- org.junit.platform:junit-platform-engine:jar:1.10.1:test
++- org.mockito:mockito-core:jar:5.11.0:test
+|  +- net.bytebuddy:byte-buddy-agent:jar:1.14.12:test
+|  \- org.objenesis:objenesis:jar:3.3:test
++- org.mockito:mockito-junit-jupiter:jar:5.11.0:test
++- javax.transaction:javax.transaction-api:jar:1.3:provided
++- javax.activation:activation:jar:1.1.1:compile
++- net.java.dev.jna:jna:jar:5.13.0:provided
++- net.java.dev.jna:jna-platform:jar:5.13.0:provided
++- commons-io:commons-io:jar:2.16.1:provided
++- org.apache.commons:commons-lang3:jar:3.14.0:provided
++- org.apache.commons:commons-csv:jar:1.11.0:provided
+|  \- commons-codec:commons-codec:jar:1.16.1:provided
++- org.apache.commons:commons-math3:jar:3.6.1:provided
++- org.osgi:org.osgi.service.metatype:jar:1.4.1:provided
++- org.apache.felix:org.apache.felix.framework:jar:7.0.5:provided
+|  \- org.codehaus.mojo:animal-sniffer-annotations:jar:1.9:provided
++- org.osgi:org.osgi.service.component:jar:1.5.0:provided
++- org.apache.felix:org.apache.felix.scr:jar:2.2.4:provided
++- org.apache.felix:org.apache.felix.log:jar:1.2.6:provided
+|  \- org.osgi:org.osgi.service.log:jar:1.4.0:provided
++- ch.qos.logback:logback-classic:jar:1.4.14:provided
+\- ch.qos.logback:logback-core:jar:1.4.14:provided

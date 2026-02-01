@@ -46,7 +46,7 @@ class EngineCoreTest extends EngineTestBase {
         assertThrows(IllegalArgumentException.class, () -> {
             new EngineCore(null, TEST_GROUP_NAME, TEST_MACHINE_NAME,
                     mockProxyConnection, mockGameModel,
-                    mockBundleContext);
+                    java.util.Collections.emptyList());
         });
     }
 
@@ -56,7 +56,7 @@ class EngineCoreTest extends EngineTestBase {
         assertThrows(IllegalArgumentException.class, () -> {
             new EngineCore(TEST_MACHINE_ID, TEST_GROUP_NAME, TEST_MACHINE_NAME,
                     null, mockGameModel,
-                    mockBundleContext);
+                    java.util.Collections.emptyList());
         });
     }
 

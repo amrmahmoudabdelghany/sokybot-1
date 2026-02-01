@@ -40,7 +40,13 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
 
         mockBundleContext.registerMockService(IActuator.class, actuator, null);
 
-        EngineCore engine = createTestEngine();
+        EngineCore engine = new EngineCore(
+                TEST_MACHINE_ID,
+                TEST_GROUP_NAME,
+                TEST_MACHINE_NAME,
+                mockProxyConnection,
+                mockGameModel,
+                java.util.Collections.singletonList(actuator));
 
         // Verify initial state
         assertEquals(EngineState.STOPPED, engine.getEngineState());
@@ -74,7 +80,13 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
 
         mockBundleContext.registerMockService(IActuator.class, actuator, null);
 
-        EngineCore engine = createTestEngine();
+        EngineCore engine = new EngineCore(
+                TEST_MACHINE_ID,
+                TEST_GROUP_NAME,
+                TEST_MACHINE_NAME,
+                mockProxyConnection,
+                mockGameModel,
+                java.util.Collections.singletonList(actuator));
         engine.start();
 
         assertTrue(engine.isRunning());
@@ -145,7 +157,7 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                 "test-machine-2",
                 mockProxyConnection,
                 mockGameModel,
-                mockBundle2);
+                java.util.Collections.singletonList(actuator2));
 
         // Both engines should be independent
         engine1.start();

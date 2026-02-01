@@ -40,16 +40,22 @@ public class MyGameEvent implements IGameEvent {
 }
 ```
 
-## 4. Handle Event
-Create an `EventHandler` to react to it.
+## 4. Handle Event (Subscriber)
+The preferred way to react to game events is using the `IReactiveEventBus`.
 
 ```java
-@Component(property = EventConstants.EVENT_TOPIC + "=sokybot/game/*/MyGameEvent")
-public class MyHandler implements EventHandler {
-    @Override
-    public void handleEvent(Event event) {
-        MyGameEvent myEvent = (MyGameEvent) event.getProperty("event");
-        // Logic
+@Component(service = MyComponent.class)
+public class MyComponent {
+
+    @Reference
+    private IReactiveEventBus eventBus;
+    
+    @Activate
+    public void start() {
+        eventBus.on(MyGameEvent.class)
+                .subscribe(this::handleEvent);
     }
 }
 ```
+
+**Note**: Raw `EventHandler` service registration is still supported but discouraged for application logic.

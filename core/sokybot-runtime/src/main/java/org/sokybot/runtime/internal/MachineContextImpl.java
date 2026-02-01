@@ -72,6 +72,7 @@ public class MachineContextImpl implements IMachineContext {
             engine = engineFactory.createEngine(
                     machineId,
                     proxyConnection,
+                    this.gameModel,
                     groupContext.name(), // Get group name from groupContext instead of machineInfo
                     machineInfo.getMachineName());
 

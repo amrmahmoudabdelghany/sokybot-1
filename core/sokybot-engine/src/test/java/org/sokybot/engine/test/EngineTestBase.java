@@ -15,16 +15,16 @@ import org.sokybot.proxy.IProxyConnection;
  * Provides common test setup (mock services, context creation).
  */
 public abstract class EngineTestBase {
-    
+
     protected static final String TEST_MACHINE_ID = "test-group.test-machine";
     protected static final String TEST_GROUP_NAME = "test-group";
     protected static final String TEST_MACHINE_NAME = "test-machine";
-    
+
     protected OSGiTestUtils.MockBundleContext mockBundleContext;
     protected MockProxyConnection mockProxyConnection;
     protected MockGameModel mockGameModel;
     protected MockDispatcher mockDispatcher;
-    
+
     /**
      * Sets up test fixtures before each test.
      * Subclasses can override to add custom setup.
@@ -32,17 +32,17 @@ public abstract class EngineTestBase {
     protected void setUp() {
         // Create mock bundle context
         mockBundleContext = OSGiTestUtils.createMockBundleContext();
-        
+
         // Create mock proxy connection
         mockProxyConnection = new MockProxyConnection().withConnected(false);
-        
+
         // Create mock game model
         mockGameModel = new MockGameModel();
-        
+
         // Create mock dispatcher
         mockDispatcher = new MockDispatcher().withConnected(false);
     }
-    
+
     /**
      * Creates a test engine instance.
      * 
@@ -51,7 +51,7 @@ public abstract class EngineTestBase {
     protected EngineCore createTestEngine() {
         return createTestEngine(mockGameModel);
     }
-    
+
     /**
      * Creates a test engine instance with the given game model.
      * 
@@ -60,14 +60,14 @@ public abstract class EngineTestBase {
      */
     protected EngineCore createTestEngine(IGameModel gameModel) {
         return new EngineCore(
-            TEST_MACHINE_ID,
-            TEST_GROUP_NAME,
-            TEST_MACHINE_NAME,
-            mockProxyConnection,
-            gameModel,
-            mockBundleContext);
+                TEST_MACHINE_ID,
+                TEST_GROUP_NAME,
+                TEST_MACHINE_NAME,
+                mockProxyConnection,
+                gameModel,
+                java.util.Collections.emptyList());
     }
-    
+
     /**
      * Tears down test fixtures after each test.
      * Subclasses can override to add custom cleanup.

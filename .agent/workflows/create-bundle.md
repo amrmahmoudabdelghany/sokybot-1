@@ -26,7 +26,7 @@ Use the standard parent with relative path `../../pom.xml`.
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>io.github.sokybot</groupId>
+        <groupId>org.sokybot</groupId>
         <artifactId>sokybot</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -72,7 +72,7 @@ Add to the `<modules>` section of the `{category}/pom.xml`.
 Add the bundle to `infra/sokybot-features/src/main/feature/feature.xml`:
 
 ```xml
-<bundle>mvn:io.github.sokybot/sokybot-{name}/${project.version}</bundle>
+<bundle>mvn:org.sokybot/sokybot-{name}/${project.version}</bundle>
 ```
 
 ## 5. Build and Deploy

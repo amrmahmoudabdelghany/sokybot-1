@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>io.github.sokybot</groupId>
+	<groupId>org.sokybot</groupId>
 	<artifactId>sokybot</artifactId>
 	<version>1.0-SNAPSHOT</version>
 
@@ -103,6 +103,7 @@
         <module>ui</module>
         <module>actuators</module>
         <module>infra</module>
+        <module>legacy/sokybot-ui-api</module>
     </modules>
 	<packaging>pom</packaging>
 
@@ -217,19 +218,19 @@
 			</dependency>
 
 			<dependency>
-				<groupId>io.github.sokybot.mydoggy</groupId>
+				<groupId>org.sokybot.mydoggy</groupId>
 				<artifactId>mydoggy-plaf</artifactId>
 				<version>${mydoggy.version}</version>
 			</dependency>
 
 			<dependency>
-				<groupId>io.github.sokybot.mydoggy</groupId>
+				<groupId>org.sokybot.mydoggy</groupId>
 				<artifactId>mydoggy-api</artifactId>
 				<version>${mydoggy.version}</version>
 			</dependency>
 
 			<dependency>
-				<groupId>io.github.sokybot.mydoggy</groupId>
+				<groupId>org.sokybot.mydoggy</groupId>
 				<artifactId>mydoggy-res</artifactId>
 				<version>${mydoggy.version}</version>
 			</dependency>
@@ -279,6 +280,18 @@
 				<groupId>org.mockito</groupId>
 				<artifactId>mockito-junit-jupiter</artifactId>
 				<version>${mockito.version}</version>
+			</dependency>
+
+			<!-- Force specific Byte Buddy version for Java 21 compatibility -->
+			<dependency>
+				<groupId>net.bytebuddy</groupId>
+				<artifactId>byte-buddy</artifactId>
+				<version>1.14.12</version>
+			</dependency>
+			<dependency>
+				<groupId>net.bytebuddy</groupId>
+				<artifactId>byte-buddy-agent</artifactId>
+				<version>1.14.12</version>
 			</dependency>
 
 			<!-- Commons Libraries - Updated versions -->

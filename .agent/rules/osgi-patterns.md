@@ -176,8 +176,8 @@ The following features provide shared dependencies to avoid duplication:
     <feature>sokybot-reactor</feature>
     <feature>sokybot-jackson</feature>
     <!-- Application bundles -->
-    <bundle>mvn:io.github.sokybot/sokybot-commons/${project.version}</bundle>
-    <bundle>mvn:io.github.sokybot/sokybot-http-server/${project.version}</bundle>
+    <bundle>mvn:org.sokybot/sokybot-commons/${project.version}</bundle>
+    <bundle>mvn:org.sokybot/sokybot-http-server/${project.version}</bundle>
 </feature>
 ```
 

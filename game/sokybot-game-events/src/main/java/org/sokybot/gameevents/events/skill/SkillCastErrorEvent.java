@@ -1,6 +1,6 @@
 package org.sokybot.gameevents.events.skill;
 
-import org.sokybot.game.enums.SkillCastErrorType;
+import org.sokybot.gameevents.enums.SkillCastErrorType;
 import org.sokybot.gameevents.events.core.AbstractGameEvent;
 
 import lombok.Getter;

@@ -2,7 +2,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>io.github.sokybot</groupId>
+        <groupId>org.sokybot</groupId>
         <artifactId>sokybot</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -17,11 +17,7 @@
 
     <dependencies>
 
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-settings</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -30,11 +26,7 @@
             <scope>provided</scope>
         </dependency>
         
-        <dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>${project.parent.artifactId}-pk2</artifactId>
-			<scope>compile</scope>
-		</dependency>
+
 
         <dependency>
 			<groupId>${project.groupId}</groupId>
@@ -42,12 +34,7 @@
 			<scope>compile</scope>
 		</dependency>
 		
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>sokybot-pk2-extractor</artifactId>
-			<version>${project.version}</version>
-			<scope>provided</scope>
-		</dependency>
+
 
         <!-- Spring Boot dependencies removed - moved to sokybot-engine-legacy module -->
 
@@ -71,23 +58,9 @@
 
         <!-- Spring State Machine removed - moved to sokybot-engine-legacy module -->
 
-        <dependency>
-			<groupId>org.orbisgis</groupId>
-			<artifactId>poly2tri-core</artifactId>
-			<version>0.1.2</version>
-		</dependency>
 
-		<dependency>
-			<groupId>io.netty</groupId>
-			<artifactId>netty-transport</artifactId>
-			<version>4.1.85.Final</version>
-		</dependency>
-		<dependency>
-			<groupId>io.netty</groupId>
-			<artifactId>netty-handler</artifactId>
-			<version>4.1.85.Final</version>
-		</dependency>
-		
+
+
 		<!-- picocli-spring-boot-starter removed - moved to sokybot-engine-legacy module -->
 		<dependency>
 			<groupId>org.apache.felix</groupId>
@@ -99,11 +72,7 @@
 			<artifactId>sokybot-game-loader</artifactId>
 			<version>${project.version}</version>
 		</dependency>
-		<dependency>
-			<groupId>${project.groupId}</groupId>
-			<artifactId>sokybot-game-navigation</artifactId>
-			<version>${project.version}</version>
-		</dependency>
+
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-game-model</artifactId>
@@ -144,6 +113,30 @@
             <version>8.0.0</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Jackson YAML for actuator manifest parsing -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.15.2</version>
+        </dependency>
+        <!-- OSGi DS annotations -->
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.5.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Groovy for scripting -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>4.0.16</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -157,7 +150,7 @@
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Activator>org.sokybot.engine.internal.EngineActivator</Bundle-Activator>
+
                         <Import-Package>
                             org.osgi.framework;version="[1.8,2.0)",
                             !javax.swing.*,
@@ -169,7 +162,9 @@
                             org.sokybot.machine.*
                         </Private-Package>
                         <Export-Package>
-                            org.sokybot.engine.core.*
+                            org.sokybot.engine.core.*,
+                            org.sokybot.engine.plugin,
+                            org.sokybot.engine.scripting
                         </Export-Package>
                         <Embed-Dependency>
                             *;scope=compile|runtime;artifactId=!org.osgi.core&amp;!org.osgi.framework&amp;!org.osgi.compendium&amp;!sokybot-engine-api

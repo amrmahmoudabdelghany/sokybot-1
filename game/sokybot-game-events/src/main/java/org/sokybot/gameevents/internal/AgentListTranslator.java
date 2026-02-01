@@ -30,7 +30,7 @@ public class AgentListTranslator extends AbstractTranslator {
     protected List<IGameEvent> translateInternal(String machineFullName, ImmutablePacket packet) {
         try {
             var reader = packet.getStreamReader();
-            java.util.List<org.sokybot.game.dto.AgentServer> resList = new java.util.ArrayList<>();
+            java.util.List<org.sokybot.gameevents.dto.AgentServer> resList = new java.util.ArrayList<>();
             
             byte hasEntity = reader.getByte();
             if (hasEntity == 0x01) {
@@ -41,7 +41,7 @@ public class AgentListTranslator extends AbstractTranslator {
                 reader.getByte(); // spirator
                 hasEntity = reader.getByte();
                 while (hasEntity == 0x01) {
-                    org.sokybot.game.dto.AgentServer agent = org.sokybot.game.dto.AgentServer.builder()
+                    org.sokybot.gameevents.dto.AgentServer agent = org.sokybot.gameevents.dto.AgentServer.builder()
                             .serverId(reader.getShort())
                             .serverName(new String(reader.getBytes(reader.getShort())))
                             .onlineUsers(reader.getShort())

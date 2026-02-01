@@ -37,7 +37,28 @@ graph TD
     Data -->|Models| Engine
 ```
 
-## 2. Technology Stack
+## 2. Core Component Directory
+
+The following table maps logical system components to their physical Maven modules and primary Java namespaces.
+
+| Component | Maven Module | Base Package Namespace |
+| :--- | :--- | :--- |
+| **Engine Core** | `sokybot-engine` | `org.sokybot.engine.core` |
+| **Engine API** | `sokybot-engine-api` | `org.sokybot.engine.api` |
+| **Bot Runtime** | `sokybot-runtime` | `org.sokybot.runtime` |
+| **Network Proxy** | `sokybot-proxy` | `org.sokybot.proxy` |
+| **Security/Crypto** | `sokybot-security` | `org.sokybot.security` |
+| **Game Model** | `sokybot-game-model` | `org.sokybot.gamemodel` |
+| **Game Events** | `sokybot-game-events` | `org.sokybot.gameevents` |
+| **HTTP Server** | `sokybot-http-server` | `org.sokybot.http.server` |
+| **Web UI Backend** | `sokybot-webview` | `org.sokybot.webview` |
+| **Persistence** | `sokybot-persistence` | `org.sokybot.persistence` |
+| **Shared Commons** | `sokybot-commons` | `org.sokybot.commons` |
+| **Settings** | `sokybot-settings` | `org.sokybot.settings` |
+| **Navigation** | `sokybot-game-navigation` | `org.sokybot.game.navigation` |
+| **PK2 Driver** | `sokybot-pk2` | `org.sokybot.pk2` |
+
+## 3. Technology Stack
 
 ### Backend (Java 11)
 *   **Runtime**: Apache Karaf (OSGi)
@@ -54,116 +75,74 @@ graph TD
 *   **Styling**: TailwindCSS
 *   **Components**: Radix UI Primitives, Lucide Icons
 
-## 3. Module Breakdown
+## 4. Module Breakdown
 
-The codebase is organized into multi-module Maven projects, categorized by responsibility.
+The codebase is organized into multi-module Maven projects under functional categories.
 
-### 3.1 Core Modules (`core/`)
+### 4.1 Core Modules (`core/`)
 These modules form the brain of the application.
 
-*   **`sokybot-runtime`**: Manages the lifecycle of bot instances (Machines) and groups. It consumes the `IEngineFactory` (provided by `sokybot-engine`) to create new bot contexts and handles the OSGi service wiring.
-*   **`sokybot-engine`**: Implements the state machines and core logic loops (Cycles). It provides the `IEngineFactory` service and orchestrates Actuators discovered via OSGi.
-*   **`sokybot-engine-api`**: Defines the public interfaces (`IDispatcher`, `ICycleDefinition`, `IWorkflowContext`, `IEngine`) to allow loose coupling between the engine and actuator implementations.
+*   **`sokybot-runtime`**: Manages the lifecycle of bot instances (Machines) and groups. It orchestrates the creation of bot contexts and handles the OSGi service wiring between modules.
+*   **`sokybot-engine`**: Implements the state machines and core logic loops (Cycles). It provides the execution engine for Actuators discovered via OSGi.
+*   **`sokybot-engine-api`**: Primary contract module. Defines interfaces like `IDispatcher`, `ICycleDefinition`, and `IWorkflowContext` to ensure decoupling between the engine and plugins.
 
-### 3.2 Network Layer (`network/`)
-Handles all external tcp communication with the game.
+### 4.2 Network Layer (`network/`)
+Handles all external TCP communication with the game.
 
-*   **`sokybot-proxy`**: A Netty-based TCP proxy. It acts as a "Man-in-the-Middle" (MITM).
-    *   **ClientToProxyConnection**: Handles traffic from the Game Client.
-    *   **ProxyToServerConnection**: Handles traffic to the Game Server.
-    *   It decrypts/encrypts packets on the fly and allows the Engine to inject or suppress packets.
-*   **`sokybot-security`**: Implementation of Silkroad's security protocols.
-    *   **Blowfish**: Packet encryption/decryption.
-    *   **CRC/Count**: Integrity checks (Handshake).
-*   **`sokybot-packet-sniffer`**: A development tool for capturing and analyzing packet streams in real-time.
+*   **`sokybot-proxy`**: A Netty-based TCP proxy acting as a "Man-in-the-Middle" (MITM) between the client and server.
+*   **`sokybot-security`**: Implements Silkroad's security layer including Blowfish encryption and CRC/Count handshakes.
+*   **`sokybot-packet-sniffer`**: Real-time packet analysis and development tool.
 
-### 3.3 Game Data (`game/`)
-Manages game assets and protocol definitions.
+### 4.3 Game Data (`game/`)
+Manages game assets, protocol definitions, and world state.
 
-*   **`sokybot-game-events`**: A large module containing definitions that map raw packet OpCodes (e.g., `0x3015`) to strongly-typed Java Events (e.g., `ChatMessageEvent`).
-    *   **Translators**: Convert `ImmutablePacket` ↔ `GameEvent`.
-*   **`sokybot-game-events-api`**: Public interfaces for the event translation system.
-*   **`sokybot-pk2`**: A driver for reading `.pk2` files (Silkroad's custom archive format).
-*   **`sokybot-pk2-extractor`**: Extracts and processes data from PK2 archives.
-*   **`sokybot-game-model`**: POJO domain models for game entities (Character, Item, Skill, Mob).
-*   **`sokybot-game-navigation`**: Pathfinding logic and navigation mesh handling.
-*   **`sokybot-loader-api`**: Interfaces for game data loading (`IGameLoader`).
-*   **`sokybot-game-loader`**: Handles launching and injecting into the game client process (shellcode injection, process I/O).
-*   **`sokybot-game-asset`**: Asset management and caching.
+*   **`sokybot-game-events`**: Maps raw packet OpCodes to strongly-typed Java Events (e.g., `ChatMessageEvent`, `MonsterSpawnEvent`).
+*   **`sokybot-game-model`**: Holds the current world state (Character, Items, Skills, Mobs) updated via the Reactive Event Bus.
+*   **`sokybot-game-navigation`**: Implements pathfinding and navigation mesh (`navmesh`) logic for autonomous movement.
 
-### 3.4 User Interface (`ui/`)
-The interface layer, decoupled from the backend.
+### 4.4 User Interface (`ui/`)
+The interface layer, decoupled from the backend logic.
 
-*   **`sokybot-http-server`**: A Reactor Netty-based OSGi bundle that provides a shared HTTP host (default port 8182). It serves the static frontend assets and upgrades WebSocket connections for RSocket.
-*   **`sokybot-webview`**: The main user interface application.
-*   **`sokybot-dev-tools`**: Development tools UI for OSGi bundle management, service inspection, and runtime metrics.
-*   **`sokybot-frontend-shared`**: Common UI components and utilities shared between webview and dev-tools.
+*   **`sokybot-http-server`**: Shared Reactor Netty host (Port 8182). Serves frontend assets and manages RSocket WebSocket upgrades.
+*   **`sokybot-webview`**: The primary bot management interface.
+*   **`sokybot-dev-tools`**: OSGi service inspection and metrics monitoring.
 
-### 3.5 Infrastructure (`infra/`)
-Shared services and deployment configuration.
+## 5. Component Relationships
 
-*   **`sokybot-commons`**: Utility classes (Hexdump, Byte manipulation, String helpers).
-*   **`sokybot-persistence`**: JPA/Hibernate layer for storing extracted game data (Items, Skills, NPCs, Shops, Navigation Meshes) in an embedded H2 database.
-*   **`sokybot-settings`**: User settings and profile management.
-*   **`sokybot-features`**: Defines Karaf Features (groups of bundles) for easy provisioning.
-*   **`sokybot-dist`**: Assembles the custom Karaf distribution, stripping out unnecessary enterprise features to keep the footprint small for desktop use.
-*   **`sokybot-build-tools`**: Build configuration (Checkstyle rules, version rules).
+The following diagram illustrates the primary data flow and service dependencies during active botting.
 
-### 3.6 Actuators (`actuators/`)
-Pluggable bot logic modules, discovered via OSGi at runtime.
+```mermaid
+graph LR
+    subgraph Execution [Engine Layer]
+        Actuator[Actuator Plugin]
+        CycleManager[Cycle Manager]
+    end
 
-*   **`sokybot-actuator-connector`**: Handles initial connection and server selection.
-*   **`sokybot-actuator-login`**: Automates the login sequence.
-*   **`sokybot-actuator-training`**: Implements combat training loops.
+    subgraph State [State Layer]
+        Model[Game Model]
+        Bus[Reactive Event Bus]
+    end
 
-## 4. Design Patterns & Principles
+    subgraph Network [Proxy Layer]
+        Proxy[TCP Proxy]
+        Translator[Event Translator]
+    end
 
-### 4.1 Event-Driven Architecture
-The system is heavily event-driven, with clear separation of concerns:
-1.  **Network Event**: A packet arrives at the Proxy.
-2.  **Translation**: It is converted to a `GameEvent` by translators.
-3.  **State Update**: `IGameModel` and `UI` subscribe to these events to update the game state (e.g., character HP, position).
-4.  **Bot Logic**: The Engine and Actuators read the *state* from `IGameModel`. They do not consume events directly for state tracking.
-5.  **Action**: Actuators use `IDispatcher` to send generated packets (commands) to the Client or Server.
+    Proxy -- Raw Packet --> Translator
+    Translator -- Game Event --> Bus
+    Bus -- Stream --> Model
+    Actuator -- Poll State --> Model
+    Actuator -- Dispatch Cmd --> Proxy
+    CycleManager -- Tick --> Actuator
+```
 
-### 4.2 Legacy Event-Driven Architecture (Deprecated)
-In earlier versions, the logic flow was strictly event-based without a centralized state model:
-1.  **Network Event** → **Translation** → **Event Bus**.
-2.  **State Tracking**: The Engine consumed events specifically to track state internally.
-3.  **Action**: Actuators consumed events directly to trigger actions (e.g., "On HP Update Event -> If HP < 50% -> Cast Heal").
-*Note: This approach led to synchronization issues and has been replaced by the Model-based approach.*
+## 6. Design Principles
 
-### 4.3 Whiteboard Pattern
-Used extensively with OSGi. Services (like `IRSocketHandler` or `IActuator`) register themselves with the OSGi registry. The consumer (e.g., `RSocketService` or `Engine`) listens for these registrations and dynamically adds them without hard dependencies.
+### 6.1 State Distillation
+Actuators do not listen to raw packets. Instead, the system distillates packets into a centralized **Game Model**. Actuators poll this model to make decisions, ensuring logic is based on a consistent world view.
 
-### 4.4 Reactive Streams
-Project Reactor (`Flux`, `Mono`) is used for asynchronous data flow, particularly in the Network and UI layers, to ensure non-blocking performance.
+### 6.2 Whiteboard Pattern (OSGi)
+Modules interact primarily via the OSGi service registry. Components like `IActuator` or `IRSocketHandler` register themselves, and their respective managers discover them dynamically, allowing for hot-swapping and modular extension.
 
-### 4.5 Logic Execution Model (Cycles)
-The bot's intelligence is built on a **State Machine** pattern called "Cycles".
-1.  **Actuators**: Logic is encapsulated in `Actuators` (implementing `IActuator`).
-2.  **Cycles**: Each Actuator registers one or more `Cycles`. A Cycle is a directed graph of states (`CycleDefinition`).
-3.  **Components**:
-    *   **Guard**: A condition (`ctx -> boolean`) that determines if a state can be entered. If false, the cycle transitions to a fallback target.
-    *   **Action**: Code to execute (`ctx -> void`) when in the state.
-    *   **Context**: Access to `IGameModel` (for state) and `IDispatcher` (for actions) is provided via `IWorkflowContext`.
-4.  **Flow**: The Engine evaluates active Cycles tick-by-tick. If a Cycle's entry guard is met, it becomes active and transitions through its states until completion or interruption.
-
-## 5. Runtime View (Boot Process)
-
-1.  **Karaf Startup**: The `sokybot-dist` assembly starts the Karaf container.
-2.  **Feature Loading**: The `sokybot-full` feature is loaded (as defined in `etc/org.apache.karaf.features.cfg`).
-3.  **Core Services**: `sokybot-runtime` and `sokybot-http-server` start.
-4.  **UI Waiting**: The HTTP server opens port 8182.
-5.  **User Action**: User creates a "Machine" via the UI.
-6.  **Bot Launch**: `sokybot-runtime` uses `IEngineFactory` to instantiate a new Engine context, spins up a Netty proxy on a local port, and the user connects the Game Client to that local port.
-
-## 6. Development & Build
-
-*   **Build System**: Maven (via `mvnw` wrapper).
-*   **frontend-maven-plugin**: Used to compile the React frontend during the Maven build phase.
-*   **karaf-maven-plugin**: Used to verify features and assemble the distribution.
-
-### Key Build Profiles
-*   `dev`: Builds the code but skips heavy integration tests and optimizations.
-*   `desktop`: optimized build for electron distribution.
+### 6.3 Reactive Communication
+The system uses **Project Reactor** for internal data flow and **RSocket** for frontend/backend interaction, providing backpressure-aware, non-blocking communication throughout the stack.

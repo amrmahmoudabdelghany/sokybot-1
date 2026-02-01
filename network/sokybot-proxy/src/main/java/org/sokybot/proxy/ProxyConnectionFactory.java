@@ -3,6 +3,10 @@ package org.sokybot.proxy;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.event.EventAdmin;
 
 import io.netty.channel.EventLoopGroup;
@@ -12,37 +16,49 @@ import io.netty.channel.nio.NioEventLoopGroup;
  * Factory implementation for creating proxy connections.
  * Manages shared Netty resources across all connections.
  */
+@Component(service = IProxyConnectionFactory.class)
 public class ProxyConnectionFactory implements IProxyConnectionFactory {
-    
-    private final EventLoopGroup bossGroup;
-    private final EventLoopGroup workerGroup;
-    private final Map<String, ProxyConnection> connections;
-    private final EventAdmin eventAdmin;
-    
-    public ProxyConnectionFactory(EventAdmin eventAdmin) {
-        this.bossGroup = new NioEventLoopGroup(1);
-        this.workerGroup = new NioEventLoopGroup();
-        this.connections = new ConcurrentHashMap<>();
+
+    private EventLoopGroup bossGroup;
+    private EventLoopGroup workerGroup;
+    private final Map<String, ProxyConnection> connections = new ConcurrentHashMap<>();
+
+    private EventAdmin eventAdmin;
+
+    @Reference
+    public void setEventAdmin(EventAdmin eventAdmin) {
         this.eventAdmin = eventAdmin;
     }
-    
+
+    @Activate
+    public void activate() {
+        this.bossGroup = new NioEventLoopGroup(1);
+        this.workerGroup = new NioEventLoopGroup();
+        System.out.println("Sokybot Proxy: Factory activated, Netty groups initialized");
+    }
+
+    @Deactivate
+    public void deactivate() {
+        shutdown();
+    }
+
     @Override
     public IProxyConnection createConnection(String machineId, IConnectionListener listener) {
         if (connections.containsKey(machineId)) {
             throw new IllegalStateException("Connection already exists for machine: " + machineId);
         }
-        
+
         ProxyConnection connection = new ProxyConnection(machineId, listener, bossGroup, workerGroup, eventAdmin);
         connections.put(machineId, connection);
-        
+
         System.out.println("Sokybot Proxy: Created connection for machine: " + machineId);
         return connection;
     }
-    
+
     @Override
     public void shutdown() {
         System.out.println("Sokybot Proxy: Shutting down all connections...");
-        
+
         for (ProxyConnection connection : connections.values()) {
             try {
                 connection.disconnect();
@@ -51,13 +67,15 @@ public class ProxyConnectionFactory implements IProxyConnectionFactory {
             }
         }
         connections.clear();
-        
-        bossGroup.shutdownGracefully();
-        workerGroup.shutdownGracefully();
-        
+
+        if (bossGroup != null)
+            bossGroup.shutdownGracefully();
+        if (workerGroup != null)
+            workerGroup.shutdownGracefully();
+
         System.out.println("Sokybot Proxy: All connections shut down");
     }
-    
+
     /**
      * Removes a connection from the factory.
      * Called when a connection is disconnected.
@@ -66,4 +84,3 @@ public class ProxyConnectionFactory implements IProxyConnectionFactory {
         connections.remove(machineId);
     }
 }
-

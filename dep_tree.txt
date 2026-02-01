@@ -1,0 +1,103 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] Using the MultiThreadedBuilder implementation with a thread count of 4
+[INFO] 
+[INFO] --------------------< org.sokybot:sokybot-runtime >---------------------
+[INFO] Building sokybot-runtime 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] -------------------------------[ bundle ]-------------------------------
+[WARNING] The POM for org.sokybot:sokybot-ui-api:jar:1.0-SNAPSHOT is missing, no dependency information available
+[INFO] 
+[INFO] --- dependency:3.6.1:tree (default-cli) @ sokybot-runtime ---
+[INFO] org.sokybot:sokybot-runtime:bundle:1.0-SNAPSHOT
+[INFO] +- org.sokybot:sokybot-commons:jar:1.0-SNAPSHOT:compile
+[INFO] +- org.sokybot:sokybot-game-events-api:jar:1.0-SNAPSHOT:compile
+[INFO] +- org.sokybot:sokybot-ui-api:jar:1.0-SNAPSHOT:provided
+[INFO] +- org.sokybot:sokybot-loader-api:jar:1.0-SNAPSHOT:provided
+[INFO] +- org.sokybot:sokybot-proxy:jar:1.0-SNAPSHOT:provided
+[INFO] |  +- io.netty:netty-transport:jar:4.1.85.Final:provided
+[INFO] |  |  +- io.netty:netty-common:jar:4.1.85.Final:provided
+[INFO] |  |  +- io.netty:netty-buffer:jar:4.1.85.Final:provided
+[INFO] |  |  \- io.netty:netty-resolver:jar:4.1.85.Final:provided
+[INFO] |  \- io.netty:netty-handler:jar:4.1.85.Final:provided
+[INFO] |     +- io.netty:netty-transport-native-unix-common:jar:4.1.85.Final:provided
+[INFO] |     \- io.netty:netty-codec:jar:4.1.85.Final:provided
+[INFO] +- org.sokybot:sokybot-engine-api:jar:1.0-SNAPSHOT:provided
+[INFO] |  \- org.sokybot:sokybot-settings:jar:1.0-SNAPSHOT:provided
+[INFO] |     +- javax.xml.bind:jaxb-api:jar:2.3.1:provided
+[INFO] |     +- org.glassfish.jaxb:jaxb-runtime:jar:2.3.1:provided
+[INFO] |     |  +- org.glassfish.jaxb:txw2:jar:2.3.1:provided
+[INFO] |     |  +- com.sun.istack:istack-commons-runtime:jar:3.0.7:provided
+[INFO] |     |  +- org.jvnet.staxex:stax-ex:jar:1.8:provided
+[INFO] |     |  \- com.sun.xml.fastinfoset:FastInfoset:jar:1.2.15:provided
+[INFO] |     \- javax.activation:javax.activation-api:jar:1.2.0:provided
+[INFO] +- org.sokybot:sokybot-persistence:jar:1.0-SNAPSHOT:provided
+[INFO] |  +- org.hibernate:hibernate-core:jar:5.6.15.Final:provided
+[INFO] |  |  +- javax.persistence:javax.persistence-api:jar:2.2:provided
+[INFO] |  |  \- org.jboss.spec.javax.transaction:jboss-transaction-api_1.2_spec:jar:1.1.1.Final:provided
+[INFO] |  +- org.hibernate:hibernate-osgi:jar:5.6.15.Final:provided
+[INFO] |  |  +- javax.interceptor:javax.interceptor-api:jar:1.2:provided
+[INFO] |  |  +- org.osgi:org.osgi.core:jar:6.0.0:provided
+[INFO] |  |  \- org.osgi:org.osgi.compendium:jar:5.0.0:provided
+[INFO] |  +- net.bytebuddy:byte-buddy:jar:1.14.12:provided
+[INFO] |  +- org.hibernate.common:hibernate-commons-annotations:jar:5.1.2.Final:provided
+[INFO] |  +- org.jboss.logging:jboss-logging:jar:3.4.3.Final:provided
+[INFO] |  +- com.fasterxml:classmate:jar:1.5.1:provided
+[INFO] |  +- org.jboss:jandex:jar:2.4.2.Final:provided
+[INFO] |  +- antlr:antlr:jar:2.7.7:provided
+[INFO] |  +- org.dom4j:dom4j:jar:2.1.3:provided
+[INFO] |  \- com.h2database:h2:jar:2.1.214:provided
+[INFO] +- org.sokybot:sokybot-game-model:jar:1.0-SNAPSHOT:provided
+[INFO] +- org.sokybot:sokybot-game-events:jar:1.0-SNAPSHOT:provided
+[INFO] +- org.sokybot:sokybot-game-navigation:jar:1.0-SNAPSHOT:provided
+[INFO] |  \- org.orbisgis:poly2tri-core:jar:0.1.2:provided
+[INFO] +- org.osgi:org.osgi.service.component.annotations:jar:1.5.1:provided
+[INFO] |  +- org.osgi:osgi.annotation:jar:8.1.0:provided
+[INFO] |  +- org.osgi:org.osgi.namespace.extender:jar:1.0.1:provided
+[INFO] |  +- org.osgi:org.osgi.util.function:jar:1.0.0:provided
+[INFO] |  \- org.osgi:org.osgi.util.promise:jar:1.0.0:provided
+[INFO] +- org.osgi:org.osgi.service.event:jar:1.4.1:provided
+[INFO] |  \- org.osgi:org.osgi.namespace.implementation:jar:1.0.0:provided
+[INFO] +- org.slf4j:slf4j-api:jar:1.7.36:provided
+[INFO] +- com.fasterxml.jackson.core:jackson-databind:jar:2.15.2:provided
+[INFO] |  +- com.fasterxml.jackson.core:jackson-annotations:jar:2.15.2:provided
+[INFO] |  \- com.fasterxml.jackson.core:jackson-core:jar:2.15.2:provided
+[INFO] +- com.fasterxml.jackson.datatype:jackson-datatype-jsr310:jar:2.15.2:provided
+[INFO] +- org.projectlombok:lombok:jar:1.18.30:provided
+[INFO] +- org.junit.jupiter:junit-jupiter-engine:jar:5.10.1:test
+[INFO] |  +- org.junit.platform:junit-platform-engine:jar:1.10.1:test
+[INFO] |  |  +- org.opentest4j:opentest4j:jar:1.3.0:test
+[INFO] |  |  \- org.junit.platform:junit-platform-commons:jar:1.10.1:test
+[INFO] |  +- org.junit.jupiter:junit-jupiter-api:jar:5.10.1:test
+[INFO] |  \- org.apiguardian:apiguardian-api:jar:1.1.2:test
+[INFO] +- org.mockito:mockito-core:jar:5.11.0:test
+[INFO] |  +- net.bytebuddy:byte-buddy-agent:jar:1.14.12:test
+[INFO] |  \- org.objenesis:objenesis:jar:3.3:test
+[INFO] +- org.mockito:mockito-junit-jupiter:jar:5.11.0:test
+[INFO] +- javax.activation:activation:jar:1.1.1:compile
+[INFO] +- net.java.dev.jna:jna:jar:5.13.0:provided
+[INFO] +- net.java.dev.jna:jna-platform:jar:5.13.0:provided
+[INFO] +- commons-io:commons-io:jar:2.16.1:provided
+[INFO] +- org.apache.commons:commons-lang3:jar:3.14.0:provided
+[INFO] +- org.apache.commons:commons-csv:jar:1.11.0:provided
+[INFO] |  \- commons-codec:commons-codec:jar:1.16.1:provided
+[INFO] +- org.apache.commons:commons-math3:jar:3.6.1:provided
+[INFO] +- org.osgi:org.osgi.service.cm:jar:1.6.1:provided
+[INFO] +- org.osgi:org.osgi.service.metatype:jar:1.4.1:provided
+[INFO] +- org.apache.felix:org.apache.felix.framework:jar:7.0.5:provided
+[INFO] |  \- org.codehaus.mojo:animal-sniffer-annotations:jar:1.9:provided
+[INFO] +- org.osgi:org.osgi.service.component:jar:1.5.0:provided
+[INFO] +- org.apache.felix:org.apache.felix.scr:jar:2.2.4:provided
+[INFO] +- org.apache.felix:org.apache.felix.log:jar:1.2.6:provided
+[INFO] |  +- org.osgi:osgi.core:jar:6.0.0:provided
+[INFO] |  \- org.osgi:org.osgi.service.log:jar:1.4.0:provided
+[INFO] +- org.junit.jupiter:junit-jupiter:jar:5.10.1:test
+[INFO] |  \- org.junit.jupiter:junit-jupiter-params:jar:5.10.1:test
+[INFO] +- ch.qos.logback:logback-classic:jar:1.4.14:provided
+[INFO] \- ch.qos.logback:logback-core:jar:1.4.14:provided
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  1.930 s (Wall Clock)
+[INFO] Finished at: 2026-02-01T00:19:02Z
+[INFO] ------------------------------------------------------------------------

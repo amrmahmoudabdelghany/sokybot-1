@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     
     <parent>
-        <groupId>io.github.sokybot</groupId>
+        <groupId>org.sokybot</groupId>
         <artifactId>sokybot</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -119,6 +119,18 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Jackson for JSON serialization -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -176,10 +188,12 @@
                         </Import-Package>
                         <Export-Package>
                             org.sokybot.runtime,
+                            org.sokybot.runtime.template,
                             org.sokybot.exception
                         </Export-Package>
                         <Private-Package>
-                            org.sokybot.runtime.internal.*
+                            org.sokybot.runtime.internal.*,
+                            org.sokybot.runtime.template.internal
                         </Private-Package>
                     </instructions>
                 </configuration>

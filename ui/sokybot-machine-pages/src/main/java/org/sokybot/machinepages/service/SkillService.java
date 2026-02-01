@@ -10,7 +10,7 @@ import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.events.skill.SkillLevelUpEvent;
 import org.sokybot.gameevents.events.skill.SkillPointsUpdateEvent;
 import org.sokybot.gameevents.events.character.CharacterSkillLoadedEvent;
-import org.sokybot.game.dto.Skill;
+import org.sokybot.gameevents.dto.Skill;
 import org.sokybot.gamemodel.model.ITrainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

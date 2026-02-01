@@ -70,8 +70,8 @@ graph TD
 
 | Module | Depends On (Internal) | Third-Party Libraries |
 |--------|----------------------|-----------------------|
-| **sokybot-runtime** | `sokybot-engine-api`, `sokybot-game-model`, `sokybot-proxy`, `sokybot-persistence`, `sokybot-loader-api` | OSGi Core, SLF4J |
-| **sokybot-engine** | `sokybot-engine-api`, `sokybot-game-model`, `sokybot-game-navigation`, `sokybot-settings`, `sokybot-pk2` | Netty (Transport), Poly2Tri (Nav) |
+| **sokybot-runtime** | `sokybot-engine-api`, `sokybot-game-model` (Ownership), `sokybot-proxy`, `sokybot-persistence`, `sokybot-loader-api` | OSGi Core, SLF4J |
+| **sokybot-engine** | `sokybot-engine-api`, `sokybot-game-model` | *None* |
 | **sokybot-engine-api** | *None* | *None* |
 
 ### 2.2 Network Layer (`network/`)
@@ -85,7 +85,7 @@ graph TD
 
 | Module | Depends On (Internal) | Third-Party Libraries |
 |--------|----------------------|-----------------------|
-| **sokybot-game-model** | `sokybot-game-events`, `sokybot-persistence`, `sokybot-settings` | Lombok |
+| **sokybot-game-model** | `sokybot-game-events`, `sokybot-persistence` | Lombok |
 | **sokybot-game-events** | `sokybot-commons` | *None* |
 | **sokybot-game-navigation**| `sokybot-commons` | *None* |
 | **sokybot-pk2** | `sokybot-security`, `sokybot-commons` | *None* |
@@ -111,7 +111,7 @@ graph TD
 
 To avoid version conflicts (Jar Hell), major libraries are isolated or shared via specific bundles:
 
-*   **Netty 4.1**: Used by `sokybot-proxy` and `sokybot-engine` for game TCP traffic.
+*   **Netty 4.1**: Used by `sokybot-proxy` for game TCP traffic.
 *   **Reactor Netty**: Used exclusively by `sokybot-http-server` for the Web UI. It is embedded to avoid conflicts with the core Netty version if they diverge.
 *   **Hibernate / H2**: Embedded within `sokybot-persistence` to isolate the ORM classpath.
 *   **Jackson**: Shared via `sokybot-jackson` feature (not shown in graph but pervasive).
@@ -136,3 +136,6 @@ The typical reactor build order based on these dependencies is:
 6.  Proxy
 7.  Engine & Runtime
 8.  UI (`http-server`, `webview`)
+
+### 6. Recent Refactors
+*   **Engine IoC**: `sokybot-engine` now receives `IGameModel` via dependency injection from `sokybot-runtime` instead of creating it internally. This centralized model creation in the runtime layer.

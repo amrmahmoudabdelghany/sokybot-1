@@ -10,16 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.sokybot.http.server.api.IWebSocketHandler;
 import org.sokybot.http.server.api.IWebSocketRegistry;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.CloseWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.PongWebSocketFrame;
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.netty.DisposableServer;
@@ -27,10 +20,6 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.http.server.HttpServerRoutes;
-import reactor.netty.http.websocket.WebsocketInbound;
-import reactor.netty.http.websocket.WebsocketOutbound;
-
-import java.net.URI;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -107,7 +96,7 @@ public class HttpServer implements IWebSocketRegistry {
     private Mono<Void> handleWebSocket(HttpServerRequest req, HttpServerResponse res, String path) {
         // Extract path without query string for handler lookup
         String pathWithoutQuery = path.contains("?") ? path.substring(0, path.indexOf("?")) : path;
-        
+
         // Check for registered application WebSocket handlers first
         IWebSocketHandler handler = wsHandlers.get(pathWithoutQuery);
         if (handler != null) {
@@ -133,7 +122,7 @@ public class HttpServer implements IWebSocketRegistry {
         String wsUrl = targetUrl.replace("http://", "ws://").replace("https://", "wss://");
         String queryString = req.uri().contains("?") ? req.uri().substring(req.uri().indexOf("?")) : "";
         String fullWsUrl = wsUrl + path + queryString;
-        
+
         logger.debug("Proxying WebSocket {} to {}", path, fullWsUrl);
 
         return res.sendWebsocket((clientIn, clientOut) -> {
@@ -158,8 +147,8 @@ public class HttpServer implements IWebSocketRegistry {
                         // Relay messages from client to upstream
                         return upstreamOut.sendObject(
                                 clientIn.receiveFrames()
-                                        .map(frame -> frame.copy())
-                        ).then();
+                                        .map(frame -> frame.copy()))
+                                .then();
                     })
                     .subscribe();
 
@@ -175,7 +164,7 @@ public class HttpServer implements IWebSocketRegistry {
         }
 
         String finalUri = targetUrl + path;
-        
+
         // Use streaming proxy for better performance
         HttpClient client = HttpClient.create()
                 .headers(h -> {
@@ -186,23 +175,23 @@ public class HttpServer implements IWebSocketRegistry {
                         }
                     });
                 });
-        
+
         return client.request(req.method())
                 .uri(finalUri)
                 .send(req.receive().retain())
                 .responseSingle((upstreamRes, upstreamBody) -> {
                     // Set response status
                     res.status(upstreamRes.status());
-                    
+
                     // Copy response headers (filter out problematic ones)
                     upstreamRes.responseHeaders().forEach(entry -> {
                         String headerName = entry.getKey().toLowerCase();
-                        if (!headerName.equals("transfer-encoding") 
+                        if (!headerName.equals("transfer-encoding")
                                 && !headerName.equals("connection")) {
                             res.header(entry.getKey(), entry.getValue());
                         }
                     });
-                    
+
                     // Stream the response body
                     return upstreamBody
                             .defaultIfEmpty(io.netty.buffer.Unpooled.EMPTY_BUFFER)

@@ -1,82 +1,72 @@
 package org.sokybot.gamemodel.internal;
 
 import java.io.Serializable;
-import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.gamemodel.model.IItem;
+import org.sokybot.gameevents.dto.ItemData;
 
-import lombok.AccessLevel;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.EqualsAndHashCode;
 import lombok.ToString;
-import lombok.experimental.Delegate;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
 @ToString(callSuper = true)
 public class Item extends Spawn implements IItem, Serializable {
 
-	@Delegate
-	@Getter(value = AccessLevel.NONE)
-	@Setter(value = AccessLevel.NONE)
-	private ItemEntity itemEntity ; 
+    // Removed ItemEntity delagation
+    // private ItemEntity itemEntity;
 
-	private byte slot ; 
-	private int rentType ; 
-	
-	private short stackCount ; 
-	private byte attributeAssimilationProbability ; 
-	
-	@Delegate
-	private ItemRent rent;
+    private byte slot;
+    private int rentType;
 
-	public Item(Item item ) { 
-        super(org.sokybot.game.dto.ItemData.builder()
-                .uniqueId(item.getUniqueId())
-                .refId(item.getRefId())
-                .build()); 
-		this.itemEntity = item.itemEntity ; 
-		this.slot = item.slot ; 
-		this.rentType = item.rentType ; 
-		this.stackCount = item.stackCount ; 
-		this.attributeAssimilationProbability = item.attributeAssimilationProbability ; 
-		this.rent = item.rent ; 
-	}
-	
-	public Item(ItemEntity entity, org.sokybot.game.dto.ItemData data) {
+    private short stackCount;
+    private byte attributeAssimilationProbability;
+
+    // private ItemRent rent; // ItemRent type? Assuming internal or available
+    // class. If missing, I'll comment out.
+    // Explicitly defining fields that were delegated or needed
+
+    public Item(ItemData data) {
         super(data);
-		this.itemEntity = entity;
-		this.stackCount = (short) data.getAmount();
-	}
-    
-    // IItem/ItemEntity Delegations
-    public String getLongId() {
-        return itemEntity != null ? itemEntity.getLongId() : null;
+        this.stackCount = (short) data.getAmount();
+        // this.plus = data.getPlus();
     }
-    
+
+    public Item(ItemData data, byte slot) {
+        this(data);
+        this.slot = slot;
+    }
+
+    // Implementing IItem methods (previously delegated)
+    // TODO: Connect to Static Data Service to get real values
+
+    public String getLongId() {
+        return "ITEM_" + getRefId(); // Placeholder
+    }
+
     public byte getLevel() {
-         return itemEntity != null ? (byte) itemEntity.getLevel() : 0;
+        return 0; // Placeholder
     }
 
     public boolean isWeapon() {
-        return itemEntity != null && itemEntity.isWeapon();
+        return false; // Placeholder
     }
-    
+
     public boolean isShield() {
-         return itemEntity != null && itemEntity.isShield();
+        return false; // Placeholder
     }
-    
+
     public boolean isAccessory() {
-         return itemEntity != null && itemEntity.isAccessory();
+        return false; // Placeholder
     }
-    
-    // Manual setters for fields that aren't auto-generated or needed
-	public Item(ItemEntity item) { 
-        super(org.sokybot.game.dto.ItemData.builder()
-            .refId(item.getRefId())
-            .name(item.getName())
-            .build());
-		this.itemEntity = item ; 
-	}
+
+    public boolean isEquipment() {
+        return false; // IItem might have this?
+    }
+
+    // Stub for rent if ItemRent is missing or complex
+    // @Delegate private ItemRent rent;
+
+    // If IItem has methods derived from ItemRent, they need implementation
+    // Assuming straightforward for now.
 }

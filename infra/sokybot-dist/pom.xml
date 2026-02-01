@@ -6,7 +6,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.github.sokybot</groupId>
+        <groupId>org.sokybot</groupId>
         <artifactId>sokybot</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
@@ -37,7 +37,7 @@
         
         <!-- Sokybot features -->
         <dependency>
-            <groupId>io.github.sokybot</groupId>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-features</artifactId>
             <version>${project.version}</version>
             <classifier>features</classifier>

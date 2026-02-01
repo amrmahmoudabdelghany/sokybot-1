@@ -41,28 +41,6 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     // const pendingUpdatesRef = useRef<Map<string, any>>(new Map());
     const streamSubscriptionsRef = useRef<Map<string, any>>(new Map());
 
-    // Performance: Memoize action handler
-    const handleAction = useCallback(async (action: string, actionData: any) => {
-        try {
-            const response = await rsocketService.requestResponse(
-                `extension.action:${pageId}:${action}:${JSON.stringify(actionData)}`
-            );
-            const result = typeof response === 'string' ? JSON.parse(response) : response;
-
-            // Apply delta updates efficiently
-            if (result.delta) {
-                applyDeltaUpdate(result.delta);
-            } else if (result.state) {
-                setData(prev => ({ ...prev, ...result.state }));
-            }
-
-            return result;
-        } catch (err) {
-            console.error(`Action ${action} failed`, err);
-            throw err;
-        }
-    }, [pageId]);
-
     // Efficient delta update application
     const applyDeltaUpdate = useCallback((delta: Record<string, any>) => {
         setData(prev => {
@@ -88,6 +66,29 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             return updated;
         });
     }, []);
+
+    // Performance: Memoize action handler
+    const handleAction = useCallback(async (action: string, actionData: any) => {
+        try {
+            const result = await rsocketService.request<any>('extension.action', {
+                pageId,
+                action,
+                data: actionData
+            });
+
+            // Apply delta updates efficiently
+            if (result.delta) {
+                applyDeltaUpdate(result.delta);
+            } else if (result.state) {
+                setData(prev => ({ ...prev, ...result.state }));
+            }
+
+            return result;
+        } catch (err) {
+            console.error(`Action ${action} failed`, err);
+            throw err;
+        }
+    }, [pageId, applyDeltaUpdate]);
 
     // Auto-discover and subscribe to streams in schema
     useEffect(() => {
@@ -122,10 +123,10 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     const fetchSchema = async () => {
         setLoading(true);
         try {
-            const response = await rsocketService.requestResponse(
-                `extension.schema:${pageId}${machineId ? `:${machineId}` : ''}`
-            );
-            const result = typeof response === 'string' ? JSON.parse(response) : response;
+            const result = await rsocketService.request<any>('extension.schema', {
+                pageId,
+                machineId
+            });
 
             if (result.schema) {
                 setSchema(result.schema);
@@ -166,23 +167,19 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         params: Record<string, any>,
         stateKey?: string
     ) => {
-        const streamRequest = `extension.stream:${pageId}:${streamId}:${JSON.stringify(params)}`;
-
-        const subscription = stateKey
-            ? rsocketService.requestStreamWithState(
-                streamRequest,
-                stateKey,
-                (state) => setData(prev => ({ ...prev, ...state }))
-            )
-            : rsocketService.requestStream(
-                streamRequest,
-                (streamData) => {
-                    setData(prev => ({
-                        ...prev,
-                        [streamId]: streamData
-                    }));
+        // Use structured subscribe method
+        const subscription = rsocketService.subscribe(
+            `extension.stream.${streamId}`, // Assuming backend handles this naming convention or adjust if specific
+            (streamData: any) => {
+                if (stateKey) {
+                    setData(prev => ({ ...prev, [stateKey]: streamData }));
+                } else {
+                    setData(prev => ({ ...prev, [streamId]: streamData }));
                 }
-            );
+            },
+            (error) => console.error(`Stream ${streamId} error`, error),
+            { ...params, pageId }
+        );
 
         streamSubscriptionsRef.current.set(streamId, subscription);
     };
