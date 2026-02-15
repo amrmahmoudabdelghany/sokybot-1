@@ -9,8 +9,8 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<maven.compiler.source>11</maven.compiler.source>
-		<maven.compiler.target>11</maven.compiler.target>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
 
 		<!-- Dependency Versions - Updated to latest stable versions -->
 		<jna.version>5.13.0</jna.version>
@@ -80,7 +80,7 @@
 
 		<!-- Desktop Packaging -->
 		<maven.assembly.version>3.6.0</maven.assembly.version>
-		<jre.version>11</jre.version>
+		<jre.version>21</jre.version>
 		<app.name>Sokybot</app.name>
 		<app.main.class>org.apache.karaf.main.Main</app.main.class>
 
@@ -103,7 +103,7 @@
         <module>ui</module>
         <module>actuators</module>
         <module>infra</module>
-        <module>legacy/sokybot-ui-api</module>
+
     </modules>
 	<packaging>pom</packaging>
 
@@ -539,7 +539,7 @@
 									<version>3.6.0</version>
 								</requireMavenVersion>
 								<requireJavaVersion>
-									<version>11</version>
+									<version>21</version>
 								</requireJavaVersion>
 								<!-- Dependency convergence - warn only for legacy codebase -->
 								<dependencyConvergence>

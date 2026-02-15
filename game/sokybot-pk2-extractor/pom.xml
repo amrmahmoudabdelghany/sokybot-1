@@ -97,7 +97,8 @@
                             *;resolution:=optional
                         </Import-Package>
                         <Export-Package>
-                            org.sokybot.pk2extractor*
+                            org.sokybot.pk2extractor,
+                            org.sokybot.pk2extractor.*
                         </Export-Package>
                         <_dsannotations>*</_dsannotations>
                     </instructions>

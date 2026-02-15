@@ -163,6 +163,7 @@
                         </Private-Package>
                         <Export-Package>
                             org.sokybot.engine.core.*,
+                            org.sokybot.engine.core.workflow.builder,
                             org.sokybot.engine.plugin,
                             org.sokybot.engine.scripting
                         </Export-Package>

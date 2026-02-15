@@ -39,6 +39,13 @@ export const ErrorCode = {
 } as const;
 
 const getRSocketUrl = () => {
+    // Check for environment variable override
+    const envUrl = (import.meta as any).env.VITE_BACKEND_URL;
+    if (envUrl) {
+        console.log('Using RSocket backend URL from environment:', envUrl);
+        return envUrl;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     // In development, Vite runs on 5173 but backend is on 8080
@@ -195,7 +202,7 @@ export class RSocketService {
                     const data = typeof payload.data === 'string'
                         ? JSON.parse(payload.data)
                         : payload.data;
-                    
+
                     // Check if it's an error response
                     if (data && data.error) {
                         if (onError) {

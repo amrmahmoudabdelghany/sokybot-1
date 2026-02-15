@@ -1,10 +1,14 @@
-package org.sokybot.engine;
+package org.sokybot.engine.internal;
 
 import java.util.Map;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.sokybot.engine.IEngine;
+import org.sokybot.engine.IEngineFactory;
+
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
@@ -23,7 +27,7 @@ import org.slf4j.LoggerFactory;
  * Creates EngineCore instances for each machine.
  * Registers built-in actuators (connector, login, training).
  */
-@Component(service = IEngineFactory.class)
+@Component(service = IEngineFactory.class, immediate = true)
 public class EngineFactory implements IEngineFactory {
 
     private static final Logger log = LoggerFactory.getLogger(EngineFactory.class);
@@ -32,6 +36,11 @@ public class EngineFactory implements IEngineFactory {
 
     // Injected actuators via OSGi Declarative Services
     private final List<IActuator> actuators = new CopyOnWriteArrayList<>();
+
+    @Activate
+    protected void activate() {
+        log.info("Engine Factory activated");
+    }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void bindActuator(IActuator actuator) {

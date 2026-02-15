@@ -7,6 +7,7 @@ interface SokybotState {
     machines: MachineInfo[];
     groups: GroupInfo[];
     selectedMachineId: string | null;
+    selectedPageId: string | null;
 
     // Character Data (Cached by machineId)
     characterStates: Record<string, CharacterState>;
@@ -24,6 +25,7 @@ interface SokybotState {
     setMachines: (machines: MachineInfo[]) => void;
     setGroups: (groups: GroupInfo[]) => void;
     setSelectedMachineId: (id: string | null) => void;
+    setSelectedPageId: (id: string | null) => void;
     updateCharacterState: (machineId: string, state: CharacterState) => void;
     setActiveTab: (machineId: string, tabId: string) => void;
     setHealthStatus: (status: string) => void;
@@ -39,6 +41,7 @@ export const useSokybotStore = create<SokybotState>((set) => ({
     machines: [],
     groups: [],
     selectedMachineId: null,
+    selectedPageId: null,
     characterStates: {},
     isSidebarOpen: true,
     theme: 'light',
@@ -48,7 +51,8 @@ export const useSokybotStore = create<SokybotState>((set) => ({
 
     setMachines: (machines) => set({ machines }),
     setGroups: (groups) => set({ groups }),
-    setSelectedMachineId: (id) => set({ selectedMachineId: id }),
+    setSelectedMachineId: (id: string | null) => set({ selectedMachineId: id }),
+    setSelectedPageId: (id: string | null) => set({ selectedPageId: id }),
     updateCharacterState: (machineId: string, state: CharacterState) => set((prev) => ({
         characterStates: { ...prev.characterStates, [machineId]: state }
     })),

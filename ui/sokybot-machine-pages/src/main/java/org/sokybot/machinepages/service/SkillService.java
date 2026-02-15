@@ -14,37 +14,37 @@ import org.sokybot.gameevents.dto.Skill;
 import org.sokybot.gamemodel.model.ITrainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.function.Supplier;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 /**
- * Service for managing skills page state and handling skill-related game events.
+ * Service for managing skills page state and handling skill-related game
+ * events.
  */
 public class SkillService implements EventHandler {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(SkillService.class);
-    
+
     private final String machineFullName;
-    private final ITrainer trainer;
-    private final Sinks.Many<Map<String, Object>> stateSink = 
-        Sinks.many().multicast().onBackpressureBuffer(100);
+    private final Supplier<ITrainer> trainerSupplier;
+    private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100);
     private volatile List<Map<String, Object>> currentSkills = new ArrayList<>();
     private volatile int skillPoints = 0;
-    
-    public SkillService(String machineFullName, ITrainer trainer) {
+
+    public SkillService(String machineFullName, Supplier<ITrainer> trainerSupplier) {
         this.machineFullName = machineFullName;
-        this.trainer = trainer;
-        // Load initial state
-        refreshSkills();
+        this.trainerSupplier = trainerSupplier;
+        // Do not call refreshSkills() eagerly to avoid triggering persistence
     }
-    
+
     @Override
     public void handleEvent(Event osgiEvent) {
         String fullName = (String) osgiEvent.getProperty("fullName");
         if (fullName == null || !machineFullName.equals(fullName)) {
             return; // Not for this machine
         }
-        
+
         IGameEvent event = (IGameEvent) osgiEvent.getProperty("event");
         if (event instanceof SkillLevelUpEvent) {
             handleSkillLevelUp((SkillLevelUpEvent) event);
@@ -54,7 +54,7 @@ public class SkillService implements EventHandler {
             handleSkillLoaded((CharacterSkillLoadedEvent) event);
         }
     }
-    
+
     private void handleSkillLevelUp(SkillLevelUpEvent event) {
         if (event.isSuccess()) {
             logger.debug("Skill level up: id={}, name={}", event.getSkillId(), event.getSkillName());
@@ -62,21 +62,21 @@ public class SkillService implements EventHandler {
             emitStateUpdate();
         }
     }
-    
+
     private void handleSkillPointsUpdate(SkillPointsUpdateEvent event) {
         logger.debug("Skill points updated: {}", event.getNewSkillPoints());
         this.skillPoints = event.getNewSkillPoints();
         refreshSkills();
         emitStateUpdate();
     }
-    
+
     private void handleSkillLoaded(CharacterSkillLoadedEvent event) {
-        logger.debug("Skill loaded: id={}, name={}, level={}", 
-            event.getSkillId(), event.getSkillName(), event.getSkillLevel());
+        logger.debug("Skill loaded: id={}, name={}, level={}",
+                event.getSkillId(), event.getSkillName(), event.getSkillLevel());
         refreshSkills();
         emitStateUpdate();
     }
-    
+
     public Map<String, Object> handleAction(String action, Map<String, Object> data) {
         Map<String, Object> newState = new HashMap<>();
         switch (action) {
@@ -96,17 +96,17 @@ public class SkillService implements EventHandler {
                 return Map.of("success", false, "error", "Unknown action: " + action);
         }
     }
-    
+
     public Flux<Map<String, Object>> streamSkills() {
         // Return initial state + updates
         return Flux.concat(
-            Flux.just(getSkillsData()),
-            stateSink.asFlux()
-        );
+                Flux.just(getSkillsData()),
+                stateSink.asFlux());
     }
-    
+
     private void refreshSkills() {
         List<Map<String, Object>> skills = new ArrayList<>();
+        ITrainer trainer = trainerSupplier.get();
         if (trainer != null && trainer.getSkills() != null) {
             for (Skill skill : trainer.getSkills()) {
                 if (skill != null) {
@@ -120,28 +120,27 @@ public class SkillService implements EventHandler {
             }
             // Sort by refId
             skills.sort((a, b) -> Long.compare(
-                Long.parseLong((String) a.get("refId")), 
-                Long.parseLong((String) b.get("refId"))
-            ));
+                    Long.parseLong((String) a.get("refId")),
+                    Long.parseLong((String) b.get("refId"))));
         }
         currentSkills = skills;
     }
-    
+
     private Map<String, Object> getSkillsData() {
         Map<String, Object> data = new HashMap<>();
         data.put("skills", new ArrayList<>(currentSkills));
         data.put("skillPoints", skillPoints);
         return data;
     }
-    
+
     private void emitStateUpdate() {
         stateSink.tryEmitNext(getSkillsData());
     }
-    
+
     public Map<String, Object> getInitialState() {
         return getSkillsData();
     }
-    
+
     public void shutdown() {
         stateSink.tryEmitComplete();
     }

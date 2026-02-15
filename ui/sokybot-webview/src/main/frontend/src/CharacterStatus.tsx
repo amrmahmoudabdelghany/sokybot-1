@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { rsocketService } from './RSocketClient';
 import type { CharacterState } from './RSocketClient';
+import { Button, cn } from '@sokybot/frontend-shared';
 
 interface CharacterStatusProps {
     machineId?: string; // Optional machine ID to filter/request
@@ -92,77 +93,89 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
     const mpPercent = (state.currentMP / state.maxMP) * 100;
 
     return (
-        <div className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-4 shadow-sm rounded-lg">
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-
-                {/* Character Info */}
-                <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                        <span className="text-xs font-mono">AV</span>
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 shadow-sm rounded-lg flex flex-col gap-4">
+            {/* Character Info */}
+            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
+                    <span className="text-sm font-bold font-mono">
+                        {state.characterName.substring(0, 2).toUpperCase()}
+                    </span>
+                </div>
+                <div className="min-w-0">
+                    <div className="flex items-baseline gap-2">
+                        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate" title={state.characterName}>
+                            {state.characterName}
+                        </h2>
                     </div>
-                    <div>
-                        <div className="flex items-baseline gap-2">
-                            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{state.characterName}</h2>
-                            <span className="text-sm text-slate-500 dark:text-slate-400">Lv.{state.level}</span>
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-500 font-mono">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground">
+                            Lv.{state.level}
+                        </span>
+                        <div className="text-[10px] text-muted-foreground font-mono">
                             ({state.x}, {state.y})
                         </div>
                     </div>
                 </div>
+            </div>
 
-                {/* Status Bars */}
-                <div className="flex-1 w-full md:w-auto md:max-w-md space-y-2">
-                    {/* HP */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-6">HP</span>
-                        <div className="flex-1 relative h-4 bg-slate-200 dark:bg-slate-800 rounded overflow-hidden">
-                            <div
-                                className="absolute top-0 left-0 h-full bg-red-500/80 transition-all duration-300"
-                                style={{ width: `${hpPercent}%` }}
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center text-[10px] text-slate-900 dark:text-white font-medium drop-shadow-md">
-                                {state.currentHP} / {state.maxHP}
-                            </div>
-                        </div>
+            {/* Status Bars */}
+            <div className="space-y-3">
+                {/* HP */}
+                <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+                        <span>HP</span>
+                        <span>{Math.round(hpPercent)}%</span>
                     </div>
-
-                    {/* MP */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400 w-6">MP</span>
-                        <div className="flex-1 relative h-4 bg-slate-200 dark:bg-slate-800 rounded overflow-hidden">
-                            <div
-                                className="absolute top-0 left-0 h-full bg-blue-500/80 transition-all duration-300"
-                                style={{ width: `${mpPercent}%` }}
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center text-[10px] text-slate-900 dark:text-white font-medium drop-shadow-md">
-                                {state.currentMP} / {state.maxMP}
-                            </div>
+                    <div className="relative h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div
+                            className="absolute top-0 left-0 h-full bg-red-500 transition-all duration-300 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
+                            style={{ width: `${hpPercent}%` }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center text-[9px] text-white font-bold drop-shadow-sm">
+                            {state.currentHP.toLocaleString()} / {state.maxHP.toLocaleString()}
                         </div>
                     </div>
                 </div>
 
-                {/* Right Actions: Gold & Start Button */}
-                <div className="flex flex-col items-end gap-2">
-                    {/* Gold */}
-                    <div className="bg-slate-100 dark:bg-slate-950 px-3 py-1.5 rounded border border-slate-200 dark:border-slate-800">
-                        <span className="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider mr-2">Gold</span>
-                        <span className="text-sm font-mono text-yellow-600 dark:text-yellow-500">{state.gold.toLocaleString()}</span>
+                {/* MP */}
+                <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+                        <span>MP</span>
+                        <span>{Math.round(mpPercent)}%</span>
                     </div>
+                    <div className="relative h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
+                        <div
+                            className="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-300 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                            style={{ width: `${mpPercent}%` }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center text-[9px] text-white font-bold drop-shadow-sm">
+                            {state.currentMP.toLocaleString()} / {state.maxMP.toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    {/* Start/Stop Button */}
-                    <button
-                        onClick={handleToggleBot}
-                        className={`px-4 py-1.5 rounded text-xs font-bold uppercase tracking-wider border transition-all shadow-sm
-                            ${state.isRunning
-                                ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-200 dark:hover:bg-red-900/50"
-                                : "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-200 dark:hover:bg-emerald-900/50"
-                            }`}
-                    >
-                        {state.isRunning ? "Stop Bot" : "Start Bot"}
-                    </button>
+            {/* Stats & Actions */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                {/* Gold */}
+                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 px-3 py-2 rounded-md border border-slate-100 dark:border-slate-800">
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Gold</span>
+                    <span className="text-xs font-mono font-bold text-yellow-600 dark:text-yellow-500">
+                        {state.gold.toLocaleString()}
+                    </span>
                 </div>
 
+                {/* Start/Stop Button */}
+                <Button
+                    onClick={handleToggleBot}
+                    variant={state.isRunning ? "destructive" : "default"}
+                    className={cn(
+                        "w-full h-9 text-xs font-bold uppercase tracking-wider transition-all",
+                        !state.isRunning && "bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_0_15px_rgba(5,150,105,0.3)]"
+                    )}
+                >
+                    {state.isRunning ? "Stop Bot" : "Start Bot"}
+                </Button>
             </div>
         </div>
     );

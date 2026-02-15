@@ -27,4 +27,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   base: '/devtools/',
+  server: {
+    allowedHosts: ['sokybotdev.local'],
+  }
 })

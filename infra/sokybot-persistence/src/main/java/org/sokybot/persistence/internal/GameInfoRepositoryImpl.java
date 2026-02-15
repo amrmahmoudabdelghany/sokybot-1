@@ -1,7 +1,5 @@
 package org.sokybot.persistence.internal;
 
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.sokybot.persistence.entities.GameInfo;
 import org.sokybot.persistence.service.GameInfoRepository;
 
@@ -10,12 +8,10 @@ import javax.persistence.EntityManagerFactory;
 /**
  * Implementation of GameInfoRepository using AbstractRepository base class.
  */
-@Component(service = GameInfoRepository.class)
 public class GameInfoRepositoryImpl extends AbstractRepository<GameInfo, String> 
         implements GameInfoRepository {
     
     /**
-     * OSGi DS default constructor - will be injected via @Reference.
      */
     public GameInfoRepositoryImpl() {
         super(GameInfo.class);
@@ -28,7 +24,6 @@ public class GameInfoRepositoryImpl extends AbstractRepository<GameInfo, String>
         super(emf, GameInfo.class);
     }
     
-    @Reference
     public void setEntityManagerFactory(EntityManagerFactory emf) {
         super.setEntityManagerFactory(emf);
     }

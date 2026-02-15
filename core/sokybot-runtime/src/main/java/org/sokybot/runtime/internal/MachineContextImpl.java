@@ -4,7 +4,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
-import org.sokybot.ui.api.IMachinePageViewer;
+
 import org.sokybot.runtime.internal.domain.MachineInfo;
 import org.sokybot.engine.IEngine;
 import org.sokybot.engine.IEngineFactory;
@@ -86,7 +86,7 @@ public class MachineContextImpl implements IMachineContext {
                             try {
                                 // Translate packet - chunk manager accessed via registry
                                 java.util.List<org.sokybot.gameevents.events.core.IGameEvent> events = translator
-                                        .translate(machineId, packet);
+                                        .translate(machineId, packet, chunkManager);
 
                                 if (events != null && eventAdmin != null) {
                                     events.forEach(event -> {
@@ -157,12 +157,6 @@ public class MachineContextImpl implements IMachineContext {
     }
 
     @Override
-    public IMachinePageViewer machinePageViewer() {
-        // Get from OSGi service registry
-        return getService(IMachinePageViewer.class);
-    }
-
-    @Override
     public String name() {
         return machineInfo.getMachineName();
     }
@@ -220,8 +214,17 @@ public class MachineContextImpl implements IMachineContext {
                 engine = null;
             }
 
-            // Note: Proxy connection cleanup is handled by proxy bundle
-            proxyConnection = null;
+            // Properly destroy proxy connection via factory to avoid state leaks
+            if (proxyConnection != null) {
+                IProxyConnectionFactory proxyFactory = getService(IProxyConnectionFactory.class);
+                if (proxyFactory != null) {
+                    proxyFactory.destroyConnection(fullName());
+                } else {
+                    // Fallback to direct disconnect if factory is missing (should not happen)
+                    proxyConnection.disconnect();
+                }
+                proxyConnection = null;
+            }
 
             log.info("Machine context destroyed: {}", fullName());
         } catch (Exception e) {

@@ -29,6 +29,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['sokybot.local'],
     proxy: {
       '/rsocket': {
         target: 'ws://127.0.0.1:7000',

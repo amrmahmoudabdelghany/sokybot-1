@@ -76,6 +76,23 @@ check_port() {
     fi
 }
 
+is_in_docker() {
+    [ -f /.dockerenv ]
+}
+
+# Docker transparency wrapper
+# If running on host and container is active, execute command inside container
+check_docker_transparency() {
+    local cmd="$1"
+    if ! is_in_docker && docker compose ps --format json | grep -q '"Service":"sokybot-backend"'; then
+        if [ "$(docker compose ps -q sokybot-backend)" != "" ]; then
+             log_info "Redirecting '$cmd' to running Docker container..."
+             docker compose exec sokybot-backend /app/infra/scripts/soky "$@"
+             exit 0
+        fi
+    fi
+}
+
 # =============================================================================
 # Subcommands: Backend
 # =============================================================================
@@ -83,17 +100,40 @@ check_port() {
 cmd_backend_start() {
     check_karaf_dist
     
+    local FOREGROUND=false
+    local WATCH=false
+    for arg in "$@"; do
+        case "$arg" in
+            --foreground|-f) FOREGROUND=true ;;
+            --watch|-w) WATCH=true ;;
+        esac
+    done
+
     if is_process_running "org.apache.karaf.main.Main"; then
         log_warn "Sokybot Backend appears to be running already."
         return
     fi
     
-    log_info "Starting Sokybot Backend (Server Mode)..."
-    "$KARAF_BIN/start"
-    
-    log_success "Backend started in background."
-    log_info "Tail logs with: soky backend logs"
-    log_info "Attach shell with: soky backend shell"
+    if [ "$FOREGROUND" = true ]; then
+        if [ "$WATCH" = true ]; then
+            log_info "Starting Automated Hot-Reload Watcher..."
+            cmd_watch &
+        fi
+        log_info "Starting Sokybot Backend in FOREGROUND mode..."
+        # In foreground mode, we use karaf server
+        export KARAF_REDIRECT="/dev/stdout"
+        "$KARAF_BIN/karaf" server
+    else
+        log_info "Starting Sokybot Backend (Server Mode)..."
+        "$KARAF_BIN/start"
+        log_success "Backend started in background."
+        log_info "Tail logs with: soky backend logs"
+        log_info "Attach shell with: soky backend shell"
+        if [ "$WATCH" = true ]; then
+            log_info "Starting Automated Hot-Reload Watcher..."
+            cmd_watch &
+        fi
+    fi
 }
 
 cmd_backend_stop() {
@@ -131,8 +171,11 @@ cmd_backend_restart() {
     cmd_backend_stop
     
     if [ "$FRESH_FLAG" = true ]; then
-        log_info "Clearing Karaf cache (--fresh)..."
+        log_info "Clearing Karaf cache and system state (--fresh)..."
         rm -rf "$KARAF_DATA"
+        # Also clear the system repository cache if it exists in the assembly
+        rm -rf "$ROOT_DIR/infra/sokybot-dist/target/assembly/data/cache"
+        rm -rf "$ROOT_DIR/infra/sokybot-dist/target/assembly/system/org/sokybot"
     fi
     
     sleep 2
@@ -199,6 +242,46 @@ cmd_backend_features() {
     check_karaf_dist
     log_info "Listing Sokybot Karaf features..."
     "$KARAF_BIN/client" "feature:list | grep -E '(sokybot|State)'"
+}
+
+cmd_watch() {
+    if ! type inotifywait > /dev/null; then
+        log_error "'inotify-tools' is not installed. Please install it to use 'watch'."
+        exit 1
+    fi
+
+    log_header "Hot-Reload Watcher Active"
+    log_info "Monitoring all 'target/*.jar' files in the workspace..."
+
+    # Use inotifywait to watch for file moves (Maven replaces files) or modifications
+    inotifywait -m -r -e close_write --format '%w%f' "$ROOT_DIR" | while read -r FILE; do
+        if [[ "$FILE" == *"target/"*".jar" ]]; then
+            # Ignore -sources.jar and -javadoc.jar
+            if [[ "$FILE" == *"-sources.jar" ]] || [[ "$FILE" == *"-javadoc.jar" ]]; then
+                 continue
+            fi
+
+            JAR_NAME=$(basename "$FILE")
+            BUNDLE_NAME="${JAR_NAME%.jar}"
+            # Extract version-less name if possible (e.g. sokybot-commons-1.0.0 -> sokybot-commons)
+            # This is a bit naive but works for standard Maven artifact naming
+            BASE_BUNDLE_NAME=$(echo "$BUNDLE_NAME" | sed -r 's/-[0-9]+(\.[0-9]+)*(-SNAPSHOT)?$//')
+            
+            log_info "Detected change in: $JAR_NAME"
+            
+            # Find bundle ID in Karaf
+            # We use 'bundle:list -s' to show symbolic names
+            BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $BASE_BUNDLE_NAME" | awk '{print $1}' | head -n 1)
+
+            if [ -n "$BUNDLE_ID" ]; then
+                log_info "Updating bundle $BUNDLE_ID ($BASE_BUNDLE_NAME)..."
+                "$KARAF_BIN/client" "bundle:update $BUNDLE_ID file:$FILE"
+                log_success "Hot-reloaded $BASE_BUNDLE_NAME (ID: $BUNDLE_ID)"
+            else
+                log_warn "Could not find an active bundle for '$BASE_BUNDLE_NAME' to update."
+            fi
+        fi
+    done
 }
 
 # =============================================================================
@@ -676,14 +759,14 @@ cmd_help() {
     echo "  kill          - Force kill all processes"
     echo ""
     echo "Backend:"
-    echo "  backend start         - Start server in background"
-    echo "  backend stop          - Stop server"
-    echo "  backend restart       - Restart server"
-    echo "  backend restart --fresh  - Restart with cache clear (use after code changes)"
+    echo "  backend start [--foreground] [--watch] - Start Karaf backend"
+    echo "  backend stop          - Stop Karaf backend"
+    echo "  backend restart [--fresh] - Restart Karaf backend"
+    echo "  backend shell         - Connect to Karaf console"
+    echo "  backend logs [filter] - Tail logs"
+    echo "  backend watch         - Start automated hot-reload watcher"
     echo "  backend debug         - Start in debug mode (port 5005)"
-    echo "  backend logs          - Tail logs"
     echo "  backend clean         - Clean Karaf cache"
-    echo "  backend shell         - Connect to Karaf shell"
     echo "  backend features      - List installed Sokybot features"
     echo ""
     echo "Frontend:"
@@ -720,14 +803,15 @@ cmd_help() {
 case "$1" in
     backend|ba)
         case "$2" in
-            start)    cmd_backend_start ;;
-            stop)     cmd_backend_stop ;;
-            restart)  shift 2; cmd_backend_restart "$@" ;;
+            start)    cmd_backend_start "${@:3}" ;;
+            stop)     check_docker_transparency "$@"; cmd_backend_stop ;;
+            restart)  check_docker_transparency "$@"; shift 2; cmd_backend_restart "$@" ;;
             debug)    cmd_backend_debug ;;
-            clean)    cmd_backend_clean ;;
-            logs|l)   shift 2; cmd_backend_logs "$@" ;;
-            shell|sh) cmd_backend_shell ;;
-            features) cmd_backend_features ;;
+            clean)    check_docker_transparency "$@"; cmd_backend_clean ;;
+            logs|l)   check_docker_transparency "$@"; shift 2; cmd_backend_logs "$@" ;;
+            shell|sh) check_docker_transparency "$@"; cmd_backend_shell ;;
+            features) check_docker_transparency "$@"; cmd_backend_features ;;
+            watch|w)  check_docker_transparency "$@"; cmd_watch ;;
             *)        cmd_help ;;
         esac
         ;;
@@ -762,13 +846,28 @@ case "$1" in
     kill)         cmd_kill ;;
     install)      cmd_install ;;
     
-    # Top-level Shortcuts
-    start)   cmd_backend_start ;;
-    stop)    cmd_backend_stop ;;
-    restart) shift; cmd_backend_restart "$@" ;;
-    logs|log|l)   shift; cmd_backend_logs "$@" ;;
-    shell|sh)     cmd_backend_shell ;;
-    
-    "")      cmd_interactive ;;
-    *)       cmd_help ;;
+    # Shortcuts
+    start)
+        cmd_backend_start
+        ;;
+    stop)
+        cmd_backend_stop
+        ;;
+    restart)
+        shift || true
+        cmd_backend_restart "$@"
+        ;;
+    logs|log|l)
+        shift || true
+        cmd_backend_logs "$@"
+        ;;
+    shell|sh)
+        cmd_backend_shell
+        ;;
+    "")
+        cmd_interactive
+        ;;
+    *)
+        cmd_help
+        ;;
 esac

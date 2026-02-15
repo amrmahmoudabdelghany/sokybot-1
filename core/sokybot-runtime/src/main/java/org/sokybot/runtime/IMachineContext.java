@@ -1,11 +1,8 @@
 package org.sokybot.runtime;
 
-import org.sokybot.ui.api.IMachinePageViewer;
 import org.sokybot.engine.IEngine;
 
 public interface IMachineContext extends IContextAdapter, IGameStateProvider, INetworkController, IEngineController {
-
-    IMachinePageViewer machinePageViewer();
 
     String fullName();
 

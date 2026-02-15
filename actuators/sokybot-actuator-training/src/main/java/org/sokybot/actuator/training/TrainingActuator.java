@@ -47,7 +47,7 @@ public class TrainingActuator implements IActuator {
         log.info("Initializing training actuator for machine: {}", context.getMachineId());
 
         try {
-            settingsRegistry.register("training", TrainingSettings.class, TrainingSettings::new);
+            // Settings scope is now registered globally by TrainingSettingsRegistrar
 
             ISettingsProvider<TrainingSettings> settingsProvider = settingsRegistry.getProvider(
                     context.getGroupName(),

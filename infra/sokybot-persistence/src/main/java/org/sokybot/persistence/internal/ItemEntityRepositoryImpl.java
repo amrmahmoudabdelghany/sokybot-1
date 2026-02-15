@@ -1,7 +1,5 @@
 package org.sokybot.persistence.internal;
 
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.persistence.service.ItemEntityRepository;
 
@@ -13,12 +11,10 @@ import java.util.Optional;
 /**
  * Implementation of ItemEntityRepository using AbstractRepository base class.
  */
-@Component(service = ItemEntityRepository.class)
 public class ItemEntityRepositoryImpl extends AbstractRepository<ItemEntity, Integer> 
         implements ItemEntityRepository {
     
     /**
-     * OSGi DS default constructor - will be injected via @Reference.
      */
     public ItemEntityRepositoryImpl() {
         super(ItemEntity.class);
@@ -31,7 +27,6 @@ public class ItemEntityRepositoryImpl extends AbstractRepository<ItemEntity, Int
         super(emf, ItemEntity.class);
     }
     
-    @Reference
     public void setEntityManagerFactory(EntityManagerFactory emf) {
         super.setEntityManagerFactory(emf);
     }

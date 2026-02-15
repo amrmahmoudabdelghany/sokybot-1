@@ -10,6 +10,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.persistence.service.IGamePersistenceFactory;
 import org.sokybot.persistence.service.IPersistenceContextManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of IGamePersistenceFactory.
@@ -18,8 +20,11 @@ import org.sokybot.persistence.service.IPersistenceContextManager;
 @Component(service = IGamePersistenceFactory.class, immediate = true)
 public class GamePersistenceFactoryImpl implements IGamePersistenceFactory {
 
+    private static final Logger log = LoggerFactory.getLogger(GamePersistenceFactoryImpl.class);
     private IPersistenceContextManager contextManager;
     private final Map<String, IGameDataLookup> lookups = new ConcurrentHashMap<>();
+    private final ThreadLocal<java.util.Set<String>> initializingPaths = ThreadLocal
+            .withInitial(java.util.HashSet::new);
 
     /**
      * OSGi DS default constructor.
@@ -44,11 +49,36 @@ public class GamePersistenceFactoryImpl implements IGamePersistenceFactory {
         if (contextManager == null) {
             throw new IllegalStateException("PersistenceContextManager not set");
         }
-        
-        return lookups.computeIfAbsent(gamePath, path -> {
-            EntityManagerFactory emf = contextManager.getEntityManagerFactory(path);
-            return new GameDataLookupImpl(path, emf);
-        });
+
+        IGameDataLookup lookup = lookups.get(gamePath);
+        if (lookup != null)
+            return lookup;
+
+        synchronized (lookups) {
+            lookup = lookups.get(gamePath);
+            if (lookup != null)
+                return lookup;
+
+            // Recursion protection
+            java.util.Set<String> currentInit = initializingPaths.get();
+            if (currentInit.contains(gamePath)) {
+                log.warn(
+                        "Circular dependency detected during persistence initialization for: {}. Returning partial lookup.",
+                        gamePath);
+                return null;
+            }
+
+            currentInit.add(gamePath);
+            try {
+                log.info("Registering game persistence context for: {}", gamePath);
+                EntityManagerFactory emf = contextManager.getEntityManagerFactory(gamePath);
+                lookup = new GameDataLookupImpl(gamePath, emf);
+                lookups.put(gamePath, lookup);
+                return lookup;
+            } finally {
+                currentInit.remove(gamePath);
+            }
+        }
     }
 
     @Override

@@ -36,11 +36,7 @@
             <scope>compile</scope>
         </dependency>
         
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-ui-api</artifactId>
-            <version>${project.version}</version>
-        </dependency>
+
         
         <!-- Loader API for IGameLoader/IGameLoaderService -->
         <dependency>

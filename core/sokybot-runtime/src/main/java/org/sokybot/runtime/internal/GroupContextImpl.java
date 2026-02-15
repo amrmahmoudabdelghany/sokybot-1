@@ -13,7 +13,7 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
-import org.sokybot.ui.api.IPageViewer;
+
 import org.sokybot.runtime.internal.domain.GroupInfo;
 import org.sokybot.runtime.internal.domain.MachineInfo;
 import org.sokybot.runtime.internal.persistence.MachineInfoRepository;
@@ -109,22 +109,6 @@ public class GroupContextImpl implements IGroupContext {
 
     private IMachineContext createMachineContext(MachineInfo machineInfo) {
         return MachineContextFactory.createMachineContext(machineInfo, this, bundleContext);
-    }
-
-    @Override
-    public IPageViewer pageViewer() {
-        // Get from OSGi service registry
-        if (bundleContext != null) {
-            try {
-                ServiceReference<IPageViewer> ref = bundleContext.getServiceReference(IPageViewer.class);
-                if (ref != null) {
-                    return bundleContext.getService(ref);
-                }
-            } catch (Exception e) {
-                log.debug("IPageViewer not available from OSGi", e);
-            }
-        }
-        return null;
     }
 
     @Override

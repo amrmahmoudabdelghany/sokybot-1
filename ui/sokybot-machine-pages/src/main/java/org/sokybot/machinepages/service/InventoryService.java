@@ -15,36 +15,36 @@ import org.sokybot.gamemodel.model.IItem;
 import org.sokybot.gamemodel.model.ITrainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.function.Supplier;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 /**
- * Service for managing inventory page state and handling inventory-related game events.
+ * Service for managing inventory page state and handling inventory-related game
+ * events.
  */
 public class InventoryService implements EventHandler {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(InventoryService.class);
-    
+
     private final String machineFullName;
-    private final ITrainer trainer;
-    private final Sinks.Many<Map<String, Object>> stateSink = 
-        Sinks.many().multicast().onBackpressureBuffer(100);
+    private final Supplier<ITrainer> trainerSupplier;
+    private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100);
     private volatile List<Map<String, Object>> currentItems = new ArrayList<>();
-    
-    public InventoryService(String machineFullName, ITrainer trainer) {
+
+    public InventoryService(String machineFullName, Supplier<ITrainer> trainerSupplier) {
         this.machineFullName = machineFullName;
-        this.trainer = trainer;
-        // Load initial state
-        refreshInventory();
+        this.trainerSupplier = trainerSupplier;
+        // Do not call refreshInventory() eagerly to avoid triggering persistence
     }
-    
+
     @Override
     public void handleEvent(Event osgiEvent) {
         String fullName = (String) osgiEvent.getProperty("fullName");
         if (fullName == null || !machineFullName.equals(fullName)) {
             return; // Not for this machine
         }
-        
+
         IGameEvent event = (IGameEvent) osgiEvent.getProperty("event");
         if (event instanceof InventoryItemUpdateEvent) {
             handleItemUpdate((InventoryItemUpdateEvent) event);
@@ -56,15 +56,15 @@ public class InventoryService implements EventHandler {
             handleItemObtained((ItemObtainedEvent) event);
         }
     }
-    
+
     private void handleItemUpdate(InventoryItemUpdateEvent event) {
-        logger.debug("Inventory item updated: slot={}, flags=0x{}", 
-            event.getSlot(), Integer.toHexString(event.getUpdateFlags() & 0xFF));
+        logger.debug("Inventory item updated: slot={}, flags=0x{}",
+                event.getSlot(), Integer.toHexString(event.getUpdateFlags() & 0xFF));
         // Refresh full list for simplicity (could optimize to update single item)
         refreshInventory();
         emitStateUpdate();
     }
-    
+
     private void handleOperation(InventoryOperationEvent event) {
         if (event.isSuccess()) {
             logger.debug("Inventory operation successful: type={}", event.getOperationType());
@@ -72,7 +72,7 @@ public class InventoryService implements EventHandler {
             emitStateUpdate();
         }
     }
-    
+
     private void handleSizeUpdate(InventorySizeUpdateEvent event) {
         if (event.isInventory()) {
             logger.debug("Inventory size updated: size={}", event.getSize());
@@ -80,14 +80,14 @@ public class InventoryService implements EventHandler {
             emitStateUpdate();
         }
     }
-    
+
     private void handleItemObtained(ItemObtainedEvent event) {
-        logger.debug("Item obtained: refId={}, slot={}, quantity={}", 
-            event.getItemRefId(), event.getSlot(), event.getQuantity());
+        logger.debug("Item obtained: refId={}, slot={}, quantity={}",
+                event.getItemRefId(), event.getSlot(), event.getQuantity());
         refreshInventory();
         emitStateUpdate();
     }
-    
+
     public Map<String, Object> handleAction(String action, Map<String, Object> data) {
         Map<String, Object> newState = new HashMap<>();
         switch (action) {
@@ -100,17 +100,17 @@ public class InventoryService implements EventHandler {
                 return Map.of("success", false, "error", "Unknown action: " + action);
         }
     }
-    
+
     public Flux<Map<String, Object>> streamInventory() {
         // Return initial state + updates
         return Flux.concat(
-            Flux.just(getInventoryData()),
-            stateSink.asFlux()
-        );
+                Flux.just(getInventoryData()),
+                stateSink.asFlux());
     }
-    
+
     private void refreshInventory() {
         List<Map<String, Object>> items = new ArrayList<>();
+        ITrainer trainer = trainerSupplier.get();
         if (trainer != null && trainer.getInventory() != null) {
             for (IItem item : trainer.getInventory()) {
                 if (item != null) {
@@ -127,19 +127,19 @@ public class InventoryService implements EventHandler {
         }
         currentItems = items;
     }
-    
+
     private Map<String, Object> getInventoryData() {
         return Map.of("items", new ArrayList<>(currentItems));
     }
-    
+
     private void emitStateUpdate() {
         stateSink.tryEmitNext(getInventoryData());
     }
-    
+
     public Map<String, Object> getInitialState() {
         return getInventoryData();
     }
-    
+
     public void shutdown() {
         stateSink.tryEmitComplete();
     }

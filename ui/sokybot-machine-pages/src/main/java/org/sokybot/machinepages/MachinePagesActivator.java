@@ -40,7 +40,7 @@ import org.sokybot.settings.security.ICredentialEncryptor;
  * Registers declarative UI pages for Inventory, Skills, Training, Environment,
  * and Log.
  */
-@Component(immediate = true, property = {
+@Component(immediate = true, service = EventHandler.class, property = {
         "event.topics=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_CREATED,
         "event.topics=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED
 })
@@ -101,7 +101,7 @@ public class MachinePagesActivator implements EventHandler {
         loadUISchemas();
 
         // Install for existing machines
-        if (appCtx != null && appCtx.isRunning()) {
+        if (appCtx != null) {
             installExistingMachines(appCtx);
         }
     }
@@ -134,10 +134,14 @@ public class MachinePagesActivator implements EventHandler {
     }
 
     private void installExistingMachines(ISokybotContext ctx) {
-        Stream.of(ctx.getGroups())
-                .filter(IGroupContext::isRunning)
-                .flatMap(g -> Stream.of(g.getMachines()))
-                .filter(IMachineContext::isRunning)
+        IGroupContext[] groups = ctx.getGroups();
+        System.out.println("Machine Pages: Found " + groups.length + " existing groups to scan");
+        Stream.of(groups)
+                .flatMap(g -> {
+                    IMachineContext[] machines = g.getMachines();
+                    System.out.println("Machine Pages: Group " + g.name() + " has " + machines.length + " machines");
+                    return Stream.of(machines);
+                })
                 .forEach(this::installMachinePages);
     }
 
@@ -176,9 +180,9 @@ public class MachinePagesActivator implements EventHandler {
         // Create service instances
         MachineServices services = new MachineServices();
         services.inventoryService = new InventoryService(machineFullName,
-                ctx.getGameModel() != null ? ctx.getGameModel().getTrainer() : null);
+                () -> ctx.getGameModel() != null ? ctx.getGameModel().getTrainer() : null);
         services.skillService = new SkillService(machineFullName,
-                ctx.getGameModel() != null ? ctx.getGameModel().getTrainer() : null);
+                () -> ctx.getGameModel() != null ? ctx.getGameModel().getTrainer() : null);
 
         services.trainingService = new TrainingService(machineFullName, ctx, settingsRegistry, profileManager);
 

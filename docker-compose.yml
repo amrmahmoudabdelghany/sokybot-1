@@ -1,0 +1,59 @@
+services:
+  sokybot-backend:
+    build: .
+    container_name: sokybot-backend
+    restart: unless-stopped
+    networks:
+      - default
+      - proxy_net
+    volumes:
+      - .:/app
+      - ~/.m2:/root/.m2
+      - "../Cyper Online Official Client:/app/game-client"
+    ports:
+      - "8182:8182"
+      - "5005:5005"
+      - "8101:8101"
+    environment:
+      - SOKY_DEV_MODE=true
+      - SOKY_WEBVIEW_URL=http://sokybot.local
+      - SOKY_DEVTOOLS_URL=http://sokybotdev.local
+      - KARAF_DEBUG=true
+    command: ./infra/scripts/soky backend start --foreground --watch
+
+  sokybot-webview-ui:
+    image: node:20-alpine
+    container_name: sokybot-webview-ui
+    restart: unless-stopped
+    working_dir: /app/ui
+    networks:
+      - default
+      - proxy_net
+    volumes:
+      - .:/app
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_BACKEND_URL=ws://api.sokybot.local:8182/rsocket
+    command: npm run dev -w frontend
+
+  sokybot-devtools-ui:
+    image: node:20-alpine
+    container_name: sokybot-devtools-ui
+    restart: unless-stopped
+    working_dir: /app/ui
+    networks:
+      - default
+      - proxy_net
+    volumes:
+      - .:/app
+    ports:
+      - "3004:3000"
+    environment:
+      - VITE_BACKEND_URL=ws://api.sokybot.local:8182/rsocket
+    command: npm run dev -w dev-tools-frontend
+
+networks:
+  default:
+  proxy_net:
+    external: true

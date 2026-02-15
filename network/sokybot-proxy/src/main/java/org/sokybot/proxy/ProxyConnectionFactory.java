@@ -76,10 +76,26 @@ public class ProxyConnectionFactory implements IProxyConnectionFactory {
         System.out.println("Sokybot Proxy: All connections shut down");
     }
 
+    @Override
+    public void destroyConnection(String machineId) {
+        ProxyConnection connection = connections.remove(machineId);
+        if (connection != null) {
+            System.out.println("Sokybot Proxy: Destroying connection for machine: " + machineId);
+            try {
+                connection.disconnect();
+            } catch (Exception e) {
+                System.err.println("Error disconnecting machine " + machineId + ": " + e.getMessage());
+            }
+        }
+    }
+
     /**
      * Removes a connection from the factory.
      * Called when a connection is disconnected.
+     * 
+     * @deprecated Use {@link #destroyConnection(String)} instead.
      */
+    @Deprecated
     void removeConnection(String machineId) {
         connections.remove(machineId);
     }

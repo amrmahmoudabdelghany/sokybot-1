@@ -245,7 +245,7 @@ public class MyConfigurableService {
 Config file: `etc/org.sokybot.myservice.cfg`
 
 ## 10. Standardization Checklist
-1. **Bundle-SymbolicName**: Must be `${project.groupId}.${project.artifactId}`
+1. **Bundle-SymbolicName**: Must be explicitly defined as `<Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>` in `pom.xml`
 2. **Bundle-Name**: Must be `${project.name}` (human readable)
 3. **Bundle-Version**: Must be `${project.version}`
 4. **Bundle-Description**: Must be `${project.description}`
@@ -334,3 +334,22 @@ public class MyStreamHandler implements IRSocketStreamHandler {
 5. **Version packages** - Use semantic versioning for exported packages
 6. **Test in OSGi** - Unit tests may miss OSGi-specific issues
 7. **Use setter injection** - For `volatile` fields with `@Reference`, use setter methods
+
+## 13. Critical Prevention Rules (DO NOT IGNORE)
+
+1. **Explicit Bundle-SymbolicName**:
+   - **Rule**: You MUST explicitly define `<Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>` in every module's `pom.xml`.
+   - **Reason**: Default plugin behavior relies on folder structure/inheritance which causes collisions (e.g., `pk2` vs `pk2-extractor`).
+
+2. **Feature First**:
+   - **Rule**: When adding a new module, add it to `infra/sokybot-features/src/main/feature/feature.xml` **IMMEDIATELY**.
+   - **Reason**: Missing bundles don't survive restarts, leading to confusing "works on my machine" errors.
+
+3. **No Manual Service Registration**:
+   - **Rule**: Use Declarative Services (`@Component`) exclusively. **NEVER** use `bundleContext.registerService()` in Activators.
+   - **Reason**: Manual registration causes race conditions where services are published before they are fully initialized (e.g., before data loading completes).
+
+4. **Integration Testing**:
+   - **Rule**: If a module has OSGi dependencies, verify its `Import-Package` headers using `mvn package` or run an OSGi integration test.
+   - **Reason**: Unit tests mock the classpath; they do NOT verify runtime OSGi resolution.
+
