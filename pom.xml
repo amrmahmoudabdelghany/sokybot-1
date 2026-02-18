@@ -101,7 +101,6 @@
         <module>network</module>
         <module>game</module>
         <module>ui</module>
-        <module>actuators</module>
         <module>infra</module>
         <module>legacy</module>
 

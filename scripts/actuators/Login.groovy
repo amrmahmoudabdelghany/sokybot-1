@@ -3,7 +3,7 @@ import org.sokybot.engine.api.extension.IActuatorContext
 import org.sokybot.engine.api.extension.ActuatorDescriptor
 import org.sokybot.engine.core.workflow.builder.CycleDefinitionBuilder
 import org.sokybot.settings.api.ISettingsRegistry
-import org.sokybot.actuator.login.LoginSettings
+import org.sokybot.settings.security.Encrypted
 import org.sokybot.network.packet.ClientOpcode
 import org.sokybot.network.packet.Encoding
 import org.sokybot.network.packet.MutablePacket
@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
 class Login implements IActuator {
 
     private static final Logger log = LoggerFactory.getLogger(Login.class)
+    private static boolean registered = false
 
     @Override
     String getName() { "login" }
@@ -28,6 +29,12 @@ class Login implements IActuator {
             if (settingsRegistry == null) {
                 log.error("Failed to acquire ISettingsRegistry service for Login actuator!")
                 return
+            }
+
+            if (!registered) {
+                log.info("Registering login settings scope from Groovy")
+                settingsRegistry.register("login", LoginSettings.class, { new LoginSettings() })
+                registered = true
             }
 
             def settingsProvider = settingsRegistry.getProvider(
@@ -143,6 +150,23 @@ class Login implements IActuator {
             log.error("Failed to send login packet: {}", e.getMessage(), e)
         }
     }
+}
+
+class LoginSettings {
+    String targetGateway = ""
+    
+    @Encrypted
+    String username = ""
+    
+    @Encrypted
+    String password = ""
+    
+    @Encrypted
+    String passcode = ""
+    
+    String targetAgent = ""
+    int locale = 22
+    boolean autoLogin = false
 }
 
 new Login()

@@ -25,6 +25,14 @@
             <scope>provided</scope>
         </dependency>
         
+        <!-- Engine API for IScriptEngine -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-engine-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
         <!-- Runtime for IMachineContext -->
         <dependency>
             <groupId>org.sokybot</groupId>
@@ -99,19 +107,6 @@
             <scope>provided</scope>
         </dependency>
         
-        <!-- Actuators -->
-        <dependency>
-            <groupId>org.sokybot</groupId>
-            <artifactId>sokybot-actuator-login</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.sokybot</groupId>
-            <artifactId>sokybot-actuator-training</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
         
         <!-- Logging -->
         <dependency>
@@ -119,6 +114,18 @@
             <artifactId>slf4j-api</artifactId>
             <version>${dependency.slf4j-api.version}</version>
             <scope>provided</scope>
+        </dependency>
+
+        <!-- Groovy for scripting -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>4.0.16</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy-json</artifactId>
+            <version>4.0.16</version>
         </dependency>
     </dependencies>
 
@@ -141,7 +148,7 @@
                             !org.reactivestreams.*,
                             *;resolution:=optional
                         </Import-Package>
-                        <Export-Package>org.sokybot.machinepages</Export-Package>
+                        <Export-Package>org.sokybot.machinepages,org.sokybot.machinepages.api</Export-Package>
                     </instructions>
                 </configuration>
             </plugin>

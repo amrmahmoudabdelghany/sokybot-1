@@ -67,21 +67,12 @@
         
     </feature>
 
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <!-- ACTUATORS FEATURE: Bot automation modules                               -->
-    <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <feature name="sokybot-actuators" version="${project.version}" description="Sokybot Actuator Bundles">
-        <feature>sokybot-core</feature>
-        <bundle>mvn:org.sokybot/sokybot-actuator-connector/${project.version}</bundle>
-        <bundle>mvn:org.sokybot/sokybot-actuator-login/${project.version}</bundle>
-        <bundle>mvn:org.sokybot/sokybot-actuator-training/${project.version}</bundle>
-    </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- DEV FEATURE: Development and debugging tools (not for production)       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-dev" version="${project.version}" description="Sokybot Development Tools">
-        <feature>sokybot-actuators</feature>
+        <feature>sokybot-core</feature>
         <!-- Karaf shell and SSH for development -->
         <feature version="${karaf.version}">shell</feature>
         <feature version="${karaf.version}">ssh</feature>
@@ -94,7 +85,7 @@
     <!-- FULL FEATURE: Complete production application for end users             -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-full" version="${project.version}" description="Sokybot Full Application">
-        <feature>sokybot-actuators</feature>
+        <feature>sokybot-core</feature>
     </feature>
 
 </features>

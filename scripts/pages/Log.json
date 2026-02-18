@@ -1,0 +1,94 @@
+{
+    "type": "div",
+    "className": "w-full h-full flex flex-col",
+    "children": [
+        {
+            "type": "div",
+            "className": "flex justify-between items-center mb-2",
+            "children": [
+                {
+                    "type": "h3",
+                    "className": "text-sm font-bold text-foreground",
+                    "props": {
+                        "children": "Event Log"
+                    }
+                },
+                {
+                    "type": "div",
+                    "className": "flex items-center gap-2",
+                    "children": [
+                        {
+                            "type": "span",
+                            "className": "text-xs text-muted-foreground",
+                            "props": {
+                                "children": "Last ${maxEvents} events"
+                            }
+                        },
+                        {
+                            "type": "Button",
+                            "variant": "outline",
+                            "size": "sm",
+                            "props": {
+                                "onClick": "clearLog",
+                                "children": "Clear"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "className": "bg-muted/30 border border-border text-foreground p-2 rounded h-96 overflow-y-auto font-mono text-xs shadow-inner",
+            "children": [
+                {
+                    "type": "div",
+                    "className": "text-muted-foreground text-center italic mt-10",
+                    "props": {
+                        "hidden": "${events.length > 0}",
+                        "children": "Waiting for events..."
+                    }
+                },
+                {
+                    "type": "div",
+                    "props": {
+                        "dataSource": "events",
+                        "renderItem": {
+                            "type": "div",
+                            "className": "border-b border-border py-1 hover:bg-muted/50 transition-colors",
+                            "children": [
+                                {
+                                    "type": "div",
+                                    "className": "flex items-center gap-2 mb-0.5",
+                                    "children": [
+                                        {
+                                            "type": "span",
+                                            "className": "text-muted-foreground",
+                                            "props": {
+                                                "children": "[${item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : 'N/A'}]"
+                                            }
+                                        },
+                                        {
+                                            "type": "span",
+                                            "className": "px-1 py-0 rounded bg-secondary border border-border text-green-500",
+                                            "props": {
+                                                "children": "${item.eventType || 'Unknown'}"
+                                            }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "div",
+                                    "className": "pl-0 text-foreground break-all",
+                                    "props": {
+                                        "children": "${item.event || JSON.stringify(item)}"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}

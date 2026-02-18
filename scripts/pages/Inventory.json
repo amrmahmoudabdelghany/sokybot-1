@@ -1,0 +1,79 @@
+{
+    "type": "div",
+    "className": "h-full flex flex-col space-y-4",
+    "children": [
+        {
+            "type": "div",
+            "className": "flex justify-between items-center",
+            "children": [
+                {
+                    "type": "h3",
+                    "className": "text-foreground font-bold",
+                    "props": {
+                        "children": "Inventory (${items.length} items)"
+                    }
+                },
+                {
+                    "type": "Button",
+                    "variant": "outline",
+                    "size": "sm",
+                    "props": {
+                        "onClick": "refresh",
+                        "children": "Refresh"
+                    }
+                }
+            ]
+        },
+        {
+            "type": "div",
+            "className": "grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2",
+            "props": {
+                "dataSource": "items",
+                "renderItem": {
+                    "type": "div",
+                    "className": "bg-card border border-border p-2 rounded flex flex-col items-center justify-center relative group hover:border-primary transition-colors h-20 w-20 shadow-sm",
+                    "children": [
+                        {
+                            "type": "div",
+                            "className": "w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs text-muted-foreground mb-1",
+                            "props": {
+                                "children": "${item.refId ? (item.refId.length() > 2 ? item.refId.substring(0, 2) : item.refId) : '?'}"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "className": "text-[10px] text-center text-foreground leading-tight w-full truncate px-1",
+                            "props": {
+                                "title": "${item.name}",
+                                "children": "${item.name}"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "className": "absolute top-1 right-1 text-[10px] bg-secondary px-1 rounded text-yellow-500 font-mono border border-border",
+                            "props": {
+                                "hidden": "${item.count <= 1}",
+                                "children": "${item.count}"
+                            }
+                        },
+                        {
+                            "type": "div",
+                            "className": "absolute top-1 left-1 text-[8px] text-muted-foreground",
+                            "props": {
+                                "children": "${item.slot}"
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        {
+            "type": "div",
+            "className": "text-center text-muted-foreground py-8 italic",
+            "props": {
+                "hidden": "${items.length > 0}",
+                "children": "Inventory is empty"
+            }
+        }
+    ]
+}
