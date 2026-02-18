@@ -35,10 +35,10 @@ description: Project architecture and module overview
 ### Core Engine
 | Module | Responsibility |
 |--------|----------------|
-| `sokybot-engine` | Main bot logic, state machines, **Groovy scripting** |
+| `sokybot-engine` | Main bot logic, state machines |
 | `sokybot-engine-api` | Engine interfaces/contracts, **scripting API** |
 | `sokybot-runtime` | Context management, lifecycle |
-| `sokybot-scripts` | **(Virtual) Groovy actuator scripts** |
+| `scripts/` | **Physical Groovy scripts** (Actuators & UI Pages) |
 
 ### Network Layer
 | Module | Responsibility |
@@ -64,7 +64,7 @@ description: Project architecture and module overview
 | `sokybot-http-server` | HTTP/WebSocket API (Reactor Netty) |
 | `sokybot-webview` | Hybrid Web UI (Java Backend + React Frontend) |
 | `sokybot-dev-tools` | Developer tools UI |
-| `sokybot-machine-pages` | Specific bot machine UI pages |
+| `sokybot-machine-pages` | **Script Page Loader** and bridge for UI scripts |
 | `sokybot-bundle-manager` | OSGi bundle management UI |
 | `sokybot-swing` | Swing UI components |
 
@@ -102,6 +102,7 @@ description: Project architecture and module overview
 | `IRouteFinder` | `sokybot-game-navigation` | Pathfinding contract |
 | `ISokybotContext` | `sokybot-runtime` | Application context |
 | `IMachineContext` | `sokybot-runtime` | Bot instance context |
+| `IScriptedPage` | `sokybot-machine-pages` | UI Script contract |
 
 ## 5. Data Flow
 
@@ -115,13 +116,13 @@ Game Client ──► Proxy ──► Packet Handler ──► Event Bus (EventA
             Packet Sniffer                  State Machine (Engine) ◄───────┘
                  │                                ▲
                  ▼                                │
-            WebSocket ◄──────────────────────► Script Actuator Loader ◄── Scripts (.groovy)
+            WebSocket ◄──────────────────────► Script Actuator Loader ◄── Actuators (.groovy)
+                 │                                │
+                 ▼                                ▼
+              Web UI ◄── Script Page Loader ◄── UI Scripts (.groovy)
                  │                                │
                  ▼                                ▼
               Web UI ◄────────────────────────► HTTP API (Reactor Netty)
-                 │                                │
-                 ▼                                ▼
-              Web UI ◄────────────────────────► Web UI (RSocket)
 ```
 
 ## 6. Build Order (Module Dependencies)

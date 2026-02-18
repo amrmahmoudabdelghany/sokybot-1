@@ -1,6 +1,6 @@
 ---
 trigger: always_on
-glob: "**/sokybot-actuator-*/**/*"
+glob: "{**/sokybot-actuator-*/**/*,scripts/actuators/*.groovy}"
 description: Bot logic and actuator development guidelines
 ---
 
@@ -10,8 +10,8 @@ description: Bot logic and actuator development guidelines
 Bot logic is encapsulated in **Actuators**.
 - **Interface**: Implement `IActuator`.
 - **Registration**: 
-  - **Java**: Use `@Component(service = IActuator.class)`.
-  - **Groovy**: Place `.groovy` script in `scripts/actuators/`. The script must return an instance of `IActuator`.
+  - **Java**: Use `@Component(service = IActuator.class)`. (Legacy)
+  - **Groovy**: Place `.groovy` script in `scripts/actuators/`. (Preferred)
 
 ## 2. State Machine (Cycles)
 Logic flow is defined using **Cycles** (State Machines).
@@ -25,6 +25,7 @@ Logic flow is defined using **Cycles** (State Machines).
 
 ## 3. Context Access
 - `IActuatorContext`: Lifecycle context (machine ID, group name).
+  - Use `getService(Class<T>)` to retrieve OSGi services (e.g., `IGameModel`, `INetworkController`).
 - `IWorkflowContext`: Runtime context (dispatcher, game model, settings).
 
 ### Actuator Isolation Principle

@@ -15,8 +15,8 @@ Modules MUST be grouped into the following categories:
 | `network/` | Network communication | `sokybot-proxy`, `sokybot-security` |
 | `game/` | Game data and logic | `sokybot-game-model`, `sokybot-pk2` |
 | `ui/` | User Interface | `sokybot-webview`, `sokybot-dev-tools`, `sokybot-frontend-shared` |
-| `actuators/` | Bot logic extensions | `sokybot-actuator-login` |
 | `infra/` | Shared infrastructure | `sokybot-commons`, `sokybot-persistence` |
+| `scripts/` | Groovy Automation | Actuators (`scripts/actuators`), UI (`scripts/pages`) |
 
 ## 2. Creating New Modules
 When creating a new module:

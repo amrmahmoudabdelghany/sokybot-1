@@ -103,7 +103,14 @@ Common RSocket methods (see `SystemInfoHandler` for full list):
 | `events.stream` | Historical/Real-time event journal |
 | `health.check` | System health status |
 
-## 4. Component Guidelines
+## 5. Declarative UI (Scripted Pages)
+Bot machine pages are defined dynamically using JSON schemas and Groovy logic.
+- **Location**: `scripts/pages/*.json` for layout, `scripts/pages/*.groovy` for logic.
+- **Contract**: Implement `IScriptedPage` in the Groovy script.
+- **Schema Format**: Standard JSON structure defining React components (type, className, props, children).
+- **Hot-Reloading**: Changes to `.json` or `.groovy` files in the pages directory are applied instantly without rebuilds.
+
+## 6. Component Guidelines
 1. **Functional Components**: Use React Functional Components with Hooks.
 2. **Strict Types**: Always define props interfaces.
 3. **Tailwind First**: Use Tailwind classes for styling. Avoid CSS files.

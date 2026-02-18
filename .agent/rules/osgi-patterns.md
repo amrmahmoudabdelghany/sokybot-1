@@ -164,9 +164,8 @@ The following features provide shared dependencies to avoid duplication:
 | Feature | Description | Dependencies |
 |---------|-------------|--------------|
 | `sokybot-core` | Core bundles | sokybot-reactor, sokybot-jackson |
-| `sokybot-actuators` | Bot automation | sokybot-core |
-| `sokybot-dev` | Development tools | sokybot-actuators, shell, ssh |
-| `sokybot-full` | Production app | sokybot-actuators |
+| `sokybot-dev` | Development tools | sokybot-core, shell, ssh |
+| `sokybot-full` | Production app | sokybot-core |
 
 ### Feature Definition Example
 
