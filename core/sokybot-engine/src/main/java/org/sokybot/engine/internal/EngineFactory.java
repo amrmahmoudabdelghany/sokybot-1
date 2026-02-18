@@ -1,5 +1,7 @@
 package org.sokybot.engine.internal;
 
+import org.osgi.framework.BundleContext;
+
 import java.util.Map;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,8 +39,11 @@ public class EngineFactory implements IEngineFactory {
     // Injected actuators via OSGi Declarative Services
     private final List<IActuator> actuators = new CopyOnWriteArrayList<>();
 
+    private BundleContext bundleContext;
+
     @Activate
-    protected void activate() {
+    protected void activate(BundleContext context) {
+        this.bundleContext = context;
         log.info("Engine Factory activated");
     }
 
@@ -72,7 +77,7 @@ public class EngineFactory implements IEngineFactory {
                 // Create engine core, passing the injected actuators list
                 EngineCore engine = new EngineCore(
                         machineId, groupName, machineName,
-                        proxyConnection, gameModel, actuators);
+                        proxyConnection, gameModel, actuators, bundleContext);
 
                 engines.put(machineId, engine);
 

@@ -99,7 +99,7 @@
                               }
                             ],
                             "onRowClick": "selectTracer",
-                            "rowClassName": "hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                            "rowClassName": "hover:bg-muted/50 cursor-pointer"
                           }
                         }
                       ]

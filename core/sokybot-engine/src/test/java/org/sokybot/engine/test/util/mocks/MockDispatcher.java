@@ -12,20 +12,20 @@ import java.util.List;
  * Tracks sent packets and connection state.
  */
 public class MockDispatcher implements IDispatcher {
-    
+
     private final List<Object> sentToServer = new ArrayList<>();
     private final List<Object> sentToClient = new ArrayList<>();
     private boolean connected = false;
     private boolean clientConnected = false;
     private boolean serverConnected = false;
     private DispatchException throwExceptionOnSend = null;
-    
+
     /**
      * Creates a new MockDispatcher.
      */
     public MockDispatcher() {
     }
-    
+
     /**
      * Sets the connection state.
      */
@@ -35,7 +35,7 @@ public class MockDispatcher implements IDispatcher {
         this.serverConnected = connected;
         return this;
     }
-    
+
     /**
      * Sets client connection state.
      */
@@ -44,7 +44,7 @@ public class MockDispatcher implements IDispatcher {
         updateConnectedState();
         return this;
     }
-    
+
     /**
      * Sets server connection state.
      */
@@ -53,7 +53,7 @@ public class MockDispatcher implements IDispatcher {
         updateConnectedState();
         return this;
     }
-    
+
     /**
      * Sets an exception to throw on send operations.
      */
@@ -61,11 +61,11 @@ public class MockDispatcher implements IDispatcher {
         this.throwExceptionOnSend = exception;
         return this;
     }
-    
+
     private void updateConnectedState() {
         this.connected = clientConnected && serverConnected;
     }
-    
+
     @Override
     public void sendToServer(Object packet) throws DispatchException {
         if (throwExceptionOnSend != null) {
@@ -73,7 +73,7 @@ public class MockDispatcher implements IDispatcher {
         }
         sentToServer.add(packet);
     }
-    
+
     @Override
     public void sendToClient(Object packet) throws DispatchException {
         if (throwExceptionOnSend != null) {
@@ -81,36 +81,36 @@ public class MockDispatcher implements IDispatcher {
         }
         sentToClient.add(packet);
     }
-    
+
     @Override
     public boolean isConnected() {
         return connected;
     }
-    
+
     @Override
     public boolean isClientConnected() {
         return clientConnected;
     }
-    
+
     @Override
     public boolean isServerConnected() {
         return serverConnected;
     }
-    
+
     /**
      * Gets all packets sent to server.
      */
     public List<Object> getSentToServer() {
         return new ArrayList<>(sentToServer);
     }
-    
+
     /**
      * Gets all packets sent to client.
      */
     public List<Object> getSentToClient() {
         return new ArrayList<>(sentToClient);
     }
-    
+
     /**
      * Clears all sent packets.
      */
@@ -118,18 +118,32 @@ public class MockDispatcher implements IDispatcher {
         sentToServer.clear();
         sentToClient.clear();
     }
-    
+
     /**
      * Gets the number of packets sent to server.
      */
     public int getServerPacketCount() {
         return sentToServer.size();
     }
-    
+
     /**
      * Gets the number of packets sent to client.
      */
     public int getClientPacketCount() {
         return sentToClient.size();
+    }
+
+    @Override
+    public void connect(String host, int port) {
+        this.connected = true;
+        this.clientConnected = true;
+        this.serverConnected = true;
+    }
+
+    @Override
+    public void disconnect() {
+        this.connected = false;
+        this.clientConnected = false;
+        this.serverConnected = false;
     }
 }

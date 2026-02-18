@@ -99,36 +99,38 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
 
     return (
-        <div className="flex h-screen bg-background text-foreground font-sans transition-colors duration-300">
+        <div className="flex h-screen bg-background text-foreground font-sans transition-colors duration-300 overflow-hidden">
             {/* Sidebar */}
-            <div className="w-64 border-r bg-card flex flex-col transition-colors duration-300">
-                <div className="p-4 border-b flex items-center justify-between">
-                    <div className="font-bold text-lg text-primary font-mono flex items-center gap-2">
-                        <Monitor className="h-5 w-5" />
+            <div className="w-64 border-r border-border/40 bg-card/80 backdrop-blur-md flex flex-col transition-all duration-300 z-20">
+                <div className="h-16 px-6 border-b border-border/40 flex items-center justify-between bg-card/50">
+                    <div className="font-bold text-lg text-primary font-mono flex items-center gap-3 tracking-tight">
+                        <div className="p-1.5 rounded-md bg-primary/10">
+                            <Monitor className="h-5 w-5" />
+                        </div>
                         Sokybot v2
                     </div>
                 </div>
 
                 {/* Actions */}
-                <div className="p-2 grid grid-cols-2 gap-2 border-b">
-                    <Button variant="outline" size="sm" onClick={() => setCreateGroupOpen(true)} className="h-8">
-                        <Plus className="h-3 w-3 mr-1" /> Group
+                <div className="p-4 grid grid-cols-2 gap-3 border-b border-border/40">
+                    <Button variant="outline" size="sm" onClick={() => setCreateGroupOpen(true)} className="h-9 shadow-sm hover:shadow transition-all hover:bg-primary/5 hover:text-primary hover:border-primary/20">
+                        <Plus className="h-3.5 w-3.5 mr-1.5" /> Group
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => setCreateMachineOpen(true)} className="h-8">
-                        <Plus className="h-3 w-3 mr-1" /> Bot
+                    <Button variant="outline" size="sm" onClick={() => setCreateMachineOpen(true)} className="h-9 shadow-sm hover:shadow transition-all hover:bg-primary/5 hover:text-primary hover:border-primary/20">
+                        <Plus className="h-3.5 w-3.5 mr-1.5" /> Bot
                     </Button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-4">
+                <div className="flex-1 overflow-y-auto p-3 space-y-6 scrollbar-thin scrollbar-thumb-border/40 scrollbar-track-transparent">
                     {groupNames.map(group => {
                         const groupMachines = machines.filter(m =>
                             m.groupName === group || getMachineGroup(m.machineId) === group
                         );
                         return (
                             <div key={group} className="space-y-1">
-                                <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                                <div className="px-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest flex items-center justify-between mb-2">
                                     {group}
-                                    <span className="text-[10px] bg-secondary px-1 rounded text-foreground">{groupMachines.length}</span>
+                                    <span className="text-[9px] bg-secondary/80 px-1.5 py-0.5 rounded-full text-foreground/80 font-mono shadow-sm">{groupMachines.length}</span>
                                 </div>
                                 {groupMachines.map(m => (
                                     /* Machine Item */
@@ -136,21 +138,28 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                         <Button
                                             key={m.machineId}
                                             variant={selectedMachineId === m.machineId ? "secondary" : "ghost"}
-                                            className={cn("w-full justify-start font-normal pl-4 h-8", selectedMachineId === m.machineId && "font-medium bg-accent")}
+                                            className={cn(
+                                                "w-full justify-start font-normal pl-3 h-9 transition-all duration-200 group relative overflow-hidden",
+                                                selectedMachineId === m.machineId
+                                                    ? "font-medium bg-primary/10 text-primary hover:bg-primary/15"
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                                            )}
                                             onClick={() => {
                                                 setSelectedMachineId(m.machineId);
-                                                // Default to 'training' or first tab if not set
-                                                // Logic will be handled by MachineView or here
-                                                // For now just select machine, let MachineView select default tab
                                             }}
                                         >
-                                            <Bot className={cn("h-4 w-4 mr-2", m.isRunning ? "text-green-500" : "text-muted-foreground")} />
-                                            {m.name || getSimpleName(m.machineId)}
+                                            <Bot className={cn("h-4 w-4 mr-2.5 transition-colors",
+                                                m.isRunning ? "text-emerald-500" : "text-muted-foreground/60 group-hover:text-muted-foreground"
+                                            )} />
+                                            <span className="truncate">{m.name || getSimpleName(m.machineId)}</span>
+                                            {selectedMachineId === m.machineId && (
+                                                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary animate-in fade-in slide-in-from-left-1 duration-300" />
+                                            )}
                                         </Button>
 
                                         {/* Nested Pages (Tree View) */}
                                         {selectedMachineId === m.machineId && (
-                                            <div className="ml-4 pl-2 border-l border-slate-200 dark:border-slate-800 space-y-0.5 min-h-[4px]">
+                                            <div className="ml-5 pl-3 border-l border-border/30 space-y-0.5 my-1 animate-in slide-in-from-top-2 duration-200 fade-in-0">
                                                 {getMachineTabs(m.machineId).length > 0 ? (
                                                     getMachineTabs(m.machineId).map(tabId => {
                                                         const page = extensionRegistry.pages[tabId];
@@ -161,12 +170,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                                                 variant="ghost"
                                                                 size="sm"
                                                                 className={cn(
-                                                                    "w-full justify-start h-7 text-xs font-normal",
-                                                                    isActive ? "text-primary bg-primary/10" : "text-muted-foreground"
+                                                                    "w-full justify-start h-8 text-xs font-normal transition-colors",
+                                                                    isActive
+                                                                        ? "text-primary bg-primary/5 font-medium"
+                                                                        : "text-muted-foreground/80 hover:text-foreground hover:bg-secondary/30"
                                                                 )}
                                                                 onClick={() => setSelectedPageId(tabId)}
                                                             >
-                                                                <div className="ml-1 flex items-center">
+                                                                <div className="flex items-center">
                                                                     {getPageIcon(tabId)}
                                                                     {page?.title || tabId}
                                                                 </div>
@@ -174,7 +185,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                                         );
                                                     })
                                                 ) : (
-                                                    <div className="text-[10px] text-muted-foreground italic pl-3 py-1">
+                                                    <div className="text-[10px] text-muted-foreground/50 italic pl-2 py-1.5">
                                                         No pages registered
                                                     </div>
                                                 )}
@@ -189,21 +200,31 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {/* Orphaned machines or if no groups defined yet (legacy fallback) */}
                     {groupNames.length === 0 && machines.length > 0 && (
                         <div className="space-y-1">
-                            <div className="px-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Default</div>
+                            <div className="px-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2">Default</div>
                             {machines.map(m => (
                                 <div key={m.machineId} className="space-y-1">
                                     <Button
                                         variant={selectedMachineId === m.machineId ? "secondary" : "ghost"}
-                                        className={cn("w-full justify-start font-normal", selectedMachineId === m.machineId && "font-medium")}
+                                        className={cn(
+                                            "w-full justify-start font-normal pl-3 h-9 transition-all duration-200 group relative",
+                                            selectedMachineId === m.machineId
+                                                ? "font-medium bg-primary/10 text-primary hover:bg-primary/15"
+                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                                        )}
                                         onClick={() => setSelectedMachineId(m.machineId)}
                                     >
-                                        <Bot className={cn("h-4 w-4 mr-2", m.isRunning ? "text-green-500" : "text-muted-foreground")} />
-                                        {m.name || m.machineId}
+                                        <Bot className={cn("h-4 w-4 mr-2.5 transition-colors",
+                                            m.isRunning ? "text-emerald-500" : "text-muted-foreground/60 group-hover:text-muted-foreground"
+                                        )} />
+                                        <span className="truncate">{m.name || m.machineId}</span>
+                                        {selectedMachineId === m.machineId && (
+                                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-r-full" />
+                                        )}
                                     </Button>
 
                                     {/* Nested Pages (Tree View) */}
                                     {selectedMachineId === m.machineId && (
-                                        <div className="ml-4 pl-2 border-l border-slate-200 dark:border-slate-800 space-y-0.5 min-h-[4px]">
+                                        <div className="ml-5 pl-3 border-l border-border/30 space-y-0.5 my-1 animate-in slide-in-from-top-2 duration-200 fade-in-0">
                                             {getMachineTabs(m.machineId).length > 0 ? (
                                                 getMachineTabs(m.machineId).map(tabId => {
                                                     const page = extensionRegistry.pages[tabId];
@@ -214,12 +235,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                                             variant="ghost"
                                                             size="sm"
                                                             className={cn(
-                                                                "w-full justify-start h-7 text-xs font-normal",
-                                                                isActive ? "text-primary bg-primary/10" : "text-muted-foreground"
+                                                                "w-full justify-start h-8 text-xs font-normal transition-colors",
+                                                                isActive
+                                                                    ? "text-primary bg-primary/5 font-medium"
+                                                                    : "text-muted-foreground/80 hover:text-foreground hover:bg-secondary/30"
                                                             )}
                                                             onClick={() => setSelectedPageId(tabId)}
                                                         >
-                                                            <div className="ml-1 flex items-center">
+                                                            <div className="flex items-center">
                                                                 {getPageIcon(tabId)}
                                                                 {page?.title || tabId}
                                                             </div>
@@ -227,7 +250,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                                     );
                                                 })
                                             ) : (
-                                                <div className="text-[10px] text-muted-foreground italic pl-3 py-1">
+                                                <div className="text-[10px] text-muted-foreground/50 italic pl-2 py-1.5">
                                                     No pages registered
                                                 </div>
                                             )}
@@ -239,13 +262,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     )}
 
                     {groupNames.length === 0 && machines.length === 0 && (
-                        <div className="text-muted-foreground text-xs italic p-4 text-center">
+                        <div className="text-muted-foreground text-xs italic p-8 text-center border-2 border-dashed border-border/30 rounded-lg mx-2 bg-secondary/10">
                             No groups or bots found.<br />Create a group to start.
                         </div>
                     )}
                 </div>
-                <div className="p-4 border-t text-xs text-muted-foreground">
-                    {machines.length} Total Bots
+                <div className="p-4 border-t border-border/40 text-[10px] font-medium text-muted-foreground/60 flex justify-between items-center bg-card/30">
+                    <span>{machines.length} Total Bots</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40"></span>
                 </div>
             </div>
 
@@ -261,46 +285,60 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             />
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 bg-secondary/10 overflow-hidden">
-                {/* Header */}
-                <div className="bg-card border-b p-4 shadow-sm flex justify-between items-center h-16 transition-colors duration-300">
-                    <div className="font-semibold text-lg flex items-center gap-2">
-                        {selectedMachineId ? (
-                            <>
-                                <Bot className="h-5 w-5 text-primary" />
-                                <span className="text-muted-foreground mr-1">Machine:</span>
-                                <span>{getSimpleName(selectedMachineId)}</span>
-                            </>
-                        ) : "Select a Machine"}
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {/* Extension Toolbar Actions */}
-                        <ToolbarExtensions />
+            <div className="flex-1 flex flex-col min-w-0 bg-background/50 relative">
+                {/* Decorative background gradients */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent pointer-events-none opacity-50" />
 
-                        <Button variant="ghost" size="icon" onClick={() => {
+                {/* Header */}
+                <div className="h-16 px-6 border-b border-border/40 bg-card/80 backdrop-blur-md shadow-sm flex justify-between items-center z-10 transition-colors duration-300">
+                    <div className="font-semibold text-lg flex items-center gap-3">
+                        {selectedMachineId ? (
+                            <div className="flex items-center animate-in fade-in slide-in-from-left-2 duration-300">
+                                <div className="p-1.5 bg-primary/10 rounded-md mr-3 text-primary">
+                                    <Bot className="h-5 w-5" />
+                                </div>
+                                <div className="flex flex-col leading-none">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">Active Machine</span>
+                                    <span className="text-base text-foreground font-medium">{getSimpleName(selectedMachineId)}</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <span className="text-muted-foreground flex items-center gap-2">
+                                <Target className="h-4 w-4" /> Select a Machine
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        {/* Extension Toolbar Actions */}
+                        <div className="mr-2">
+                            <ToolbarExtensions />
+                        </div>
+
+                        <div className="h-6 w-px bg-border/40 mx-2" />
+
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={() => {
                             if (theme === 'light') setTheme('dark');
                             else if (theme === 'dark') setTheme('desktop');
                             else if (theme === 'desktop') setTheme('desktop-dark');
                             else setTheme('light');
                         }} title={`Theme: ${theme}`}>
-                            {theme === 'dark' ? <Moon className="h-4 w-4" /> :
-                                theme === 'desktop' ? <Monitor className="h-4 w-4" /> :
-                                    theme === 'desktop-dark' ? <Monitor className="h-4 w-4 text-foreground/70" /> :
-                                        <Sun className="h-4 w-4" />}
+                            {theme === 'dark' ? <Moon className="h-4 w-4 transition-all" /> :
+                                theme === 'desktop' ? <Monitor className="h-4 w-4 transition-all" /> :
+                                    theme === 'desktop-dark' ? <Monitor className="h-4 w-4 text-primary transition-all" /> :
+                                        <Sun className="h-4 w-4 transition-all" />}
                         </Button>
 
-                        <Button variant="ghost" size="icon" onClick={toggleFullscreen}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" onClick={toggleFullscreen}>
                             {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
                         </Button>
-                        <div className="h-4 w-px bg-border mx-1" />
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground">
                             <Settings className="h-4 w-4" />
                         </Button>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto p-6 transition-colors duration-300">
-                    <div className="max-w-6xl mx-auto h-full">
+                <div className="flex-1 overflow-auto transition-colors duration-300 z-0 relative">
+                    <div className="h-full">
                         {children}
                     </div>
                 </div>
@@ -308,12 +346,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* Right Sidebar (Dashboard) */}
             {selectedMachineId && (
-                <div className="w-72 border-l bg-card flex flex-col p-4 transition-colors duration-300 overflow-y-auto shadow-[-4px_0_10px_rgba(0,0,0,0.02)]">
-                    <div className="flex items-center gap-2 mb-4 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-border/50 pb-2">
-                        <Monitor className="h-3 w-3" />
-                        Bot Dashboard
+                <div className="w-80 border-l border-border/40 bg-card/80 backdrop-blur-md flex flex-col transition-all duration-300 z-20 shadow-[-4px_0_20px_rgba(0,0,0,0.02)]">
+                    <div className="h-16 px-4 flex items-center border-b border-border/40">
+                        <div className="flex items-center gap-2 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                            <Activity className="h-4 w-4 text-primary" />
+                            Live Dashboard
+                        </div>
                     </div>
-                    <CharacterStatus machineId={selectedMachineId} />
+                    <div className="flex-1 overflow-y-auto p-4">
+                        <CharacterStatus machineId={selectedMachineId} />
+                    </div>
                 </div>
             )}
         </div>

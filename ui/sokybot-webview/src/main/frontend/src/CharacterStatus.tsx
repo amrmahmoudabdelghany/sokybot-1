@@ -93,9 +93,9 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
     const mpPercent = (state.currentMP / state.maxMP) * 100;
 
     return (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 shadow-sm rounded-lg flex flex-col gap-4">
+        <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg flex flex-col gap-4">
             {/* Character Info */}
-            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div className="flex items-center gap-3 border-b border-border pb-3">
                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shrink-0">
                     <span className="text-sm font-bold font-mono">
                         {state.characterName.substring(0, 2).toUpperCase()}
@@ -103,7 +103,7 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
                 </div>
                 <div className="min-w-0">
                     <div className="flex items-baseline gap-2">
-                        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 truncate" title={state.characterName}>
+                        <h2 className="text-lg font-bold text-foreground truncate" title={state.characterName}>
                             {state.characterName}
                         </h2>
                     </div>
@@ -126,7 +126,7 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
                         <span>HP</span>
                         <span>{Math.round(hpPercent)}%</span>
                     </div>
-                    <div className="relative h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <div className="relative h-3 bg-secondary rounded-full overflow-hidden border border-border">
                         <div
                             className="absolute top-0 left-0 h-full bg-red-500 transition-all duration-300 shadow-[0_0_10px_rgba(239,68,68,0.5)]"
                             style={{ width: `${hpPercent}%` }}
@@ -143,7 +143,7 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
                         <span>MP</span>
                         <span>{Math.round(mpPercent)}%</span>
                     </div>
-                    <div className="relative h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <div className="relative h-3 bg-secondary rounded-full overflow-hidden border border-border">
                         <div
                             className="absolute top-0 left-0 h-full bg-blue-500 transition-all duration-300 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                             style={{ width: `${mpPercent}%` }}
@@ -156,9 +156,9 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId }) =
             </div>
 
             {/* Stats & Actions */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
+            <div className="pt-2 border-t border-border space-y-3">
                 {/* Gold */}
-                <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950 px-3 py-2 rounded-md border border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center bg-muted/50 px-3 py-2 rounded-md border border-border">
                     <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Gold</span>
                     <span className="text-xs font-mono font-bold text-yellow-600 dark:text-yellow-500">
                         {state.gold.toLocaleString()}

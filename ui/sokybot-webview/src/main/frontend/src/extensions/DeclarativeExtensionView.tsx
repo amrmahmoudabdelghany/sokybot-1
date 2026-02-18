@@ -90,11 +90,18 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         }
     }, [pageId, applyDeltaUpdate]);
 
-    // Auto-discover and subscribe to streams in schema
+    // Effect 1: Fetch schema if not provided
     useEffect(() => {
         if (!providedSchema) {
             fetchSchema();
         }
+    }, [pageId, machineId, providedSchema]);
+
+    // Effect 2: Manage subscriptions (Streams & Events)
+    useEffect(() => {
+        // Cleanup previous subscriptions
+        streamSubscriptionsRef.current.forEach(sub => sub?.unsubscribe());
+        streamSubscriptionsRef.current.clear();
 
         // Discover streams in schema
         discoverAndSubscribeStreams(providedSchema || schema);
@@ -102,7 +109,9 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         // Subscribe to state change events (delta updates)
         const subscription = rsocketService.streamEvents(
             (event) => {
+                // console.log("Received extension event:", event);
                 if (event.type === `${pageId}.stateChanged` && event.delta) {
+                    // console.log(`[${pageId}] Applying delta update`, event.delta);
                     applyDeltaUpdate(event.delta);
                 }
             },
@@ -118,7 +127,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             streamSubscriptionsRef.current.forEach(sub => sub?.unsubscribe());
             streamSubscriptionsRef.current.clear();
         };
-    }, [pageId, machineId, providedSchema]);
+    }, [pageId, machineId, providedSchema, schema]);
 
     const fetchSchema = async () => {
         setLoading(true);
@@ -133,7 +142,9 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             }
 
             if (result.data || result.state) {
-                setData(result.data || result.state || {});
+                const newState = result.data || result.state || {};
+                console.log(`[${pageId}] Initial state loaded:`, newState);
+                setData(newState);
             }
         } catch (err) {
             console.error(`Failed to fetch schema for ${pageId}`, err);
@@ -145,34 +156,59 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     const discoverAndSubscribeStreams = (schema: any) => {
         if (!schema) return;
 
+        console.log(`[${pageId}] Scanning for streams in:`, schema.type || (Array.isArray(schema) ? 'Array' : 'Unknown'));
+
+        if (Array.isArray(schema)) {
+            schema.forEach(child => discoverAndSubscribeStreams(child));
+            return;
+        }
+
         // Check if component has stream
         if (schema.type === 'stream' || schema.props?.streamId) {
             const streamId = schema.props?.streamId || schema.id;
             const streamParams = schema.props?.streamParams || {};
             const stateKey = schema.props?.stateKey;
+            const streamMode = schema.props?.streamMode;
 
             if (streamId) {
-                subscribeToStream(streamId, streamParams, stateKey);
+                console.log(`[${pageId}] Found stream: ${streamId} with mode: ${streamMode}`, streamParams);
+                subscribeToStream(streamId, streamParams, stateKey, streamMode);
             }
         }
 
         // Recursively check children
-        if (schema.children && Array.isArray(schema.children)) {
-            schema.children.forEach((child: any) => discoverAndSubscribeStreams(child));
+        if (schema.children) {
+            if (Array.isArray(schema.children)) {
+                schema.children.forEach((child: any) => discoverAndSubscribeStreams(child));
+            } else {
+                discoverAndSubscribeStreams(schema.children);
+            }
         }
     };
 
     const subscribeToStream = (
         streamId: string,
         params: Record<string, any>,
-        stateKey?: string
+        stateKey?: string,
+        mode?: string
     ) => {
         // Use structured subscribe method
+        // Backend expects: extension.stream:pageId:streamId
         const subscription = rsocketService.subscribe(
-            `extension.stream.${streamId}`, // Assuming backend handles this naming convention or adjust if specific
+            `extension.stream:${pageId}:${streamId}`,
             (streamData: any) => {
+                console.log(`[Stream:${streamId}] Received data`, streamData);
                 if (stateKey) {
-                    setData(prev => ({ ...prev, [stateKey]: streamData }));
+                    if (mode === 'append') {
+                        setData(prev => {
+                            const existing = Array.isArray(prev[stateKey]) ? prev[stateKey] : [];
+                            // Keep last 1000 items
+                            const updated = [...existing, streamData].slice(-1000);
+                            return { ...prev, [stateKey]: updated };
+                        });
+                    } else {
+                        setData(prev => ({ ...prev, [stateKey]: streamData }));
+                    }
                 } else {
                     setData(prev => ({ ...prev, [streamId]: streamData }));
                 }

@@ -98,8 +98,8 @@ export const HexViewer: React.FC<HexViewerProps> = ({
       if (packetRow.type === 'header') {
         // Header row
         rows.push(
-          <div key={`header-${packetIndex}`} className="flex border-b border-slate-300 dark:border-slate-600 py-1">
-            <div className="w-24 px-2 text-xs text-slate-500 dark:text-slate-400"></div>
+          <div key={`header-${packetIndex}`} className="flex border-b border-border py-1">
+            <div className="w-24 px-2 text-xs text-muted-foreground"></div>
             <div className="flex-1 px-2">
               <span className={cn(
                 "font-semibold",
@@ -108,7 +108,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
                 {packetRow.source}
               </span>
               {' '}
-              <span className="italic text-green-600 dark:text-green-400">
+              <span className="italic text-emerald-600 dark:text-emerald-400">
                 {packetRow.name}[{packetRow.opcode}]
               </span>
             </div>
@@ -127,20 +127,20 @@ export const HexViewer: React.FC<HexViewerProps> = ({
           <div
             key={`data-${packetIndex}-${packetRow.startOffset}`}
             className={cn(
-              "flex border-b border-slate-200 dark:border-slate-700 py-0.5",
-              isHighlighted && "bg-blue-200 dark:bg-blue-900"
+              "flex border-b border-border/50 py-0.5",
+              isHighlighted && "bg-primary/20"
             )}
           >
             <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? lineRef : undefined}
-              className="w-24 px-2 text-xs text-slate-500 dark:text-slate-400 select-none"
+              className="w-24 px-2 text-xs text-muted-foreground select-none"
               onScroll={handleScroll('line')}
             >
               {packetRow.lineNumber}
             </div>
             <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? hexRef : undefined}
-              className="flex-1 px-2 font-mono text-sm select-text"
+              className="flex-1 px-2 font-mono text-sm select-text text-foreground"
               onScroll={handleScroll('hex')}
               onMouseUp={handleHexSelection}
               onContextMenu={handleContextMenu}
@@ -149,7 +149,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
             </div>
             <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? asciiRef : undefined}
-              className="w-64 px-2 font-mono text-sm text-slate-400 dark:text-slate-500 select-none"
+              className="w-64 px-2 font-mono text-sm text-muted-foreground select-none"
               onScroll={handleScroll('ascii')}
             >
               {packetRow.ascii}
@@ -171,20 +171,20 @@ export const HexViewer: React.FC<HexViewerProps> = ({
     <div className={cn("h-full flex flex-col relative", className)} style={style}>
       <div className="flex-1 overflow-auto">
         <div className="flex">
-          <div className="w-24 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
-            <div className="sticky top-0 bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-semibold border-b">
+          <div className="w-24 border-r border-border bg-muted/30">
+            <div className="sticky top-0 bg-muted/50 px-2 py-1 text-xs font-semibold border-b border-border">
               Offset
             </div>
             {renderPacketRows()}
           </div>
-          <div className="flex-1 border-r border-slate-200 dark:border-slate-700">
-            <div className="sticky top-0 bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-semibold border-b">
+          <div className="flex-1 border-r border-border">
+            <div className="sticky top-0 bg-muted/50 px-2 py-1 text-xs font-semibold border-b border-border">
               Hex
             </div>
             {renderPacketRows()}
           </div>
-          <div className="w-64 bg-slate-50 dark:bg-slate-900/50">
-            <div className="sticky top-0 bg-slate-100 dark:bg-slate-800 px-2 py-1 text-xs font-semibold border-b">
+          <div className="w-64 bg-muted/30">
+            <div className="sticky top-0 bg-muted/50 px-2 py-1 text-xs font-semibold border-b border-border">
               ASCII
             </div>
             {renderPacketRows()}
@@ -194,11 +194,11 @@ export const HexViewer: React.FC<HexViewerProps> = ({
 
       {contextMenu && (
         <div
-          className="fixed z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-lg py-1"
+          className="fixed z-50 bg-popover border border-border rounded shadow-lg py-1"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+            className="w-full px-4 py-2 text-left text-sm hover:bg-muted text-popover-foreground"
             onClick={() => {
               if (onDefineVariable) {
                 onDefineVariable(contextMenu.hex, contextMenu.packetName);

@@ -166,6 +166,80 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         }
     }
 
+    // Handle table component
+    if (type === 'table') {
+        const data = props.dataSource ? context[props.dataSource] : (props.data || []);
+        const columns = props.columns || [];
+
+        return (
+            <div className={cn('overflow-x-auto', resolvedClassName)} style={resolvedStyle}>
+                <table className="min-w-full border-collapse border border-slate-300 dark:border-slate-700">
+                    <thead>
+                        <tr className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                            {columns.map((col: any) => (
+                                <th key={col.field || col.key} className={cn('border p-2 text-left', col.className)}>
+                                    {col.label || col.field}
+                                </th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {Array.isArray(data) && data.map((row: any, idx: number) => (
+                            <tr
+                                key={idx}
+                                className={props.rowClassName}
+                                onClick={() => {
+                                    if (props.onRowClick && onAction) {
+                                        onAction(props.onRowClick, { ...row, index: idx });
+                                    }
+                                }}
+                            >
+                                {columns.map((col: any) => (
+                                    <td key={col.field || col.key} className={cn('border p-2', col.className)}>
+                                        {row[col.field] || ''}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        );
+    }
+
+    // Handle hex viewer component
+    if (type === 'hex-viewer' || type === 'HexViewer') {
+        const packets = props.dataSource ? context[props.dataSource] : (props.packets || context.packets || []);
+        const selectedHex = context.selectedHex || props.selectedHex || '';
+        const selectedByteCount = context.selectedByteCount || props.selectedByteCount || 0;
+        const matchCount = context.matchCount || props.matchCount || 0;
+        const matches = context.matches || props.matches || [];
+        const groupLen = props.groupLen || context.groupLen || 16;
+
+        return (
+            <HexViewer
+                packets={packets}
+                selectedHex={selectedHex}
+                selectedByteCount={selectedByteCount}
+                matchCount={matchCount}
+                matches={matches}
+                groupLen={groupLen}
+                onSelectHex={(hex, startOffset, endOffset) => {
+                    if (onAction && props.onSelectHex) {
+                        onAction(props.onSelectHex, { hex, startOffset, endOffset });
+                    }
+                }}
+                onDefineVariable={(hex, packetName) => {
+                    if (onAction && props.onDefineVariable) {
+                        onAction(props.onDefineVariable, { hex, packetName });
+                    }
+                }}
+                className={resolvedClassName}
+                style={resolvedStyle}
+            />
+        );
+    }
+
     // Try to get component from UI library first
     const LibraryComponent = getComponentFromLibrary(type);
 
@@ -281,38 +355,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         );
     }
 
-    // Handle hex viewer component
-    if (type === 'hex-viewer' || type === 'HexViewer') {
-        const packets = props.dataSource ? context[props.dataSource] : (props.packets || context.packets || []);
-        const selectedHex = context.selectedHex || props.selectedHex || '';
-        const selectedByteCount = context.selectedByteCount || props.selectedByteCount || 0;
-        const matchCount = context.matchCount || props.matchCount || 0;
-        const matches = context.matches || props.matches || [];
-        const groupLen = props.groupLen || context.groupLen || 16;
 
-        return (
-            <HexViewer
-                packets={packets}
-                selectedHex={selectedHex}
-                selectedByteCount={selectedByteCount}
-                matchCount={matchCount}
-                matches={matches}
-                groupLen={groupLen}
-                onSelectHex={(hex, startOffset, endOffset) => {
-                    if (onAction && props.onSelectHex) {
-                        onAction(props.onSelectHex, { hex, startOffset, endOffset });
-                    }
-                }}
-                onDefineVariable={(hex, packetName) => {
-                    if (onAction && props.onDefineVariable) {
-                        onAction(props.onDefineVariable, { hex, packetName });
-                    }
-                }}
-                className={resolvedClassName}
-                style={resolvedStyle}
-            />
-        );
-    }
 
     // Try extension registry
     const registered = getComponent(type);

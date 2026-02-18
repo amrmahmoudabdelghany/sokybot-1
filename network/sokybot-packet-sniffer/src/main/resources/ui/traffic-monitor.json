@@ -1,6 +1,14 @@
 {
   "type": "Card",
   "className": "w-full h-full",
+  "props": {
+    "streamId": "packets",
+    "stateKey": "trafficPackets",
+    "streamMode": "append",
+    "streamParams": {
+      "includeHistory": true
+    }
+  },
   "children": [
     {
       "type": "CardHeader",
@@ -36,13 +44,13 @@
                   "type": "Button",
                   "variant": "outline",
                   "size": "sm",
-                  "icon": "${monitorEnabled ? 'Pause' : 'Play'}",
+                  "icon": "${monitorIcon}",
                   "iconProps": {
                     "size": 16
                   },
                   "props": {
                     "onClick": "togglePause",
-                    "children": "${monitorEnabled ? 'Pause' : 'Resume'}"
+                    "children": "${monitorActionText}"
                   }
                 },
                 {
@@ -117,7 +125,7 @@
                   }
                 ],
                 "onRowClick": "selectPacket",
-                "rowClassName": "hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                "rowClassName": "hover:bg-muted/50 cursor-pointer"
               }
             }
           ]

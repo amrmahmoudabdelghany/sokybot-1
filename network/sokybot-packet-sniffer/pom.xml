@@ -32,19 +32,22 @@
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
 			<version>2.15.2</version> 
+			<scope>provided</scope>
 		</dependency>
 		
 		<dependency>
 			<groupId>org.sokybot</groupId>
 			<artifactId>sokybot-proxy</artifactId>
 			<version>${project.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		
-		<!-- Reactor for streams -->
+		<!-- Reactor for streams - provided by http-server -->
 		<dependency>
 			<groupId>io.projectreactor</groupId>
 			<artifactId>reactor-core</artifactId>
 			<version>3.5.11</version>
+			<scope>provided</scope>
 		</dependency>
 		
 		<!-- OSGi -->
@@ -84,12 +87,15 @@
 						<Bundle-Version>${project.version}</Bundle-Version>
 						<Bundle-Description>${project.description}</Bundle-Description>
 						<Import-Package>
-							!javax.servlet*,
-							!javax.swing.*,
-							!java.awt.*,
-							!reactor.*,
-							!org.reactivestreams.*,
-							*;resolution:=optional
+							org.sokybot.webview.api,
+							org.sokybot.webview.api.util,
+							org.sokybot.network,
+							org.sokybot.proxy,
+							org.sokybot.runtime,
+							reactor.core.*,
+							reactor.util.*,
+							com.fasterxml.jackson.*,
+							*
 						</Import-Package>
 						<Export-Package>org.sokybot.packetsniffer</Export-Package>
 					</instructions>

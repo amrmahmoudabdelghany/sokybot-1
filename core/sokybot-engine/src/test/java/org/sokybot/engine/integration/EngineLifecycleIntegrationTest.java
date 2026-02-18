@@ -9,6 +9,7 @@ import org.sokybot.engine.core.EngineCore;
 import org.sokybot.engine.test.EngineTestBase;
 import org.sokybot.engine.test.util.MockActuator;
 import org.sokybot.engine.test.util.OSGiTestUtils;
+import org.osgi.framework.BundleContext;
 import org.sokybot.engine.test.util.WorkflowTestBuilders;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,7 +47,8 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                 TEST_MACHINE_NAME,
                 mockProxyConnection,
                 mockGameModel,
-                java.util.Collections.singletonList(actuator));
+                java.util.Collections.singletonList(actuator),
+                mockBundleContext);
 
         // Verify initial state
         assertEquals(EngineState.STOPPED, engine.getEngineState());
@@ -86,7 +88,8 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                 TEST_MACHINE_NAME,
                 mockProxyConnection,
                 mockGameModel,
-                java.util.Collections.singletonList(actuator));
+                java.util.Collections.singletonList(actuator),
+                mockBundleContext);
         engine.start();
 
         assertTrue(engine.isRunning());
@@ -157,7 +160,8 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                 "test-machine-2",
                 mockProxyConnection,
                 mockGameModel,
-                java.util.Collections.singletonList(actuator2));
+                java.util.Collections.singletonList(actuator2),
+                mockBundle2);
 
         // Both engines should be independent
         engine1.start();

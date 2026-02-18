@@ -8,7 +8,7 @@
       "children": [
         {
           "type": "h3",
-          "className": "text-sm font-bold text-slate-700 dark:text-slate-300",
+          "className": "text-sm font-bold text-foreground",
           "props": {
             "children": "Event Log"
           }
@@ -19,7 +19,7 @@
           "children": [
             {
               "type": "span",
-              "className": "text-xs text-slate-500",
+              "className": "text-xs text-muted-foreground",
               "props": {
                 "children": "Last ${maxEvents} events"
               }
@@ -39,11 +39,11 @@
     },
     {
       "type": "div",
-      "className": "bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 p-2 rounded h-96 overflow-y-auto font-mono text-xs shadow-inner",
+      "className": "bg-muted/30 border border-border text-foreground p-2 rounded h-96 overflow-y-auto font-mono text-xs shadow-inner",
       "children": [
         {
           "type": "div",
-          "className": "text-slate-400 dark:text-gray-600 text-center italic mt-10",
+          "className": "text-muted-foreground text-center italic mt-10",
           "props": {
             "hidden": "${events.length > 0}",
             "children": "Waiting for events..."
@@ -55,7 +55,7 @@
             "dataSource": "events",
             "renderItem": {
               "type": "div",
-              "className": "border-b border-slate-100 dark:border-slate-800 py-1 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors",
+              "className": "border-b border-border py-1 hover:bg-muted/50 transition-colors",
               "children": [
                 {
                   "type": "div",
@@ -63,14 +63,14 @@
                   "children": [
                     {
                       "type": "span",
-                      "className": "text-slate-500 dark:text-gray-600",
+                      "className": "text-muted-foreground",
                       "props": {
                         "children": "[${item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : 'N/A'}]"
                       }
                     },
                     {
                       "type": "span",
-                      "className": "px-1 py-0 rounded bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-green-600 dark:text-green-500",
+                      "className": "px-1 py-0 rounded bg-secondary border border-border text-green-500",
                       "props": {
                         "children": "${item.eventType || 'Unknown'}"
                       }
@@ -79,7 +79,7 @@
                 },
                 {
                   "type": "div",
-                  "className": "pl-0 text-slate-600 dark:text-gray-400 break-all",
+                  "className": "pl-0 text-foreground break-all",
                   "props": {
                     "children": "${item.event || JSON.stringify(item)}"
                   }

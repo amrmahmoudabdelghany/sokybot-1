@@ -1,5 +1,7 @@
 package org.sokybot.engine.core;
 
+import org.osgi.framework.BundleContext;
+
 import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.IActuatorContext;
 import org.sokybot.engine.api.extension.BundleException;
@@ -28,6 +30,7 @@ public class ActuatorRegistry {
     private final IWorkflowContext workflowContext;
     private final IEngine engine;
     private final List<IActuator> availableActuators;
+    private final BundleContext bundleContext;
 
     private final Map<String, IActuator> actuators = new ConcurrentHashMap<>();
     private final List<IActuatorContext> actuatorContexts = new ArrayList<>();
@@ -35,11 +38,13 @@ public class ActuatorRegistry {
     public ActuatorRegistry(IWorkflowRegistry workflowRegistry,
             IWorkflowContext workflowContext,
             IEngine engine,
-            List<IActuator> availableActuators) {
+            List<IActuator> availableActuators,
+            BundleContext bundleContext) {
         this.workflowRegistry = workflowRegistry;
         this.workflowContext = workflowContext;
         this.engine = engine;
         this.availableActuators = availableActuators != null ? availableActuators : new ArrayList<>();
+        this.bundleContext = bundleContext;
     }
 
     /**
@@ -91,7 +96,8 @@ public class ActuatorRegistry {
         ActuatorContextImpl context = new ActuatorContextImpl(
                 workflowRegistry, workflowContext.getGameModel(),
                 engine.getDispatcher(),
-                engine.getGroupName(), engine.getMachineName());
+                engine.getGroupName(), engine.getMachineName(),
+                bundleContext);
 
         actuatorContexts.add(context);
 

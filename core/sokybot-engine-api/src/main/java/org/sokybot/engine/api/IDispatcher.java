@@ -5,7 +5,7 @@ package org.sokybot.engine.api;
  * Wraps IProxyConnection to provide a framework-agnostic interface.
  */
 public interface IDispatcher {
-    
+
     /**
      * Sends a packet to the game server.
      * 
@@ -13,7 +13,7 @@ public interface IDispatcher {
      * @throws DispatchException if packet cannot be sent
      */
     void sendToServer(Object packet);
-    
+
     /**
      * Sends a packet to the game client.
      * 
@@ -21,25 +21,39 @@ public interface IDispatcher {
      * @throws DispatchException if packet cannot be sent
      */
     void sendToClient(Object packet);
-    
+
     /**
      * Checks if the proxy is connected to both client and server.
      * 
      * @return true if both connections are active
      */
     boolean isConnected();
-    
+
     /**
      * Checks if the client is connected to the local proxy server.
      * 
      * @return true if client is connected
      */
     boolean isClientConnected();
-    
+
     /**
      * Checks if the proxy is connected to the game server.
      * 
      * @return true if server connection is active
      */
     boolean isServerConnected();
+
+    /**
+     * Connects to the game server.
+     * 
+     * @param host The hostname or IP
+     * @param port The port
+     * @throws DispatchException if connection fails
+     */
+    void connect(String host, int port);
+
+    /**
+     * Disconnects from the game server.
+     */
+    void disconnect();
 }

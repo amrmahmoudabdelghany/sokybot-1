@@ -5,7 +5,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@sokybot/frontend-shared';
 import { Label } from '@sokybot/frontend-shared';
 import { Progress } from '@/components/ui/progress';
+import { Slider } from '@/components/ui/slider';
+import { Checkbox } from '@/components/ui/checkbox';
 import * as LucideIcons from 'lucide-react';
+
+
+
 
 /**
  * Component Library - Maps component names to React components
@@ -27,6 +32,8 @@ export const UIComponentLibrary: Record<string, React.ComponentType<any>> = {
     'Input': Input,
     'Label': Label,
     'Progress': Progress,
+    'Slider': Slider,
+    'Checkbox': Checkbox,
 
     // HTML elements (as string tags)
     'div': 'div' as any,

@@ -49,7 +49,8 @@ class ActuatorRegistryTest {
                 mockBundleContext = OSGiTestUtils.createMockBundleContext();
 
                 registry = new ActuatorRegistry(
-                                workflowRegistry, workflowContext, engineCore, Collections.emptyList());
+                                workflowRegistry, workflowContext, engineCore, Collections.emptyList(),
+                                mockBundleContext);
         }
 
         @Test
@@ -78,7 +79,8 @@ class ActuatorRegistryTest {
 
                 // Re-create registry with actuators
                 registry = new ActuatorRegistry(
-                                workflowRegistry, workflowContext, engineCore, Arrays.asList(actuator1, actuator2));
+                                workflowRegistry, workflowContext, engineCore, Arrays.asList(actuator1, actuator2),
+                                mockBundleContext);
 
                 // Initialize actuators
                 registry.initializeActuators();
@@ -102,7 +104,7 @@ class ActuatorRegistryTest {
                 // Re-create registry with failing actuator
                 registry = new ActuatorRegistry(
                                 workflowRegistry, workflowContext, engineCore,
-                                Collections.singletonList(failingActuator));
+                                Collections.singletonList(failingActuator), mockBundleContext);
 
                 // Should not throw exception, but log error
                 assertDoesNotThrow(() -> {
@@ -140,7 +142,8 @@ class ActuatorRegistryTest {
 
                 // Re-create registry with actuators
                 registry = new ActuatorRegistry(
-                                workflowRegistry, workflowContext, engineCore, Arrays.asList(actuator1, actuator2));
+                                workflowRegistry, workflowContext, engineCore, Arrays.asList(actuator1, actuator2),
+                                mockBundleContext);
 
                 registry.initializeActuators();
 
@@ -164,7 +167,7 @@ class ActuatorRegistryTest {
         @DisplayName("Should handle null actuator list gracefully")
         void testNullActuatorList() {
                 ActuatorRegistry registryWithNullList = new ActuatorRegistry(
-                                workflowRegistry, workflowContext, engineCore, null);
+                                workflowRegistry, workflowContext, engineCore, null, mockBundleContext);
 
                 // Should not throw exception
                 assertDoesNotThrow(() -> {

@@ -63,6 +63,7 @@
         <!-- UI (Webview-based) -->
         <bundle>mvn:org.sokybot/sokybot-webview/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-machine-pages/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-packet-sniffer/${project.version}</bundle>
         
     </feature>
 
@@ -86,7 +87,6 @@
         <feature version="${karaf.version}">ssh</feature>
         <!-- Development bundles -->
         <bundle>mvn:org.sokybot/sokybot-dev-tools/${project.version}</bundle>
-        <bundle>mvn:org.sokybot/sokybot-packet-sniffer/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-bundle-manager/${project.version}</bundle>
     </feature>
 

@@ -262,26 +262,55 @@ cmd_watch() {
             fi
 
             JAR_NAME=$(basename "$FILE")
-            BUNDLE_NAME="${JAR_NAME%.jar}"
-            # Extract version-less name if possible (e.g. sokybot-commons-1.0.0 -> sokybot-commons)
-            # This is a bit naive but works for standard Maven artifact naming
-            BASE_BUNDLE_NAME=$(echo "$BUNDLE_NAME" | sed -r 's/-[0-9]+(\.[0-9]+)*(-SNAPSHOT)?$//')
+            # Convert JAR name to symbolic name (rough)
+            # sokybot-commons-1.0-SNAPSHOT.jar -> org.sokybot.sokybot-commons
+            SYMBOLIC_NAME="org.sokybot.${JAR_NAME%-1.0-SNAPSHOT.jar}"
+            BASE_BUNDLE_NAME=$(echo "$JAR_NAME" | sed -r 's/-[0-9]+(\.[0-9]+)*(-SNAPSHOT)?\.jar$//')
             
-            log_info "Detected change in: $JAR_NAME"
+            log_info "Detected change in: $JAR_NAME ($BASE_BUNDLE_NAME)"
             
             # Find bundle ID in Karaf
-            # We use 'bundle:list -s' to show symbolic names
-            BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $BASE_BUNDLE_NAME" | awk '{print $1}' | head -n 1)
+            BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $BASE_BUNDLE_NAME" 2>/dev/null | awk '{print $1}' | head -n 1)
 
             if [ -n "$BUNDLE_ID" ]; then
                 log_info "Updating bundle $BUNDLE_ID ($BASE_BUNDLE_NAME)..."
-                "$KARAF_BIN/client" "bundle:update $BUNDLE_ID file:$FILE"
+                "$KARAF_BIN/client" "bundle:update $BUNDLE_ID"
+                "$KARAF_BIN/client" "bundle:refresh $BUNDLE_ID"
                 log_success "Hot-reloaded $BASE_BUNDLE_NAME (ID: $BUNDLE_ID)"
             else
-                log_warn "Could not find an active bundle for '$BASE_BUNDLE_NAME' to update."
+                log_warn "Bundle '$BASE_BUNDLE_NAME' not active in Karaf. Use 'soky deploy' for first install."
             fi
         fi
     done
+}
+
+cmd_refresh() {
+    check_docker_transparency "$@"
+    local MODULE_NAME=$1
+    if [ -z "$MODULE_NAME" ]; then
+        log_error "Usage: soky refresh <module-name>"
+        exit 1
+    fi
+
+    # Extract base name if path provided
+    MODULE_NAME=$(basename "$MODULE_NAME")
+
+    log_info "Refreshing module in Karaf: $MODULE_NAME"
+    if ! is_process_running "org.apache.karaf.main.Main"; then
+        log_error "Backend is not running!"
+        exit 1
+    fi
+
+    BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $MODULE_NAME" 2>/dev/null | awk '{print $1}' | head -1)
+    if [ -n "$BUNDLE_ID" ]; then
+        log_info "Updating bundle ID: $BUNDLE_ID"
+        "$KARAF_BIN/client" "bundle:update $BUNDLE_ID"
+        "$KARAF_BIN/client" "bundle:refresh $BUNDLE_ID"
+        log_success "Hot-reload successful."
+    else
+        log_warn "Bundle '$MODULE_NAME' not found. Is it installed?"
+        log_info "Try: soky deploy $MODULE_NAME"
+    fi
 }
 
 # =============================================================================
@@ -533,22 +562,7 @@ cmd_deploy() {
     
     # Step 2: Deploy to Karaf
     if [ "$NO_RESTART" = true ]; then
-        # Try hot reload via Karaf client
-        if is_process_running "org.apache.karaf.main.Main"; then
-            log_info "Attempting hot reload via Karaf..."
-            # Get bundle ID for module
-            BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $MODULE_NAME" 2>/dev/null | awk '{print $1}' | head -1)
-            if [ -n "$BUNDLE_ID" ]; then
-                log_info "Refreshing bundle ID: $BUNDLE_ID"
-                "$KARAF_BIN/client" "bundle:update $BUNDLE_ID"
-                "$KARAF_BIN/client" "bundle:refresh $BUNDLE_ID"
-                log_success "Bundle refreshed!"
-            else
-                log_warn "Bundle not found in Karaf. You may need to restart: soky backend restart --fresh"
-            fi
-        else
-            log_warn "Backend not running. Start with: soky backend start"
-        fi
+        cmd_refresh "$MODULE_NAME"
     else
         # Full restart with cache clear
         if is_process_running "org.apache.karaf.main.Main"; then
@@ -828,6 +842,10 @@ case "$1" in
     deploy|d)
         shift
         cmd_deploy "$@"
+        ;;
+    refresh|ref|r)
+        shift
+        cmd_refresh "$@"
         ;;
     test|t)
         shift

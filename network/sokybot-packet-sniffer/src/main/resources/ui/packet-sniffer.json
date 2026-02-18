@@ -6,12 +6,12 @@
   "children": [
     {
       "type": "div",
-      "className": "border-b border-slate-200 dark:border-slate-700 flex space-x-1",
+      "className": "border-b border-border flex space-x-1",
       "children": [
         {
           "type": "Button",
           "variant": "ghost",
-          "className": "rounded-t-lg data-[active=true]:bg-white data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r",
+          "className": "rounded-t-lg data-[active=true]:bg-muted data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r data-[active=true]:border-b-0 border-transparent",
           "props": {
             "onClick": "switchTab",
             "actionData": {
@@ -24,7 +24,7 @@
         {
           "type": "Button",
           "variant": "ghost",
-          "className": "rounded-t-lg data-[active=true]:bg-white data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r",
+          "className": "rounded-t-lg data-[active=true]:bg-muted data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r data-[active=true]:border-b-0 border-transparent",
           "props": {
             "onClick": "switchTab",
             "actionData": {

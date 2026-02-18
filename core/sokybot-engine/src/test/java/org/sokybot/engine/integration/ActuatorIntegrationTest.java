@@ -12,6 +12,7 @@ import org.sokybot.engine.test.util.MockActuator;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.osgi.framework.BundleContext;
 import org.sokybot.engine.test.util.WorkflowTestBuilders;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,215 +23,220 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("Actuator Integration Tests")
 class ActuatorIntegrationTest extends EngineTestBase {
 
-    private EngineCore engine;
+        private EngineCore engine;
 
-    @BeforeEach
-    @Override
-    public void setUp() {
-        super.setUp();
-    }
+        @BeforeEach
+        @Override
+        public void setUp() {
+                super.setUp();
+        }
 
-    @Test
-    @DisplayName("Should discover and initialize actuators via OSGi")
-    void testActuatorDiscoveryAndInitialization() throws BundleException {
-        // Register actuators as OSGi services
-        MockActuator actuator1 = new MockActuator("actuator1")
-                .withCycle(WorkflowTestBuilders.cycle("cycle1")
-                        .priority(100)
-                        .entryState("STATE1")
-                        .state("STATE1",
-                                WorkflowTestBuilders.guard().returns(true).build(),
-                                WorkflowTestBuilders.action().build(),
-                                null)
-                        .build());
+        @Test
+        @DisplayName("Should discover and initialize actuators via OSGi")
+        void testActuatorDiscoveryAndInitialization() throws BundleException {
+                // Register actuators as OSGi services
+                MockActuator actuator1 = new MockActuator("actuator1")
+                                .withCycle(WorkflowTestBuilders.cycle("cycle1")
+                                                .priority(100)
+                                                .entryState("STATE1")
+                                                .state("STATE1",
+                                                                WorkflowTestBuilders.guard().returns(true).build(),
+                                                                WorkflowTestBuilders.action().build(),
+                                                                null)
+                                                .build());
 
-        MockActuator actuator2 = new MockActuator("actuator2")
-                .withCycle(WorkflowTestBuilders.cycle("cycle2")
-                        .priority(200)
-                        .entryState("STATE1")
-                        .state("STATE1",
-                                WorkflowTestBuilders.guard().returns(true).build(),
-                                WorkflowTestBuilders.action().build(),
-                                null)
-                        .build());
+                MockActuator actuator2 = new MockActuator("actuator2")
+                                .withCycle(WorkflowTestBuilders.cycle("cycle2")
+                                                .priority(200)
+                                                .entryState("STATE1")
+                                                .state("STATE1",
+                                                                WorkflowTestBuilders.guard().returns(true).build(),
+                                                                WorkflowTestBuilders.action().build(),
+                                                                null)
+                                                .build());
 
-        // Create and start engine with injected actuators
-        engine = new EngineCore(
-                TEST_MACHINE_ID,
-                TEST_GROUP_NAME,
-                TEST_MACHINE_NAME,
-                mockProxyConnection,
-                mockGameModel,
-                Arrays.asList(actuator1, actuator2));
-        engine.start();
+                // Create and start engine with injected actuators
+                engine = new EngineCore(
+                                TEST_MACHINE_ID,
+                                TEST_GROUP_NAME,
+                                TEST_MACHINE_NAME,
+                                mockProxyConnection,
+                                mockGameModel,
+                                Arrays.asList(actuator1, actuator2),
+                                mockBundleContext);
+                engine.start();
 
-        // Verify actuators were initialized
-        assertTrue(actuator1.isInitialized());
-        assertTrue(actuator2.isInitialized());
+                // Verify actuators were initialized
+                assertTrue(actuator1.isInitialized());
+                assertTrue(actuator2.isInitialized());
 
-        // Verify cycles were registered
-        assertNotNull(engine.getWorkflowRegistry().getCycle("cycle1"));
-        assertNotNull(engine.getWorkflowRegistry().getCycle("cycle2"));
+                // Verify cycles were registered
+                assertNotNull(engine.getWorkflowRegistry().getCycle("cycle1"));
+                assertNotNull(engine.getWorkflowRegistry().getCycle("cycle2"));
 
-        engine.stop();
-    }
+                engine.stop();
+        }
 
-    @Test
-    @DisplayName("Should handle actuator initialization failure gracefully")
-    void testActuatorInitializationFailure() {
-        BundleException initException = new BundleException("Initialization failed");
-        MockActuator failingActuator = new MockActuator("failing-actuator")
-                .withInitializationException(initException);
+        @Test
+        @DisplayName("Should handle actuator initialization failure gracefully")
+        void testActuatorInitializationFailure() {
+                BundleException initException = new BundleException("Initialization failed");
+                MockActuator failingActuator = new MockActuator("failing-actuator")
+                                .withInitializationException(initException);
 
-        MockActuator workingActuator = new MockActuator("working-actuator")
-                .withCycle(WorkflowTestBuilders.cycle("working-cycle")
-                        .priority(100)
-                        .entryState("STATE1")
-                        .state("STATE1",
-                                WorkflowTestBuilders.guard().returns(true).build(),
-                                WorkflowTestBuilders.action().build(),
-                                null)
-                        .build());
+                MockActuator workingActuator = new MockActuator("working-actuator")
+                                .withCycle(WorkflowTestBuilders.cycle("working-cycle")
+                                                .priority(100)
+                                                .entryState("STATE1")
+                                                .state("STATE1",
+                                                                WorkflowTestBuilders.guard().returns(true).build(),
+                                                                WorkflowTestBuilders.action().build(),
+                                                                null)
+                                                .build());
 
-        // Engine should still start even if one actuator fails
-        engine = new EngineCore(
-                TEST_MACHINE_ID,
-                TEST_GROUP_NAME,
-                TEST_MACHINE_NAME,
-                mockProxyConnection,
-                mockGameModel,
-                Arrays.asList(failingActuator, workingActuator));
+                // Engine should still start even if one actuator fails
+                engine = new EngineCore(
+                                TEST_MACHINE_ID,
+                                TEST_GROUP_NAME,
+                                TEST_MACHINE_NAME,
+                                mockProxyConnection,
+                                mockGameModel,
+                                Arrays.asList(failingActuator, workingActuator),
+                                mockBundleContext);
 
-        // Start should not throw exception (error is logged)
-        assertDoesNotThrow(() -> {
-            engine.start();
-        });
+                // Start should not throw exception (error is logged)
+                assertDoesNotThrow(() -> {
+                        engine.start();
+                });
 
-        // Working actuator should still be initialized
-        assertTrue(workingActuator.isInitialized());
+                // Working actuator should still be initialized
+                assertTrue(workingActuator.isInitialized());
 
-        // Failing actuator should not be initialized
-        assertFalse(failingActuator.isInitialized());
+                // Failing actuator should not be initialized
+                assertFalse(failingActuator.isInitialized());
 
-        engine.stop();
-    }
+                engine.stop();
+        }
 
-    @Test
-    @DisplayName("Should shutdown all actuators on engine stop")
-    void testActuatorShutdown() throws BundleException {
-        MockActuator actuator1 = new MockActuator("actuator1");
-        MockActuator actuator2 = new MockActuator("actuator2");
+        @Test
+        @DisplayName("Should shutdown all actuators on engine stop")
+        void testActuatorShutdown() throws BundleException {
+                MockActuator actuator1 = new MockActuator("actuator1");
+                MockActuator actuator2 = new MockActuator("actuator2");
 
-        engine = new EngineCore(
-                TEST_MACHINE_ID,
-                TEST_GROUP_NAME,
-                TEST_MACHINE_NAME,
-                mockProxyConnection,
-                mockGameModel,
-                Arrays.asList(actuator1, actuator2));
-        engine.start();
+                engine = new EngineCore(
+                                TEST_MACHINE_ID,
+                                TEST_GROUP_NAME,
+                                TEST_MACHINE_NAME,
+                                mockProxyConnection,
+                                mockGameModel,
+                                Arrays.asList(actuator1, actuator2),
+                                mockBundleContext);
+                engine.start();
 
-        assertTrue(actuator1.isInitialized());
-        assertTrue(actuator2.isInitialized());
+                assertTrue(actuator1.isInitialized());
+                assertTrue(actuator2.isInitialized());
 
-        // Stop engine
-        engine.stop();
+                // Stop engine
+                engine.stop();
 
-        // Verify actuators were shut down
-        assertTrue(actuator1.isShutdown());
-        assertTrue(actuator2.isShutdown());
-    }
+                // Verify actuators were shut down
+                assertTrue(actuator1.isShutdown());
+                assertTrue(actuator2.isShutdown());
+        }
 
-    @Test
-    @DisplayName("Should register multiple actuators with different priorities")
-    void testMultipleActuatorsWithPriorities() throws BundleException {
-        MockActuator actuator1 = new MockActuator("actuator1")
-                .withCycle(WorkflowTestBuilders.cycle("cycle1")
-                        .priority(100)
-                        .entryState("STATE1")
-                        .state("STATE1",
-                                WorkflowTestBuilders.guard().returns(true).build(),
-                                WorkflowTestBuilders.action().build(),
-                                null)
-                        .build());
+        @Test
+        @DisplayName("Should register multiple actuators with different priorities")
+        void testMultipleActuatorsWithPriorities() throws BundleException {
+                MockActuator actuator1 = new MockActuator("actuator1")
+                                .withCycle(WorkflowTestBuilders.cycle("cycle1")
+                                                .priority(100)
+                                                .entryState("STATE1")
+                                                .state("STATE1",
+                                                                WorkflowTestBuilders.guard().returns(true).build(),
+                                                                WorkflowTestBuilders.action().build(),
+                                                                null)
+                                                .build());
 
-        MockActuator actuator2 = new MockActuator("actuator2")
-                .withCycle(WorkflowTestBuilders.cycle("cycle2")
-                        .priority(200)
-                        .entryState("STATE1")
-                        .state("STATE1",
-                                WorkflowTestBuilders.guard().returns(true).build(),
-                                WorkflowTestBuilders.action().build(),
-                                null)
-                        .build());
+                MockActuator actuator2 = new MockActuator("actuator2")
+                                .withCycle(WorkflowTestBuilders.cycle("cycle2")
+                                                .priority(200)
+                                                .entryState("STATE1")
+                                                .state("STATE1",
+                                                                WorkflowTestBuilders.guard().returns(true).build(),
+                                                                WorkflowTestBuilders.action().build(),
+                                                                null)
+                                                .build());
 
-        MockActuator actuator3 = new MockActuator("actuator3")
-                .withCycle(WorkflowTestBuilders.cycle("cycle3")
-                        .priority(50)
-                        .entryState("STATE1")
-                        .state("STATE1",
-                                WorkflowTestBuilders.guard().returns(true).build(),
-                                WorkflowTestBuilders.action().build(),
-                                null)
-                        .build());
+                MockActuator actuator3 = new MockActuator("actuator3")
+                                .withCycle(WorkflowTestBuilders.cycle("cycle3")
+                                                .priority(50)
+                                                .entryState("STATE1")
+                                                .state("STATE1",
+                                                                WorkflowTestBuilders.guard().returns(true).build(),
+                                                                WorkflowTestBuilders.action().build(),
+                                                                null)
+                                                .build());
 
-        engine = new EngineCore(
-                TEST_MACHINE_ID,
-                TEST_GROUP_NAME,
-                TEST_MACHINE_NAME,
-                mockProxyConnection,
-                mockGameModel,
-                Arrays.asList(actuator1, actuator2, actuator3));
-        engine.start();
+                engine = new EngineCore(
+                                TEST_MACHINE_ID,
+                                TEST_GROUP_NAME,
+                                TEST_MACHINE_NAME,
+                                mockProxyConnection,
+                                mockGameModel,
+                                Arrays.asList(actuator1, actuator2, actuator3),
+                                mockBundleContext);
+                engine.start();
 
-        // Verify all actuators were initialized
-        assertTrue(actuator1.isInitialized());
-        assertTrue(actuator2.isInitialized());
-        assertTrue(actuator3.isInitialized());
+                // Verify all actuators were initialized
+                assertTrue(actuator1.isInitialized());
+                assertTrue(actuator2.isInitialized());
+                assertTrue(actuator3.isInitialized());
 
-        // Verify cycles are ordered by priority
-        var orderedComponents = engine.getWorkflowRegistry().getOrderedWorkflowComponents();
-        assertTrue(orderedComponents.indexOf("cycle3") < orderedComponents.indexOf("cycle1"));
-        assertTrue(orderedComponents.indexOf("cycle1") < orderedComponents.indexOf("cycle2"));
+                // Verify cycles are ordered by priority
+                var orderedComponents = engine.getWorkflowRegistry().getOrderedWorkflowComponents();
+                assertTrue(orderedComponents.indexOf("cycle3") < orderedComponents.indexOf("cycle1"));
+                assertTrue(orderedComponents.indexOf("cycle1") < orderedComponents.indexOf("cycle2"));
 
-        engine.stop();
-    }
+                engine.stop();
+        }
 
-    @Test
-    @DisplayName("Should handle actuator recovery after initialization failure")
-    void testActuatorRecovery() {
-        // This test demonstrates that one actuator failure doesn't prevent others from
-        // working
-        BundleException initException = new BundleException("Initialization failed");
-        MockActuator failingActuator = new MockActuator("failing-actuator")
-                .withInitializationException(initException);
+        @Test
+        @DisplayName("Should handle actuator recovery after initialization failure")
+        void testActuatorRecovery() {
+                // This test demonstrates that one actuator failure doesn't prevent others from
+                // working
+                BundleException initException = new BundleException("Initialization failed");
+                MockActuator failingActuator = new MockActuator("failing-actuator")
+                                .withInitializationException(initException);
 
-        MockActuator workingActuator = new MockActuator("working-actuator")
-                .withCycle(WorkflowTestBuilders.cycle("recovery-cycle")
-                        .priority(100)
-                        .entryState("STATE1")
-                        .state("STATE1",
-                                WorkflowTestBuilders.guard().returns(true).build(),
-                                WorkflowTestBuilders.action().build(),
-                                null)
-                        .build());
+                MockActuator workingActuator = new MockActuator("working-actuator")
+                                .withCycle(WorkflowTestBuilders.cycle("recovery-cycle")
+                                                .priority(100)
+                                                .entryState("STATE1")
+                                                .state("STATE1",
+                                                                WorkflowTestBuilders.guard().returns(true).build(),
+                                                                WorkflowTestBuilders.action().build(),
+                                                                null)
+                                                .build());
 
-        engine = new EngineCore(
-                TEST_MACHINE_ID,
-                TEST_GROUP_NAME,
-                TEST_MACHINE_NAME,
-                mockProxyConnection,
-                mockGameModel,
-                Arrays.asList(failingActuator, workingActuator));
+                engine = new EngineCore(
+                                TEST_MACHINE_ID,
+                                TEST_GROUP_NAME,
+                                TEST_MACHINE_NAME,
+                                mockProxyConnection,
+                                mockGameModel,
+                                Arrays.asList(failingActuator, workingActuator),
+                                mockBundleContext);
 
-        // Engine should start successfully
-        assertDoesNotThrow(() -> {
-            engine.start();
-        });
+                // Engine should start successfully
+                assertDoesNotThrow(() -> {
+                        engine.start();
+                });
 
-        // Working actuator's cycle should be available
-        assertNotNull(engine.getWorkflowRegistry().getCycle("recovery-cycle"));
+                // Working actuator's cycle should be available
+                assertNotNull(engine.getWorkflowRegistry().getCycle("recovery-cycle"));
 
-        engine.stop();
-    }
+                engine.stop();
+        }
 }

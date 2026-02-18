@@ -52,4 +52,13 @@ public interface IActuatorContext {
      * @return The machine name
      */
     String getMachineName();
+
+    /**
+     * Gets an OSGi service.
+     * 
+     * @param serviceClass The service interface class
+     * @return The service instance, or null if not found
+     * @param <T> The service type
+     */
+    <T> T getService(Class<T> serviceClass);
 }

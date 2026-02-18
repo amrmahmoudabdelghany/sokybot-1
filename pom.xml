@@ -103,6 +103,7 @@
         <module>ui</module>
         <module>actuators</module>
         <module>infra</module>
+        <module>legacy</module>
 
     </modules>
 	<packaging>pom</packaging>

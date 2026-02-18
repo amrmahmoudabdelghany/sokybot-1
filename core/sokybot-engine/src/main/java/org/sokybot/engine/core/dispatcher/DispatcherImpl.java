@@ -12,12 +12,12 @@ import org.slf4j.LoggerFactory;
  * Provides framework-agnostic packet sending interface.
  */
 public class DispatcherImpl implements IDispatcher {
-    
+
     private static final Logger log = LoggerFactory.getLogger(DispatcherImpl.class);
-    
+
     private final IProxyConnection proxyConnection;
     private final String machineId;
-    
+
     public DispatcherImpl(IProxyConnection proxyConnection, String machineId) {
         if (proxyConnection == null) {
             throw new IllegalArgumentException("Proxy connection cannot be null");
@@ -25,18 +25,18 @@ public class DispatcherImpl implements IDispatcher {
         this.proxyConnection = proxyConnection;
         this.machineId = machineId;
     }
-    
+
     @Override
     public void sendToServer(Object packet) {
         if (packet == null) {
             throw new IllegalArgumentException("Packet cannot be null");
         }
-        
+
         try {
             if (!proxyConnection.isServerConnected()) {
                 throw new DispatchException("Not connected to server for machine: " + machineId);
             }
-            
+
             if (packet instanceof MutablePacket) {
                 proxyConnection.sendToServer((MutablePacket) packet);
             } else if (packet instanceof byte[]) {
@@ -47,7 +47,7 @@ public class DispatcherImpl implements IDispatcher {
             } else {
                 throw new DispatchException("Unsupported packet type: " + packet.getClass().getName());
             }
-            
+
         } catch (Exception e) {
             if (e instanceof DispatchException) {
                 throw e;
@@ -55,18 +55,18 @@ public class DispatcherImpl implements IDispatcher {
             throw new DispatchException("Failed to send packet to server: " + e.getMessage(), e);
         }
     }
-    
+
     @Override
     public void sendToClient(Object packet) {
         if (packet == null) {
             throw new IllegalArgumentException("Packet cannot be null");
         }
-        
+
         try {
             if (!proxyConnection.isClientConnected()) {
                 throw new DispatchException("Not connected to client for machine: " + machineId);
             }
-            
+
             if (packet instanceof MutablePacket) {
                 proxyConnection.sendToClient((MutablePacket) packet);
             } else if (packet instanceof byte[]) {
@@ -75,7 +75,7 @@ public class DispatcherImpl implements IDispatcher {
             } else {
                 throw new DispatchException("Unsupported packet type: " + packet.getClass().getName());
             }
-            
+
         } catch (Exception e) {
             if (e instanceof DispatchException) {
                 throw e;
@@ -83,19 +83,39 @@ public class DispatcherImpl implements IDispatcher {
             throw new DispatchException("Failed to send packet to client: " + e.getMessage(), e);
         }
     }
-    
+
     @Override
     public boolean isConnected() {
         return proxyConnection.isConnected();
     }
-    
+
     @Override
     public boolean isClientConnected() {
         return proxyConnection.isClientConnected();
     }
-    
+
     @Override
     public boolean isServerConnected() {
         return proxyConnection.isServerConnected();
+    }
+
+    @Override
+    public void connect(String host, int port) {
+        try {
+            log.info("Dispatcher connecting to {}:{}", host, port);
+            proxyConnection.connectToServer(host, port);
+        } catch (Exception e) {
+            throw new DispatchException("Failed to connect to " + host + ":" + port, e);
+        }
+    }
+
+    @Override
+    public void disconnect() {
+        try {
+            log.info("Dispatcher disconnecting");
+            proxyConnection.disconnect();
+        } catch (Exception e) {
+            log.warn("Error during disconnect", e);
+        }
     }
 }

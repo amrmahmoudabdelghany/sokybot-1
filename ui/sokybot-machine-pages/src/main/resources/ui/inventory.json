@@ -8,7 +8,7 @@
       "children": [
         {
           "type": "h3",
-          "className": "text-slate-700 dark:text-slate-300 font-bold",
+          "className": "text-foreground font-bold",
           "props": {
             "children": "Inventory (${items.length} items)"
           }
@@ -31,18 +31,18 @@
         "dataSource": "items",
         "renderItem": {
           "type": "div",
-          "className": "bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-2 rounded flex flex-col items-center justify-center relative group hover:border-slate-400 dark:hover:border-slate-500 transition-colors h-20 w-20 shadow-sm dark:shadow-none",
+          "className": "bg-card border border-border p-2 rounded flex flex-col items-center justify-center relative group hover:border-primary transition-colors h-20 w-20 shadow-sm",
           "children": [
             {
               "type": "div",
-              "className": "w-8 h-8 rounded bg-slate-100 dark:bg-slate-900/50 flex items-center justify-center text-xs text-slate-500 mb-1",
+              "className": "w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs text-muted-foreground mb-1",
               "props": {
                 "children": "${item.refId ? item.refId.substring(0, 2) : '?'}"
               }
             },
             {
               "type": "div",
-              "className": "text-[10px] text-center text-slate-700 dark:text-slate-300 leading-tight w-full truncate px-1",
+              "className": "text-[10px] text-center text-foreground leading-tight w-full truncate px-1",
               "props": {
                 "title": "${item.name}",
                 "children": "${item.name}"
@@ -50,7 +50,7 @@
             },
             {
               "type": "div",
-              "className": "absolute top-1 right-1 text-[10px] bg-slate-100 dark:bg-slate-900/80 px-1 rounded text-yellow-600 dark:text-yellow-400 font-mono border border-slate-200 dark:border-transparent",
+              "className": "absolute top-1 right-1 text-[10px] bg-secondary px-1 rounded text-yellow-500 font-mono border border-border",
               "props": {
                 "hidden": "${item.count <= 1}",
                 "children": "${item.count}"
@@ -58,7 +58,7 @@
             },
             {
               "type": "div",
-              "className": "absolute top-1 left-1 text-[8px] text-slate-400 dark:text-slate-600",
+              "className": "absolute top-1 left-1 text-[8px] text-muted-foreground",
               "props": {
                 "children": "${item.slot}"
               }
@@ -69,7 +69,7 @@
     },
     {
       "type": "div",
-      "className": "text-center text-slate-600 py-8 italic",
+      "className": "text-center text-muted-foreground py-8 italic",
       "props": {
         "hidden": "${items.length > 0}",
         "children": "Inventory is empty"

@@ -9,6 +9,7 @@ import org.sokybot.engine.api.workflow.ICycleDefinition;
 import org.sokybot.engine.api.workflow.ICycleState;
 import org.sokybot.engine.test.EngineTestBase;
 import org.sokybot.engine.test.util.OSGiTestUtils;
+import org.osgi.framework.BundleContext;
 import org.sokybot.gamemodel.IGameModel;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,7 +47,8 @@ class EngineCoreTest extends EngineTestBase {
         assertThrows(IllegalArgumentException.class, () -> {
             new EngineCore(null, TEST_GROUP_NAME, TEST_MACHINE_NAME,
                     mockProxyConnection, mockGameModel,
-                    java.util.Collections.emptyList());
+                    java.util.Collections.emptyList(),
+                    mockBundleContext);
         });
     }
 
@@ -56,7 +58,8 @@ class EngineCoreTest extends EngineTestBase {
         assertThrows(IllegalArgumentException.class, () -> {
             new EngineCore(TEST_MACHINE_ID, TEST_GROUP_NAME, TEST_MACHINE_NAME,
                     null, mockGameModel,
-                    java.util.Collections.emptyList());
+                    java.util.Collections.emptyList(),
+                    mockBundleContext);
         });
     }
 

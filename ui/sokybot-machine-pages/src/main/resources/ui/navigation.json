@@ -4,11 +4,11 @@
     "children": [
         {
             "type": "div",
-            "className": "flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-2",
+            "className": "flex justify-between items-center border-b border-border pb-2",
             "children": [
                 {
                     "type": "h3",
-                    "className": "text-slate-700 dark:text-slate-300 font-bold",
+                    "className": "text-foreground font-bold",
                     "props": {
                         "children": "Navigation & Loop"
                     }
@@ -45,11 +45,11 @@
             "children": [
                 {
                     "type": "div",
-                    "className": "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-sm",
+                    "className": "bg-card border border-border rounded p-4 shadow-sm",
                     "children": [
                         {
                             "type": "h4",
-                            "className": "text-sm font-semibold text-amber-600 dark:text-amber-400 mb-3 uppercase tracking-wider",
+                            "className": "text-sm font-semibold text-amber-500 mb-3 uppercase tracking-wider",
                             "props": {
                                 "children": "Town Loop"
                             }
@@ -105,11 +105,11 @@
                 },
                 {
                     "type": "div",
-                    "className": "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded p-4 shadow-sm",
+                    "className": "bg-card border border-border rounded p-4 shadow-sm",
                     "children": [
                         {
                             "type": "h4",
-                            "className": "text-sm font-semibold text-blue-500 dark:text-blue-400 mb-3 uppercase tracking-wider",
+                            "className": "text-sm font-semibold text-blue-500 mb-3 uppercase tracking-wider",
                             "props": {
                                 "children": "Current Position"
                             }
@@ -120,18 +120,18 @@
                             "children": [
                                 {
                                     "type": "div",
-                                    "className": "p-3 bg-slate-100 dark:bg-slate-800 rounded",
+                                    "className": "p-3 bg-muted rounded",
                                     "children": [
                                         {
                                             "type": "div",
-                                            "className": "text-xs text-slate-500 uppercase",
+                                            "className": "text-xs text-muted-foreground uppercase",
                                             "props": {
                                                 "children": "X Coordinate"
                                             }
                                         },
                                         {
                                             "type": "div",
-                                            "className": "text-lg font-mono font-bold",
+                                            "className": "text-lg font-mono font-bold text-foreground",
                                             "props": {
                                                 "children": "${position.x}"
                                             }
@@ -140,18 +140,18 @@
                                 },
                                 {
                                     "type": "div",
-                                    "className": "p-3 bg-slate-100 dark:bg-slate-800 rounded",
+                                    "className": "p-3 bg-muted rounded",
                                     "children": [
                                         {
                                             "type": "div",
-                                            "className": "text-xs text-slate-500 uppercase",
+                                            "className": "text-xs text-muted-foreground uppercase",
                                             "props": {
                                                 "children": "Y Coordinate"
                                             }
                                         },
                                         {
                                             "type": "div",
-                                            "className": "text-lg font-mono font-bold",
+                                            "className": "text-lg font-mono font-bold text-foreground",
                                             "props": {
                                                 "children": "${position.y}"
                                             }

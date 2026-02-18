@@ -4,7 +4,7 @@
   "children": [
     {
       "type": "div",
-      "className": "flex items-center justify-between p-2 border-b border-slate-200 dark:border-slate-700",
+      "className": "flex items-center justify-between p-2 border-b border-border",
       "children": [
         {
           "type": "div",
@@ -48,7 +48,7 @@
     },
     {
       "type": "div",
-      "className": "border-t border-slate-200 dark:border-slate-700",
+      "className": "border-t border-border",
       "children": [
         {
           "type": "table",
@@ -56,10 +56,28 @@
           "props": {
             "dataSource": "variables",
             "columns": [
-              { "field": "packet", "label": "Packet", "className": "w-[150px]" },
-              { "field": "varName", "label": "Var", "className": "w-[150px]", "editable": true },
-              { "field": "value", "label": "Value", "className": "w-[120px]" },
-              { "field": "comment", "label": "Comment", "className": "flex-1", "editable": true }
+              {
+                "field": "packet",
+                "label": "Packet",
+                "className": "w-[150px]"
+              },
+              {
+                "field": "varName",
+                "label": "Var",
+                "className": "w-[150px]",
+                "editable": true
+              },
+              {
+                "field": "value",
+                "label": "Value",
+                "className": "w-[120px]"
+              },
+              {
+                "field": "comment",
+                "label": "Comment",
+                "className": "flex-1",
+                "editable": true
+              }
             ],
             "onRowClick": "selectVariable",
             "onCellEdit": "updateVariable"

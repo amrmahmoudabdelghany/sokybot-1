@@ -65,7 +65,8 @@ public abstract class EngineTestBase {
                 TEST_MACHINE_NAME,
                 mockProxyConnection,
                 gameModel,
-                java.util.Collections.emptyList());
+                java.util.Collections.emptyList(),
+                mockBundleContext);
     }
 
     /**

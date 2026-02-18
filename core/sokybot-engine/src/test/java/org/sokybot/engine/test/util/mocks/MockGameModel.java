@@ -15,17 +15,17 @@ import java.util.Optional;
  * Provides configurable trainer and spawn data.
  */
 public class MockGameModel implements IGameModel {
-    
+
     private ITrainer trainer;
     private final Map<Integer, ISpawn> spawns = new HashMap<>();
     private ISpawn selected;
-    
+
     /**
      * Creates a new MockGameModel.
      */
     public MockGameModel() {
     }
-    
+
     /**
      * Sets the trainer for this game model.
      */
@@ -33,7 +33,7 @@ public class MockGameModel implements IGameModel {
         this.trainer = trainer;
         return this;
     }
-    
+
     /**
      * Creates a mock trainer with the given unique ID.
      */
@@ -43,7 +43,7 @@ public class MockGameModel implements IGameModel {
         this.trainer = mockTrainer;
         return this;
     }
-    
+
     /**
      * Adds a spawn to the game model.
      */
@@ -51,7 +51,7 @@ public class MockGameModel implements IGameModel {
         spawns.put(spawn.getUniqueId(), spawn);
         return this;
     }
-    
+
     /**
      * Adds a mock monster with the given unique ID.
      */
@@ -61,7 +61,7 @@ public class MockGameModel implements IGameModel {
         spawns.put(uniqueId, monster);
         return this;
     }
-    
+
     /**
      * Sets the selected spawn.
      */
@@ -69,12 +69,12 @@ public class MockGameModel implements IGameModel {
         this.selected = spawn;
         return this;
     }
-    
+
     @Override
     public Optional<ISpawn> find(int id) {
         return Optional.ofNullable(spawns.get(id));
     }
-    
+
     @Override
     @SuppressWarnings("unchecked")
     public <T extends ISpawn> Map<Integer, T> findAll(Class<T> type) {
@@ -86,7 +86,7 @@ public class MockGameModel implements IGameModel {
         }
         return result;
     }
-    
+
     @Override
     @SuppressWarnings("unchecked")
     public <T extends ISpawn> Optional<T> find(int id, Class<T> type) {
@@ -96,14 +96,25 @@ public class MockGameModel implements IGameModel {
         }
         return Optional.empty();
     }
-    
+
     @Override
     public Optional<ISpawn> getSelected() {
         return Optional.ofNullable(selected);
     }
-    
+
     @Override
     public ITrainer getTrainer() {
         return trainer;
+    }
+
+    @Override
+    public <T extends ISpawn> reactor.core.publisher.Flux<T> observe(int id, Class<T> type) {
+        return reactor.core.publisher.Flux.empty();
+    }
+
+    @Override
+    public <T extends ISpawn> reactor.core.publisher.Flux<org.sokybot.gamemodel.ModelUpdate<T>> observeAll(
+            Class<T> type) {
+        return reactor.core.publisher.Flux.empty();
     }
 }

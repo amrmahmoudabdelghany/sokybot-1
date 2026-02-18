@@ -6,6 +6,7 @@ services:
     networks:
       - default
       - proxy_net
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - .:/app
       - ~/.m2:/root/.m2
@@ -29,6 +30,7 @@ services:
     networks:
       - default
       - proxy_net
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - .:/app
     ports:
@@ -45,6 +47,7 @@ services:
     networks:
       - default
       - proxy_net
+    user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - .:/app
     ports:

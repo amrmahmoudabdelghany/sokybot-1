@@ -80,7 +80,7 @@ export const MachineView: React.FC<MachineViewProps> = ({ machineId }) => {
     return (
         <div className="h-full flex flex-col">
             {/* Tab Content - now full content area */}
-            <div className="flex-1 bg-white dark:bg-slate-900/50 rounded p-4 border border-slate-200 dark:border-slate-800 overflow-auto min-h-[400px]">
+            <div className="flex-1 bg-card overflow-auto">
                 {renderTabContent()}
             </div>
         </div>

@@ -52,10 +52,12 @@ public class EngineCore implements IEngine {
     // Actuator management
     private final ActuatorRegistry actuatorRegistry;
     private final java.util.List<org.sokybot.engine.api.extension.IActuator> actuators;
+    private final BundleContext bundleContext;
 
     public EngineCore(String machineId, String groupName, String machineName,
             IProxyConnection proxyConnection, IGameModel gameModel,
-            java.util.List<org.sokybot.engine.api.extension.IActuator> actuators) {
+            java.util.List<org.sokybot.engine.api.extension.IActuator> actuators,
+            BundleContext bundleContext) {
         if (machineId == null || machineId.trim().isEmpty()) {
             throw new IllegalArgumentException("Machine ID cannot be null or empty");
         }
@@ -78,6 +80,7 @@ public class EngineCore implements IEngine {
         this.proxyConnection = proxyConnection;
         this.gameModel = gameModel;
         this.actuators = actuators;
+        this.bundleContext = bundleContext;
 
         // Initialize components
         this.dispatcher = new DispatcherImpl(proxyConnection, machineId);
@@ -109,7 +112,7 @@ public class EngineCore implements IEngine {
 
         // Initialize actuator registry (with BundleContext for OSGi service discovery)
         this.actuatorRegistry = new ActuatorRegistry(
-                workflowRegistry, workflowContext, this, actuators);
+                workflowRegistry, workflowContext, this, actuators, bundleContext);
 
         log.info("EngineCore created for machine: {}", machineId);
     }
