@@ -20,5 +20,6 @@
         <module>sokybot-features</module>
         <module>sokybot-dist</module>
         <module>sokybot-build-tools</module>
+        <module>sokybot-dev-shell</module>
     </modules>
 </project>

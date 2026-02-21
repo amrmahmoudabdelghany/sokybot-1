@@ -18,12 +18,7 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
 import org.sokybot.machinepages.api.IScriptedPage;
-import org.sokybot.machinepages.internal.ScriptPageLoader;
-import org.sokybot.runtime.ContextLifecycleEvents;
-import org.sokybot.runtime.IGroupContext;
-import org.sokybot.runtime.IMachineContext;
 import org.sokybot.runtime.ISokybotContext;
-import org.sokybot.settings.api.ISettingsRegistry;
 import org.sokybot.webview.api.IWebviewConfigurator;
 
 /**

@@ -26,4 +26,8 @@ public interface IGroupContext extends IContextAdapter {
 	 */
 	org.sokybot.persistence.service.IGameDataLookup getGameDataLookup();
 
+	String getGamePath();
+
+	void removeMachine(String machineName);
+
 }

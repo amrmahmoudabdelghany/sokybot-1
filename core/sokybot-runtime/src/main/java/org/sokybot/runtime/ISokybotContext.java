@@ -13,4 +13,6 @@ public interface ISokybotContext extends IContextAdapter {
 	void installGroup(String groupName, String gamePath, String... options);
 
 	void installGroup(String groupName, String gamePath);
+
+	void removeGroup(String groupName);
 }

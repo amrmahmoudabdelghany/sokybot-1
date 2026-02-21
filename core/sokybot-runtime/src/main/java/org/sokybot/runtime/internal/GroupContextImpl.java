@@ -153,6 +153,26 @@ public class GroupContextImpl implements IGroupContext {
     }
 
     @Override
+    public String getGamePath() {
+        return groupInfo.getGamePath();
+    }
+
+    @Override
+    public void removeMachine(String name) {
+        lock.lock();
+        try {
+            IMachineContext machineCtx = machines.remove(name);
+            if (machineCtx != null) {
+                publishMachineDestroyed(machineCtx);
+                MachineContextFactory.destroyMachineContext(machineCtx);
+                machineInfoRepo.findByMachineName(name).ifPresent(machineInfoRepo::delete);
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
     public String name() {
         return groupInfo.getName();
     }

@@ -1,4 +1,4 @@
-package org.sokybot.machinepages.internal;
+package org.sokybot.machinepages;
 
 import java.io.IOException;
 import java.nio.file.*;
