@@ -41,8 +41,9 @@
         <bundle>wrap:mvn:io.netty/netty-common/${netty.version}</bundle>
         <bundle>wrap:mvn:io.netty/netty-buffer/${netty.version}</bundle>
         <bundle>wrap:mvn:io.netty/netty-transport/${netty.version}</bundle>
-        <!-- Native epoll transport provides io.netty.channel.epoll packages required by reactor-netty-core -->
-        <bundle>wrap:mvn:io.netty/netty-transport-native-epoll/${netty.version}</bundle>
+        <!-- Native epoll transport provides io.netty.channel.epoll packages required by reactor-netty-core.
+             Use the linux-x86_64 classifier (jar type) to ensure the package is actually present on Linux hosts. -->
+        <bundle>wrap:mvn:io.netty/netty-transport-native-epoll/${netty.version}/jar/linux-x86_64</bundle>
         <bundle>wrap:mvn:io.netty/netty-resolver/${netty.version}</bundle>
         <bundle>wrap:mvn:io.netty/netty-codec/${netty.version}</bundle>
         <bundle>wrap:mvn:io.netty/netty-handler/${netty.version}</bundle>
