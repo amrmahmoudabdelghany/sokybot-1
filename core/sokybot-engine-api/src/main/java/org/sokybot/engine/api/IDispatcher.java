@@ -53,6 +53,20 @@ public interface IDispatcher {
     void connect(String host, int port);
 
     /**
+     * Sets whether the proxy operates in clientless mode (bot without game client).
+     * 
+     * @param clientlessMode true for clientless operation
+     */
+    void setClientlessMode(boolean clientlessMode);
+
+    /**
+     * Checks if the proxy is in clientless mode.
+     * 
+     * @return true if clientless mode is enabled
+     */
+    boolean isClientlessMode();
+
+    /**
      * Disconnects from the game server.
      */
     void disconnect();

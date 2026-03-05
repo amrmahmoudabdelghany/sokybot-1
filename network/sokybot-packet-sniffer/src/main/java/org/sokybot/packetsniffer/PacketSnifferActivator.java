@@ -1,14 +1,12 @@
 package org.sokybot.packetsniffer;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
-import java.util.concurrent.ConcurrentHashMap;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceRegistration;
 import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.ComponentContext;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
@@ -19,37 +17,30 @@ import org.sokybot.runtime.ISokybotContext;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.IPacketSubscription;
 import org.sokybot.proxy.IProxyConnection;
-import org.sokybot.webview.api.IWebviewConfigurator;
-import org.sokybot.webview.api.util.SchemaLoader;
+import org.sokybot.packetsniffer.api.IPacketSnifferRegistry;
 import org.sokybot.packetsniffer.storage.JsonPacketStorage;
 
 /**
- * Packet Sniffer Bundle Activator
- * Uses EventAdmin to listen for machine context lifecycle events
+ * Packet Sniffer Bundle Activator.
+ * Listens for machine lifecycle events, creates PacketSnifferService per machine,
+ * subscribes to packets, and registers IPacketSnifferRegistry so scripted pages can obtain the sniffer.
+ * Does not register any webview pages; those are registered by MachinePagesActivator from scripts/pages.
  */
 @Component(immediate = true, service = EventHandler.class, property = {
-        "event.topics=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_CREATED,
-        "event.topics=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED
+        EventConstants.EVENT_TOPIC + "=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_CREATED,
+        EventConstants.EVENT_TOPIC + "=" + ContextLifecycleEvents.TOPIC_MACHINE_CONTEXT_DESTROYED
 })
 public class PacketSnifferActivator implements EventHandler {
 
     private static final JsonPacketStorage storage = new JsonPacketStorage("./packet-data.json");
 
-    private IWebviewConfigurator webviewConfigurator;
     private ISokybotContext sokybotContext;
+    private final PacketSnifferRegistryImpl registry = new PacketSnifferRegistryImpl();
+    private final java.util.Map<String, PacketSnifferService> services = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Map<String, IPacketSubscription> subscriptions = new java.util.concurrent.ConcurrentHashMap<>();
 
-    private Map<String, Object> mainSchema;
-    private Map<String, Object> trafficMonitorSchema;
-    private Map<String, Object> packetTracerSchema;
-    private Map<String, Object> packetAnalyzerSchema;
-
-    private final Map<String, PacketSnifferService> services = new ConcurrentHashMap<>();
-    private final Map<String, IPacketSubscription> subscriptions = new ConcurrentHashMap<>();
-
-    @Reference
-    public void setWebviewConfigurator(IWebviewConfigurator webviewConfigurator) {
-        this.webviewConfigurator = webviewConfigurator;
-    }
+    private BundleContext bundleContext;
+    private ServiceRegistration<IPacketSnifferRegistry> registryRegistration;
 
     @Reference
     public void setSokybotContext(ISokybotContext sokybotContext) {
@@ -57,13 +48,11 @@ public class PacketSnifferActivator implements EventHandler {
     }
 
     @Activate
-    public void activate() {
-        System.out.println("Starting PacketSniffer Bundle (Webview)");
+    public void activate(ComponentContext componentContext) {
+        this.bundleContext = componentContext.getBundleContext();
+        registryRegistration = bundleContext.registerService(IPacketSnifferRegistry.class, registry, null);
+        System.out.println("Starting PacketSniffer Bundle (declarative pages)");
 
-        // Load UI schemas from resources
-        loadUISchemas();
-
-        // Search for existing machines and install sniffer
         if (sokybotContext != null) {
             for (IGroupContext group : sokybotContext.getGroups()) {
                 for (IMachineContext machine : group.getMachines()) {
@@ -81,15 +70,18 @@ public class PacketSnifferActivator implements EventHandler {
 
     @Deactivate
     public void deactivate() {
-        System.out.println("Stopping PacketSniffer Bundle (Webview)");
+        System.out.println("Stopping PacketSniffer Bundle");
 
-        // Cleanup all subscriptions
+        if (registryRegistration != null) {
+            registryRegistration.unregister();
+            registryRegistration = null;
+        }
+
         for (IPacketSubscription subscription : subscriptions.values()) {
             subscription.unsubscribe();
         }
         subscriptions.clear();
 
-        // Shutdown all services
         for (PacketSnifferService service : services.values()) {
             service.shutdown();
         }
@@ -118,49 +110,10 @@ public class PacketSnifferActivator implements EventHandler {
         }
     }
 
-    private void loadUISchemas() {
-        try {
-            // Load main schema
-            mainSchema = SchemaLoader.loadSchema("/ui/packet-sniffer.json", getClass());
-            if (mainSchema == null) {
-                System.err.println("Failed to load packet-sniffer.json");
-                mainSchema = createFallbackSchema();
-            }
-
-            // Load traffic monitor schema
-            trafficMonitorSchema = SchemaLoader.loadSchema("/ui/traffic-monitor.json", getClass());
-            if (trafficMonitorSchema == null) {
-                System.err.println("Failed to load traffic-monitor.json");
-            }
-
-            // Load packet tracer schema
-            packetTracerSchema = SchemaLoader.loadSchema("/ui/packet-tracer.json", getClass());
-            if (packetTracerSchema == null) {
-                System.err.println("Failed to load packet-tracer.json");
-            }
-
-            System.out.println("Packet Sniffer: UI schemas loaded successfully");
-        } catch (Exception e) {
-            System.err.println("Failed to load UI schemas: " + e.getMessage());
-            e.printStackTrace();
-            mainSchema = createFallbackSchema();
-        }
-    }
-
-    private Map<String, Object> createFallbackSchema() {
-        Map<String, Object> schema = new HashMap<>();
-        schema.put("type", "div");
-        schema.put("className", "p-6");
-        schema.put("props", Map.of(
-                "children", "Packet Sniffer - UI schema failed to load"));
-        return schema;
-    }
-
     private void installPacketSniffer(IMachineContext ctx) {
         String machineName = ctx.fullName();
         System.out.println("Install Packet Sniffer On Machine: " + machineName);
 
-        // Get proxy connection and packet publisher
         IProxyConnection proxyConnection = ctx.getProxyConnection();
         if (proxyConnection == null) {
             System.err.println("No proxy connection available for " + machineName);
@@ -173,17 +126,15 @@ public class PacketSnifferActivator implements EventHandler {
             return;
         }
 
-        // Create service for this machine
         PacketSnifferService service = new PacketSnifferService(storage, machineName);
         services.put(machineName, service);
+        registry.put(machineName, service);
 
-        // Subscribe to all packets
         PacketSnifferObserver observer = new PacketSnifferObserver(service, machineName);
         IPacketSubscription subscription = packetPublisher.subscribeAll(observer);
         subscriptions.put(machineName, subscription);
 
-        // Register webview page with declarative schema
-        registerPacketSnifferPage(machineName, service);
+        System.out.println("Packet Sniffer: service registered for " + machineName);
     }
 
     private void uninstallPacketSniffer(String machineName) {
@@ -192,112 +143,10 @@ public class PacketSnifferActivator implements EventHandler {
             subscription.unsubscribe();
         }
 
+        registry.remove(machineName);
         PacketSnifferService service = services.remove(machineName);
         if (service != null) {
             service.shutdown();
-        }
-
-        // Remove page from webview
-        if (webviewConfigurator != null) {
-            webviewConfigurator.removePage("packetSniffer_" + machineName);
-        }
-    }
-
-    private void registerPacketSnifferPage(String machineName, PacketSnifferService service) {
-        if (webviewConfigurator == null) {
-            System.err.println("Webview configurator not available");
-            return;
-        }
-
-        // Create a copy of the schema for this machine instance
-        Map<String, Object> machineSchema = deepCopySchema(mainSchema);
-
-        // Register the page
-        webviewConfigurator.addDeclarativePage(
-                "packetSniffer_" + machineName,
-                "Packet Sniffer",
-                "Activity",
-                machineSchema);
-
-        webviewConfigurator.registerSchemaHandler(
-                "packetSniffer_" + machineName,
-                (request) -> {
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("schema", machineSchema);
-                    result.put("state", service.handleSchemaRequest(request));
-                    return result;
-                });
-
-        // Register action handlers
-        webviewConfigurator.registerActionHandler(
-                "packetSniffer_" + machineName,
-                (action, data) -> service.handleAction(action, data));
-
-        // Register stream handlers
-        webviewConfigurator.registerStreamHandler(
-                "packetSniffer_" + machineName,
-                "packets",
-                service::streamPackets,
-                "trafficPackets");
-
-        webviewConfigurator.registerStreamHandler(
-                "packetSniffer_" + machineName,
-                "statistics",
-                service::streamStatistics,
-                "statistics");
-
-        // Register state change listener to update UI
-        service.addStateChangeListener((state) -> {
-            webviewConfigurator.sendEvent(
-                    "packetSniffer_" + machineName + ".stateChanged",
-                    state);
-        });
-
-        // Register analyzer page
-        if (packetAnalyzerSchema != null) {
-            Map<String, Object> analyzerSchema = deepCopySchema(packetAnalyzerSchema);
-            webviewConfigurator.addDeclarativePage(
-                    "packetAnalyzer_" + machineName,
-                    "Packet Analyzer",
-                    "icons/search.svg",
-                    analyzerSchema);
-
-            // Register analyzer action handlers
-            webviewConfigurator.registerActionHandler(
-                    "packetAnalyzer_" + machineName,
-                    (action, data) -> {
-                        // Delegate to service's analyzer action handler
-                        return service.handleAction("analyzerAction", Map.of(
-                                "action", action,
-                                "data", data != null ? data : new HashMap<>()));
-                    });
-
-            // Register analyzer schema handler
-            webviewConfigurator.registerSchemaHandler(
-                    "packetAnalyzer_" + machineName,
-                    (request) -> {
-                        if (service.getAnalyzerService() != null) {
-                            return service.getAnalyzerService().getInitialState();
-                        }
-                        return Map.of("packets", new ArrayList<>(), "variables", new ArrayList<>());
-                    });
-        }
-
-        System.out.println("Packet Sniffer: Page registered for " + machineName);
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> deepCopySchema(Map<String, Object> original) {
-        if (original == null)
-            return new HashMap<>();
-        try {
-            // Simple deep copy using serialization
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            String json = mapper.writeValueAsString(original);
-            return mapper.readValue(json, Map.class);
-        } catch (Exception e) {
-            System.err.println("Failed to deep copy schema: " + e.getMessage());
-            return new HashMap<>(original);
         }
     }
 }

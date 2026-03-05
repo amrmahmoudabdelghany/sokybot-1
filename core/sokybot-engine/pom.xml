@@ -26,19 +26,22 @@
             <scope>provided</scope>
         </dependency>
         
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-proxy</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
 
         <dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-security</artifactId>
-			<scope>compile</scope>
+			<version>${project.version}</version>
+			<scope>provided</scope>
 		</dependency>
-		
 
-
-        <!-- Spring Boot dependencies removed - moved to sokybot-engine-legacy module -->
-
-         <dependency>
+        <dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 			<version>${lombok.version}</version>
@@ -48,6 +51,7 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -56,21 +60,17 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Spring State Machine removed - moved to sokybot-engine-legacy module -->
-
-
-
-
-		<!-- picocli-spring-boot-starter removed - moved to sokybot-engine-legacy module -->
 		<dependency>
 			<groupId>org.apache.felix</groupId>
 			<artifactId>org.apache.felix.atomos</artifactId>
 			<version>1.0.0</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-game-loader</artifactId>
 			<version>${project.version}</version>
+			<scope>provided</scope>
 		</dependency>
 
 		<dependency>
@@ -83,6 +83,7 @@
 			<groupId>${project.groupId}</groupId>
 			<artifactId>sokybot-game-asset</artifactId>
 			<version>${project.version}</version>
+			<scope>provided</scope>
 		</dependency>
 <!-- 
         <dependency>
@@ -92,15 +93,6 @@
 			<scope>provided</scope>
 		</dependency>
 -->
-		
-
-		
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>5.3.31</version>
-            <scope>provided</scope>
-        </dependency>
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
@@ -113,16 +105,18 @@
             <version>8.0.0</version>
             <scope>provided</scope>
         </dependency>
-        <!-- Jackson YAML for actuator manifest parsing -->
+        <!-- Jackson YAML for actuator manifest parsing (provided by sokybot-jackson feature) -->
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
             <version>2.15.2</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>2.15.2</version>
+            <scope>provided</scope>
         </dependency>
         <!-- OSGi DS annotations -->
         <dependency>
@@ -143,6 +137,13 @@
             <version>3.6.0</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Packet Sniffer API (optional: for scripted pages that use IPacketSnifferRegistry) -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-packet-sniffer-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -159,10 +160,21 @@
 
                         <Import-Package>
                             org.osgi.framework;version="[1.8,2.0)",
+                            org.sokybot.engine.api.*;version="[1.0,2)",
+                            org.sokybot.settings.api;version="[1.0,2)",
+                            org.sokybot.settings.api.*;version="[1.0,2)",
+                            org.sokybot.settings.security;version="[1.0,2)",
+                            org.sokybot.settings;version="[1.0,2)",
+                            org.sokybot.network;version="[1.0,2)",
+                            org.sokybot.network.*;version="[1.0,2)",
+                            org.sokybot.gamemodel.*;version="[1.0,2)",
+                            org.sokybot.gameevents.*;version="[1.0,2)",
+                            org.sokybot.packetsniffer.api.*;resolution:=optional,
                             !javax.swing.*,
                             !java.awt.*,
                             *;resolution:=optional
                         </Import-Package>
+                        <DynamicImport-Package>*</DynamicImport-Package>
                         <Private-Package>
                             org.sokybot.engine.internal,
                             org.sokybot.machine.*
@@ -173,9 +185,8 @@
                             org.sokybot.engine.plugin,
                             org.sokybot.engine.scripting
                         </Export-Package>
-                        <Embed-Dependency>
-                            *;scope=compile|runtime;artifactId=!org.osgi.core&amp;!org.osgi.framework&amp;!org.osgi.compendium&amp;!sokybot-engine-api
-                        </Embed-Dependency>
+                        <!-- Only Groovy embedded (scripting); Jackson and Atomos from sokybot-jackson / sokybot-platform features -->
+                        <Embed-Dependency>groovy;scope=compile;inline=true</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                     </instructions>
                 </configuration>

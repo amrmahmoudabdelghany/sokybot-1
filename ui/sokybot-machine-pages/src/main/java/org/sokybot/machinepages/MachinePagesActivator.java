@@ -14,12 +14,19 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
 import org.sokybot.machinepages.api.IScriptedPage;
 import org.sokybot.runtime.ISokybotContext;
+import org.sokybot.runtime.IMachineContext;
+import org.sokybot.runtime.IGroupContext;
+import org.sokybot.runtime.ContextLifecycleEvents;
 import org.sokybot.webview.api.IWebviewConfigurator;
+import org.sokybot.logging.api.ILogStreamService;
+import org.sokybot.packetsniffer.api.IPacketSnifferPage;
+import org.sokybot.packetsniffer.api.IPacketSnifferRegistry;
 
 /**
  * Activator for Machine Pages bundle.
@@ -31,13 +38,28 @@ import org.sokybot.webview.api.IWebviewConfigurator;
 }, immediate = true)
 public class MachinePagesActivator implements EventHandler {
 
+    private static final String LOG_STREAM_ID = "Log";
+
     private ISokybotContext appCtx;
     private IWebviewConfigurator webviewConfigurator;
     private ScriptPageLoader pageLoader;
+    private ILogStreamService logStreamService;
+    private IPacketSnifferRegistry packetSnifferRegistry;
 
     @Reference
     public void setAppCtx(ISokybotContext appCtx) {
         this.appCtx = appCtx;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL)
+    public void setPacketSnifferRegistry(IPacketSnifferRegistry packetSnifferRegistry) {
+        this.packetSnifferRegistry = packetSnifferRegistry;
+    }
+
+    public void unsetPacketSnifferRegistry(IPacketSnifferRegistry packetSnifferRegistry) {
+        if (this.packetSnifferRegistry == packetSnifferRegistry) {
+            this.packetSnifferRegistry = null;
+        }
     }
 
     @Reference
@@ -48,6 +70,17 @@ public class MachinePagesActivator implements EventHandler {
     @Reference
     public void setPageLoader(ScriptPageLoader pageLoader) {
         this.pageLoader = pageLoader;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL)
+    public void setLogStreamService(ILogStreamService logStreamService) {
+        this.logStreamService = logStreamService;
+    }
+
+    public void unsetLogStreamService(ILogStreamService logStreamService) {
+        if (this.logStreamService == logStreamService) {
+            this.logStreamService = null;
+        }
     }
 
     private BundleContext bundleContext;
@@ -170,19 +203,99 @@ public class MachinePagesActivator implements EventHandler {
                         page.getIcon(),
                         schema);
 
-                webviewConfigurator.registerSchemaHandler(pageId, (request) -> {
-                    Map<String, Object> result = new HashMap<>();
-                    result.put("schema", pageLoader.loadSchema(pageName));
-                    result.put("state", page.getInitialState());
-                    return result;
-                });
+                // Schema handler: for the Log page with central logging available,
+                // build initial state from ILogStreamService so that the declarative
+                // schema (Log.json) can bind to Log.events / Log.level / Log.feature.
+                if ("log".equalsIgnoreCase(pageName) && logStreamService != null) {
+                    webviewConfigurator.registerSchemaHandler(pageId, (request) -> {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("schema", pageLoader.loadSchema(pageName));
+
+                        String machineFullName = services.machineFullName;
+                        String level = "ALL";
+                        String feature = "ALL";
+                        int maxEntries = 500;
+
+                        java.util.List<java.util.Map<String, Object>> entries =
+                                logStreamService.getRecentEntries(machineFullName, level, feature, maxEntries);
+
+                        Map<String, Object> state = buildLogState(entries, maxEntries, level, feature);
+                        result.put("state", state);
+                        return result;
+                    });
+                } else {
+                    webviewConfigurator.registerSchemaHandler(pageId, (request) -> {
+                        Map<String, Object> result = new HashMap<>();
+                        result.put("schema", pageLoader.loadSchema(pageName));
+                        result.put("state", page.getInitialState());
+                        return result;
+                    });
+                }
 
                 webviewConfigurator.registerActionHandler(pageId, page::handleAction);
 
-                // For now, support a default stream named after the page
-                webviewConfigurator.registerStreamHandler(pageId, pageName,
-                        (params) -> page.streamData(pageName, params),
-                        pageName);
+                // Default stream for the page.
+                // For the Log page, when the central logging service is
+                // available, build state from ILogStreamService so we can
+                // filter by level/feature and keep a bounded list.
+                if ("log".equalsIgnoreCase(pageName) && logStreamService != null) {
+                    webviewConfigurator.registerStreamHandler(pageId, LOG_STREAM_ID,
+                            params -> {
+                                String machineFullName = services.machineFullName;
+                                String level = stringOrDefault(params.get("level"), "ALL");
+                                String feature = stringOrDefault(params.get("feature"), "ALL");
+                                int maxEntries = intOrDefault(params.get("maxEntries"), 500);
+
+                                // Initial snapshot
+                                java.util.List<java.util.Map<String, Object>> initial =
+                                        logStreamService.getRecentEntries(machineFullName, level, feature, maxEntries);
+
+                                java.util.Map<String, Object> initialState = buildLogState(initial, maxEntries, level,
+                                        feature);
+
+                                // Live updates: accumulate into a bounded list
+                                return reactor.core.publisher.Flux
+                                        .concat(
+                                                reactor.core.publisher.Flux.just(initialState),
+                                                logStreamService
+                                                        .getStream(machineFullName, level, feature, maxEntries)
+                                                        .scan(initialState, (state, entry) -> {
+                                                            @SuppressWarnings("unchecked")
+                                                            java.util.List<java.util.Map<String, Object>> events =
+                                                                    (java.util.List<java.util.Map<String, Object>>) state
+                                                                            .getOrDefault("events",
+                                                                                    java.util.Collections.emptyList());
+                                                            events = new java.util.ArrayList<>(events);
+                                                            events.add(0, entry);
+                                                            while (events.size() > maxEntries) {
+                                                                events.remove(events.size() - 1);
+                                                            }
+                                                            return buildLogState(events, maxEntries, level, feature);
+                                                        }))
+                                        ;
+                            },
+                            LOG_STREAM_ID);
+                } else {
+                    webviewConfigurator.registerStreamHandler(pageId, pageName,
+                            (params) -> page.streamData(pageName, params),
+                            pageName);
+                }
+
+                // Packet Sniffer: register streams and state push from bundle
+                if ("PacketSniffer".equalsIgnoreCase(pageName) && packetSnifferRegistry != null) {
+                    IPacketSnifferPage sniffer = packetSnifferRegistry.getSniffer(services.machineFullName);
+                    if (sniffer != null) {
+                        webviewConfigurator.registerStreamHandler(pageId, "packets", sniffer::streamPackets, "trafficPackets");
+                        webviewConfigurator.registerStreamHandler(pageId, "statistics", sniffer::streamStatistics, "statistics");
+                        sniffer.addStateChangeListener(state -> webviewConfigurator.sendEvent(pageId + ".stateChanged", state));
+                    }
+                }
+                if ("PacketAnalyzer".equalsIgnoreCase(pageName) && packetSnifferRegistry != null) {
+                    IPacketSnifferPage sniffer = packetSnifferRegistry.getSniffer(services.machineFullName);
+                    if (sniffer != null) {
+                        sniffer.addStateChangeListener(state -> webviewConfigurator.sendEvent(pageId + ".stateChanged", state));
+                    }
+                }
             }
 
             // Register as EventHandler if needed
@@ -257,5 +370,47 @@ public class MachinePagesActivator implements EventHandler {
         void shutdown() {
             new ArrayList<>(pages.keySet()).forEach(this::unregisterPage);
         }
+    }
+
+    private static Map<String, Object> buildLogState(java.util.List<java.util.Map<String, Object>> events,
+                                                     int maxEntries,
+                                                     String level,
+                                                     String feature) {
+        Map<String, Object> state = new HashMap<>();
+        state.put("events", events);
+        state.put("maxEvents", maxEntries);
+
+        Map<String, Object> logState = new HashMap<>();
+        logState.put("events", events);
+        logState.put("maxEvents", maxEntries);
+        logState.put("level", level);
+        logState.put("feature", feature);
+        state.put("Log", logState);
+
+        return state;
+    }
+
+    private static String stringOrDefault(Object value, String def) {
+        if (value instanceof String) {
+            String s = (String) value;
+            if (!s.isEmpty()) {
+                return s;
+            }
+        }
+        return def;
+    }
+
+    private static int intOrDefault(Object value, int def) {
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        if (value != null) {
+            try {
+                return Integer.parseInt(value.toString());
+            } catch (NumberFormatException ignored) {
+                // fall through
+            }
+        }
+        return def;
     }
 }

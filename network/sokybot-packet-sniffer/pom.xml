@@ -13,14 +13,14 @@
 
 
 	<dependencies>
-		<!-- Webview Extension API -->
+		<!-- Packet Sniffer API -->
 		<dependency>
 			<groupId>org.sokybot</groupId>
-			<artifactId>sokybot-webview</artifactId>
+			<artifactId>sokybot-packet-sniffer-api</artifactId>
 			<version>${project.version}</version>
 			<scope>provided</scope>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.sokybot</groupId>
 			<artifactId>sokybot-runtime</artifactId>
@@ -87,8 +87,7 @@
 						<Bundle-Version>${project.version}</Bundle-Version>
 						<Bundle-Description>${project.description}</Bundle-Description>
 						<Import-Package>
-							org.sokybot.webview.api,
-							org.sokybot.webview.api.util,
+							org.sokybot.packetsniffer.api,
 							org.sokybot.network,
 							org.sokybot.proxy,
 							org.sokybot.runtime,

@@ -17,14 +17,16 @@
     <description>Shared Reactor Netty HTTP Server and Router provider</description>
 
     <dependencies>
-        <!-- Reactor Netty - embedded in bundle due to OSGi complexity -->
+        <!-- Reactor Netty - provided by dedicated Karaf feature -->
         <dependency>
             <groupId>io.projectreactor.netty</groupId>
             <artifactId>reactor-netty-http</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
+            <scope>provided</scope>
         </dependency>
         
         <!-- Jackson - provided by sokybot-jackson feature -->
@@ -88,28 +90,10 @@
                         <Export-Package>
                             org.sokybot.http.server,
                             org.sokybot.http.server.api,
-                            org.sokybot.http.server.events,
-                            reactor.core.*,
-                            reactor.netty.*,
-                            reactor.util.*,
-                            org.reactivestreams.*,
-                            io.netty.*
+                            org.sokybot.http.server.events
                         </Export-Package>
-                        <!-- Embed Reactor/Netty due to OSGi complexity with native transports -->
-                        <Embed-Dependency>
-                            reactive-streams,
-                            reactor-netty-http,
-                            reactor-netty-core,
-                            reactor-core,
-                            netty-*
-                        </Embed-Dependency>
-                        <Embed-Transitive>true</Embed-Transitive>
                         <_removeheaders>Require-Capability</_removeheaders>
                         <Import-Package>
-                            <!-- Embedded - don't import -->
-                            !reactor.*,
-                            !org.reactivestreams.*,
-                            !io.netty.*,
                             <!-- Sun/Oracle internal packages (not available in OSGi) -->
                             !sun.*,
                             !com.sun.*,

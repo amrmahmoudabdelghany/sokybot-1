@@ -23,12 +23,14 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-game-events-api</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Sokybot Persistence for Position and entity types -->
@@ -73,6 +75,7 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.7.36</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -114,7 +117,7 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
@@ -131,7 +134,8 @@
                             org.sokybot.gameevents.store.internal
                         </Private-Package>
                         <Import-Package>
-                            org.sokybot.*,
+                            org.sokybot.commons.*;version="[1.0,2)",
+                            org.sokybot.gameevents.*;version="[1.0,2)",
                             org.osgi.*,
                             *;resolution:=optional
                         </Import-Package>

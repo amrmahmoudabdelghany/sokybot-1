@@ -5,6 +5,7 @@ import org.osgi.framework.BundleContext;
 import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.IActuatorContext;
 import org.sokybot.engine.api.extension.BundleException;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.engine.IEngine;
@@ -33,7 +34,7 @@ public class ActuatorRegistry {
     private final BundleContext bundleContext;
 
     private final Map<String, IActuator> actuators = new ConcurrentHashMap<>();
-    private final List<IActuatorContext> actuatorContexts = new ArrayList<>();
+    private final List<IActuatorContext> actuatorContexts = new CopyOnWriteArrayList<>();
 
     public ActuatorRegistry(IWorkflowRegistry workflowRegistry,
             IWorkflowContext workflowContext,

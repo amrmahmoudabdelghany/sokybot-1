@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
-import org.sokybot.game.navigation.IRuteFinderFactory;
+import org.sokybot.game.navigation.IRouteFinderFactory;
 import org.sokybot.persistence.service.IGamePersistenceFactory;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.internal.domain.GroupInfo;

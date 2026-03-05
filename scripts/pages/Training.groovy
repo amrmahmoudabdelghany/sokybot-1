@@ -17,14 +17,14 @@ class TrainingPage implements IScriptedPage, EventHandler {
     
     private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100)
 
-    @Override
+     
     String getTitle() { "Training" }
 
-    @Override
+     
     String getIcon() { "Target" }
 
-    @Override
-    void initialize(IMachineContext context) {
+     
+     @Override void init(IMachineContext context) {
         this.machineContext = context
         
         def settingsRegistry = context.getSokybotContext().getService(ISettingsRegistry.class)
@@ -41,17 +41,17 @@ class TrainingPage implements IScriptedPage, EventHandler {
         log.info("Groovy TrainingPage initialized for {}", context.fullName())
     }
 
-    @Override
+     
     Map<String, Object> getSchema() {
         return [:] // Loaded from Training.json by ScriptPageLoader
     }
 
-    @Override
+     
     Map<String, Object> getInitialState() {
         return getState()
     }
 
-    @Override
+     
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
         log.debug("Handling action: {} with data: {}", action, data)
         
@@ -77,7 +77,7 @@ class TrainingPage implements IScriptedPage, EventHandler {
         }
     }
 
-    @Override
+     
     Flux<Object> streamData(String streamName, Map<String, Object> params) {
         return Flux.concat(
                 Flux.just(getState()),
@@ -85,7 +85,7 @@ class TrainingPage implements IScriptedPage, EventHandler {
         )
     }
 
-    @Override
+     
     void handleEvent(Event event) {
         // Handle TrainerStuckEvent or other training related events
         String topic = event.getTopic()
@@ -95,7 +95,7 @@ class TrainingPage implements IScriptedPage, EventHandler {
         }
     }
 
-    @Override
+     
     void shutdown() {
         stateSink.tryEmitComplete()
     }

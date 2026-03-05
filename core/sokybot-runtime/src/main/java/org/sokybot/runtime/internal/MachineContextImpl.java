@@ -13,6 +13,7 @@ import org.sokybot.proxy.IProxyConnection;
 import org.sokybot.proxy.IProxyConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 
 /**
  * Implementation of IMachineContext that manages a single machine.
@@ -57,6 +58,13 @@ public class MachineContextImpl implements IMachineContext {
 
     private void initializeMachineComponents() {
         String machineId = fullName();
+
+        // Set MDC context for logging (machine + group).
+        MDC.put("sokybot.log.category", "MACHINE");
+        MDC.put("sokybot.log.machineFullName", machineId);
+        MDC.put("sokybot.log.machineName", name());
+        MDC.put("sokybot.log.groupName", groupContext.name());
+
         log.info("Initializing machine context for: {}", machineId);
 
         try {
@@ -118,6 +126,12 @@ public class MachineContextImpl implements IMachineContext {
         } catch (Exception e) {
             log.error("Failed to initialize machine components for: {}", machineId, e);
             throw new RuntimeException("Failed to initialize machine: " + machineId, e);
+        } finally {
+            // Clear MDC context for this thread.
+            MDC.remove("sokybot.log.category");
+            MDC.remove("sokybot.log.machineFullName");
+            MDC.remove("sokybot.log.machineName");
+            MDC.remove("sokybot.log.groupName");
         }
     }
 
@@ -197,6 +211,11 @@ public class MachineContextImpl implements IMachineContext {
     }
 
     public void destroy() {
+        MDC.put("sokybot.log.category", "MACHINE");
+        MDC.put("sokybot.log.machineFullName", fullName());
+        MDC.put("sokybot.log.machineName", name());
+        MDC.put("sokybot.log.groupName", groupContext.name());
+
         log.info("Destroying machine context: {}", fullName());
 
         try {
@@ -229,6 +248,11 @@ public class MachineContextImpl implements IMachineContext {
             log.info("Machine context destroyed: {}", fullName());
         } catch (Exception e) {
             log.error("Error destroying machine context: {}", fullName(), e);
+        } finally {
+            MDC.remove("sokybot.log.category");
+            MDC.remove("sokybot.log.machineFullName");
+            MDC.remove("sokybot.log.machineName");
+            MDC.remove("sokybot.log.groupName");
         }
     }
 }

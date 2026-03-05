@@ -18,15 +18,16 @@ import org.sokybot.network.NetworkPeer;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.packetsniffer.packettracer.PacketTracerModel;
 import org.sokybot.packetsniffer.storage.JsonPacketStorage;
+import org.sokybot.packetsniffer.api.IPacketSnifferPage;
 import org.sokybot.packetsniffer.trafficmonitor.TablePacket;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 /**
- * Packet Sniffer Service - Business logic for packet monitoring and tracing
- * Refactored to work with declarative UI system
+ * Packet Sniffer Service - Business logic for packet monitoring and tracing.
+ * Implements IPacketSnifferPage for use by scripted pages (PacketSniffer, PacketAnalyzer).
  */
-public class PacketSnifferService {
+public class PacketSnifferService implements IPacketSnifferPage {
 
     private final JsonPacketStorage packetStorage;
     private final String machineName;
@@ -226,6 +227,19 @@ public class PacketSnifferService {
             return Map.of("cached", true, "state", cachedState);
         }
         return getCurrentState();
+    }
+
+    @Override
+    public Map<String, Object> getState() {
+        return handleSchemaRequest("");
+    }
+
+    @Override
+    public Map<String, Object> getAnalyzerState() {
+        if (analyzerService == null) {
+            return Map.of("packets", new ArrayList<>(), "variables", new ArrayList<>());
+        }
+        return analyzerService.getInitialState();
     }
 
     public Map<String, Object> handleAction(String action, Map<String, Object> data) {

@@ -14,29 +14,29 @@ class EnvironmentPage implements IScriptedPage, EventHandler {
     private IMachineContext machineContext
     private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100)
 
-    @Override
+     
     String getTitle() { "Environment" }
 
-    @Override
+     
     String getIcon() { "Globe" }
 
-    @Override
-    void initialize(IMachineContext context) {
+     
+     @Override void init(IMachineContext context) {
         this.machineContext = context
         log.info("Groovy EnvironmentPage initialized for {}", context.fullName())
     }
 
-    @Override
+     
     Map<String, Object> getSchema() {
         return [:] // Loaded from Environment.json
     }
 
-    @Override
+     
     Map<String, Object> getInitialState() {
         return getEnvironmentData()
     }
 
-    @Override
+     
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
         log.debug("Handling action: {} with data: {}", action, data)
         switch (action) {
@@ -49,7 +49,7 @@ class EnvironmentPage implements IScriptedPage, EventHandler {
         return newState
     }
 
-    @Override
+     
     Flux<Object> streamData(String streamName, Map<String, Object> params) {
         return Flux.concat(
                 Flux.just(getEnvironmentData()),
@@ -57,13 +57,13 @@ class EnvironmentPage implements IScriptedPage, EventHandler {
         )
     }
 
-    @Override
+     
     void handleEvent(Event event) {
         log.debug("Environment event received in Groovy: {}", event.getTopic())
         emitStateUpdate()
     }
 
-    @Override
+     
     void shutdown() {
         stateSink.tryEmitComplete()
     }

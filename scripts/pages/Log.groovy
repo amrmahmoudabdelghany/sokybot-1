@@ -12,33 +12,39 @@ class LogPage implements IScriptedPage, EventHandler {
     private static final Logger log = LoggerFactory.getLogger(LogPage.class)
 
     private IMachineContext machineContext
+    // Legacy event buffer kept for compatibility with older runtimes.
+    // When the central logging service is active, the machine log page
+    // state is built from ILogStreamService instead; this buffer is then
+    // only used for the "clear" action on older setups.
     private final List<Map<String, Object>> eventBuffer = []
     private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(1000)
     private int maxEvents = 100
+    private String level = "ALL"
+    private String feature = "ALL"
 
-    @Override
+     
     String getTitle() { "Log" }
 
-    @Override
+     
     String getIcon() { "FileText" }
 
-    @Override
-    void initialize(IMachineContext context) {
+     
+     @Override void init(IMachineContext context) {
         this.machineContext = context
         log.info("Groovy LogPage initialized for {}", context.fullName())
     }
 
-    @Override
+     
     Map<String, Object> getSchema() {
         return [:] // Loaded from Log.json
     }
 
-    @Override
+     
     Map<String, Object> getInitialState() {
         return getLogData()
     }
 
-    @Override
+     
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
         log.debug("Handling action: {} with data: {}", action, data)
         switch (action) {
@@ -57,11 +63,31 @@ class LogPage implements IScriptedPage, EventHandler {
                 }
                 emitStateUpdate()
                 return [success: true]
+            case "setLogLevel":
+                def value = data?.get("value") ?: "ALL"
+                this.level = value?.toString() ?: "ALL"
+                return [
+                    Log: [
+                        level  : this.level,
+                        feature: this.feature
+                    ],
+                    success: true
+                ]
+            case "setLogFeature":
+                def value = data?.get("value") ?: "ALL"
+                this.feature = value?.toString() ?: "ALL"
+                return [
+                    Log: [
+                        level  : this.level,
+                        feature: this.feature
+                    ],
+                    success: true
+                ]
         }
         return [success: false, error: "Unknown action: ${action}"]
     }
 
-    @Override
+     
     Flux<Object> streamData(String streamName, Map<String, Object> params) {
         return Flux.concat(
                 Flux.just(getLogData()),
@@ -69,7 +95,7 @@ class LogPage implements IScriptedPage, EventHandler {
         )
     }
 
-    @Override
+     
     void handleEvent(Event event) {
         // Log all machine-specific events
         Map<String, Object> logEntry = [
@@ -87,7 +113,7 @@ class LogPage implements IScriptedPage, EventHandler {
         emitStateUpdate()
     }
 
-    @Override
+     
     void shutdown() {
         stateSink.tryEmitComplete()
     }

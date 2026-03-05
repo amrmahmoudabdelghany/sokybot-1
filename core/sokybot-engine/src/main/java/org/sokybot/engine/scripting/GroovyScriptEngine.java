@@ -14,6 +14,7 @@ import org.sokybot.engine.api.scripting.ScriptException;
 
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
+import org.slf4j.MDC;
 
 /**
  * Groovy implementation of IScriptEngine.
@@ -29,6 +30,14 @@ public class GroovyScriptEngine implements IScriptEngine {
         this.executor = Executors.newCachedThreadPool();
         this.config = new CompilerConfiguration();
         this.config.setScriptBaseClass(null); // Use default
+
+        // Debug class visibility
+        try {
+            Class<?> cls = getClass().getClassLoader().loadClass("org.sokybot.network.NetworkPeer");
+            System.out.println("GroovyScriptEngine: Successfully loaded NetworkPeer: " + cls);
+        } catch (Exception e) {
+            System.err.println("GroovyScriptEngine: Failed to load NetworkPeer: " + e.getMessage());
+        }
     }
 
     @Deactivate
@@ -40,16 +49,35 @@ public class GroovyScriptEngine implements IScriptEngine {
 
     @Override
     public Object execute(String script, Map<String, Object> context) throws ScriptException {
+        ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
         try {
+            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+
+            // Tag script execution in MDC for logging
+            if (context != null) {
+                Object scriptName = context.get("scriptName");
+                if (scriptName != null) {
+                    MDC.put("sokybot.log.scriptName", scriptName.toString());
+                }
+                Object feature = context.get("feature");
+                if (feature != null) {
+                    MDC.put("sokybot.log.feature", feature.toString());
+                }
+            }
+
             Binding binding = new Binding();
             if (context != null) {
                 context.forEach(binding::setVariable);
             }
 
-            GroovyShell shell = new GroovyShell(binding, config);
+            GroovyShell shell = new GroovyShell(getClass().getClassLoader(), binding, config);
             return shell.evaluate(script);
         } catch (Exception e) {
             throw new ScriptException("Script execution failed", e);
+        } finally {
+            MDC.remove("sokybot.log.scriptName");
+            MDC.remove("sokybot.log.feature");
+            Thread.currentThread().setContextClassLoader(oldLoader);
         }
     }
 

@@ -25,14 +25,22 @@ class Connector implements IActuator {
     @Override
     void initialize(IActuatorContext context) {
         log.info("Initializing GROOVY connector actuator for machine: {}", context.getMachineId())
+        
+        // FOR TESTING: Trigger immediate connection
+        log.info("TESTING: Triggering immediate connection for machine {}", context.getMachineId())
+        try {
+             context.getDispatcher().setClientlessMode(true)
+             context.getDispatcher().connect("skrillax-gateway", 15779)
+        } catch (Exception e) {
+             log.error("Failed to trigger immediate connection: {}", e.getMessage())
+        }
 
         try {
             // Lookup ISettingsRegistry service using the new context method
             def settingsRegistry = context.getService(ISettingsRegistry.class)
             
             if (settingsRegistry == null) {
-                log.error("Failed to acquire ISettingsRegistry service!")
-                return
+                log.warn("ISettingsRegistry service not available yet, proceeding with defaults.")
             }
 
             // Get settings provider
@@ -40,57 +48,44 @@ class Connector implements IActuator {
                     context.getGroupName(),
                     context.getMachineName(),
                     "login",
-                    LoginSettings.class)
+                    Map.class)
+
+            // HARDCODED gateway for testing packet sniffer
+            String testHost = "skrillax-gateway"
+            int testPort = 15779
 
             // Register connector cycle
             def cycle = new CycleDefinitionBuilder()
                     .name("connector-cycle")
-                    .priority(100)
+                    .priority(1000) // Must be higher than training-cycle (500) to avoid interruption
                     .entryState("CHECK_CONNECTION")
                     .entryGuard({ ctx ->
-                        def settings = settingsProvider.get()
-                        return !ctx.getDispatcher().isConnected() &&
-                                settings.getTargetGateway() != null &&
-                                !settings.getTargetGateway().isEmpty()
+                        return !ctx.getDispatcher().isServerConnected()
                     })
                     .state("CHECK_CONNECTION", { builder -> builder
-                            .guard({ ctx -> !ctx.getDispatcher().isConnected() })
+                            .guard({ ctx -> !ctx.getDispatcher().isServerConnected() })
                             .action({ ctx -> 
-                                log.info("Connection check: not connected, attempting to connect") 
+                                log.info("Connection check: not connected to server, attempting to connect") 
                             })
                             .nextState("CONNECT_TO_SERVER")
-                            .targetState(null) // Exit if connected
                     })
                     .state("CONNECT_TO_SERVER", { builder -> builder
-                            .guard({ ctx ->
-                                def settings = settingsProvider.get()
-                                return settings.getTargetGateway() != null && !settings.getTargetGateway().isEmpty()
-                            })
+                            .guard({ ctx -> true })
                             .action({ ctx ->
-                                def settings = settingsProvider.get()
-                                String gateway = settings.getTargetGateway()
-                                log.info("Connecting to gateway: {}", gateway)
-                                
-                                String[] parts = gateway.split(":")
-                                if (parts.length == 2) {
-                                    String host = parts[0]
-                                    int port = Integer.parseInt(parts[1])
-                                    ctx.getDispatcher().connect(host, port)
-                                } else {
-                                    log.warn("Invalid gateway format: {}", gateway)
-                                }
+                                log.info("Connecting to hardcoded gateway {}:{}", testHost, testPort)
+                                ctx.getDispatcher().setClientlessMode(true)
+                                ctx.getDispatcher().connect(testHost, testPort)
                             })
                             .nextState("WAIT_FOR_CONNECTION")
                             .targetState("CHECK_CONNECTION")
                     })
                     .state("WAIT_FOR_CONNECTION", { builder -> builder
-                            .guard({ ctx -> ctx.getDispatcher().isConnected() })
+                            .guard({ ctx -> ctx.getDispatcher().isServerConnected() })
                             .action({ ctx ->
-                                log.info("Connected successfully")
+                                log.info("Connected successfully to server")
                                 sendAgentRequest(ctx)
                             })
                             .nextState(null)
-                            .targetState("CHECK_CONNECTION")
                     })
                     .build()
 
@@ -111,7 +106,7 @@ class Connector implements IActuator {
                     .build()
 
             context.getDispatcher().sendToServer(agentRequest)
-            log.debug("Sent agent request packet")
+            log.info("Sent agent request packet")
         } catch (Exception e) {
             log.error("Failed to send agent request: {}", e.getMessage(), e)
         }

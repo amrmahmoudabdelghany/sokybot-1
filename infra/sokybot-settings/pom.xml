@@ -72,7 +72,7 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
@@ -80,6 +80,7 @@
                         <Bundle-Description>${project.description}</Bundle-Description>
                         <Export-Package>org.sokybot.settings.*</Export-Package>
                         <Import-Package>
+                            org.sokybot.persistence.*;version="[1.0,2)",
                             *;resolution:=optional
                         </Import-Package>
                     </instructions>

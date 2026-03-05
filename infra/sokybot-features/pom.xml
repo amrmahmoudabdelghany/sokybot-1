@@ -41,6 +41,10 @@
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+        </dependency>
 
         <!-- Sokybot bundles referenced in features -->
         <dependency>
@@ -75,7 +79,7 @@
         </dependency>
         <dependency>
             <groupId>org.sokybot</groupId>
-            <artifactId>sokybot-dev-tools</artifactId>
+            <artifactId>sokybot-dev-shell</artifactId>
             <version>${project.version}</version>
         </dependency>
     </dependencies>

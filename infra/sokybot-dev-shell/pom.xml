@@ -63,8 +63,21 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-settings</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-proxy</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-core</artifactId>
+            <version>3.6.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -75,13 +88,22 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Bundle-Description>${project.description}</Bundle-Description>
+                        <Export-Package />
                         <Karaf-Commands>org.sokybot.devshell.command</Karaf-Commands>
+                        <Import-Package>
+                            org.sokybot.engine.api.*;version="[1.0,2.0)",
+                            org.sokybot.runtime.*;version="[1.0,2.0)",
+                            org.sokybot.proxy.*;version="[1.0,2.0)",
+                            org.sokybot.network.packet.*;version="[1.0,2.0)",
+                            org.apache.karaf.shell.*;version="[4,5)",
+                            *
+                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

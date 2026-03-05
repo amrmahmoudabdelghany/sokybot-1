@@ -9,6 +9,9 @@ public abstract class DevCommand implements Action {
     @Reference
     protected ISokybotContext sokybotContext;
 
+    @Reference
+    protected org.sokybot.settings.api.ISettingsRegistry settingsRegistry;
+
     protected void println(String format, Object... args) {
         System.out.println(String.format(format, args));
     }

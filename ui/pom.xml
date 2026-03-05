@@ -16,9 +16,6 @@
     <modules>
         <module>sokybot-webview</module>
         <module>sokybot-http-server</module>
-
-        <module>sokybot-dev-tools</module>
-        <module>sokybot-bundle-manager</module>
         <module>sokybot-machine-pages</module>
     </modules>
 </project>

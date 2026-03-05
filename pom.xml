@@ -14,8 +14,6 @@
 
 		<!-- Dependency Versions - Updated to latest stable versions -->
 		<jna.version>5.13.0</jna.version>
-		<swingx-all.version>1.6.5-1</swingx-all.version>
-		<mydoggy.version>1.5.0</mydoggy.version>
 		<junit-jupiter.version>5.10.1</junit-jupiter.version>
 		<!-- Backward compatibility: keep old property name for child modules -->
 		<junit-jupiter-engine.version>${junit-jupiter.version}</junit-jupiter-engine.version>
@@ -26,7 +24,6 @@
 		<dependency.gc4s.version>1.6.0</dependency.gc4s.version>
 		<dependency.felix.version>7.0.5</dependency.felix.version>
 		<karaf.version>4.4.6</karaf.version>
-		<vavr.version>0.10.4</vavr.version>
 		<commons-lang3.version>3.14.0</commons-lang3.version>
 		<commons-io.version>2.16.1</commons-io.version>
 		<commons-csv.version>1.11.0</commons-csv.version>
@@ -39,10 +36,6 @@
 		<dependency.slf4j-api.version>${slf4j.version}</dependency.slf4j-api.version>
 		<jackson.version>2.15.2</jackson.version>
 		<lombok.version>1.18.30</lombok.version>
-		<nitrite.version>4.1.0-SNAPSHOT</nitrite.version>
-		<nitrite-jackson-mapper.version>4.1.0-SNAPSHOT</nitrite-jackson-mapper.version>
-		<nitrite-mvstore-adapter.version>4.1.0-SNAPSHOT</nitrite-mvstore-adapter.version>
-		<dependency.ehcache.version>3.8.1</dependency.ehcache.version>
 
 		<!-- Plugin Versions -->
 		<plugin.bundle.version>5.1.8</plugin.bundle.version>
@@ -102,8 +95,6 @@
         <module>game</module>
         <module>ui</module>
         <module>infra</module>
-        <module>legacy</module>
-
     </modules>
 	<packaging>pom</packaging>
 
@@ -176,71 +167,6 @@
 				<scope>provided</scope>
 			</dependency>
 -->
-			<dependency>
-				<groupId>${project.groupId}</groupId>
-				<artifactId>sokybot-ui-api</artifactId>
-				<version>${project.version}</version>
-				<scope>provided</scope>
-			</dependency>
-
-			<!-- https://mvnrepository.com/artifact/org.ehcache/ehcache -->
-
-			<dependency>
-				<groupId>org.dizitart</groupId>
-				<artifactId>nitrite</artifactId>
-				<version>${nitrite.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.dizitart</groupId>
-				<artifactId>nitrite-jackson-mapper</artifactId>
-				<version>${nitrite-jackson-mapper.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.dizitart</groupId>
-				<artifactId>nitrite-mvstore-adapter</artifactId>
-				<version>${nitrite-mvstore-adapter.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>io.vavr</groupId>
-				<artifactId>vavr</artifactId>
-				<version>${vavr.version}</version>
-				<scope>provided</scope>
-			</dependency>
-
-
-			<dependency>
-				<groupId>org.swinglabs.swingx</groupId>
-				<artifactId>swingx-all</artifactId>
-				<version>${swingx-all.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.sokybot.mydoggy</groupId>
-				<artifactId>mydoggy-plaf</artifactId>
-				<version>${mydoggy.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.sokybot.mydoggy</groupId>
-				<artifactId>mydoggy-api</artifactId>
-				<version>${mydoggy.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>org.sokybot.mydoggy</groupId>
-				<artifactId>mydoggy-res</artifactId>
-				<version>${mydoggy.version}</version>
-			</dependency>
-
-			<dependency>
-				<groupId>tablelayout</groupId>
-				<artifactId>TableLayout</artifactId>
-				<version>20050920</version>
-			</dependency>
-
 			<!-- JNA - Added to dependencyManagement to prevent version conflicts -->
 			<dependency>
 				<groupId>net.java.dev.jna</groupId>

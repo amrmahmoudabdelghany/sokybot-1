@@ -15,29 +15,29 @@ class SkillsPage implements IScriptedPage, EventHandler {
     private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100)
     private int skillPoints = 0
 
-    @Override
+     
     String getTitle() { "Skills" }
 
-    @Override
+     
     String getIcon() { "Zap" }
 
-    @Override
-    void initialize(IMachineContext context) {
+     
+     @Override void init(IMachineContext context) {
         this.machineContext = context
         log.info("Groovy SkillsPage initialized for {}", context.fullName())
     }
 
-    @Override
+     
     Map<String, Object> getSchema() {
         return [:] // Loaded from Skills.json
     }
 
-    @Override
+     
     Map<String, Object> getInitialState() {
         return getSkillsData()
     }
 
-    @Override
+     
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
         log.debug("Handling action: {} with data: {}", action, data)
         switch (action) {
@@ -50,7 +50,7 @@ class SkillsPage implements IScriptedPage, EventHandler {
         return newState
     }
 
-    @Override
+     
     Flux<Object> streamData(String streamName, Map<String, Object> params) {
         return Flux.concat(
                 Flux.just(getSkillsData()),
@@ -58,7 +58,7 @@ class SkillsPage implements IScriptedPage, EventHandler {
         )
     }
 
-    @Override
+     
     void handleEvent(Event event) {
         log.debug("Skill event received in Groovy: {}", event.getTopic())
         
@@ -71,7 +71,7 @@ class SkillsPage implements IScriptedPage, EventHandler {
         emitStateUpdate()
     }
 
-    @Override
+     
     void shutdown() {
         stateSink.tryEmitComplete()
     }

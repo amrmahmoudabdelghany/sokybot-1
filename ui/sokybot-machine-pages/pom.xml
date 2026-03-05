@@ -73,6 +73,22 @@
             <scope>provided</scope>
         </dependency>
         
+        <!-- Central logging API (ILogStreamService) -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-logging</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Packet Sniffer API (optional: for PacketSniffer/PacketAnalyzer scripted pages) -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-packet-sniffer-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        
         <!-- Jackson for JSON -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -134,21 +150,28 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Bundle-Description>${project.description}</Bundle-Description>
+                        <Export-Package>
+                            org.sokybot.machinepages,
+                            org.sokybot.machinepages.api
+                        </Export-Package>
                         <Import-Package>
-                            !javax.servlet*,
-                            !javax.swing.*,
-                            !java.awt.*,
-                            !reactor.*,
-                            !org.reactivestreams.*,
-                            *;resolution:=optional
+                            org.sokybot.runtime.*;version="[1,2)",
+                            org.sokybot.engine.api.*;version="[1,2)",
+                            org.sokybot.proxy.*;version="[1,2)",
+                            org.sokybot.settings.api.*;version="[1,2)",
+                            org.sokybot.gameevents.*;version="[1,2)",
+                            org.sokybot.gamemodel.*;version="[1,2)",
+                            org.sokybot.webview.api.*;version="[1,2)",
+                            org.sokybot.packetsniffer.api.*;resolution:=optional,
+                            *
                         </Import-Package>
-                        <Export-Package>org.sokybot.machinepages,org.sokybot.machinepages.api</Export-Package>
+                        <_dump>true</_dump>
                     </instructions>
                 </configuration>
             </plugin>

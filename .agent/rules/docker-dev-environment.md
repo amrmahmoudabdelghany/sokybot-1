@@ -9,7 +9,6 @@ The Sokybot development environment is containerized and optimized for JDK 21. I
 |---------|------------|---------------|---------|
 | `sokybot-backend` | `api.sokybot.local` | 8182 | Java (Karaf) Backend (JDK 21) |
 | `sokybot-webview-ui` | `sokybot.local` | 5173 | React Webview UI (Vite) |
-| `sokybot-devtools-ui` | `sokybotdev.local` | 3000 | React DevTools UI (Vite) |
 
 ## Automated Hot-Reloading
 - **Java Bundles**: The backend container runs a watcher (`soky backend watch`) that detects JAR updates in `target/` directories and hotswaps them into Karaf using `bundle:update`.

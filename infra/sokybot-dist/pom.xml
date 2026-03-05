@@ -13,7 +13,7 @@
     </parent>
 
     <artifactId>sokybot-dist</artifactId>
-    <packaging>karaf-assembly</packaging>
+    <packaging>pom</packaging>
     <name>Sokybot :: Distribution</name>
     <description>Custom Karaf distribution for Sokybot desktop application</description>
 
@@ -47,7 +47,91 @@
 
     <build>
         <plugins>
-            <!-- Copy custom config files to the assembly -->
+            <!-- Remove assembly data/tmp before archive (must run first in package phase) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>clean-assembly-tmp</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <delete dir="${project.build.directory}/assembly/data/tmp" failonerror="false"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Karaf assembly in prepare-package so we can clean data/tmp before archive -->
+            <plugin>
+                <groupId>org.apache.karaf.tooling</groupId>
+                <artifactId>karaf-maven-plugin</artifactId>
+                <version>${karaf.version}</version>
+                <executions>
+                    <execution>
+                        <id>assembly</id>
+                        <phase>prepare-package</phase>
+                        <goals>
+                            <goal>assembly</goal>
+                        </goals>
+                        <configuration>
+                            <installedFeatures>
+                                <feature>wrapper</feature>
+                            </installedFeatures>
+                            <startupFeatures>
+                                <feature>eventadmin</feature>
+                                <feature>log</feature>
+                            </startupFeatures>
+                            <bootFeatures>
+                                <feature>standard</feature>
+                                <feature>scr</feature>
+                                <feature>http</feature>
+                                <feature>sokybot-jackson</feature>
+                                <feature>sokybot-full</feature>
+                            </bootFeatures>
+                            <archiveTarGz>false</archiveTarGz>
+                            <archiveZip>true</archiveZip>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>archive</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>archive</goal>
+                        </goals>
+                        <configuration>
+                            <archiveTarGz>false</archiveTarGz>
+                            <archiveZip>true</archiveZip>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <installedFeatures>
+                        <feature>wrapper</feature>
+                    </installedFeatures>
+                    <startupFeatures>
+                        <feature>eventadmin</feature>
+                        <feature>log</feature>
+                    </startupFeatures>
+                    <bootFeatures>
+                        <feature>standard</feature>
+                        <feature>scr</feature>
+                        <feature>http</feature>
+                        <feature>sokybot-jackson</feature>
+                        <feature>sokybot-full</feature>
+                    </bootFeatures>
+                    <archiveTarGz>false</archiveTarGz>
+                    <archiveZip>true</archiveZip>
+                </configuration>
+            </plugin>
+
+            <!-- Copy custom config files to the assembly (after assembly so etc is not overwritten) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-resources-plugin</artifactId>
@@ -69,39 +153,6 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
-            
-            <plugin>
-                <groupId>org.apache.karaf.tooling</groupId>
-                <artifactId>karaf-maven-plugin</artifactId>
-                <version>${karaf.version}</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <!-- Minimal Karaf - strip heavy server features for desktop use -->
-                    <installedFeatures>
-                        <feature>wrapper</feature>
-                    </installedFeatures>
-                    
-                    <startupFeatures>
-                        <feature>eventadmin</feature>
-                        <feature>log</feature>
-                    </startupFeatures>
-
-                    <!-- Features that boot on startup (production mode) -->
-                    <bootFeatures>
-                        <feature>standard</feature>
-                        <feature>scr</feature>
-                        <feature>http</feature>
-                        <!-- Shared infrastructure features -->
-                        <feature>sokybot-jackson</feature>
-                        <!-- Application features -->
-                        <feature>sokybot-full</feature>
-                    </bootFeatures>
-                    
-                    <!-- Archive settings -->
-                    <archiveTarGz>false</archiveTarGz>
-                    <archiveZip>true</archiveZip>
-                </configuration>
             </plugin>
         </plugins>
     </build>

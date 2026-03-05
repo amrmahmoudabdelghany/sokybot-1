@@ -1,0 +1,323 @@
+{
+  "type": "div",
+  "className": "space-y-4 h-full flex flex-col",
+  "children": [
+    {
+      "type": "div",
+      "className": "flex items-center justify-between",
+      "children": [
+        {
+          "type": "div",
+          "className": "flex items-center gap-2",
+          "children": [
+            {
+              "type": "icon",
+              "props": {
+                "name": "Package",
+                "size": 20
+              }
+            },
+            {
+              "type": "h2",
+              "className": "text-xl font-semibold",
+              "props": {
+                "children": "Dev Bundles"
+              }
+            },
+            {
+              "type": "Badge",
+              "props": {
+                "variant": "secondary",
+                "children": "${filteredBundles.length}"
+              }
+            }
+          ]
+        },
+        {
+          "type": "div",
+          "className": "flex items-center gap-2",
+          "children": [
+            {
+              "type": "div",
+              "className": "relative",
+              "children": [
+                {
+                  "type": "icon",
+                  "props": {
+                    "name": "Search",
+                    "size": 16,
+                    "className": "absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                  }
+                },
+                {
+                  "type": "Input",
+                  "className": "pl-8 w-64",
+                  "props": {
+                    "placeholder": "Search bundles...",
+                    "value": "${searchTerm}",
+                    "onChange": "setBundlesSearch"
+                  }
+                }
+              ]
+            },
+            {
+              "type": "Button",
+              "props": {
+                "variant": "outline",
+                "size": "sm",
+                "onClick": "refreshBundles",
+                "children": [
+                  {
+                    "type": "icon",
+                    "props": {
+                      "name": "RefreshCw",
+                      "size": 16,
+                      "className": "${loading ? 'h-4 w-4 mr-2 animate-spin' : 'h-4 w-4 mr-2'}"
+                    }
+                  },
+                  "Refresh"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "div",
+      "props": {
+        "hidden": "${!error}"
+      },
+      "children": [
+        {
+          "type": "Card",
+          "className": "border-destructive",
+          "children": [
+            {
+              "type": "CardContent",
+              "className": "pt-6",
+              "props": {
+                "children": "${error}"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Card",
+      "children": [
+        {
+          "type": "CardContent",
+          "className": "p-0",
+          "children": [
+            {
+              "type": "div",
+              "className": "overflow-x-auto",
+              "children": [
+                {
+                  "type": "table",
+                  "className": "w-full",
+                  "children": [
+                    {
+                      "type": "thead",
+                      "children": [
+                        {
+                          "type": "tr",
+                          "className": "border-b",
+                          "children": [
+                            { "type": "th", "className": "text-left p-4 font-medium", "props": { "children": "Name" } },
+                            { "type": "th", "className": "text-left p-4 font-medium", "props": { "children": "Version" } },
+                            { "type": "th", "className": "text-left p-4 font-medium", "props": { "children": "State" } },
+                            { "type": "th", "className": "text-left p-4 font-medium", "props": { "children": "Status" } },
+                            { "type": "th", "className": "text-left p-4 font-medium", "props": { "children": "Actions" } }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "type": "tbody",
+                      "props": {
+                        "dataSource": "filteredBundles",
+                        "renderItem": {
+                          "type": "tr",
+                          "className": "border-b hover:bg-muted/50",
+                          "children": [
+                            {
+                              "type": "td",
+                              "className": "p-4",
+                              "children": [
+                                {
+                                  "type": "div",
+                                  "className": "flex flex-col",
+                                  "children": [
+                                    {
+                                      "type": "span",
+                                      "className": "font-medium",
+                                      "props": { "children": "${item.symbolicName}" }
+                                    },
+                                    {
+                                      "type": "span",
+                                      "className": "text-xs text-muted-foreground truncate max-w-md",
+                                      "props": { "children": "${item.location}" }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "td",
+                              "className": "p-4 text-sm",
+                              "props": { "children": "${item.version}" }
+                            },
+                            {
+                              "type": "td",
+                              "className": "p-4",
+                              "children": [
+                                {
+                                  "type": "Badge",
+                                  "className": "gap-1",
+                                  "props": {
+                                    "variant": "outline",
+                                    "children": [
+                                      {
+                                        "type": "div",
+                                        "className": "h-2 w-2 rounded-full",
+                                        "props": {
+                                          "style": {
+                                            "backgroundColor": "${item.state === 'ACTIVE' ? '#22c55e' : item.state === 'INSTALLED' ? '#eab308' : item.state === 'RESOLVED' ? '#3b82f6' : item.state === 'STARTING' ? '#a855f7' : item.state === 'STOPPING' ? '#f97316' : '#6b7280'}"
+                                          }
+                                        }
+                                      },
+                                      "${item.state}"
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            {
+                              "type": "td",
+                              "className": "p-4",
+                              "children": [
+                                {
+                                  "type": "div",
+                                  "className": "flex flex-col gap-1",
+                                  "children": [
+                                    {
+                                      "type": "Badge",
+                                      "className": "text-xs",
+                                      "props": {
+                                        "variant": "secondary",
+                                        "hidden": "${!item.isWatchingForChanges}",
+                                        "children": "Dev Mode"
+                                      }
+                                    },
+                                    {
+                                      "type": "Badge",
+                                      "className": "text-xs",
+                                      "props": {
+                                        "variant": "destructive",
+                                        "hidden": "${!item.needsReload}",
+                                        "children": "Needs Reload"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "td",
+                              "className": "p-4",
+                              "children": [
+                                {
+                                  "type": "div",
+                                  "className": "flex items-center gap-2",
+                                  "children": [
+                                    {
+                                      "type": "Button",
+                                      "props": {
+                                        "variant": "outline",
+                                        "size": "sm",
+                                        "onClick": "${item.state === 'ACTIVE' ? 'stopBundle' : 'startBundle'}",
+                                        "actionData": { "id": "${item.id}" },
+                                        "children": [
+                                          {
+                                            "type": "icon",
+                                            "props": {
+                                              "name": "${item.state === 'ACTIVE' ? 'Square' : 'Play'}",
+                                              "size": 12,
+                                              "className": "h-3 w-3 mr-1"
+                                            }
+                                          },
+                                          "${item.state === 'ACTIVE' ? 'Stop' : 'Start'}"
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "Button",
+                                      "props": {
+                                        "variant": "outline",
+                                        "size": "sm",
+                                        "onClick": "restartBundle",
+                                        "actionData": { "id": "${item.id}" },
+                                        "children": [
+                                          {
+                                            "type": "icon",
+                                            "props": {
+                                              "name": "RotateCw",
+                                              "size": 12,
+                                              "className": "h-3 w-3 mr-1"
+                                            }
+                                          },
+                                          "Restart"
+                                        ]
+                                      }
+                                    },
+                                    {
+                                      "type": "Button",
+                                      "props": {
+                                        "variant": "outline",
+                                        "size": "sm",
+                                        "onClick": "reloadBundle",
+                                        "disabled": "${!item.isWatchingForChanges || !item.needsReload}",
+                                        "actionData": { "symbolicName": "${item.symbolicName}" },
+                                        "children": [
+                                          {
+                                            "type": "icon",
+                                            "props": {
+                                              "name": "RefreshCw",
+                                              "size": 12,
+                                              "className": "h-3 w-3 mr-1"
+                                            }
+                                          },
+                                          "Reload FS"
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "div",
+                  "className": "p-8 text-center text-muted-foreground",
+                  "props": {
+                    "hidden": "${filteredBundles.length > 0}",
+                    "children": "${searchTerm ? 'No bundles match your search' : 'No bundles found'}"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+

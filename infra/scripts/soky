@@ -51,6 +51,27 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 log_header() { echo -e "\n${CYAN}=== $1 ===${NC}"; }
 
+# When in Docker and assembly is missing, build backend once (writes to mounted volume)
+check_karaf_dist_or_build() {
+    if [ -d "$KARAF_BIN" ]; then
+        return 0
+    fi
+    if is_in_docker; then
+        log_warn "Karaf distribution not found at: $KARAF_DIST"
+        log_info "Building backend once (this may take a few minutes)..."
+        cmd_build backend --fast
+        if [ ! -d "$KARAF_BIN" ]; then
+            log_error "Backend build did not produce assembly at: $KARAF_DIST"
+            exit 1
+        fi
+        log_success "Backend built. Starting..."
+        return 0
+    fi
+    log_error "Karaf distribution not found at: $KARAF_DIST"
+    log_warn "Please build the project first: soky build backend"
+    exit 1
+}
+
 check_karaf_dist() {
     if [ ! -d "$KARAF_BIN" ]; then
         log_error "Karaf distribution not found at: $KARAF_DIST"
@@ -98,7 +119,7 @@ check_docker_transparency() {
 # =============================================================================
 
 cmd_backend_start() {
-    check_karaf_dist
+    check_karaf_dist_or_build
     
     local FOREGROUND=false
     local WATCH=false
@@ -114,6 +135,10 @@ cmd_backend_start() {
         return
     fi
     
+    # Ensure Karaf bin scripts are executable (fixes Docker volume permission issues)
+    if [ -d "$KARAF_BIN" ]; then
+        chmod +x "$KARAF_BIN"/* 2>/dev/null || true
+    fi
     if [ "$FOREGROUND" = true ]; then
         if [ "$WATCH" = true ]; then
             log_info "Starting Automated Hot-Reload Watcher..."
@@ -321,7 +346,6 @@ cmd_ui_dev() {
     log_info "Starting Frontend Development Servers..."
     log_info "NOTE: You can access the UI at http://localhost:8182 (Backend HTTP Server)"
     log_info "      Webview dev server: http://localhost:5173"
-    log_info "      DevTools dev server: http://localhost:3000"
     cd "$UI_DIR"
     npm run dev
 }
@@ -560,7 +584,31 @@ cmd_deploy() {
     fi
     log_success "Module built successfully."
     
-    # Step 2: Deploy to Karaf
+    # Step 2: Copy built JAR to assembly system directory
+    # This prevents stale JARs — Karaf loads bundles from system/, so we must sync it
+    local ARTIFACT_ID
+    # Correctly identify module artifactId by skipping the <parent> tag if it exists
+    ARTIFACT_ID=$(sed -n '/<parent>/,/<\/parent>/d; /<artifactId>/ s/.*<artifactId>\(.*\)<\/artifactId>.*/\1/p' "$MODULE_DIR/pom.xml" | head -1 | tr -d '[:space:]')
+    local VERSION="1.0-SNAPSHOT"
+    local BUILT_JAR="$MODULE_DIR/target/${ARTIFACT_ID}-${VERSION}.jar"
+    local SYSTEM_DIR="$KARAF_DIST/system/org/sokybot/${ARTIFACT_ID}/${VERSION}"
+    
+    if [ -f "$BUILT_JAR" ]; then
+        if [ -d "$SYSTEM_DIR" ]; then
+            log_info "Syncing JAR to assembly: $SYSTEM_DIR"
+            cp "$BUILT_JAR" "$SYSTEM_DIR/${ARTIFACT_ID}-${VERSION}.jar"
+            log_success "Assembly JAR updated."
+        else
+            log_info "Creating assembly directory: $SYSTEM_DIR"
+            mkdir -p "$SYSTEM_DIR"
+            cp "$BUILT_JAR" "$SYSTEM_DIR/${ARTIFACT_ID}-${VERSION}.jar"
+            log_success "Assembly JAR installed."
+        fi
+    else
+        log_warn "Built JAR not found at: $BUILT_JAR (skipping assembly sync)"
+    fi
+    
+    # Step 3: Deploy to Karaf
     if [ "$NO_RESTART" = true ]; then
         cmd_refresh "$MODULE_NAME"
     else
@@ -607,9 +655,6 @@ cmd_status() {
     
     echo ""
     echo -e "${YELLOW}Frontend Dev Servers:${NC}"
-    echo -n "  DevTools (Port 3000): "
-    check_port 3000
-    
     echo -n "  Webview (Port 5173): "
     check_port 5173
 }
@@ -784,7 +829,7 @@ cmd_help() {
     echo "  backend features      - List installed Sokybot features"
     echo ""
     echo "Frontend:"
-    echo "  ui dev           - Start dev servers (webview + devtools)"
+    echo "  ui dev           - Start webview dev server"
     echo ""
     echo "Build:"
     echo "  build backend [--fast]  - Build Java project"

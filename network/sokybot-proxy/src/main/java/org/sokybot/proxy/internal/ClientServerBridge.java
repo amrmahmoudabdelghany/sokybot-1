@@ -20,40 +20,38 @@ import io.netty.channel.SimpleChannelInboundHandler;
  */
 @Sharable
 public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePacket> {
-    
+
     // Handshake protocol opcodes
     private static final int SETUP_OPCODE = 0x5000;
     private static final int CHALLENGE_OPCODE = 0x5001;
     private static final int ID_OPCODE = 0x2001;
-    
+
     private final ProxyConnection proxyConnection;
-    
+
     private final Set<Integer> preventedClientOpcodes;
     private final Set<Integer> preventedServerOpcodes;
-    
+
     public ClientServerBridge(ProxyConnection proxyConnection) {
         this.proxyConnection = proxyConnection;
-        
+
         // Opcodes that should not be forwarded from client to server
         this.preventedClientOpcodes = Set.of(
-            GlobalOpcode.HANDSHAKE_ACCEPTANCE, 
-            GlobalOpcode.MODULE_IDENTIFICATION,
-            GlobalOpcode.HANDSHAKE, 
-            ClientOpcode.AUTH_REQUEST, 
-            ClientOpcode.JOIN_REQUEST
-        );
-        
+                GlobalOpcode.HANDSHAKE_ACCEPTANCE,
+                GlobalOpcode.MODULE_IDENTIFICATION,
+                GlobalOpcode.HANDSHAKE,
+                ClientOpcode.AUTH_REQUEST,
+                ClientOpcode.JOIN_REQUEST);
+
         // Opcodes that should not be forwarded from server to client
         this.preventedServerOpcodes = Set.of(
-            0xA102
-        );
+                0xA102);
     }
-    
+
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ImmutablePacket msg) throws Exception {
         NetworkPeer peer = ctx.channel().attr(NetworkAttributes.TRANSPORT).get();
         int opcode = msg.getOpcode();
-        
+
         // Handle handshake and identification packets from server in clientless mode
         if (peer == NetworkPeer.SERVER && proxyConnection.isClientlessMode()) {
             HandshakeHandler handler = null;
@@ -70,19 +68,19 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
                 handler = proxyConnection.createHandshakeHandler();
                 handler.handleServerIdentification(msg);
             }
-            
+
             if (handler != null) {
                 ctx.fireChannelRead(msg);
                 return;
             }
         }
-        
+
         boolean blocked = (peer == NetworkPeer.CLIENT && preventedClientOpcodes.contains(opcode))
                 || (peer == NetworkPeer.SERVER && preventedServerOpcodes.contains(opcode));
-        
+
         MutablePacket packet = MutablePacket.wrap(msg.toBytes());
         packet.setPacketSource(peer);
-        
+
         if (peer == NetworkPeer.CLIENT) {
             // Forward client packet to server (if not blocked)
             if (!blocked) {
@@ -100,11 +98,11 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
                 }
             }
         }
-        
+
         // Continue pipeline for packet observers
         ctx.fireChannelRead(msg);
     }
-    
+
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         System.err.println("ClientServerBridge error: " + cause.getMessage());

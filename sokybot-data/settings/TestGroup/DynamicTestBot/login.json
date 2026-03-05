@@ -1,0 +1,6 @@
+{
+  "password" : "supersecret2026",
+  "autoLogin" : true,
+  "targetGateway" : "1.2.3.4",
+  "username" : "myuser"
+}

@@ -17,13 +17,13 @@ import io.netty.handler.codec.ByteToMessageDecoder;
  * Handles encrypted packets using Blowfish.
  */
 public class PacketDecoder extends ByteToMessageDecoder {
-    
+
     private final IBlowfish blowfish;
-    
+
     public PacketDecoder(IBlowfish blowfish) {
         this.blowfish = blowfish;
     }
-    
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         if (in.readableBytes() < 2) {
@@ -33,9 +33,13 @@ public class PacketDecoder extends ByteToMessageDecoder {
         in.markReaderIndex();
         byte[] sizeBuffer = new byte[2];
         in.readBytes(sizeBuffer);
-         
+
         short size = (short) (((sizeBuffer[1] & 0xff) << 8) | (sizeBuffer[0] & 0xff));
-        
+
+        if (size > 10000) { // Safety check for malformed packets
+            // log warning or handle
+        }
+
         boolean encrypted = false;
         if ((size & 0x8000) == 0x8000) {
             encrypted = true;
@@ -54,21 +58,23 @@ public class PacketDecoder extends ByteToMessageDecoder {
 
         byte[] buffer = new byte[size];
         in.readBytes(buffer, 2, buffer.length - 2);
-        
+
         buffer[0] = sizeBuffer[0];
         buffer[1] = sizeBuffer[1];
 
+        int opcode = (((buffer[3] & 0xff) << 8) | (buffer[2] & 0xff));
+
         if (encrypted) {
             buffer = blowfish.decode(2, buffer);
-            
+
             size = (short) (((buffer[1] & 0x7f) << 8) | (buffer[0] & 0xff));
             size += 6;
-            
+
             if (size < buffer.length) {
                 buffer = Arrays.copyOf(buffer, size);
             }
         }
-        
+
         NetworkPeer peer = ctx.channel().attr(NetworkAttributes.TRANSPORT).get();
         out.add(ImmutablePacket.wrap(buffer, Encoding.PLAIN, peer));
     }

@@ -245,6 +245,14 @@ public class OSGiTestUtils {
         public boolean isAssignableTo(Bundle bundle, String className) { return false; }
         @Override
         public int compareTo(Object reference) { return 0; }
+
+        @Override
+        public <A> A adapt(Class<A> type) { return null; }
+
+        @Override
+        public java.util.Dictionary<String, Object> getProperties() {
+            return new java.util.Hashtable<>(properties);
+        }
         
         @Override
         public boolean equals(Object obj) {

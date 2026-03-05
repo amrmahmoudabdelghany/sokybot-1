@@ -98,6 +98,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         return <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mr-2" />;
     };
 
+    const hasSystemLog = !!extensionRegistry.pages?.['SystemLog'];
+
     return (
         <div className="flex h-screen bg-background text-foreground font-sans transition-colors duration-300 overflow-hidden">
             {/* Sidebar */}
@@ -126,11 +128,29 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         const groupMachines = machines.filter(m =>
                             m.groupName === group || getMachineGroup(m.machineId) === group
                         );
+                        const groupLogPageId = `GroupLog_${group}`;
+                        const hasGroupLog = !!extensionRegistry.pages?.[groupLogPageId];
                         return (
                             <div key={group} className="space-y-1">
                                 <div className="px-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest flex items-center justify-between mb-2">
-                                    {group}
-                                    <span className="text-[9px] bg-secondary/80 px-1.5 py-0.5 rounded-full text-foreground/80 font-mono shadow-sm">{groupMachines.length}</span>
+                                    <span>{group}</span>
+                                    <div className="flex items-center gap-1">
+                                        {hasGroupLog && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-6 w-6 text-muted-foreground hover:text-primary"
+                                                title="Group Log"
+                                                onClick={() => {
+                                                    setSelectedMachineId(null);
+                                                    setSelectedPageId(groupLogPageId);
+                                                }}
+                                            >
+                                                <FileText className="h-3 w-3" />
+                                            </Button>
+                                        )}
+                                        <span className="text-[9px] bg-secondary/80 px-1.5 py-0.5 rounded-full text-foreground/80 font-mono shadow-sm">{groupMachines.length}</span>
+                                    </div>
                                 </div>
                                 {groupMachines.map(m => (
                                     /* Machine Item */
@@ -269,7 +289,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </div>
                 <div className="p-4 border-t border-border/40 text-[10px] font-medium text-muted-foreground/60 flex justify-between items-center bg-card/30">
                     <span>{machines.length} Total Bots</span>
-                    <span className="w-2 h-2 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40"></span>
+                    <div className="flex items-center gap-2">
+                        {hasSystemLog && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-2 text-[10px] font-medium text-muted-foreground hover:text-primary hover:bg-secondary/40"
+                                onClick={() => {
+                                    setSelectedMachineId(null);
+                                    setSelectedPageId('SystemLog');
+                                }}
+                            >
+                                <FileText className="h-3 w-3 mr-1" />
+                                System Log
+                            </Button>
+                        )}
+                        <span className="w-2 h-2 rounded-full bg-emerald-500/20 ring-1 ring-emerald-500/40"></span>
+                    </div>
                 </div>
             </div>
 

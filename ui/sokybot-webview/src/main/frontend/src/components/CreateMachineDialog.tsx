@@ -112,22 +112,31 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
             setLoading(true);
             setError(null);
 
-            const options: string[] = [];
+            // Step 1: Create the bare machine context (Empty options since they were legacy)
+            await rsocketService.createMachine(selectedGroup, formData.name, []);
+
+            // Step 2: Initialize Settings dynamically if any are configured
+            const payload: Record<string, unknown> = {};
+            let needsInitialization = false;
 
             if (formData.host) {
-                options.push(`MACHINE_TARGET_GATEWAY=${formData.host}`);
+                payload.targetGateway = formData.host;
+                needsInitialization = true;
             }
 
             if (formData.autoLogin) {
-                options.push("--MACHINE_AUTO_LOGIN");
-                options.push(`MACHINE_USER_NAME=${formData.username}`);
-                options.push(`MACHINE_PASSWORD=${formData.password}`);
-                options.push(`MACHINE_PASSCODE=${formData.passcode}`);
-                options.push(`MACHINE_TARGET_AGENT=${formData.agentServer}`);
+                payload.autoLogin = formData.autoLogin;
+                payload.username = formData.username;
+                payload.password = formData.password;
+                payload.passcode = formData.passcode;
+                payload.targetAgent = formData.agentServer;
+                needsInitialization = true;
             }
 
-            // Use new typed API
-            await rsocketService.createMachine(selectedGroup, formData.name, options);
+            if (needsInitialization) {
+                await rsocketService.initializeMachine(selectedGroup, formData.name, "login", payload);
+            }
+
             onSuccess();
             onClose();
         } catch (err: any) {

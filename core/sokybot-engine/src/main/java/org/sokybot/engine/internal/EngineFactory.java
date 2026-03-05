@@ -49,13 +49,33 @@ public class EngineFactory implements IEngineFactory {
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     protected void bindActuator(IActuator actuator) {
-        log.info("Binding actuator services: {}", actuator.getName());
+        log.info("Binding actuator service: {}", actuator.getName());
         this.actuators.add(actuator);
+
+        // Register to all existing engines
+        engines.values().forEach(engine -> {
+            try {
+                engine.getActuatorRegistry().registerActuator(actuator);
+            } catch (Exception e) {
+                log.error("Failed to register actuator {} to engine {}", actuator.getName(), engine.getMachineId(),
+                        e);
+            }
+        });
     }
 
     protected void unbindActuator(IActuator actuator) {
-        log.info("Unbinding actuator services: {}", actuator.getName());
+        log.info("Unbinding actuator service: {}", actuator.getName());
         this.actuators.remove(actuator);
+
+        // Unregister from all existing engines
+        engines.values().forEach(engine -> {
+            try {
+                engine.getActuatorRegistry().unregisterActuator(actuator.getName());
+            } catch (Exception e) {
+                log.error("Error unregistering actuator {} from engine {}", actuator.getName(), engine.getMachineId(),
+                        e);
+            }
+        });
     }
 
     @Override
@@ -82,6 +102,11 @@ public class EngineFactory implements IEngineFactory {
                 engines.put(machineId, engine);
 
                 log.info("Engine created successfully for machine: {}", machineId);
+
+                // AUTO-START for testing
+                log.info("AUTO-STARTING engine for machine: {}", machineId);
+                engine.start();
+
                 return engine;
 
             } catch (Exception e) {

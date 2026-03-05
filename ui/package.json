@@ -4,15 +4,11 @@
     "private": true,
     "workspaces": [
         "sokybot-frontend-shared",
-        "sokybot-webview/src/main/frontend",
-        "sokybot-dev-tools/src/main/frontend"
+        "sokybot-webview/src/main/frontend"
     ],
     "scripts": {
-        "dev": "concurrently \"npm run dev -w frontend\" \"npm run dev -w dev-tools-frontend\"",
+        "dev": "npm run dev -w frontend",
         "build": "npm run build -ws",
         "install:all": "npm install"
-    },
-    "devDependencies": {
-        "concurrently": "^9.1.2"
     }
 }

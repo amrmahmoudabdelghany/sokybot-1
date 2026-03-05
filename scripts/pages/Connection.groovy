@@ -23,14 +23,14 @@ class ConnectionPage implements IScriptedPage, EventHandler {
     
     private String profileName = ""
 
-    @Override
+     
     String getTitle() { "Connection" }
 
-    @Override
+     
     String getIcon() { "Link" }
 
-    @Override
-    void initialize(IMachineContext context) {
+     
+     @Override void init(IMachineContext context) {
         this.machineContext = context
         
         def settingsRegistry = context.getSokybotContext().getService(ISettingsRegistry.class)
@@ -50,17 +50,17 @@ class ConnectionPage implements IScriptedPage, EventHandler {
         log.info("Groovy ConnectionPage initialized for {}", context.fullName())
     }
 
-    @Override
+     
     Map<String, Object> getSchema() {
         return [:] // Loaded from Connection.json by ScriptPageLoader
     }
 
-    @Override
+     
     Map<String, Object> getInitialState() {
         return getState()
     }
 
-    @Override
+     
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
         log.debug("Handling action: {} with data: {}", action, data)
         
@@ -113,7 +113,7 @@ class ConnectionPage implements IScriptedPage, EventHandler {
         }
     }
 
-    @Override
+     
     Flux<Object> streamData(String streamName, Map<String, Object> params) {
         return Flux.concat(
                 Flux.just(getState()),
@@ -121,7 +121,7 @@ class ConnectionPage implements IScriptedPage, EventHandler {
         )
     }
 
-    @Override
+     
     void handleEvent(Event event) {
         // MachinePagesActivator filters by machine, so we just check topics
         String topic = event.getTopic()
@@ -130,7 +130,7 @@ class ConnectionPage implements IScriptedPage, EventHandler {
         }
     }
 
-    @Override
+     
     void shutdown() {
         stateSink.tryEmitComplete()
     }

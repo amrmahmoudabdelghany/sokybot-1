@@ -1,27 +1,75 @@
 {
     "type": "div",
     "className": "w-full h-full flex flex-col",
+    "props": {
+        "streamId": "Log",
+        "stateKey": "Log",
+        "streamParams": {
+            "level": "${Log.level}",
+            "feature": "${Log.feature}",
+            "maxEntries": "${Log.maxEvents}"
+        }
+    },
     "children": [
         {
             "type": "div",
             "className": "flex justify-between items-center mb-2",
             "children": [
                 {
-                    "type": "h3",
-                    "className": "text-sm font-bold text-foreground",
-                    "props": {
-                        "children": "Event Log"
-                    }
+                    "type": "div",
+                    "className": "flex items-center gap-2",
+                    "children": [
+                        {
+                            "type": "h3",
+                            "className": "text-sm font-bold text-foreground",
+                            "props": {
+                                "children": "Event Log"
+                            }
+                        },
+                        {
+                            "type": "span",
+                            "className": "text-xs text-muted-foreground",
+                            "props": {
+                                "children": "Last ${ (Log && Log.maxEvents) || 0 } events"
+                            }
+                        }
+                    ]
                 },
                 {
                     "type": "div",
                     "className": "flex items-center gap-2",
                     "children": [
                         {
-                            "type": "span",
-                            "className": "text-xs text-muted-foreground",
+                            "type": "select",
+                            "className": "h-7 rounded-md border border-input bg-background px-2 text-[11px]",
                             "props": {
-                                "children": "Last ${maxEvents} events"
+                                "value": "${Log && Log.level || 'ALL'}",
+                                "onChange": "setLogLevel",
+                                "children": [
+                                    { "type": "option", "props": { "value": "ALL", "children": "All" } },
+                                    { "type": "option", "props": { "value": "ERROR", "children": "Error" } },
+                                    { "type": "option", "props": { "value": "WARN", "children": "Warn" } },
+                                    { "type": "option", "props": { "value": "INFO", "children": "Info" } },
+                                    { "type": "option", "props": { "value": "DEBUG", "children": "Debug" } },
+                                    { "type": "option", "props": { "value": "TRACE", "children": "Trace" } }
+                                ]
+                            }
+                        },
+                        {
+                            "type": "select",
+                            "className": "h-7 rounded-md border border-input bg-background px-2 text-[11px]",
+                            "props": {
+                                "value": "${Log && Log.feature || 'ALL'}",
+                                "onChange": "setLogFeature",
+                                "children": [
+                                    { "type": "option", "props": { "value": "ALL", "children": "All features" } },
+                                    { "type": "option", "props": { "value": "training", "children": "Training" } },
+                                    { "type": "option", "props": { "value": "healing", "children": "Healing" } },
+                                    { "type": "option", "props": { "value": "connection", "children": "Connection" } },
+                                    { "type": "option", "props": { "value": "navigation", "children": "Navigation" } },
+                                    { "type": "option", "props": { "value": "inventory", "children": "Inventory" } },
+                                    { "type": "option", "props": { "value": "skills", "children": "Skills" } }
+                                ]
                             }
                         },
                         {
@@ -45,14 +93,14 @@
                     "type": "div",
                     "className": "text-muted-foreground text-center italic mt-10",
                     "props": {
-                        "hidden": "${events.length > 0}",
+                        "hidden": "${Log && Log.events && Log.events.length > 0}",
                         "children": "Waiting for events..."
                     }
                 },
                 {
                     "type": "div",
                     "props": {
-                        "dataSource": "events",
+                        "dataSource": "Log && Log.events ? Log.events : []",
                         "renderItem": {
                             "type": "div",
                             "className": "border-b border-border py-1 hover:bg-muted/50 transition-colors",

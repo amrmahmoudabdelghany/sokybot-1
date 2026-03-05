@@ -146,4 +146,16 @@ public class MockDispatcher implements IDispatcher {
         this.clientConnected = false;
         this.serverConnected = false;
     }
+
+    private boolean clientlessMode = false;
+
+    @Override
+    public void setClientlessMode(boolean clientlessMode) {
+        this.clientlessMode = clientlessMode;
+    }
+
+    @Override
+    public boolean isClientlessMode() {
+        return clientlessMode;
+    }
 }

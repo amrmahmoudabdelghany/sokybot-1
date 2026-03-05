@@ -7,40 +7,113 @@
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- SHARED INFRASTRUCTURE: Jackson JSON processing                          -->
-    <!-- Note: Netty/Reactor/RSocket are embedded in bundles due to OSGi         -->
-    <!-- complexity with native transports and version requirements              -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <feature name="sokybot-jackson" version="${jackson.version}" description="Jackson JSON">
+    <feature name="sokybot-jackson" version="${jackson.version}" description="Jackson JSON and YAML">
         <bundle>mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson.version}</bundle>
         <bundle>mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
         <bundle>mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
+        <bundle>mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${jackson.version}</bundle>
         <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/${jackson.version}</bundle>
+        <!-- YAML backend required by jackson-dataformat-yaml (wrap for OSGi Export-Package) -->
+        <bundle>wrap:mvn:org.yaml/snakeyaml/2.0</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- PLATFORM FEATURE: Third-party runtime (no sokybot modules)              -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-platform" version="${project.version}" description="Third-party platform bundles (JNA, H2, Felix Atomos)">
+        <bundle>mvn:net.java.dev.jna/jna/${jna.version}</bundle>
+        <bundle>mvn:net.java.dev.jna/jna-platform/${jna.version}</bundle>
+        <bundle>mvn:com.h2database/h2/2.1.214</bundle>
+        <bundle>mvn:org.apache.felix/org.apache.felix.atomos/1.0.0</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- REACTOR FEATURE: Third-party Reactor/Netty (no sokybot modules)         -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-reactor" version="${project.version}" description="Third-party Reactor/Netty bundles (wrapped)">
+        <bundle>wrap:mvn:org.reactivestreams/reactive-streams/${reactive-streams.version}</bundle>
+        <bundle>wrap:mvn:io.projectreactor/reactor-core/${reactor.version}</bundle>
+        <bundle>wrap:mvn:io.projectreactor.netty/reactor-netty-core/${reactor-netty.version}</bundle>
+        <bundle>wrap:mvn:io.projectreactor.netty/reactor-netty-http/${reactor-netty.version}</bundle>
+
+        <!-- Netty modules (reactor-netty depends on these) -->
+        <bundle>wrap:mvn:io.netty/netty-common/${netty.version}</bundle>
+        <bundle>wrap:mvn:io.netty/netty-buffer/${netty.version}</bundle>
+        <bundle>wrap:mvn:io.netty/netty-transport/${netty.version}</bundle>
+        <!-- Native epoll transport provides io.netty.channel.epoll packages required by reactor-netty-core -->
+        <bundle>wrap:mvn:io.netty/netty-transport-native-epoll/${netty.version}</bundle>
+        <bundle>wrap:mvn:io.netty/netty-resolver/${netty.version}</bundle>
+        <bundle>wrap:mvn:io.netty/netty-codec/${netty.version}</bundle>
+        <bundle>wrap:mvn:io.netty/netty-handler/${netty.version}</bundle>
+        <bundle>wrap:mvn:io.netty/netty-codec-http/${netty.version}</bundle>
+        <bundle>wrap:mvn:io.netty/netty-codec-http2/${netty.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- RSOCKET FEATURE: Third-party RSocket (no sokybot modules)                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-rsocket" version="${project.version}" description="Third-party RSocket bundles (wrapped)">
+        <feature>sokybot-reactor</feature>
+        <bundle>wrap:mvn:io.rsocket/rsocket-core/${rsocket.version}</bundle>
+        <bundle>wrap:mvn:io.rsocket/rsocket-transport-netty/${rsocket.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- HIBERNATE FEATURE: Third-party Hibernate/JPA stack (no sokybot modules)  -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-hibernate" version="${project.version}" description="Third-party Hibernate/JPA stack (wrapped)">
+        <bundle>wrap:mvn:javax.persistence/javax.persistence-api/2.2</bundle>
+        <bundle>wrap:mvn:javax.transaction/javax.transaction-api/1.3</bundle>
+        <bundle>wrap:mvn:org.jboss.spec.javax.transaction/jboss-transaction-api_1.2_spec/1.1.1.Final</bundle>
+
+        <bundle>wrap:mvn:org.hibernate/hibernate-core/5.6.15.Final</bundle>
+        <bundle>wrap:mvn:org.hibernate/hibernate-osgi/5.6.15.Final</bundle>
+        <bundle>wrap:mvn:org.hibernate.common/hibernate-commons-annotations/5.1.2.Final</bundle>
+
+        <bundle>wrap:mvn:org.jboss.logging/jboss-logging/3.4.3.Final</bundle>
+        <bundle>wrap:mvn:com.fasterxml/classmate/1.5.1</bundle>
+        <bundle>wrap:mvn:org.jboss/jandex/2.4.2.Final</bundle>
+        <bundle>wrap:mvn:antlr/antlr/2.7.7</bundle>
+        <bundle>wrap:mvn:org.dom4j/dom4j/2.1.3</bundle>
+        <bundle>wrap:mvn:net.bytebuddy/byte-buddy/1.12.18</bundle>
+
+        <!-- JAXB / activation needed by Hibernate 5.6 -->
+        <bundle>wrap:mvn:javax.activation/javax.activation-api/1.2.0</bundle>
+        <bundle>wrap:mvn:javax.activation/activation/1.1.1</bundle>
+        <bundle>wrap:mvn:javax.xml.bind/jaxb-api/2.3.1</bundle>
+        <bundle>wrap:mvn:org.glassfish.jaxb/jaxb-runtime/2.3.1</bundle>
+        <bundle>wrap:mvn:org.glassfish.jaxb/txw2/2.3.1</bundle>
+        <bundle>wrap:mvn:com.sun.istack/istack-commons-runtime/3.0.7</bundle>
+        <bundle>wrap:mvn:org.jvnet.staxex/stax-ex/1.8</bundle>
+        <bundle>wrap:mvn:com.sun.xml.fastinfoset/FastInfoset/1.2.15</bundle>
+
+        <!-- Interceptor API required by hibernate-osgi -->
+        <bundle>wrap:mvn:javax.interceptor/javax.interceptor-api/1.2</bundle>
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- CORE FEATURE: Base bundles required for all configurations              -->
+    <!-- (References dedicated features for third-party; only org.sokybot bundles) -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-core" version="${project.version}" description="Sokybot Core">
-        <!-- Shared infrastructure dependencies -->
         <feature>sokybot-jackson</feature>
-        
-        <!-- Third-party libraries -->
-        <bundle>mvn:net.java.dev.jna/jna/${jna.version}</bundle>
-        <bundle>mvn:net.java.dev.jna/jna-platform/${jna.version}</bundle>
+        <feature>sokybot-platform</feature>
+        <feature>sokybot-reactor</feature>
+        <feature>sokybot-rsocket</feature>
+        <feature>sokybot-hibernate</feature>
         
         <!-- APIs (must load first) -->
         <bundle>mvn:org.sokybot/sokybot-loader-api/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-engine-api/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-game-events-api/${project.version}</bundle>
-        <bundle>mvn:org.sokybot/sokybot-ui-api/${project.version}</bundle>
         
         <!-- Infrastructure -->
         <bundle>mvn:org.sokybot/sokybot-commons/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-security/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-settings/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-persistence/${project.version}</bundle>
-        <!-- H2 Database (Separate bundle to avoid embedding issues) -->
-        <bundle>mvn:com.h2database/h2/2.1.214</bundle>
+        <bundle>mvn:org.sokybot/sokybot-logging/${project.version}</bundle>
         
         <!-- Game Data -->
         <bundle>mvn:org.sokybot/sokybot-pk2/${project.version}</bundle>
@@ -65,6 +138,8 @@
         <bundle>mvn:org.sokybot/sokybot-machine-pages/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-packet-sniffer/${project.version}</bundle>
         
+        <!-- Development CLI -->
+        <bundle>mvn:org.sokybot/sokybot-dev-shell/${project.version}</bundle>        
     </feature>
 
 
@@ -76,9 +151,8 @@
         <!-- Karaf shell and SSH for development -->
         <feature version="${karaf.version}">shell</feature>
         <feature version="${karaf.version}">ssh</feature>
-        <!-- Development bundles -->
-        <bundle>mvn:org.sokybot/sokybot-dev-tools/${project.version}</bundle>
-        <bundle>mvn:org.sokybot/sokybot-bundle-manager/${project.version}</bundle>
+        <!-- Development bundles (sokybot-dev-shell is in sokybot-core) -->
+        <!-- <bundle>mvn:org.sokybot/sokybot-bundle-manager/${project.version}</bundle> -->
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->

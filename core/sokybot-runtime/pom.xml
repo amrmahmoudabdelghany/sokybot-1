@@ -27,13 +27,14 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-game-events-api</artifactId>
             <version>${project.version}</version>
-            <scope>compile</scope>
+            <scope>provided</scope>
         </dependency>
         
 
@@ -43,6 +44,7 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-loader-api</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         
         <dependency>
@@ -164,7 +166,7 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
@@ -177,8 +179,9 @@
                             org.osgi.framework,
                             org.osgi.framework.launch,
                             org.osgi.service.event,
-                            org.sokybot.gameevents,
-                            org.sokybot.gameevents.events.core,
+                            org.sokybot.gameevents.*;version="[1.0,2)",
+                            org.sokybot.engine.api.*;version="[1.0,2)",
+                            org.sokybot.loader.api.*;version="[1.0,2)",
                             org.sokybot.*,
                             *;resolution:=optional
                         </Import-Package>

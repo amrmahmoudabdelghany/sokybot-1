@@ -123,7 +123,7 @@ public class ScriptActuatorLoaderImpl implements IScriptActuatorLoader {
                 log.error("Script {} did not return an instance of IActuator", scriptFile.getFileName());
             }
         } catch (Exception e) {
-            log.error("Failed to load script {}: {}", scriptFile.getFileName(), e.getMessage());
+            log.error("Failed to load script {}: {}", scriptFile.getFileName(), e.getMessage(), e);
         }
         return Optional.empty();
     }

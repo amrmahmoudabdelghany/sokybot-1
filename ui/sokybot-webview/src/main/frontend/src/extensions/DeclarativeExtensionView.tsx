@@ -40,6 +40,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     // const lastUpdateRef = useRef<number>(0);
     // const pendingUpdatesRef = useRef<Map<string, any>>(new Map());
     const streamSubscriptionsRef = useRef<Map<string, any>>(new Map());
+    const lastStreamParamsRef = useRef<Map<string, string>>(new Map());
 
     // Efficient delta update application
     const applyDeltaUpdate = useCallback((delta: Record<string, any>) => {
@@ -102,6 +103,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         // Cleanup previous subscriptions
         streamSubscriptionsRef.current.forEach(sub => sub?.unsubscribe());
         streamSubscriptionsRef.current.clear();
+        lastStreamParamsRef.current.clear();
 
         // Discover streams in schema
         discoverAndSubscribeStreams(providedSchema || schema);
@@ -126,6 +128,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             // Cleanup streams
             streamSubscriptionsRef.current.forEach(sub => sub?.unsubscribe());
             streamSubscriptionsRef.current.clear();
+            lastStreamParamsRef.current.clear();
         };
     }, [pageId, machineId, providedSchema, schema]);
 
@@ -166,13 +169,20 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         // Check if component has stream
         if (schema.type === 'stream' || schema.props?.streamId) {
             const streamId = schema.props?.streamId || schema.id;
-            const streamParams = schema.props?.streamParams || {};
+            const rawStreamParams = schema.props?.streamParams || {};
             const stateKey = schema.props?.stateKey;
             const streamMode = schema.props?.streamMode;
 
             if (streamId) {
-                console.log(`[${pageId}] Found stream: ${streamId} with mode: ${streamMode}`, streamParams);
-                subscribeToStream(streamId, streamParams, stateKey, streamMode);
+                const resolvedParams = resolveTemplateInObject(rawStreamParams, data);
+                const serialized = JSON.stringify(resolvedParams || {});
+                lastStreamParamsRef.current.set(streamId, serialized);
+
+                console.log(
+                    `[${pageId}] Found stream: ${streamId} with mode: ${streamMode}`,
+                    resolvedParams
+                );
+                subscribeToStream(streamId, resolvedParams, stateKey, streamMode);
             }
         }
 
@@ -218,6 +228,103 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         );
 
         streamSubscriptionsRef.current.set(streamId, subscription);
+    };
+
+    // Effect 3: Re-subscribe streams when their resolved parameters change
+    useEffect(() => {
+        const schemaToScan = providedSchema || schema;
+        if (!schemaToScan) {
+            return;
+        }
+
+        const visit = (node: any) => {
+            if (!node) return;
+
+            if (Array.isArray(node)) {
+                node.forEach(child => visit(child));
+                return;
+            }
+
+            if (node.type === 'stream' || node.props?.streamId) {
+                const streamId = node.props?.streamId || node.id;
+                const rawStreamParams = node.props?.streamParams || {};
+                const stateKey = node.props?.stateKey;
+                const streamMode = node.props?.streamMode;
+
+                if (streamId) {
+                    const resolvedParams = resolveTemplateInObject(rawStreamParams, data);
+                    const serialized = JSON.stringify(resolvedParams || {});
+                    const previous = lastStreamParamsRef.current.get(streamId);
+
+                    if (previous !== undefined && previous !== serialized) {
+                        console.log(
+                            `[${pageId}] Stream params changed for ${streamId}, re-subscribing`,
+                            resolvedParams
+                        );
+                        const existing = streamSubscriptionsRef.current.get(streamId);
+                        existing?.unsubscribe();
+                        subscribeToStream(streamId, resolvedParams, stateKey, streamMode);
+                        lastStreamParamsRef.current.set(streamId, serialized);
+                    } else if (previous === undefined) {
+                        // In case discoverAndSubscribeStreams has not yet run for this stream.
+                        lastStreamParamsRef.current.set(streamId, serialized);
+                    }
+                }
+            }
+
+            if (node.children) {
+                if (Array.isArray(node.children)) {
+                    node.children.forEach((child: any) => visit(child));
+                } else {
+                    visit(node.children);
+                }
+            }
+        };
+
+        visit(schemaToScan);
+    }, [data, pageId, providedSchema, schema]);
+
+    // Local helper to resolve template expressions in stream params using current data context.
+    const resolveTemplateInObject = (obj: any, ctx: Record<string, any>): any => {
+        if (typeof obj === 'string') {
+            return resolveTemplate(obj, ctx);
+        } else if (Array.isArray(obj)) {
+            return obj.map(item => resolveTemplateInObject(item, ctx));
+        } else if (obj && typeof obj === 'object') {
+            const resolved: any = {};
+            for (const [key, value] of Object.entries(obj)) {
+                resolved[key] = resolveTemplateInObject(value, ctx);
+            }
+            return resolved;
+        }
+        return obj;
+    };
+
+    const resolveTemplate = (template: string, ctx: Record<string, any>): string => {
+        if (!template || typeof template !== 'string') return template;
+
+        return template.replace(/\$\{([^}]+)\}/g, (match, expr) => {
+            try {
+                const value = evaluateExpression(expr, ctx);
+                return value != null ? String(value) : match;
+            } catch (e) {
+                console.warn(`Template resolution failed for: ${expr}`, e);
+                return match;
+            }
+        });
+    };
+
+    const evaluateExpression = (expr: string, ctx: Record<string, any>): any => {
+        const parts = expr.trim().split(/[.\[\]]/).filter(p => p);
+        let value: any = ctx;
+        for (const part of parts) {
+            if (value && typeof value === 'object') {
+                value = value[part];
+            } else {
+                return undefined;
+            }
+        }
+        return value;
     };
 
     // Performance: Memoize rendered components

@@ -135,6 +135,8 @@ instances/
 *.kar
 
 ### Sokybot ###
+# Removed module (leftover dir from Docker; delete with: sudo rm -rf ui/sokybot-dev-tools)
+ui/sokybot-dev-tools/
 sokybot-core/sokybot.data
 sokybot-core/felix-cache
 sokybot-core/sokybot-cache
@@ -219,3 +221,8 @@ jacoco.exec
 /.metadata/
 *.class
 DiagnosticDriver.class
+
+# =============================================================================
+# Game Server (Skrillax) - External project, not part of sokybot source
+# =============================================================================
+skrillax/

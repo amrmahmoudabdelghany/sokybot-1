@@ -12,7 +12,7 @@ Bot UI is divided into the core Javascript frontend (React) and the Scripted Pag
 Always use the `soky` CLI to run the frontend development servers. This proxies requests to the backend (`localhost:8182` via RSocket).
 
 ```bash
-# Starts Webview on 5173, DevTools on 3000
+# Starts Webview on 5173
 soky ui dev
 ```
 Do not restart backend services when only making frontend structural changes.

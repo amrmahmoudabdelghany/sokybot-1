@@ -55,11 +55,11 @@ soky backend logs
 soky backend shell
 ```
 
-**Frontend (Webview + DevTools)**
+**Frontend (Webview)**
 ```bash
 soky ui dev
 ```
-*Access Webview at http://localhost:5173 and DevTools at http://localhost:3000.*
+*Access Webview at http://localhost:5173.*
 
 ### 4. Utilities
 

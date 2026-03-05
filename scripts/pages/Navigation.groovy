@@ -17,14 +17,14 @@ class NavigationPage implements IScriptedPage, EventHandler {
     
     private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100)
 
-    @Override
+     
     String getTitle() { "Navigation" }
 
-    @Override
+     
     String getIcon() { "Navigation" }
 
-    @Override
-    void initialize(IMachineContext context) {
+     
+     @Override void init(IMachineContext context) {
         this.machineContext = context
         
         def settingsRegistry = context.getSokybotContext().getService(ISettingsRegistry.class)
@@ -41,17 +41,17 @@ class NavigationPage implements IScriptedPage, EventHandler {
         log.info("Groovy NavigationPage initialized for {}", context.fullName())
     }
 
-    @Override
+     
     Map<String, Object> getSchema() {
         return [:] // Loaded from Navigation.json
     }
 
-    @Override
+     
     Map<String, Object> getInitialState() {
         return getState()
     }
 
-    @Override
+     
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
         log.debug("Handling action: {} with data: {}", action, data)
         
@@ -77,7 +77,7 @@ class NavigationPage implements IScriptedPage, EventHandler {
         }
     }
 
-    @Override
+     
     Flux<Object> streamData(String streamName, Map<String, Object> params) {
         return Flux.concat(
                 Flux.just(getState()),
@@ -85,7 +85,7 @@ class NavigationPage implements IScriptedPage, EventHandler {
         )
     }
 
-    @Override
+     
     void handleEvent(Event event) {
         String topic = event.getTopic()
         if (topic.contains("PositionUpdate") || topic.contains("MapChanged")) {
@@ -93,7 +93,7 @@ class NavigationPage implements IScriptedPage, EventHandler {
         }
     }
 
-    @Override
+     
     void shutdown() {
         stateSink.tryEmitComplete()
     }

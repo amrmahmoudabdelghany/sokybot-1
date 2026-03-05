@@ -172,9 +172,6 @@ public class EngineCore implements IEngine {
                 actuatorRegistry.shutdownActuators();
             }
 
-            // Shutdown scheduler
-            scheduler.shutdown();
-
             state.set(EngineState.STOPPED);
             log.info("Engine stopped successfully for machine: {}", machineId);
 
@@ -281,7 +278,7 @@ public class EngineCore implements IEngine {
      * 
      * @return The actuator registry
      */
-    ActuatorRegistry getActuatorRegistry() {
+    public ActuatorRegistry getActuatorRegistry() {
         return actuatorRegistry;
     }
 

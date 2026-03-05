@@ -21,5 +21,6 @@
         <module>sokybot-dist</module>
         <module>sokybot-build-tools</module>
         <module>sokybot-dev-shell</module>
+        <module>sokybot-logging</module>
     </modules>
 </project>

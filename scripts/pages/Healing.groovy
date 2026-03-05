@@ -17,14 +17,14 @@ class HealingPage implements IScriptedPage, EventHandler {
     
     private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100)
 
-    @Override
+     
     String getTitle() { "Healing" }
 
-    @Override
+     
     String getIcon() { "Heart" }
 
-    @Override
-    void initialize(IMachineContext context) {
+     
+     @Override void init(IMachineContext context) {
         this.machineContext = context
         
         def settingsRegistry = context.getSokybotContext().getService(ISettingsRegistry.class)
@@ -41,17 +41,17 @@ class HealingPage implements IScriptedPage, EventHandler {
         log.info("Groovy HealingPage initialized for {}", context.fullName())
     }
 
-    @Override
+     
     Map<String, Object> getSchema() {
         return [:] // Loaded from Healing.json
     }
 
-    @Override
+     
     Map<String, Object> getInitialState() {
         return getState()
     }
 
-    @Override
+     
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
         log.debug("Handling action: {} with data: {}", action, data)
         
@@ -77,7 +77,7 @@ class HealingPage implements IScriptedPage, EventHandler {
         }
     }
 
-    @Override
+     
     Flux<Object> streamData(String streamName, Map<String, Object> params) {
         return Flux.concat(
                 Flux.just(getState()),
@@ -85,7 +85,7 @@ class HealingPage implements IScriptedPage, EventHandler {
         )
     }
 
-    @Override
+     
     void handleEvent(Event event) {
         String topic = event.getTopic()
         if (topic.contains("UpdateHP") || topic.contains("UpdateMP")) {
@@ -93,7 +93,7 @@ class HealingPage implements IScriptedPage, EventHandler {
         }
     }
 
-    @Override
+     
     void shutdown() {
         stateSink.tryEmitComplete()
     }

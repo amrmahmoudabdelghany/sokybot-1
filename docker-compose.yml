@@ -18,7 +18,6 @@ services:
     environment:
       - SOKY_DEV_MODE=true
       - SOKY_WEBVIEW_URL=http://sokybot.local
-      - SOKY_DEVTOOLS_URL=http://sokybotdev.local
       - KARAF_DEBUG=true
     command: ./infra/scripts/soky backend start --foreground --watch
 
@@ -38,23 +37,6 @@ services:
     environment:
       - VITE_BACKEND_URL=ws://api.sokybot.local:8182/rsocket
     command: npm run dev -w frontend
-
-  sokybot-devtools-ui:
-    image: node:20-alpine
-    container_name: sokybot-devtools-ui
-    restart: unless-stopped
-    working_dir: /app/ui
-    networks:
-      - default
-      - proxy_net
-    user: "${UID:-1000}:${GID:-1000}"
-    volumes:
-      - .:/app
-    ports:
-      - "3004:3000"
-    environment:
-      - VITE_BACKEND_URL=ws://api.sokybot.local:8182/rsocket
-    command: npm run dev -w dev-tools-frontend
 
 networks:
   default:

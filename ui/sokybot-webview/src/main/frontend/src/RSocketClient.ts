@@ -356,6 +356,13 @@ export class RSocketService {
     }
 
     /**
+     * Initialize a machine with dynamic target settings (like gateway, credentials).
+     */
+    async initializeMachine(group: string, name: string, scope: string, payload: Record<string, unknown>) {
+        return this.request<{ status: string; machineId: string }>('machine.initialize', { group, name, scope, payload });
+    }
+
+    /**
      * List all groups.
      */
     async getGroups() {

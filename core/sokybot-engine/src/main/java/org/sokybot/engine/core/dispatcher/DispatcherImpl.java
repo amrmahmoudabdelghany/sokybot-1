@@ -110,6 +110,17 @@ public class DispatcherImpl implements IDispatcher {
     }
 
     @Override
+    public void setClientlessMode(boolean clientlessMode) {
+        log.info("Dispatcher setting clientless mode: {}", clientlessMode);
+        proxyConnection.setClientlessMode(clientlessMode);
+    }
+
+    @Override
+    public boolean isClientlessMode() {
+        return proxyConnection.isClientlessMode();
+    }
+
+    @Override
     public void disconnect() {
         try {
             log.info("Dispatcher disconnecting");

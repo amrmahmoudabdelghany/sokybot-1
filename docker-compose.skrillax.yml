@@ -1,0 +1,64 @@
+version: "3"
+
+services:
+  skrillax-db:
+    image: postgres:16-alpine
+    container_name: skrillax-db
+    restart: unless-stopped
+    networks:
+      - default
+      - proxy_net
+    environment:
+      - POSTGRES_USER=skrillax
+      - POSTGRES_DB=skrillax
+      - POSTGRES_PASSWORD=skrillax
+    volumes:
+      - "./skrillax/migrations:/docker-entrypoint-initdb.d:r"
+    ports:
+      - "15432:5432"
+
+  skrillax-agent:
+    build:
+      context: ./skrillax
+    image: skrillax-server
+    container_name: skrillax-agent
+    restart: unless-stopped
+    environment:
+      - SKRILLAX_AGENT_DATABASE_HOST=skrillax-db
+      - SKRILLAX_AGENT_GAME_DATA-LOCATION=/usr/silkroad
+      - SKRILLAX_AGENT_RPC-ADDRESS=skrillax-agent
+      - SERVER=/usr/local/bin/silkroad-agent
+    ports:
+      - "15780:15780"
+    depends_on:
+      - skrillax-db
+    networks:
+      - default
+      - proxy_net
+    volumes:
+      - "../Cyper Online Official Client:/usr/silkroad"
+      - "./skrillax/configs:/opt/skrillax/configs:r"
+
+  skrillax-gateway:
+    image: skrillax-server
+
+    container_name: skrillax-gateway
+    restart: unless-stopped
+    environment:
+      - SKRILLAX_GATEWAY_DATABASE_HOST=skrillax-db
+      - SERVER=/usr/local/bin/silkroad-gateway
+    ports:
+      - "15779:15779"
+    depends_on:
+      - skrillax-db
+      - skrillax-agent
+    networks:
+      - default
+      - proxy_net
+    volumes:
+      - "./skrillax/configs:/opt/skrillax/configs:r"
+
+networks:
+  default:
+  proxy_net:
+    external: true

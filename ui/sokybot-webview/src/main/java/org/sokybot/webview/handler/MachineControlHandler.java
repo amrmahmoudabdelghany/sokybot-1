@@ -30,12 +30,14 @@ import reactor.core.publisher.Mono;
         IRSocketHandler.METHOD_PROPERTY + "=machine.start",
         IRSocketHandler.METHOD_PROPERTY + "=machine.stop",
         IRSocketHandler.METHOD_PROPERTY + "=machine.list",
-        IRSocketHandler.METHOD_PROPERTY + "=machine.create"
+        IRSocketHandler.METHOD_PROPERTY + "=machine.create",
+        IRSocketHandler.METHOD_PROPERTY + "=machine.initialize"
 })
 public class MachineControlHandler implements IRSocketHandler {
 
     private volatile IGroupContext groupContext;
     private volatile ISokybotContext sokybotContext;
+    private volatile org.sokybot.settings.api.ISettingsRegistry settingsRegistry;
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL)
     protected void setGroupContext(IGroupContext groupContext) {
@@ -55,14 +57,23 @@ public class MachineControlHandler implements IRSocketHandler {
         this.sokybotContext = null;
     }
 
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL)
+    protected void setSettingsRegistry(org.sokybot.settings.api.ISettingsRegistry settingsRegistry) {
+        this.settingsRegistry = settingsRegistry;
+    }
+
+    protected void unsetSettingsRegistry(org.sokybot.settings.api.ISettingsRegistry settingsRegistry) {
+        this.settingsRegistry = null;
+    }
+
     @Override
     public String[] getMethods() {
-        return new String[] { "machine.start", "machine.stop", "machine.list", "machine.create" };
+        return new String[] { "machine.start", "machine.stop", "machine.list", "machine.create", "machine.initialize" };
     }
 
     @Override
     public String getDescription() {
-        return "Machine control operations (start, stop, list, create)";
+        return "Machine control operations (start, stop, list, create, initialize)";
     }
 
     @Override
@@ -78,6 +89,8 @@ public class MachineControlHandler implements IRSocketHandler {
                 return handleList(request);
             case "machine.create":
                 return handleCreate(request);
+            case "machine.initialize":
+                return handleInitialize(request);
             default:
                 return Mono.just(RSocketResponse.methodNotFound(method));
         }
@@ -97,6 +110,7 @@ public class MachineControlHandler implements IRSocketHandler {
 
         try {
             ctx.getEngine().start();
+            ctx.getEngine().sendEvent("CONNECT");
             Map<String, Object> result = new HashMap<>();
             result.put("status", "started");
             result.put("machineId", machineId);
@@ -192,7 +206,6 @@ public class MachineControlHandler implements IRSocketHandler {
     private Mono<RSocketResponse> handleCreate(RSocketRequest request) {
         String group = request.getString("group");
         String name = request.getString("name");
-        List<String> options = request.get("options", List.class);
 
         if (group == null || group.isEmpty()) {
             return Mono.just(RSocketResponse.invalidParams("group is required"));
@@ -213,11 +226,39 @@ public class MachineControlHandler implements IRSocketHandler {
         }
 
         try {
-            String[] optionsArray = options != null ? options.toArray(new String[0]) : new String[0];
-            grpCtx.installMachine(name, optionsArray);
+            grpCtx.installMachine(name);
 
             Map<String, Object> result = new HashMap<>();
             result.put("status", "created");
+            result.put("machineId", group + "." + name);
+            return Mono.just(RSocketResponse.success(result));
+        } catch (Exception e) {
+            return Mono.just(RSocketResponse.internalError(e));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Mono<RSocketResponse> handleInitialize(RSocketRequest request) {
+        String group = request.getString("group");
+        String name = request.getString("name");
+        String scope = request.getString("scope");
+        Map<String, Object> payload = request.get("payload", Map.class);
+
+        if (group == null || name == null || scope == null || payload == null) {
+            return Mono.just(RSocketResponse.invalidParams("group, name, scope, and payload are required"));
+        }
+
+        if (settingsRegistry == null) {
+            return Mono.just(RSocketResponse.error(
+                    RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
+                    "Settings registry not available"));
+        }
+
+        try {
+            settingsRegistry.writeRawSettings(group, name, scope, payload);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("status", "initialized");
             result.put("machineId", group + "." + name);
             return Mono.just(RSocketResponse.success(result));
         } catch (Exception e) {

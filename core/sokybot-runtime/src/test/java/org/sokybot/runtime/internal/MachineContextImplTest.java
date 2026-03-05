@@ -84,8 +84,8 @@ class MachineContextImplTest extends RuntimeTestBase {
         // Mock Proxy Connection
         lenient().when(proxyConnection.getPacketPublisher()).thenReturn(packetPublisher);
 
-        // Setup translator behavior
-        lenient().when(translator.translate(any(), any())).thenReturn(Collections.emptyList());
+        // Setup translator behavior (translate(machineFullName, packet, chunkManager))
+        lenient().when(translator.translate(any(), any(), any())).thenReturn(Collections.emptyList());
 
         // Register services in MockBundleContext
         mockBundleContext.registerMockService(IEngineFactory.class, engineFactory, null);
