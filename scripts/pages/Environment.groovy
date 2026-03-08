@@ -1,82 +1,34 @@
+import org.sokybot.machinepages.api.BasePage
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
-import org.sokybot.machinepages.api.IScriptedPage
-import org.sokybot.runtime.IMachineContext
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Sinks
 
-class EnvironmentPage implements IScriptedPage, EventHandler {
+class EnvironmentPage extends BasePage implements EventHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(EnvironmentPage.class)
+    EnvironmentPage() { super("Environment", "Globe") }
 
-    private IMachineContext machineContext
-    private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100)
-
-     
-    String getTitle() { "Environment" }
-
-     
-    String getIcon() { "Globe" }
-
-     
-     @Override void init(IMachineContext context) {
-        this.machineContext = context
-        log.info("Groovy EnvironmentPage initialized for {}", context.fullName())
+    @Override
+    String[] getEventTopics(String machineFullName) {
+        ["sokybot/game/${machineFullName}/EntitySpawn",
+         "sokybot/game/${machineFullName}/EntityDespawn"] as String[]
     }
 
-     
-    Map<String, Object> getSchema() {
-        return [:] // Loaded from Environment.json
-    }
-
-     
+    @Override
     Map<String, Object> getInitialState() {
-        return getEnvironmentData()
-    }
-
-     
-    Map<String, Object> handleAction(String action, Map<String, Object> data) {
-        log.debug("Handling action: {} with data: {}", action, data)
-        switch (action) {
-            case "refresh":
-                emitStateUpdate()
-                break
-        }
-        def newState = getEnvironmentData()
-        newState.put("success", true)
-        return newState
-    }
-
-     
-    Flux<Object> streamData(String streamName, Map<String, Object> params) {
-        return Flux.concat(
-                Flux.just(getEnvironmentData()),
-                stateSink.asFlux()
-        )
-    }
-
-     
-    void handleEvent(Event event) {
-        log.debug("Environment event received in Groovy: {}", event.getTopic())
-        emitStateUpdate()
-    }
-
-     
-    void shutdown() {
-        stateSink.tryEmitComplete()
-    }
-
-    private Map<String, Object> getEnvironmentData() {
         return [
             monsterPreferences: [:],
             areaFilters: [:]
         ]
     }
 
-    private void emitStateUpdate() {
-        stateSink.tryEmitNext(getEnvironmentData())
+    @Override
+    Map<String, Object> handleAction(String action, Map<String, Object> data) {
+        if (action == "refresh") emitStateUpdate()
+        return withSuccess(getInitialState())
+    }
+
+    @Override
+    void handleEvent(Event event) {
+        emitStateUpdate()
     }
 }
 

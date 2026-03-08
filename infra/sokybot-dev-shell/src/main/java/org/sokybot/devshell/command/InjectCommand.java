@@ -4,6 +4,7 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.sokybot.devshell.util.HexUtils;
 import org.sokybot.network.packet.MutablePacket;
 
 @Service
@@ -32,15 +33,15 @@ public class InjectCommand extends DevCommand {
                 }
 
                 try {
-                    byte[] data = hexToBytes(hexData.replaceAll("\\s+", ""));
+                    byte[] data = HexUtils.hexToBytes(hexData);
                     MutablePacket packet = MutablePacket.wrap(data);
-                    
+
                     if (toClient) {
-                         println("Injecting packet to client for bot '%s'...", botName);
-                         bot.getProxyConnection().sendToClient(packet);
+                        println("Injecting packet to client for bot '%s'...", botName);
+                        bot.getProxyConnection().sendToClient(packet);
                     } else {
-                         println("Injecting packet to server for bot '%s'...", botName);
-                         bot.getProxyConnection().sendToServer(packet);
+                        println("Injecting packet to server for bot '%s'...", botName);
+                        bot.getProxyConnection().sendToServer(packet);
                     }
                     println("Successfully injected %d bytes.", data.length);
                 } catch (Exception e) {
@@ -49,18 +50,5 @@ public class InjectCommand extends DevCommand {
             }, () -> error("Bot '%s' not found in group '%s'.", botName, groupName));
         }, () -> error("Group '%s' not found.", groupName));
         return null;
-    }
-
-    private byte[] hexToBytes(String s) {
-        int len = s.length();
-        if (len % 2 != 0) {
-            throw new IllegalArgumentException("Hex string must have an even length");
-        }
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                                 + Character.digit(s.charAt(i+1), 16));
-        }
-        return data;
     }
 }

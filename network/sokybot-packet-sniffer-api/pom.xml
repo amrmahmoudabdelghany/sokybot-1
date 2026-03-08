@@ -38,7 +38,12 @@
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Bundle-Description>${project.description}</Bundle-Description>
                         <Export-Package>org.sokybot.packetsniffer.api</Export-Package>
-                        <Import-Package>*</Import-Package>
+                        <!-- Allow any available reactor.core.publisher provider so we don't
+                             over-constrain against the wrapped reactor-core bundle in Karaf. -->
+                        <Import-Package>
+                            reactor.core.publisher;version="[0,4)",
+                            *
+                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

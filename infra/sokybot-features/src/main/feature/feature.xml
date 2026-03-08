@@ -21,40 +21,49 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- PLATFORM FEATURE: Third-party runtime (no sokybot modules)              -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <feature name="sokybot-platform" version="${project.version}" description="Third-party platform bundles (JNA, H2, Felix Atomos)">
+    <feature name="sokybot-platform" version="${project.version}" description="Third-party platform bundles (JNA, H2)">
         <bundle>mvn:net.java.dev.jna/jna/${jna.version}</bundle>
         <bundle>mvn:net.java.dev.jna/jna-platform/${jna.version}</bundle>
         <bundle>mvn:com.h2database/h2/2.1.214</bundle>
-        <bundle>mvn:org.apache.felix/org.apache.felix.atomos/1.0.0</bundle>
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- REACTOR FEATURE: Third-party Reactor/Netty (no sokybot modules)         -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <feature name="sokybot-reactor" version="${project.version}" description="Third-party Reactor/Netty bundles (wrapped)">
-        <bundle>wrap:mvn:org.reactivestreams/reactive-streams/${reactive-streams.version}</bundle>
-        <bundle>wrap:mvn:io.projectreactor/reactor-core/${reactor.version}</bundle>
-        <bundle>wrap:mvn:io.projectreactor.netty/reactor-netty-core/${reactor-netty.version}</bundle>
-        <bundle>wrap:mvn:io.projectreactor.netty/reactor-netty-http/${reactor-netty.version}</bundle>
+    <feature name="sokybot-reactor" version="${project.version}" description="Third-party Reactor/Netty bundles">
+        <bundle>mvn:org.reactivestreams/reactive-streams/${reactive-streams.version}</bundle>
+        <bundle>mvn:io.projectreactor/reactor-core/${reactor.version}</bundle>
+        <bundle>mvn:io.projectreactor.netty/reactor-netty-core/${reactor-netty.version}</bundle>
+        <bundle>mvn:io.projectreactor.netty/reactor-netty-http/${reactor-netty.version}</bundle>
 
         <!-- Netty modules (reactor-netty depends on these) -->
-        <bundle>wrap:mvn:io.netty/netty-common/${netty.version}</bundle>
-        <bundle>wrap:mvn:io.netty/netty-buffer/${netty.version}</bundle>
-        <bundle>wrap:mvn:io.netty/netty-transport/${netty.version}</bundle>
-        <!-- Native epoll transport provides io.netty.channel.epoll packages required by reactor-netty-core.
-             Use the linux-x86_64 classifier (jar type) to ensure the package is actually present on Linux hosts. -->
-        <bundle>wrap:mvn:io.netty/netty-transport-native-epoll/${netty.version}/jar/linux-x86_64</bundle>
-        <bundle>wrap:mvn:io.netty/netty-resolver/${netty.version}</bundle>
-        <bundle>wrap:mvn:io.netty/netty-codec/${netty.version}</bundle>
-        <bundle>wrap:mvn:io.netty/netty-handler/${netty.version}</bundle>
-        <bundle>wrap:mvn:io.netty/netty-codec-http/${netty.version}</bundle>
-        <bundle>wrap:mvn:io.netty/netty-codec-http2/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-common/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-buffer/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-transport/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-resolver/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-codec/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-handler/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-codec-http/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-codec-http2/${netty.version}</bundle>
+        
+        <!-- Proxy & Socks support (required by reactor-netty-core) -->
+        <bundle>mvn:io.netty/netty-handler-proxy/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-codec-socks/${netty.version}</bundle>
+        
+        <!-- DNS support (required by reactor-netty-http) -->
+        <bundle>mvn:io.netty/netty-resolver-dns/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-codec-dns/${netty.version}</bundle>
+
+        <!-- Epoll / native transport pieces required by reactor-netty-core -->
+        <bundle>mvn:io.netty/netty-transport-classes-epoll/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-transport-native-unix-common/${netty.version}</bundle>
+        <bundle>mvn:io.netty/netty-transport-native-epoll/${netty.version}/jar/linux-x86_64</bundle>
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- RSOCKET FEATURE: Third-party RSocket (no sokybot modules)                -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <feature name="sokybot-rsocket" version="${project.version}" description="Third-party RSocket bundles (wrapped)">
+    <feature name="sokybot-rsocket" version="${project.version}" description="Third-party RSocket bundles">
         <feature>sokybot-reactor</feature>
         <bundle>wrap:mvn:io.rsocket/rsocket-core/${rsocket.version}</bundle>
         <bundle>wrap:mvn:io.rsocket/rsocket-transport-netty/${rsocket.version}</bundle>
@@ -63,10 +72,9 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- HIBERNATE FEATURE: Third-party Hibernate/JPA stack (no sokybot modules)  -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <feature name="sokybot-hibernate" version="${project.version}" description="Third-party Hibernate/JPA stack (wrapped)">
-        <bundle>wrap:mvn:javax.persistence/javax.persistence-api/2.2</bundle>
-        <bundle>wrap:mvn:javax.transaction/javax.transaction-api/1.3</bundle>
-        <bundle>wrap:mvn:org.jboss.spec.javax.transaction/jboss-transaction-api_1.2_spec/1.1.1.Final</bundle>
+    <feature name="sokybot-hibernate" version="${project.version}" description="Third-party Hibernate/JPA stack">
+        <bundle>mvn:javax.persistence/javax.persistence-api/2.2</bundle>
+        <bundle>mvn:org.jboss.spec.javax.transaction/jboss-transaction-api_1.2_spec/1.1.1.Final</bundle>
 
         <bundle>wrap:mvn:org.hibernate/hibernate-core/5.6.15.Final</bundle>
         <bundle>wrap:mvn:org.hibernate/hibernate-osgi/5.6.15.Final</bundle>
@@ -91,6 +99,11 @@
 
         <!-- Interceptor API required by hibernate-osgi -->
         <bundle>wrap:mvn:javax.interceptor/javax.interceptor-api/1.2</bundle>
+        
+        <!-- CDI, EL and Inject APIs required by hibernate-osgi/cdi-api -->
+        <bundle>wrap:mvn:javax.enterprise/cdi-api/2.0.SP1</bundle>
+        <bundle>wrap:mvn:jakarta.el/jakarta.el-api/3.0.3</bundle>
+        <bundle>wrap:mvn:javax.inject/javax.inject/1</bundle>
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -108,6 +121,8 @@
         <bundle>mvn:org.sokybot/sokybot-loader-api/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-engine-api/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-game-events-api/${project.version}</bundle>
+        <!-- Packet Sniffer API bundle required by sokybot-packet-sniffer -->
+        <bundle>mvn:org.sokybot/sokybot-packet-sniffer-api/${project.version}</bundle>
         
         <!-- Infrastructure -->
         <bundle>mvn:org.sokybot/sokybot-commons/${project.version}</bundle>

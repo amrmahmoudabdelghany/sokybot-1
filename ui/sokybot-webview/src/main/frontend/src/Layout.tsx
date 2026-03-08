@@ -43,9 +43,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
         Object.keys(extensionRegistry.pages || {}).forEach(pageId => {
             const lowerPageId = pageId.toLowerCase();
+            // Packet Analyzer is shown only as a modal from Packet Sniffer, not as a separate tab
+            if (lowerPageId.startsWith('packetanalyzer_')) return;
 
             // Strict match: pageId must end with exactly _machineId
-            // This prevents "TEST" from matching "TESTA" and prevents "ASD" from matching group names
             if (lowerPageId === lowerMachineId ||
                 lowerPageId.endsWith("_" + lowerMachineId)) {
                 machineTabs.push(pageId);

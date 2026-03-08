@@ -1,29 +1,20 @@
 Manifest-Version: 1.0
 Build-Jdk-Spec: 21
-Bundle-Description: Central logging ring buffer and streaming service 
- for Sokybot (SYSTEM/GROUP/MACHINE).
+Bundle-Description: API for packet sniffer UI integration (scripted pa
+ ges)
 Bundle-ManifestVersion: 2
-Bundle-Name: sokybot-logging
-Bundle-SymbolicName: org.sokybot.sokybot-logging
+Bundle-Name: Sokybot :: Packet Sniffer API
+Bundle-SymbolicName: org.sokybot.sokybot-packet-sniffer-api
 Bundle-Version: 1.0.0.SNAPSHOT
 Created-By: Apache Maven Bundle Plugin 5.1.8
 Embed-Dependency: *;scope=compile;inline=true
 Embed-Transitive: true
-Export-Package: org.sokybot.logging.api;uses:="reactor.core.publisher"
- ;version="1.0.0.SNAPSHOT"
-Import-Package: org.osgi.service.log;version="[1.4,2)",org.slf4j;versi
- on="[1.7,2)",java.awt,java.awt.datatransfer,java.awt.event,java.awt.i
- mage,java.beans,java.io,java.lang,java.lang.invoke,java.lang.reflect,
- java.net,java.security,java.time,java.time.format,java.time.temporal,
- java.util,java.util.concurrent,java.util.function,java.util.logging,o
- rg.reactivestreams;version="[1.0,2)",org.sokybot.logging.api,reactor.
- core.publisher;version="[3.6,4)"
-Provide-Capability: osgi.service;objectClass:List<String>="org.sokybot
- .logging.api.ILogStreamService";uses:="org.sokybot.logging.api"
-Require-Capability: osgi.extender;filter:="(&(osgi.extender=osgi.compo
- nent)(version>=1.5.0)(!(version>=2.0.0)))",osgi.ee;filter:="(&(osgi.e
- e=JavaSE)(version=11))"
-Service-Component: OSGI-INF/org.sokybot.logging.internal.LogStreamServ
- iceImpl.xml
+Export-Package: org.sokybot.packetsniffer.api;uses:="reactor.core.publ
+ isher";version="1.0.0.SNAPSHOT"
+Import-Package: java.awt,java.awt.datatransfer,java.awt.event,java.awt
+ .image,java.beans,java.io,java.lang,java.net,java.security,java.util,
+ java.util.function,java.util.logging,reactor.core.publisher;version="
+ [3.5,4)"
+Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version=11))"
 Tool: Bnd-6.3.1.202206071316
 

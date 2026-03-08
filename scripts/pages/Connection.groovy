@@ -1,172 +1,100 @@
+import org.sokybot.machinepages.api.BasePage
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
-import org.sokybot.machinepages.api.IScriptedPage
-import org.sokybot.runtime.IMachineContext
-import org.sokybot.settings.api.ISettingsRegistry
 import org.sokybot.settings.api.IProfileManager
 import org.sokybot.settings.security.ICredentialEncryptor
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Sinks
 
-class ConnectionPage implements IScriptedPage, EventHandler {
+class ConnectionPage extends BasePage implements EventHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(ConnectionPage.class)
-
-    private IMachineContext machineContext
-    private def loginSettingsProvider
+    def loginSettings
     private IProfileManager profileManager
     private ICredentialEncryptor credentialEncryptor
-    
-    private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100)
-    
     private String profileName = ""
 
-     
-    String getTitle() { "Connection" }
+    ConnectionPage() { super("Connection", "Link") }
 
-     
-    String getIcon() { "Link" }
-
-     
-     @Override void init(IMachineContext context) {
-        this.machineContext = context
-        
-        def settingsRegistry = context.getSokybotContext().getService(ISettingsRegistry.class)
-        this.profileManager = context.getSokybotContext().getService(IProfileManager.class)
-        this.credentialEncryptor = context.getSokybotContext().getService(ICredentialEncryptor.class)
-
-        // Access LoginSettings from the registry. 
-        // We use Object.class because the actual class is defined in Login.groovy
-        this.loginSettingsProvider = settingsRegistry.getProvider(
-                context.getGroupName(),
-                context.getMachineName(),
-                "login",
-                Object.class)
-
-        this.loginSettingsProvider.subscribe { settings -> emitStateUpdate() }
-        
-        log.info("Groovy ConnectionPage initialized for {}", context.fullName())
+    @Override
+    String[] getEventTopics(String machineFullName) {
+        ["sokybot/network/${machineFullName}/Connected",
+         "sokybot/network/${machineFullName}/Disconnected"] as String[]
     }
 
-     
-    Map<String, Object> getSchema() {
-        return [:] // Loaded from Connection.json by ScriptPageLoader
+    @Override
+    void setup() {
+        profileManager = service(IProfileManager)
+        credentialEncryptor = service(ICredentialEncryptor)
+        loginSettings = settingsProvider("login", Object)
+        loginSettings?.subscribe { emitStateUpdate() }
     }
 
-     
+    @Override
     Map<String, Object> getInitialState() {
-        return getState()
+        def settings = loginSettings?.get()
+        boolean connected = false
+        try { connected = machineContext.getProxyConnection()?.isConnected() } catch (Exception ignore) {}
+
+        return [
+            settings: settings ?: [:],
+            isDirty: loginSettings?.isDirty() ?: false,
+            isUnlocked: credentialEncryptor?.isUnlocked() ?: false,
+            connected: connected,
+            profileName: this.profileName,
+            profiles: profileManager?.listProfiles(machineContext.getGroupName()) ?: []
+        ]
     }
 
-     
+    @Override
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
-        log.debug("Handling action: {} with data: {}", action, data)
-        
         try {
             switch (action) {
-                case "refresh":
-                    break
-                case "save":
-                    loginSettingsProvider.save()
-                    break
+                case "refresh": break
+                case "save": loginSettings?.save(); break
                 case "update":
-                    updateSettings(data)
+                    if (data.containsKey("profileName")) {
+                        this.profileName = data.get("profileName")
+                        emitStateUpdate()
+                    }
+                    applyFrom(loginSettings, data, ["username", "password", "targetGateway", "autoLogin", "targetAgent", "passcode"])
                     break
                 case "unlock":
-                    String passphrase = (String) data.get("passphrase")
-                    credentialEncryptor.unlock(passphrase)
-                    loginSettingsProvider.reload()
+                    credentialEncryptor?.unlock((String) data.get("passphrase"))
+                    loginSettings?.reload()
                     break
                 case "lock":
-                    credentialEncryptor.lock()
+                    credentialEncryptor?.lock()
                     break
                 case "loadProfile":
                     String name = (String) data.get("profileName") ?: this.profileName
-                    if (name) {
+                    if (name && profileManager) {
                         profileManager.loadProfile(machineContext.getGroupName(), machineContext.getMachineName(), name)
-                        loginSettingsProvider.reload()
+                        loginSettings?.reload()
                     }
                     break
                 case "saveProfile":
                     String name = (String) data.get("profileName") ?: this.profileName
-                    if (name) {
+                    if (name && profileManager) {
                         profileManager.saveProfile(machineContext.getGroupName(), name)
                     }
                     break
                 case "deleteProfile":
                     String name = (String) data.get("profileName") ?: this.profileName
-                    if (name) {
+                    if (name && profileManager) {
                         profileManager.deleteProfile(machineContext.getGroupName(), name)
                     }
                     break
             }
-            
-            def newState = getState()
-            newState.put("success", true)
-            return newState
-            
+            return withSuccess(getInitialState())
         } catch (Exception e) {
             log.error("Error handling action ${action}", e)
-            return [success: false, error: e.message]
+            return withError(e.message)
         }
     }
 
-     
-    Flux<Object> streamData(String streamName, Map<String, Object> params) {
-        return Flux.concat(
-                Flux.just(getState()),
-                stateSink.asFlux()
-        )
-    }
-
-     
+    @Override
     void handleEvent(Event event) {
-        // MachinePagesActivator filters by machine, so we just check topics
-        String topic = event.getTopic()
-        if (topic.contains("Connected") || topic.contains("Disconnected")) {
+        if (event.getTopic().contains("Connected") || event.getTopic().contains("Disconnected")) {
             emitStateUpdate()
         }
-    }
-
-     
-    void shutdown() {
-        stateSink.tryEmitComplete()
-    }
-
-    private void updateSettings(Map<String, Object> data) {
-        if (data.containsKey("profileName")) {
-            this.profileName = data.get("profileName")
-            emitStateUpdate()
-        }
-        
-        loginSettingsProvider.update { settings ->
-            if (data.containsKey("username")) settings.username = data.get("username")
-            if (data.containsKey("password")) settings.password = data.get("password")
-            if (data.containsKey("targetGateway")) settings.targetGateway = data.get("targetGateway")
-            if (data.containsKey("autoLogin")) settings.autoLogin = data.get("autoLogin")
-            if (data.containsKey("targetAgent")) settings.targetAgent = data.get("targetAgent")
-            if (data.containsKey("passcode")) settings.passcode = data.get("passcode")
-        }
-    }
-
-    private Map<String, Object> getState() {
-        def settings = loginSettingsProvider.get()
-        boolean connected = machineContext.getNetworkController().getProxyConnection().isConnected()
-        
-        return [
-            settings: settings,
-            isDirty: loginSettingsProvider.isDirty(),
-            isUnlocked: credentialEncryptor.isUnlocked(),
-            connected: connected,
-            profileName: this.profileName,
-            profiles: profileManager.listProfiles(machineContext.getGroupName())
-        ]
-    }
-
-    private void emitStateUpdate() {
-        stateSink.tryEmitNext(getState())
     }
 }
 

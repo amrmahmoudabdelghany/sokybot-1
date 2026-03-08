@@ -32,4 +32,14 @@ public interface IScriptEngine {
      * Get the name of the scripting language (e.g., "Groovy").
      */
     String getLanguageName();
+
+    /**
+     * Validate a script without executing it (compile-only).
+     *
+     * @param script the source code
+     * @return list of error messages (empty if valid)
+     */
+    default java.util.List<String> validate(String script) {
+        return java.util.Collections.emptyList();
+    }
 }

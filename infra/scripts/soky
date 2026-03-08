@@ -139,6 +139,13 @@ cmd_backend_start() {
     if [ -d "$KARAF_BIN" ]; then
         chmod +x "$KARAF_BIN"/* 2>/dev/null || true
     fi
+    # Persistence DB path (e.g. in Docker set SOKYBOT_DB_PATH=/app/data/db)
+    if [ -n "$SOKYBOT_DB_PATH" ]; then
+        export KARAF_OPTS="${KARAF_OPTS:+$KARAF_OPTS }-Dsokybot.db.path=$SOKYBOT_DB_PATH"
+        mkdir -p "$SOKYBOT_DB_PATH"
+    fi
+    # Script directories: Karaf cwd differs from project root, so pass absolute paths
+    export KARAF_OPTS="${KARAF_OPTS:+$KARAF_OPTS }-Dsokybot.pages.dir=$ROOT_DIR/scripts/pages -Dsokybot.scripts.dir=$ROOT_DIR/scripts/actuators"
     if [ "$FOREGROUND" = true ]; then
         if [ "$WATCH" = true ]; then
             log_info "Starting Automated Hot-Reload Watcher..."

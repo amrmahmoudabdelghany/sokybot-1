@@ -11,7 +11,6 @@ import java.util.Set;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.sokybot.gameevents.CoreTranslatorProvider;
 import org.sokybot.gameevents.ExtensibleTranslatorFactory;
 import org.sokybot.gameevents.events.core.IPacketTranslator;
 import org.sokybot.gameevents.events.core.ITranslatorProvider;
@@ -42,19 +41,16 @@ class ExtensibleTranslatorFactoryTest {
     @Test
     @DisplayName("Should create translators when provider is registered")
     void testCreateTranslatorsWithProvider() {
-        // Register core provider manually (simulating OSGi binding)
-        CoreTranslatorProvider provider = new CoreTranslatorProvider();
+        MockTranslatorProvider provider = new MockTranslatorProvider(100, Set.of(0x3015, 0x3016, 0xA103));
         factory.bindProvider(provider);
 
         Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
 
         assertNotNull(translators);
         assertFalse(translators.isEmpty());
-
-        // Verify some core translators are created
-        assertTrue(translators.containsKey(0x3015)); // EntitySpawn
-        assertTrue(translators.containsKey(0x3016)); // EntityDespawn
-        assertTrue(translators.containsKey(0xA103)); // AuthResponse
+        assertTrue(translators.containsKey(0x3015));
+        assertTrue(translators.containsKey(0x3016));
+        assertTrue(translators.containsKey(0xA103));
     }
 
     @Test
@@ -86,23 +82,22 @@ class ExtensibleTranslatorFactoryTest {
     @Test
     @DisplayName("Should handle multiple providers with different opcodes")
     void testMultipleProviders() {
-        CoreTranslatorProvider coreProvider = new CoreTranslatorProvider();
-        MockTranslatorProvider customProvider = new MockTranslatorProvider(150, Set.of(0x9999));
+        MockTranslatorProvider provider1 = new MockTranslatorProvider(100, Set.of(0x3015));
+        MockTranslatorProvider provider2 = new MockTranslatorProvider(150, Set.of(0x9999));
 
-        factory.bindProvider(coreProvider);
-        factory.bindProvider(customProvider);
+        factory.bindProvider(provider1);
+        factory.bindProvider(provider2);
 
         Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
 
-        // Should have translators from both providers
-        assertTrue(translators.containsKey(0x3015)); // Core provider
-        assertTrue(translators.containsKey(0x9999)); // Custom provider
+        assertTrue(translators.containsKey(0x3015));
+        assertTrue(translators.containsKey(0x9999));
     }
 
     @Test
     @DisplayName("Should handle provider unregistration")
     void testProviderUnregistration() {
-        CoreTranslatorProvider provider = new CoreTranslatorProvider();
+        MockTranslatorProvider provider = new MockTranslatorProvider(100, Set.of(0x3015));
         factory.bindProvider(provider);
 
         Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
@@ -117,18 +112,13 @@ class ExtensibleTranslatorFactoryTest {
     @Test
     @DisplayName("Should create same translator instance for same game (per-game scope)")
     void testPerGameTranslators() {
-        CoreTranslatorProvider provider = new CoreTranslatorProvider();
+        MockTranslatorProvider provider = new MockTranslatorProvider(100, Set.of(0x3015, 0x3016));
         factory.bindProvider(provider);
 
         Map<Integer, IPacketTranslator> translators1 = factory.createTranslators(lookup, null);
         Map<Integer, IPacketTranslator> translators2 = factory.createTranslators(lookup, null);
 
-        // Should create new instances each time (translators are created per-game call)
-        // But should have same opcodes
         assertEquals(translators1.keySet(), translators2.keySet());
-
-        // Each call creates new instances (not cached in factory)
-        // This is expected - caching happens in GroupContext
     }
 
     @Test

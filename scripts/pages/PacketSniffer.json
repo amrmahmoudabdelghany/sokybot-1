@@ -48,6 +48,79 @@
           "children": [{ "$ref": "packet-tracer.json" }]
         }
       ]
+    },
+    {
+      "type": "Dialog",
+      "props": {
+        "open": "${analyzerOpen}",
+        "onOpenChange": "closeAnalyzer"
+      },
+      "children": [
+        {
+          "type": "DialogContent",
+          "className": "max-w-5xl max-h-[90vh] flex flex-col overflow-hidden",
+          "children": [
+            {
+              "type": "DialogHeader",
+              "children": [
+                {
+                  "type": "DialogTitle",
+                  "props": { "children": "Packet Analyzer" }
+                }
+              ]
+            },
+            {
+              "type": "div",
+              "className": "flex items-center justify-between p-2 border-b border-border",
+              "children": [
+                {
+                  "type": "div",
+                  "className": "flex items-center gap-4",
+                  "children": [
+                    { "type": "span", "className": "text-sm", "props": { "children": "Selected: ${selectedByteCount} byte(s)" } },
+                    { "type": "span", "className": "text-sm", "props": { "children": "Matches: ${matchCount}" } }
+                  ]
+                },
+                {
+                  "type": "Button",
+                  "variant": "outline",
+                  "size": "sm",
+                  "props": { "onClick": "closeAnalyzer", "children": "Close" }
+                }
+              ]
+            },
+            {
+              "type": "hex-viewer",
+              "className": "flex-1 min-h-0",
+              "props": {
+                "dataSource": "packets",
+                "onSelectHex": "selectHex",
+                "onDefineVariable": "defineVariable"
+              }
+            },
+            {
+              "type": "div",
+              "className": "border-t border-border flex-shrink-0",
+              "children": [
+                {
+                  "type": "table",
+                  "className": "h-[200px]",
+                  "props": {
+                    "dataSource": "variables",
+                    "columns": [
+                      { "field": "packet", "label": "Packet", "className": "w-[150px]" },
+                      { "field": "varName", "label": "Var", "className": "w-[150px]" },
+                      { "field": "value", "label": "Value", "className": "w-[120px]" },
+                      { "field": "comment", "label": "Comment", "className": "flex-1" }
+                    ],
+                    "onRowClick": "selectVariable"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

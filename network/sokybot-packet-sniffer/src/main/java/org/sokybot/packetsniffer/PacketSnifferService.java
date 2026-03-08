@@ -138,12 +138,11 @@ public class PacketSnifferService implements IPacketSnifferPage {
             if (tracer == null) {
                 tracer = new PacketTracerModel(source, opcode);
                 tracer.setIgnored(false);
-                tracer.setName("UNKNOWN");
+                tracer.setName(resolveOpcodeName(source, opcode));
                 tracer.setCount(1);
                 tracers.add(tracer);
                 String key = source.toString() + ":" + opcode;
                 tracerCache.put(key, tracer);
-                // Defer save to avoid blocking
                 updateExecutor.execute(() -> saveTracers());
             } else {
                 tracer.setCount(tracer.getCount() + 1);
@@ -151,22 +150,12 @@ public class PacketSnifferService implements IPacketSnifferPage {
 
             if (!tracer.isIgnored()) {
                 TablePacket tablePacket = TablePacket.createTablePacket(tracer.getName(), packet);
-                // Non-blocking queue offer
                 if (!packetQueue.offer(tablePacket)) {
-                    // Queue full, drop oldest
                     packetQueue.poll();
                     packetQueue.offer(tablePacket);
                 }
 
-                // Emit to stream
-                Map<String, Object> packetData = new HashMap<>();
-                packetData.put("type", "packet");
-                packetData.put("source", packet.getPacketSource().toString());
-                packetData.put("opcode", "0x" + Integer.toHexString(packet.getOpcode() & 0xffff));
-                packetData.put("size", packet.getPacketSize());
-                packetData.put("name", tracer.getName());
-                packetData.put("timestamp", System.currentTimeMillis());
-                packetStreamSink.tryEmitNext(packetData);
+                packetStreamSink.tryEmitNext(buildPacketRow(packet, tracer.getName()));
             }
         } finally {
             lock.unlock();
@@ -273,17 +262,14 @@ public class PacketSnifferService implements IPacketSnifferPage {
                     break;
 
                 case "openAnalyzer":
-                    // Open analyzer with current packets
+                    // Open analyzer with current packets (state merged in getCurrentState() below)
                     if (monitorPackets.isEmpty()) {
                         response.put("success", false);
                         response.put("error", "No packets to analyze");
                     } else {
                         analyzerService = new org.sokybot.packetsniffer.packetanalyzer.PacketAnalyzerService(
                                 new ArrayList<>(monitorPackets));
-                        Map<String, Object> analyzerState = analyzerService.getInitialState();
                         response.put("success", true);
-                        response.put("state", analyzerState);
-                        response.put("openAnalyzer", true); // Signal to open analyzer page
                     }
                     break;
 
@@ -522,6 +508,10 @@ public class PacketSnifferService implements IPacketSnifferPage {
                     selectedTracer != null
                             ? (selectedTracer.getDescription() != null ? selectedTracer.getDescription() : "")
                             : "");
+            state.put("analyzerOpen", analyzerService != null);
+            if (analyzerService != null) {
+                state.putAll(analyzerService.getInitialState());
+            }
             return state;
         } finally {
             lock.unlock();
@@ -552,18 +542,58 @@ public class PacketSnifferService implements IPacketSnifferPage {
     private List<Map<String, Object>> convertPacketsToData(List<TablePacket> packets) {
         List<Map<String, Object>> result = new ArrayList<>();
         for (TablePacket packet : packets) {
-            ImmutablePacket p = packet.getPacket();
-            Map<String, Object> row = new HashMap<>();
-            row.put("source", p.getPacketSource().toString());
-            row.put("encoding", p.getPacketEncoding().toString());
-            row.put("size", p.getPacketSize());
-            row.put("name", packet.getName());
-            row.put("opcode", "0x" + Integer.toHexString(p.getOpcode() & 0xffff));
-            row.put("count", "0x" + Integer.toHexString(p.getCount() & 0xff));
-            row.put("crc", "0x" + Integer.toHexString(p.getCRC() & 0xff));
-            result.add(row);
+            result.add(buildPacketRow(packet.getPacket(), packet.getName()));
         }
         return result;
+    }
+
+    private Map<String, Object> buildPacketRow(ImmutablePacket p, String name) {
+        Map<String, Object> row = new HashMap<>();
+        row.put("source", p.getPacketSource().toString());
+        row.put("encoding", p.getPacketEncoding().toString());
+        row.put("size", p.getPacketSize());
+        row.put("name", name);
+        row.put("opcode", "0x" + Integer.toHexString(p.getOpcode() & 0xffff));
+        row.put("count", "0x" + Integer.toHexString(p.getCount() & 0xff));
+        row.put("crc", "0x" + Integer.toHexString(p.getCRC() & 0xff));
+        row.put("payload", bytesToHex(p.toBytes()));
+        row.put("timestamp", System.currentTimeMillis());
+        return row;
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
+
+    private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+
+    private static final Map<Integer, String> KNOWN_OPCODES = Map.ofEntries(
+            Map.entry(0x5000, "SETUP"),
+            Map.entry(0x5001, "CHALLENGE"),
+            Map.entry(0x2001, "MODULE_ID"),
+            Map.entry(0x9000, "HANDSHAKE_ACCEPT"),
+            Map.entry(0x2002, "PATCH_INFO"),
+            Map.entry(0xA100, "AUTH_REQUEST"),
+            Map.entry(0xA101, "AUTH_RESPONSE"),
+            Map.entry(0xA102, "LOGIN_RESPONSE"),
+            Map.entry(0xA103, "SERVER_LIST"),
+            Map.entry(0x6005, "AGENT_REQUEST"),
+            Map.entry(0x600D, "MASSIVE"),
+            Map.entry(0x34B5, "TELEPORT_COMPLETE"),
+            Map.entry(0x3020, "CHARACTER_DATA"),
+            Map.entry(0x3013, "ENTITY_SPAWN"),
+            Map.entry(0x3015, "ENTITY_DESPAWN")
+    );
+
+    private static String resolveOpcodeName(NetworkPeer source, int opcode) {
+        String known = KNOWN_OPCODES.get(opcode);
+        return known != null ? known : "UNKNOWN";
     }
 
     private Map<String, Object> handleAnalyzerAction(String action, Map<String, Object> data) {

@@ -138,7 +138,8 @@ public class MachineContextImpl implements IMachineContext {
     private static final int SERVICE_LOOKUP_RETRIES = 5;
     private static final long SERVICE_LOOKUP_DELAY_MS = 200;
 
-    private <T> T getService(Class<T> serviceClass) {
+    @Override
+    public <T> T getService(Class<T> serviceClass) {
         if (bundleContext == null) {
             return null;
         }

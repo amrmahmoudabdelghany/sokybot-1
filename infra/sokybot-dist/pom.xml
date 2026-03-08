@@ -96,39 +96,10 @@
                                 <feature>sokybot-full</feature>
                             </bootFeatures>
                             <archiveTarGz>false</archiveTarGz>
-                            <archiveZip>true</archiveZip>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>archive</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>archive</goal>
-                        </goals>
-                        <configuration>
-                            <archiveTarGz>false</archiveTarGz>
-                            <archiveZip>true</archiveZip>
+                            <archiveZip>false</archiveZip>
                         </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <installedFeatures>
-                        <feature>wrapper</feature>
-                    </installedFeatures>
-                    <startupFeatures>
-                        <feature>eventadmin</feature>
-                        <feature>log</feature>
-                    </startupFeatures>
-                    <bootFeatures>
-                        <feature>standard</feature>
-                        <feature>scr</feature>
-                        <feature>http</feature>
-                        <feature>sokybot-jackson</feature>
-                        <feature>sokybot-full</feature>
-                    </bootFeatures>
-                    <archiveTarGz>false</archiveTarGz>
-                    <archiveZip>true</archiveZip>
-                </configuration>
             </plugin>
 
             <!-- Copy custom config files to the assembly (after assembly so etc is not overwritten) -->

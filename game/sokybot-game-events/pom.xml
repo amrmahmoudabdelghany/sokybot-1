@@ -33,6 +33,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-engine-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Sokybot Persistence for Position and entity types -->
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -75,6 +82,12 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.7.36</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>4.0.16</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -127,10 +140,10 @@
                             org.sokybot.gameevents,
                             org.sokybot.gameevents.events.*,
                             org.sokybot.gameevents.dto,
-                            org.sokybot.gameevents.enums
+                            org.sokybot.gameevents.enums,
+                            org.sokybot.gameevents.script
                         </Export-Package>
                         <Private-Package>
-                            org.sokybot.gameevents.internal.*,
                             org.sokybot.gameevents.store.internal
                         </Private-Package>
                         <Import-Package>

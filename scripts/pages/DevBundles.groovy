@@ -1,31 +1,20 @@
-import org.sokybot.machinepages.api.IScriptedPage
-import org.sokybot.runtime.IMachineContext
+import org.sokybot.machinepages.api.BasePage
 import org.sokybot.webview.api.IBundleAdminService
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
-class DevBundlesPage implements IScriptedPage {
+class DevBundlesPage extends BasePage {
 
-    private static final Logger log = LoggerFactory.getLogger(DevBundlesPage.class)
-
-    private IMachineContext machineContext
     private IBundleAdminService bundleAdmin
-
     private List<Map<String, Object>> bundles = []
     private String searchTerm = ""
     private boolean loading = false
     private String error = null
 
-    String getTitle() { "Dev Bundles" }
-
-    String getIcon() { "Package" }
+    DevBundlesPage() { super("Dev Bundles", "Package") }
 
     @Override
-    void init(IMachineContext context) {
-        this.machineContext = context
+    void setup() {
         try {
-            def sokyCtx = context.getSokybotContext()
-            this.bundleAdmin = sokyCtx?.getService(IBundleAdminService.class)
+            this.bundleAdmin = service(IBundleAdminService)
             if (this.bundleAdmin == null) {
                 log.warn("IBundleAdminService not available; Dev Bundles page will be empty")
             }
@@ -35,72 +24,41 @@ class DevBundlesPage implements IScriptedPage {
         refresh()
     }
 
-    Map<String, Object> getSchema() {
-        // Loaded from DevBundles.json via ScriptPageLoader
-        return [:]
-    }
+    @Override
+    Map<String, Object> getInitialState() { state() }
 
-    Map<String, Object> getInitialState() {
-        state()
-    }
-
+    @Override
     Map<String, Object> handleAction(String action, Map<String, Object> data) {
-        log.debug("DevBundlesPage action: {} data: {}", action, data)
         try {
             switch (action) {
-                case "refreshBundles":
-                    refresh()
-                    break
-                case "setBundlesSearch":
-                    this.searchTerm = (data?.get("value") ?: "").toString()
-                    break
+                case "refreshBundles": refresh(); break
+                case "setBundlesSearch": this.searchTerm = (data?.get("value") ?: "").toString(); break
                 case "startBundle":
                     def id = data?.get("id") as Number
-                    if (id != null && bundleAdmin != null) {
-                        bundleAdmin.startBundle(id.longValue())
-                        refresh()
-                    }
+                    if (id != null && bundleAdmin != null) { bundleAdmin.startBundle(id.longValue()); refresh() }
                     break
                 case "stopBundle":
-                    def id2 = data?.get("id") as Number
-                    if (id2 != null && bundleAdmin != null) {
-                        bundleAdmin.stopBundle(id2.longValue())
-                        refresh()
-                    }
+                    def id = data?.get("id") as Number
+                    if (id != null && bundleAdmin != null) { bundleAdmin.stopBundle(id.longValue()); refresh() }
                     break
                 case "restartBundle":
-                    def id3 = data?.get("id") as Number
-                    if (id3 != null && bundleAdmin != null) {
-                        bundleAdmin.restartBundle(id3.longValue())
-                        refresh()
-                    }
+                    def id = data?.get("id") as Number
+                    if (id != null && bundleAdmin != null) { bundleAdmin.restartBundle(id.longValue()); refresh() }
                     break
                 case "reloadBundle":
                     def sym = data?.get("symbolicName") as String
-                    if (sym && bundleAdmin != null) {
-                        bundleAdmin.reloadBundleFromFileSystem(sym)
-                        refresh()
-                    }
+                    if (sym && bundleAdmin != null) { bundleAdmin.reloadBundleFromFileSystem(sym); refresh() }
                     break
             }
+            return withSuccess(state())
         } catch (Throwable t) {
             log.error("Error handling DevBundles action {}", action, t)
-            this.error = t.message
+            return withError(t.message)
         }
-        return state()
-    }
-
-    reactor.core.publisher.Flux<Map<String, Object>> streamData(String streamId, Map<String, Object> params) {
-        // No reactive stream; state is refreshed via actions only.
-        return reactor.core.publisher.Flux.empty()
     }
 
     private void refresh() {
-        if (bundleAdmin == null) {
-            this.error = "Bundle admin service not available"
-            this.bundles = []
-            return
-        }
+        if (bundleAdmin == null) { this.error = "Bundle admin service not available"; this.bundles = []; return }
         this.loading = true
         try {
             this.error = null
@@ -123,15 +81,8 @@ class DevBundlesPage implements IScriptedPage {
                 (b.location?.toString()?.toLowerCase()?.contains(term))
             }
         }
-        return [
-            bundles        : bundles,
-            filteredBundles: filtered,
-            loading        : loading,
-            searchTerm     : searchTerm,
-            error          : error
-        ]
+        return [bundles: bundles, filteredBundles: filtered, loading: loading, searchTerm: searchTerm, error: error]
     }
 }
 
 new DevBundlesPage()
-

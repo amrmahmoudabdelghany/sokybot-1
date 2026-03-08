@@ -19,6 +19,7 @@ services:
       - SOKY_DEV_MODE=true
       - SOKY_WEBVIEW_URL=http://sokybot.local
       - KARAF_DEBUG=true
+      - SOKYBOT_DB_PATH=/app/data/db
     command: ./infra/scripts/soky backend start --foreground --watch
 
   sokybot-webview-ui:
@@ -35,7 +36,7 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_BACKEND_URL=ws://api.sokybot.local:8182/rsocket
+      - VITE_BACKEND_URL=ws://api.sokybot.local/rsocket
     command: npm run dev -w frontend
 
 networks:

@@ -79,7 +79,8 @@
                             org.sokybot.commons.error,
                             org.sokybot.commons.health,
                             org.sokybot.commons.metrics,
-                            org.sokybot.commons.event
+                            org.sokybot.commons.event,
+                            org.sokybot.commons.script
                         </Export-Package>
                         <Private-Package>
                             org.sokybot.commons.error.internal,

@@ -291,7 +291,8 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
         try {
             ICycleDefinition cycle = cycles.get(cycleName);
             if (cycle == null) {
-                throw new IllegalArgumentException("Cycle not found: " + cycleName);
+                log.warn("Cycle not found: {} (actuator may not be loaded yet)", cycleName);
+                return;
             }
             if (cycle instanceof CycleDefinitionImpl) {
                 ((CycleDefinitionImpl) cycle).setEnabled(enabled);

@@ -55,6 +55,19 @@ public interface IScriptedPage {
     Flux<Map<String, Object>> streamData(String streamId, Map<String, Object> params);
 
     /**
+     * Return the OSGi event topics this page wants to receive, scoped to
+     * a specific machine. Implementations that also implement
+     * {@link org.osgi.service.event.EventHandler} will have
+     * {@code handleEvent} called for matching events.
+     *
+     * @param machineFullName the machine identifier (e.g. "group.machine")
+     * @return event topic strings, or empty array for no subscriptions
+     */
+    default String[] getEventTopics(String machineFullName) {
+        return new String[0];
+    }
+
+    /**
      * Shutdown the page and release resources.
      */
     default void shutdown() {

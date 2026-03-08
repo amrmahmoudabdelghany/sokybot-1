@@ -16,6 +16,7 @@ import { getComponentFromLibrary, renderIcon } from '../componentLibrary';
 import { cn } from '@sokybot/frontend-shared';
 import { getComponent } from '../registry';
 import { HexViewer } from '../components/HexViewer';
+import { safeEval, resolveTemplate, resolveTemplateInObject } from './expressionUtils';
 
 interface ComponentRendererProps {
     component: UIComponent;
@@ -99,13 +100,9 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         if (typeof hiddenValue === 'boolean') {
             shouldHide = hiddenValue;
         } else if (typeof hiddenValue === 'string') {
-            // Try to evaluate as template expression
             if (hiddenValue.startsWith('${') && hiddenValue.endsWith('}')) {
-                const expr = hiddenValue.slice(2, -1);
-                const result = evaluateBooleanExpression(expr, context);
-                shouldHide = result === true;
+                shouldHide = Boolean(safeEval(hiddenValue.slice(2, -1), context));
             } else {
-                // Handle string literals 'true'/'false'
                 shouldHide = hiddenValue === 'true';
             }
         }
@@ -114,9 +111,33 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         }
     }
 
+    // Coerce disabled prop to boolean (templates resolve to string "true"/"false")
+    if (resolvedProps.disabled !== undefined) {
+        const d = resolvedProps.disabled;
+        if (typeof d === 'string') {
+            resolvedProps.disabled = d === 'true' || (d !== 'false' && d !== '');
+        } else {
+            resolvedProps.disabled = Boolean(d);
+        }
+    }
+
+    // Dialog: coerce open to boolean; when onOpenChange is an action name, call it when dialog closes
+    if (type === 'Dialog') {
+        if (resolvedProps.open !== undefined) {
+            const o = resolvedProps.open;
+            resolvedProps.open = typeof o === 'string' ? o === 'true' : Boolean(o);
+        }
+        if (typeof resolvedProps.onOpenChange === 'string') {
+            const actionName = resolvedProps.onOpenChange;
+            resolvedProps.onOpenChange = (open: boolean) => {
+                if (!open && onAction) onAction(actionName, {});
+            };
+        }
+    }
+
     // Handle dataSource with renderItem pattern (for rendering arrays)
     if (resolvedProps.dataSource && resolvedProps.renderItem) {
-        const data = context[resolvedProps.dataSource];
+        const data = safeEval(resolvedProps.dataSource, context);
         if (Array.isArray(data)) {
             const renderItem = resolvedProps.renderItem;
             const renderedItems = data.map((item: any, index: number) => {
@@ -171,6 +192,21 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         const data = props.dataSource ? context[props.dataSource] : (props.data || []);
         const columns = props.columns || [];
 
+        const renderCell = (col: any, row: any) => {
+            const value = row[col.field] ?? '';
+            if (col.truncate && col.maxWidth) {
+                return (
+                    <div
+                        style={{ maxWidth: col.maxWidth, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                        title={col.title ? String(row[col.title] ?? '') : String(value)}
+                    >
+                        {value}
+                    </div>
+                );
+            }
+            return value;
+        };
+
         return (
             <div className={cn('overflow-x-auto', resolvedClassName)} style={resolvedStyle}>
                 <table className="min-w-full border-collapse border border-slate-300 dark:border-slate-700">
@@ -195,8 +231,12 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                                 }}
                             >
                                 {columns.map((col: any) => (
-                                    <td key={col.field || col.key} className={cn('border p-2', col.className)}>
-                                        {row[col.field] || ''}
+                                    <td
+                                        key={col.field || col.key}
+                                        className={cn('border p-2', col.className)}
+                                        title={!col.truncate && col.title ? String(row[col.title] ?? '') : undefined}
+                                    >
+                                        {renderCell(col, row)}
                                     </td>
                                 ))}
                             </tr>
@@ -246,9 +286,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     if (LibraryComponent) {
         // Determine children: prefer props.children, then component.children
         const resolvedChildren = resolvedProps.children !== undefined
-            ? (typeof resolvedProps.children === 'string'
-                ? resolveTemplate(resolvedProps.children, context)
-                : resolvedProps.children)
+            ? resolvePropsChildren(resolvedProps.children, pageId, machineId, context, onAction)
             : (children ? renderChildren(children, pageId, machineId, context, onAction) : undefined);
 
         // Handle string elements (HTML tags)
@@ -314,49 +352,6 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         }) || <span>Icon not found</span>;
     }
 
-    // Handle table component
-    if (type === 'table') {
-        const data = props.dataSource ? context[props.dataSource] : (props.data || []);
-        const columns = props.columns || [];
-
-        return (
-            <div className={cn('overflow-x-auto', resolvedClassName)} style={resolvedStyle}>
-                <table className="min-w-full border-collapse border border-slate-300 dark:border-slate-700">
-                    <thead>
-                        <tr className="bg-slate-100 dark:bg-slate-800">
-                            {columns.map((col: any) => (
-                                <th key={col.field || col.key} className={cn('border p-2 text-left', col.className)}>
-                                    {col.label || col.field}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {Array.isArray(data) && data.map((row: any, idx: number) => (
-                            <tr
-                                key={idx}
-                                className={props.rowClassName}
-                                onClick={() => {
-                                    if (props.onRowClick && onAction) {
-                                        onAction(props.onRowClick, { ...row, index: idx });
-                                    }
-                                }}
-                            >
-                                {columns.map((col: any) => (
-                                    <td key={col.field || col.key} className={cn('border p-2', col.className)}>
-                                        {row[col.field] || ''}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        );
-    }
-
-
-
     // Try extension registry
     const registered = getComponent(type);
     if (registered) {
@@ -382,6 +377,53 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         </div>
     );
 };
+
+/**
+ * Resolve props.children which may be a string, an array of UIComponent objects, or a mixed array
+ */
+function resolvePropsChildren(
+    value: any,
+    pageId: string,
+    machineId: string | undefined,
+    context: Record<string, any>,
+    onAction?: (action: string, data: any) => Promise<any>
+): React.ReactNode {
+    if (typeof value === 'string') {
+        return resolveTemplate(value, context);
+    }
+    if (Array.isArray(value)) {
+        return value.map((item: any, idx: number) => {
+            if (typeof item === 'string') {
+                return resolveTemplate(item, context);
+            }
+            if (item && typeof item === 'object' && item.type) {
+                return (
+                    <ComponentRenderer
+                        key={item.key || idx}
+                        component={item}
+                        pageId={pageId}
+                        machineId={machineId}
+                        context={context}
+                        onAction={onAction}
+                    />
+                );
+            }
+            return item;
+        });
+    }
+    if (value && typeof value === 'object' && value.type) {
+        return (
+            <ComponentRenderer
+                component={value}
+                pageId={pageId}
+                machineId={machineId}
+                context={context}
+                onAction={onAction}
+            />
+        );
+    }
+    return value;
+}
 
 /**
  * Render children components
@@ -415,124 +457,3 @@ function renderChildren(
     return undefined;
 }
 
-/**
- * Resolve template expressions like ${variable} or ${obj.property}
- */
-function resolveTemplate(template: string, ctx: Record<string, any>): string {
-    if (!template || typeof template !== 'string') return template;
-
-    return template.replace(/\$\{([^}]+)\}/g, (match, expr) => {
-        try {
-            // Simple variable access
-            if (ctx[expr] !== undefined) {
-                return String(ctx[expr]);
-            }
-            // Expression evaluation (limited for security)
-            const value = evaluateExpression(expr, ctx);
-            return value != null ? String(value) : match;
-        } catch (e) {
-            console.warn(`Template resolution failed for: ${expr}`, e);
-            return match;
-        }
-    });
-}
-
-/**
- * Resolve template expressions in objects recursively
- */
-function resolveTemplateInObject(obj: any, ctx: Record<string, any>): any {
-    if (typeof obj === 'string') {
-        return resolveTemplate(obj, ctx);
-    } else if (Array.isArray(obj)) {
-        return obj.map(item => resolveTemplateInObject(item, ctx));
-    } else if (obj && typeof obj === 'object') {
-        const resolved: any = {};
-        for (const [key, value] of Object.entries(obj)) {
-            resolved[key] = resolveTemplateInObject(value, ctx);
-        }
-        return resolved;
-    }
-    return obj;
-}
-
-/**
- * Simple expression evaluator (for security, only allow property access)
- */
-function evaluateExpression(expr: string, ctx: Record<string, any>): any {
-    const parts = expr.trim().split(/[.\[\]]/).filter(p => p);
-    let value = ctx;
-    for (const part of parts) {
-        if (value && typeof value === 'object') {
-            value = value[part];
-        } else {
-            return undefined;
-        }
-    }
-    return value;
-}
-
-/**
- * Evaluate boolean expressions like "activeTab !== 'traffic'" or "show === false"
- */
-function evaluateBooleanExpression(expr: string, ctx: Record<string, any>): boolean {
-    const trimmed = expr.trim();
-
-    // Helper to resolve values (literals or expressions)
-    const resolveValue = (val: string) => {
-        const trimmedVal = val.trim();
-        if (trimmedVal === 'true') return true;
-        if (trimmedVal === 'false') return false;
-        if (trimmedVal === 'null') return null;
-        if (trimmedVal === 'undefined') return undefined;
-        // Try to parse as number
-        const numVal = Number(trimmedVal);
-        if (!isNaN(numVal) && trimmedVal === String(numVal)) return numVal;
-        // String literals
-        if ((trimmedVal.startsWith("'") && trimmedVal.endsWith("'")) ||
-            (trimmedVal.startsWith('"') && trimmedVal.endsWith('"'))) {
-            return trimmedVal.slice(1, -1);
-        }
-        // Try to evaluate as expression
-        return evaluateExpression(trimmedVal, ctx);
-    };
-
-    // Handle !== operator (check before != to avoid false matches)
-    if (trimmed.includes('!==')) {
-        const [left, right] = trimmed.split('!==').map(s => s.trim());
-        const leftValue = resolveValue(left);
-        const rightValue = resolveValue(right);
-        return leftValue !== rightValue;
-    }
-
-    // Handle === operator (check before == to avoid false matches)
-    if (trimmed.includes('===')) {
-        const [left, right] = trimmed.split('===').map(s => s.trim());
-        const leftValue = resolveValue(left);
-        const rightValue = resolveValue(right);
-        return leftValue === rightValue;
-    }
-
-    // Handle != operator
-    if (trimmed.includes('!=')) {
-        const [left, right] = trimmed.split('!=').map(s => s.trim());
-        const leftValue = resolveValue(left);
-        const rightValue = resolveValue(right);
-        return leftValue != rightValue;
-    }
-
-    // Handle == operator
-    if (trimmed.includes('==')) {
-        const [left, right] = trimmed.split('==').map(s => s.trim());
-        const leftValue = resolveValue(left);
-        const rightValue = resolveValue(right);
-        return leftValue == rightValue;
-    }
-
-    // Simple boolean value - try to resolve as literal first
-    if (trimmed === 'true') return true;
-    if (trimmed === 'false') return false;
-
-    // Otherwise evaluate as expression
-    const value = evaluateExpression(trimmed, ctx);
-    return Boolean(value);
-}

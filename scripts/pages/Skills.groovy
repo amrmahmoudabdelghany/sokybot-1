@@ -1,82 +1,21 @@
+import org.sokybot.machinepages.api.BasePage
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
-import org.sokybot.machinepages.api.IScriptedPage
-import org.sokybot.runtime.IMachineContext
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
-import reactor.core.publisher.Flux
-import reactor.core.publisher.Sinks
 
-class SkillsPage implements IScriptedPage, EventHandler {
+class SkillsPage extends BasePage implements EventHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(SkillsPage.class)
-
-    private IMachineContext machineContext
-    private final Sinks.Many<Map<String, Object>> stateSink = Sinks.many().multicast().onBackpressureBuffer(100)
     private int skillPoints = 0
 
-     
-    String getTitle() { "Skills" }
+    SkillsPage() { super("Skills", "Zap") }
 
-     
-    String getIcon() { "Zap" }
-
-     
-     @Override void init(IMachineContext context) {
-        this.machineContext = context
-        log.info("Groovy SkillsPage initialized for {}", context.fullName())
+    @Override
+    String[] getEventTopics(String machineFullName) {
+        ["sokybot/game/${machineFullName}/SkillUpdate",
+         "sokybot/game/${machineFullName}/SkillPointsUpdate"] as String[]
     }
 
-     
-    Map<String, Object> getSchema() {
-        return [:] // Loaded from Skills.json
-    }
-
-     
+    @Override
     Map<String, Object> getInitialState() {
-        return getSkillsData()
-    }
-
-     
-    Map<String, Object> handleAction(String action, Map<String, Object> data) {
-        log.debug("Handling action: {} with data: {}", action, data)
-        switch (action) {
-            case "refresh":
-                emitStateUpdate()
-                break
-        }
-        def newState = getSkillsData()
-        newState.put("success", true)
-        return newState
-    }
-
-     
-    Flux<Object> streamData(String streamName, Map<String, Object> params) {
-        return Flux.concat(
-                Flux.just(getSkillsData()),
-                stateSink.asFlux()
-        )
-    }
-
-     
-    void handleEvent(Event event) {
-        log.debug("Skill event received in Groovy: {}", event.getTopic())
-        
-        // Extract skill points if available
-        def eventObj = event.getProperty("event")
-        if (eventObj && eventObj.metaClass.respondsTo(eventObj, "getNewSkillPoints")) {
-            this.skillPoints = eventObj.getNewSkillPoints()
-        }
-        
-        emitStateUpdate()
-    }
-
-     
-    void shutdown() {
-        stateSink.tryEmitComplete()
-    }
-
-    private Map<String, Object> getSkillsData() {
         def skills = []
         def trainer = machineContext.getGameModel().getTrainer()
         if (trainer != null && trainer.getSkills() != null) {
@@ -98,8 +37,19 @@ class SkillsPage implements IScriptedPage, EventHandler {
         ]
     }
 
-    private void emitStateUpdate() {
-        stateSink.tryEmitNext(getSkillsData())
+    @Override
+    Map<String, Object> handleAction(String action, Map<String, Object> data) {
+        if (action == "refresh") emitStateUpdate()
+        return withSuccess(getInitialState())
+    }
+
+    @Override
+    void handleEvent(Event event) {
+        def eventObj = event.getProperty("event")
+        if (eventObj && eventObj.metaClass.respondsTo(eventObj, "getNewSkillPoints")) {
+            this.skillPoints = eventObj.getNewSkillPoints()
+        }
+        emitStateUpdate()
     }
 }
 

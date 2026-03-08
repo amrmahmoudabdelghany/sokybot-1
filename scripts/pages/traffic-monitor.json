@@ -64,8 +64,8 @@
                   "props": {
                     "onClick": "openAnalyzer",
                     "id": "analyzeBtn",
-                    "disabled": "${packetCount === 0}",
-                    "children": "Analyze (${packetCount})"
+                    "disabled": "${!trafficPackets || trafficPackets.length === 0}",
+                    "children": "Analyze (${trafficPackets ? trafficPackets.length : 0})"
                   }
                 }
               ]
@@ -91,37 +91,45 @@
                   {
                     "field": "source",
                     "label": "Source",
-                    "className": "text-left p-2 border"
+                    "className": "text-left p-2 border whitespace-nowrap"
                   },
                   {
                     "field": "encoding",
                     "label": "Encoding",
-                    "className": "text-left p-2 border"
+                    "className": "text-left p-2 border whitespace-nowrap"
                   },
                   {
                     "field": "size",
                     "label": "Size",
-                    "className": "text-right p-2 border"
+                    "className": "text-right p-2 border whitespace-nowrap"
                   },
                   {
                     "field": "name",
                     "label": "Name",
-                    "className": "text-left p-2 border"
+                    "className": "text-left p-2 border whitespace-nowrap"
                   },
                   {
                     "field": "opcode",
                     "label": "Opcode",
-                    "className": "text-left p-2 border font-mono"
+                    "className": "text-left p-2 border font-mono whitespace-nowrap"
                   },
                   {
                     "field": "count",
                     "label": "Count",
-                    "className": "text-left p-2 border font-mono"
+                    "className": "text-left p-2 border font-mono whitespace-nowrap"
                   },
                   {
                     "field": "crc",
                     "label": "CRC",
-                    "className": "text-left p-2 border font-mono"
+                    "className": "text-left p-2 border font-mono whitespace-nowrap"
+                  },
+                  {
+                    "field": "payload",
+                    "label": "Payload",
+                    "className": "text-left p-2 border font-mono text-xs",
+                    "title": "payload",
+                    "maxWidth": 220,
+                    "truncate": true
                   }
                 ],
                 "onRowClick": "selectPacket",

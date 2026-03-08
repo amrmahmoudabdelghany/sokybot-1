@@ -1,6 +1,10 @@
 package org.sokybot.proxy;
 
+import java.util.Arrays;
+
 import org.osgi.service.event.EventAdmin;
+import org.sokybot.network.NetworkPeer;
+import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.proxy.internal.SimplePacketPublisher;
@@ -129,6 +133,7 @@ public class ProxyConnection implements IProxyConnection {
     public void sendToServer(MutablePacket packet) {
         if (gameServerChannel != null && gameServerChannel.isActive()) {
             gameServerChannel.writeAndFlush(packet);
+            publishOutboundPacket(packet);
         }
     }
     
@@ -136,6 +141,18 @@ public class ProxyConnection implements IProxyConnection {
     public void sendToClient(MutablePacket packet) {
         if (clientChannel != null && clientChannel.isActive()) {
             clientChannel.writeAndFlush(packet);
+            publishOutboundPacket(packet);
+        }
+    }
+
+    private void publishOutboundPacket(MutablePacket packet) {
+        try {
+            byte[] raw = packet.unwrap();
+            byte[] copy = Arrays.copyOf(raw, raw.length);
+            ImmutablePacket snapshot = ImmutablePacket.wrap(copy, packet.getDataEncoding(), NetworkPeer.BOT);
+            packetPublisher.publish(snapshot);
+        } catch (Exception e) {
+            // Never let sniffer publishing break actual packet sending
         }
     }
     

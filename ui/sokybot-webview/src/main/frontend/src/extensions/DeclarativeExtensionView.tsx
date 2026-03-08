@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { rsocketService } from '../RSocketClient';
 import { ComponentRenderer } from './renderer/ComponentRenderer';
+import { resolveTemplateInObject, cleanResolvedParams } from './renderer/expressionUtils';
 // UIComponent inlined to work around Vite serving ui-types.ts as empty
 interface UIComponent {
     type: string;
@@ -76,12 +77,28 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 action,
                 data: actionData
             });
+            if (result == null) return result;
 
             // Apply delta updates efficiently
             if (result.delta) {
                 applyDeltaUpdate(result.delta);
-            } else if (result.state) {
-                setData(prev => ({ ...prev, ...result.state }));
+            }
+            // Apply full state (for openAnalyzer ensure modal opens even if state shape differs)
+            const state = result.state;
+            if (state != null || (action === 'openAnalyzer' && result.success !== false)) {
+                setData(prev => {
+                    const merged = state != null ? { ...prev, ...state } : { ...prev };
+                    if (action === 'openAnalyzer' && result.success !== false) {
+                        merged.analyzerOpen = true;
+                    }
+                    // Preserve trafficPackets if we have more than the action response (e.g. stream appended more)
+                    const incoming = state?.trafficPackets;
+                    const existing = prev.trafficPackets;
+                    if (Array.isArray(existing) && Array.isArray(incoming) && existing.length > incoming.length) {
+                        merged.trafficPackets = existing;
+                    }
+                    return merged;
+                });
             }
 
             return result;
@@ -174,7 +191,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             const streamMode = schema.props?.streamMode;
 
             if (streamId) {
-                const resolvedParams = resolveTemplateInObject(rawStreamParams, data);
+                const resolvedParams = cleanResolvedParams(resolveTemplateInObject(rawStreamParams, data));
                 const serialized = JSON.stringify(resolvedParams || {});
                 lastStreamParamsRef.current.set(streamId, serialized);
 
@@ -252,7 +269,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 const streamMode = node.props?.streamMode;
 
                 if (streamId) {
-                    const resolvedParams = resolveTemplateInObject(rawStreamParams, data);
+                    const resolvedParams = cleanResolvedParams(resolveTemplateInObject(rawStreamParams, data));
                     const serialized = JSON.stringify(resolvedParams || {});
                     const previous = lastStreamParamsRef.current.get(streamId);
 
@@ -266,7 +283,6 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                         subscribeToStream(streamId, resolvedParams, stateKey, streamMode);
                         lastStreamParamsRef.current.set(streamId, serialized);
                     } else if (previous === undefined) {
-                        // In case discoverAndSubscribeStreams has not yet run for this stream.
                         lastStreamParamsRef.current.set(streamId, serialized);
                     }
                 }
@@ -283,49 +299,6 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
         visit(schemaToScan);
     }, [data, pageId, providedSchema, schema]);
-
-    // Local helper to resolve template expressions in stream params using current data context.
-    const resolveTemplateInObject = (obj: any, ctx: Record<string, any>): any => {
-        if (typeof obj === 'string') {
-            return resolveTemplate(obj, ctx);
-        } else if (Array.isArray(obj)) {
-            return obj.map(item => resolveTemplateInObject(item, ctx));
-        } else if (obj && typeof obj === 'object') {
-            const resolved: any = {};
-            for (const [key, value] of Object.entries(obj)) {
-                resolved[key] = resolveTemplateInObject(value, ctx);
-            }
-            return resolved;
-        }
-        return obj;
-    };
-
-    const resolveTemplate = (template: string, ctx: Record<string, any>): string => {
-        if (!template || typeof template !== 'string') return template;
-
-        return template.replace(/\$\{([^}]+)\}/g, (match, expr) => {
-            try {
-                const value = evaluateExpression(expr, ctx);
-                return value != null ? String(value) : match;
-            } catch (e) {
-                console.warn(`Template resolution failed for: ${expr}`, e);
-                return match;
-            }
-        });
-    };
-
-    const evaluateExpression = (expr: string, ctx: Record<string, any>): any => {
-        const parts = expr.trim().split(/[.\[\]]/).filter(p => p);
-        let value: any = ctx;
-        for (const part of parts) {
-            if (value && typeof value === 'object') {
-                value = value[part];
-            } else {
-                return undefined;
-            }
-        }
-        return value;
-    };
 
     // Performance: Memoize rendered components
     const renderedContent = useMemo(() => {

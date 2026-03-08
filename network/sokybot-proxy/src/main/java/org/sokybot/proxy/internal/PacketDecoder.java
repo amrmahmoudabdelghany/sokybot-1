@@ -37,7 +37,9 @@ public class PacketDecoder extends ByteToMessageDecoder {
         short size = (short) (((sizeBuffer[1] & 0xff) << 8) | (sizeBuffer[0] & 0xff));
 
         if (size > 10000) { // Safety check for malformed packets
-            // log warning or handle
+            in.resetReaderIndex();
+            in.skipBytes(2); // skip size bytes to avoid infinite loop
+            return;
         }
 
         boolean encrypted = false;
@@ -56,26 +58,35 @@ public class PacketDecoder extends ByteToMessageDecoder {
             return;
         }
 
-        byte[] buffer = new byte[size];
-        in.readBytes(buffer, 2, buffer.length - 2);
+        try {
+            byte[] buffer = new byte[size];
+            in.readBytes(buffer, 2, buffer.length - 2);
 
-        buffer[0] = sizeBuffer[0];
-        buffer[1] = sizeBuffer[1];
+            buffer[0] = sizeBuffer[0];
+            buffer[1] = sizeBuffer[1];
 
-        int opcode = (((buffer[3] & 0xff) << 8) | (buffer[2] & 0xff));
+            if (encrypted) {
+                buffer = blowfish.decode(2, buffer);
 
-        if (encrypted) {
-            buffer = blowfish.decode(2, buffer);
+                size = (short) (((buffer[1] & 0x7f) << 8) | (buffer[0] & 0xff));
+                size += 6;
 
-            size = (short) (((buffer[1] & 0x7f) << 8) | (buffer[0] & 0xff));
-            size += 6;
-
-            if (size < buffer.length) {
-                buffer = Arrays.copyOf(buffer, size);
+                if (size < buffer.length) {
+                    buffer = Arrays.copyOf(buffer, size);
+                }
             }
-        }
 
-        NetworkPeer peer = ctx.channel().attr(NetworkAttributes.TRANSPORT).get();
-        out.add(ImmutablePacket.wrap(buffer, Encoding.PLAIN, peer));
+            NetworkPeer peer = ctx.channel().attr(NetworkAttributes.TRANSPORT).get();
+            out.add(ImmutablePacket.wrap(buffer, Encoding.PLAIN, peer));
+        } catch (Exception e) {
+            // One bad packet (e.g. decryption failure) must not block the pipeline
+            in.resetReaderIndex();
+            int toSkip = Math.min(in.readableBytes(), size);
+            if (toSkip > 0) {
+                in.skipBytes(toSkip);
+            }
+            // Log at debug/fine level to avoid noise; pipeline continues with next bytes
+            System.err.println("PacketDecoder: skipped malformed packet (size=" + size + "): " + e.getMessage());
+        }
     }
 }

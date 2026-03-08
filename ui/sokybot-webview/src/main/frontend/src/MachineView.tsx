@@ -23,8 +23,11 @@ export const MachineView: React.FC<MachineViewProps> = ({ machineId }) => {
         // Find all pages that match this machine
         // Match pages ending with machineFullName or containing machineFullName
         Object.keys(extensionRegistry.pages || {}).forEach(pageId => {
+            // Packet Analyzer is shown only as a modal from Packet Sniffer, not as a separate tab
+            const base = pageId.split('_')[0]?.toLowerCase() || '';
+            if (base === 'packetanalyzer') return;
+
             // Match pages like "inventory_group.machine", "log_group.machine", etc.
-            // or pages that end with machineFullName
             if (pageId.endsWith('_' + machineFullName) ||
                 pageId.endsWith('.' + machineFullName) ||
                 (pageId.includes('_') && pageId.split('_').pop() === machineFullName) ||

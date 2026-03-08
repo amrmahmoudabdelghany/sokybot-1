@@ -1,126 +1,70 @@
-import org.sokybot.engine.api.extension.IActuator
-import org.sokybot.engine.api.extension.IActuatorContext
-import org.sokybot.engine.api.extension.ActuatorDescriptor
-import org.sokybot.engine.core.workflow.builder.CycleDefinitionBuilder
-import org.sokybot.engine.api.workflow.IWorkflowContext
-import org.sokybot.settings.api.ISettingsRegistry
 import org.sokybot.settings.MonsterPreference
-import org.sokybot.gamemodel.model.*
-import org.sokybot.gameevents.enums.*
-import org.sokybot.gameevents.dto.Skill
-import org.sokybot.network.packet.*
-import org.sokybot.network.NetworkPeer
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 
-class Training implements IActuator {
-
-    private static final Logger log = LoggerFactory.getLogger(Training.class)
-    private static boolean registered = false
+class Training extends BaseActuator {
 
     private final PotionBehavior potionBehavior = new PotionBehavior()
     private final CombatBehavior combatBehavior = new CombatBehavior()
     private final TownBehavior townBehavior = new TownBehavior()
 
-    @Override
-    String getName() { "training" }
+    Training() { super("training") }
 
     @Override
-    void initialize(IActuatorContext context) {
-        log.info("Initializing GROOVY training actuator for machine: {}", context.getMachineId())
+    void setup() {
+        registerSettings("training", TrainingSettings, { new TrainingSettings() })
 
-        try {
-            def settingsRegistry = context.getService(ISettingsRegistry.class)
-            
-            if (settingsRegistry == null) {
-                log.error("Failed to acquire ISettingsRegistry service for Training actuator!")
-                return
-            }
-
-            if (!registered) {
-                log.info("Registering training settings scope from Groovy")
-                settingsRegistry.register("training", TrainingSettings.class, { new TrainingSettings() })
-                registered = true
-            }
-
-            def settingsProvider = settingsRegistry.getProvider(
-                    context.getGroupName(),
-                    context.getMachineName(),
-                    "training",
-                    TrainingSettings.class)
-
-            def cycle = new CycleDefinitionBuilder()
-                    .name("training-cycle")
-                    .priority(300)
-                    .entryState("CHECK_POTION")
-                    .entryGuard({ ctx ->
-                        def settings = settingsProvider.get()
-                        return isLoggedIn(ctx) && settings.isAutoAttack()
-                    })
-                    .interruptionGuard({ ctx -> potionBehavior.needsPotion(ctx, settingsProvider.get()) })
-                    .interruptionPriority(500)
-                    .interruptionAction({ ctx ->
-                        log.warn("Interrupting training due to low HP/MP (Groovy)")
-                    })
-                    .interruptible(true)
-
-                    // Potion State
-                    .state("CHECK_POTION", { builder -> builder
-                            .guard({ ctx -> potionBehavior.needsPotion(ctx, settingsProvider.get()) })
-                            .action({ ctx -> potionBehavior.execute(ctx, settingsProvider.get()) })
-                            .nextState("WAIT_AFTER_POTION")
-                            .targetState("CHECK_COMBAT")
-                    })
-                    .delayState("WAIT_AFTER_POTION", { builder -> builder
-                            .delay(500)
-                            .nextState("CHECK_COMBAT")
-                    })
-
-                    // Combat State
-                    .state("CHECK_COMBAT", { builder -> builder
-                            .guard({ ctx -> combatBehavior.shouldAttack(ctx, settingsProvider.get()) })
-                            .action({ ctx -> combatBehavior.execute(ctx, settingsProvider.get()) })
-                            .nextState("WAIT_AFTER_COMBAT")
-                            .targetState("CHECK_TOWN_LOOP")
-                    })
-                    .delayState("WAIT_AFTER_COMBAT", { builder -> builder
-                            .delay(1000)
-                            .nextState("CHECK_TOWN_LOOP")
-                    })
-
-                    // Town Loop State
-                    .state("CHECK_TOWN_LOOP", { builder -> builder
-                            .guard({ ctx -> townBehavior.shouldReturnToTown(ctx) })
-                            .action({ ctx -> townBehavior.execute(ctx) })
-                            .nextState("WAIT_AFTER_TOWN")
-                            .targetState("CHECK_POTION")
-                    })
-                    .delayState("WAIT_AFTER_TOWN", { builder -> builder
-                            .delay(2000)
-                            .nextState("CHECK_POTION")
-                    })
-                    .build()
-
-            context.getWorkflowRegistry().registerCycle(cycle)
-            log.info("Training cycle registered successfully (Groovy)")
-
-        } catch (Exception e) {
-            log.error("Failed to initialize training actuator: {}", e.getMessage(), e)
+        def settingsProvider = settingsProvider("training", TrainingSettings)
+        if (settingsProvider == null) {
+            log.warn("Training: settings provider not available; cycle will not be registered")
+            return
         }
+
+        def cycle = new CycleDefinitionBuilder()
+                .name("training-cycle")
+                .priority(300)
+                .entryState("CHECK_POTION")
+                .entryGuard({ ctx ->
+                    def settings = settingsProvider?.get()
+                    return settings != null && isLoggedIn(ctx) && settings.isAutoAttack()
+                })
+                .interruptionGuard({ ctx -> potionBehavior.needsPotion(ctx, settingsProvider?.get()) })
+                .interruptionPriority(500)
+                .interruptionAction({ ctx -> log.warn("Interrupting training due to low HP/MP") })
+                .interruptible(true)
+
+                .state("CHECK_POTION", { builder -> builder
+                        .guard({ ctx -> potionBehavior.needsPotion(ctx, settingsProvider?.get()) })
+                        .action({ ctx -> potionBehavior.execute(ctx, settingsProvider?.get()) })
+                        .nextState("WAIT_AFTER_POTION")
+                        .targetState("CHECK_COMBAT")
+                })
+                .delayState("WAIT_AFTER_POTION", { builder -> builder.delay(500).nextState("CHECK_COMBAT") })
+
+                .state("CHECK_COMBAT", { builder -> builder
+                        .guard({ ctx -> combatBehavior.shouldAttack(ctx, settingsProvider?.get()) })
+                        .action({ ctx -> combatBehavior.execute(ctx, settingsProvider?.get()) })
+                        .nextState("WAIT_AFTER_COMBAT")
+                        .targetState("CHECK_TOWN_LOOP")
+                })
+                .delayState("WAIT_AFTER_COMBAT", { builder -> builder.delay(1000).nextState("CHECK_TOWN_LOOP") })
+
+                .state("CHECK_TOWN_LOOP", { builder -> builder
+                        .guard({ ctx -> townBehavior.shouldReturnToTown(ctx) })
+                        .action({ ctx -> townBehavior.execute(ctx) })
+                        .nextState("WAIT_AFTER_TOWN")
+                        .targetState("CHECK_POTION")
+                })
+                .delayState("WAIT_AFTER_TOWN", { builder -> builder.delay(2000).nextState("CHECK_POTION") })
+                .build()
+
+        context.getWorkflowRegistry().registerCycle(cycle)
+        log.info("Training cycle registered successfully")
     }
 
-    @Override
-    void shutdown(IActuatorContext context) {
-        log.info("Shutting down Groovy training actuator")
-    }
-
-    private boolean isLoggedIn(def context) {
+    private boolean isLoggedIn(def ctx) {
         try {
-            def trainer = context.getGameModel().getTrainer()
+            def trainer = ctx.getGameModel().getTrainer()
             return trainer != null && trainer.getUniqueId() > 0
-        } catch (Exception e) {
-            return false
-        }
+        } catch (Exception e) { return false }
     }
 }
 
@@ -133,7 +77,6 @@ class TrainingSettings {
     Map<MonsterType, List<String>> attackSkills = [:]
     Map<MonsterType, MonsterPreference> monsterPreferences = [:]
 
-    // Healing Settings
     int hpPotionThreshold = 50
     int mpPotionThreshold = 50
     int hpPetPotionThreshold = 50
@@ -141,12 +84,10 @@ class TrainingSettings {
     boolean useMpPotion = true
     boolean usePetPotion = true
 
-    // Navigation / Town Loop Settings
     boolean loopInTown = true
     String scriptPath = ""
     boolean reverseReturnScroll = false
 
-    // Training area settings
     String activeAreaName = ""
     int areaX = 0
     int areaY = 0
@@ -171,9 +112,8 @@ class TrainingSettings {
 }
 
 class PotionBehavior {
-    private static final Logger log = LoggerFactory.getLogger(PotionBehavior.class)
+    private static final Logger log = LoggerFactory.getLogger(PotionBehavior)
     private static final int USE_ITEM_OPCODE = 0x704C
-
     private static final String HP_POTION_PATTERN = "_HP_POTION_"
     private static final String MP_POTION_PATTERN = "_MP_POTION_"
 
@@ -185,7 +125,6 @@ class PotionBehavior {
 
     void execute(IWorkflowContext context, TrainingSettings settings) {
         if (settings == null) return
-
         if (settings.useHpPotion && isLowHP(context, settings)) {
             usePotion(context, "HP", HP_POTION_PATTERN)
         } else if (settings.useMpPotion && isLowMP(context, settings)) {
@@ -222,15 +161,12 @@ class PotionBehavior {
                 byte slot = potionItem.getSlot()
                 int tid = potionItem.getRefId()
 
-                def useItemPacket = MutablePacket.getBuilder(5, USE_ITEM_OPCODE)
+                def pkt = MutablePacket.getBuilder(5, USE_ITEM_OPCODE)
                         .packetEncoding(Encoding.ENCRYPTED)
                         .dataEncoding(Encoding.PLAIN)
                         .packetSource(NetworkPeer.BOT)
-                        .put(slot)
-                        .putInt(tid)
-                        .build()
-
-                context.getDispatcher().sendToServer(useItemPacket)
+                        .put(slot).putInt(tid).build()
+                context.getDispatcher().sendToServer(pkt)
                 log.info("Used {} potion (RefId: {}) from slot: {}", type, tid, slot)
             } else {
                 log.warn("No {} potion found in inventory matching pattern: {}", type, pattern)
@@ -242,19 +178,17 @@ class PotionBehavior {
 
     private def findPotion(IWorkflowContext context, String pattern) {
         try {
-            def items = context.getGameModel().findAll(IItem.class)
-            return items.values().find { item -> 
-                item.getSlot() >= 0 && item.getSlot() < 100 && 
+            def items = context.getGameModel().findAll(IItem)
+            return items.values().find { item ->
+                item.getSlot() >= 0 && item.getSlot() < 100 &&
                 item.getLongId() != null && item.getLongId().contains(pattern)
             }
-        } catch (Exception e) {
-            return null
-        }
+        } catch (Exception e) { return null }
     }
 }
 
 class CombatBehavior {
-    private static final Logger log = LoggerFactory.getLogger(CombatBehavior.class)
+    private static final Logger log = LoggerFactory.getLogger(CombatBehavior)
     private static final byte AUTO_ATTACK_ACTION = 0x01
     private static final int USE_SKILL_OPCODE = 0x7001
 
@@ -263,11 +197,12 @@ class CombatBehavior {
     private boolean targetObstructed = false
 
     boolean shouldAttack(IWorkflowContext context, TrainingSettings settings) {
-        if (!settings.autoAttack || settings.doNotAttack) return false
+        if (settings == null || !settings.autoAttack || settings.doNotAttack) return false
         return findTarget(context, settings) > 0
     }
 
     void execute(IWorkflowContext context, TrainingSettings settings) {
+        if (settings == null) return
         try {
             def trainer = context.getGameModel().getTrainer()
             int targetId = findTarget(context, settings)
@@ -311,35 +246,26 @@ class CombatBehavior {
     }
 
     private void sendAttackPacket(IWorkflowContext context, int targetId, byte action) {
-        def packet = MutablePacket.getBuilder(7, ClientOpcode.CHAR_ACTION)
+        def pkt = MutablePacket.getBuilder(7, ClientOpcode.CHAR_ACTION)
                 .packetEncoding(Encoding.ENCRYPTED)
                 .dataEncoding(Encoding.PLAIN)
                 .packetSource(NetworkPeer.BOT)
-                .put(action)
-                .put((byte) 0x01)
-                .put((byte) 0x01)
-                .putInt(targetId)
-                .build()
-        context.getDispatcher().sendToServer(packet)
+                .put(action).put((byte) 0x01).put((byte) 0x01).putInt(targetId).build()
+        context.getDispatcher().sendToServer(pkt)
     }
 
     private void sendUseSkillPacket(IWorkflowContext context, int targetId, int skillId) {
-        def packet = MutablePacket.getBuilder(10, USE_SKILL_OPCODE)
+        def pkt = MutablePacket.getBuilder(10, USE_SKILL_OPCODE)
                 .packetEncoding(Encoding.ENCRYPTED)
                 .dataEncoding(Encoding.PLAIN)
                 .packetSource(NetworkPeer.BOT)
-                .put((byte) 0x01)
-                .put((byte) 0x01)
-                .putInt(skillId)
-                .put((byte) 0x01)
-                .putInt(targetId)
-                .build()
-        context.getDispatcher().sendToServer(packet)
+                .put((byte) 0x01).put((byte) 0x01).putInt(skillId).put((byte) 0x01).putInt(targetId).build()
+        context.getDispatcher().sendToServer(pkt)
     }
 
     private int findTarget(IWorkflowContext context, TrainingSettings settings) {
         try {
-            def monsters = context.getGameModel().findAll(IMonster.class)
+            def monsters = context.getGameModel().findAll(IMonster)
             if (!monsters) return 0
 
             def trainer = context.getGameModel().getTrainer()
@@ -375,22 +301,15 @@ class CombatBehavior {
                     }
                     .map { m -> m.getUniqueId() }
                     .orElse(0)
-        } catch (Exception e) {
-            return 0
-        }
+        } catch (Exception e) { return 0 }
     }
 }
 
 class TownBehavior {
-    private static final Logger log = LoggerFactory.getLogger(TownBehavior.class)
+    private static final Logger log = LoggerFactory.getLogger(TownBehavior)
 
-    boolean shouldReturnToTown(IWorkflowContext context) {
-        return false
-    }
-
-    void execute(IWorkflowContext context) {
-        log.info("Returning to town logic (Groovy)")
-    }
+    boolean shouldReturnToTown(IWorkflowContext context) { return false }
+    void execute(IWorkflowContext context) { log.info("Returning to town logic") }
 }
 
 new Training()

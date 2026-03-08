@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.sokybot.persistence.service.IPersistenceContextManager;
 
 import javax.persistence.EntityManagerFactory;
-import javax.persistence.Persistence;
+import javax.persistence.spi.PersistenceProvider;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,14 +27,16 @@ public class PersistenceContextManagerImpl implements IPersistenceContextManager
     
     @Activate
     public void activate(Map<String, Object> config) {
-        // Use configurable base path (could come from OSGi ConfigAdmin)
+        // Use configurable base path (OSGi ConfigAdmin or system property)
         Object pathObj = config != null ? config.get("db.base.path") : null;
-        this.dbBasePath = pathObj != null ? pathObj.toString() : 
+        String rawPath = pathObj != null ? pathObj.toString() : 
             System.getProperty("sokybot.db.path", "./data/db");
+        File dbDir = new File(rawPath);
+        this.dbBasePath = dbDir.getAbsolutePath();
         
-        File dbDir = new File(dbBasePath);
         if (!dbDir.exists() && !dbDir.mkdirs()) {
-            logger.warn("Failed to create database directory: {}", dbBasePath);
+            throw new IllegalStateException("Failed to create database directory: " + dbBasePath + 
+                ". Ensure the path is writable (e.g. set sokybot.db.path or db.base.path).");
         }
         
         logger.info("PersistenceContextManager activated with base path: {}", dbBasePath);
@@ -89,13 +91,22 @@ public class PersistenceContextManagerImpl implements IPersistenceContextManager
             properties.put("hibernate.hikari.connectionTimeout", "30000");
             properties.put("hibernate.hikari.idleTimeout", "600000");
             
-            // Context ClassLoader switch for OSGi/Hibernate
+            // In OSGi, javax.persistence.Persistence.createEntityManagerFactory uses
+            // ServiceLoader which cannot discover providers across bundle boundaries.
+            // Instantiate HibernatePersistenceProvider directly.
             ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
             try {
                 Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
                 
-                EntityManagerFactory emf = Persistence.createEntityManagerFactory(
+                PersistenceProvider provider = new org.hibernate.jpa.HibernatePersistenceProvider();
+                EntityManagerFactory emf = provider.createEntityManagerFactory(
                     "sokybot-persistence-unit", properties);
+                
+                if (emf == null) {
+                    throw new javax.persistence.PersistenceException(
+                        "HibernatePersistenceProvider returned null for persistence unit 'sokybot-persistence-unit'. " +
+                        "Check that META-INF/persistence.xml is on the classpath.");
+                }
                 
                 logger.info("Successfully created EntityManagerFactory for game: {} at {}", 
                     gamePath, dbPath);
@@ -106,7 +117,10 @@ public class PersistenceContextManagerImpl implements IPersistenceContextManager
             
         } catch (Exception e) {
             logger.error("Failed to create EntityManagerFactory for game: {}", gamePath, e);
-            throw new RuntimeException("Failed to create persistence context for game: " + gamePath, e);
+            String causeMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
+            String message = "Failed to create persistence context for game: " + gamePath +
+                (causeMsg != null && !causeMsg.isEmpty() ? ". " + causeMsg : "");
+            throw new RuntimeException(message, e);
         }
     }
     

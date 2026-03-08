@@ -23,4 +23,9 @@ public interface IMachineContext extends IContextAdapter, IGameStateProvider, IN
 
     @Override
     String getMachineName();
+
+    /**
+     * Look up an OSGi service by type from this machine's bundle context.
+     */
+    <T> T getService(Class<T> serviceClass);
 }
