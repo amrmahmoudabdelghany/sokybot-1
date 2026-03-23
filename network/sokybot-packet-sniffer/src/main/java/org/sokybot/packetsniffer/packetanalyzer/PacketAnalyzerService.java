@@ -33,44 +33,49 @@ public class PacketAnalyzerService {
      */
     public Map<String, Object> getPacketData() {
         List<Map<String, Object>> packetRows = new ArrayList<>();
-        
+
         for (TablePacket packet : packets) {
-            byte[] buffer = packet.getPacket().getPacketReader().readBytes(0);
-            NetworkPeer source = packet.getPacket().getPacketSource();
-            String opcode = String.format("0x%04X", packet.getPacket().getOpcode() & 0xffff);
-            String name = packet.getName();
-            
-            // Add header row
-            Map<String, Object> headerRow = new HashMap<>();
-            headerRow.put("type", "header");
-            headerRow.put("source", source.toString());
-            headerRow.put("opcode", opcode);
-            headerRow.put("name", name);
-            packetRows.add(headerRow);
-            
-            // Add hex data rows
-            int i = 0;
-            do {
-                int lineNumber = i;
-                String hexLine = Utils.toHex(buffer, i, groupLen);
-                String asciiLine = Utils.toAscii(buffer, i, groupLen);
-                
-                Map<String, Object> dataRow = new HashMap<>();
-                dataRow.put("type", "data");
-                dataRow.put("lineNumber", String.format("%06X", lineNumber));
-                dataRow.put("hex", hexLine);
-                dataRow.put("ascii", asciiLine);
-                dataRow.put("startOffset", i);
-                dataRow.put("endOffset", Math.min(i + groupLen, buffer.length));
-                packetRows.add(dataRow);
-                
-                i += groupLen;
-            } while (i < buffer.length);
-            
-            // Add empty row separator
-            Map<String, Object> separatorRow = new HashMap<>();
-            separatorRow.put("type", "separator");
-            packetRows.add(separatorRow);
+            try {
+                byte[] buffer = packet.getPacket().getPacketReader().readBytes(0);
+                if (buffer == null) buffer = new byte[0];
+                NetworkPeer source = packet.getPacket().getPacketSource();
+                String opcode = String.format("0x%04X", packet.getPacket().getOpcode() & 0xffff);
+                String name = packet.getName();
+
+                // Add header row
+                Map<String, Object> headerRow = new HashMap<>();
+                headerRow.put("type", "header");
+                headerRow.put("source", source.toString());
+                headerRow.put("opcode", opcode);
+                headerRow.put("name", name);
+                packetRows.add(headerRow);
+
+                // Add hex data rows
+                int i = 0;
+                do {
+                    int lineNumber = i;
+                    String hexLine = Utils.toHex(buffer, i, groupLen);
+                    String asciiLine = Utils.toAscii(buffer, i, groupLen);
+
+                    Map<String, Object> dataRow = new HashMap<>();
+                    dataRow.put("type", "data");
+                    dataRow.put("lineNumber", String.format("%06X", lineNumber));
+                    dataRow.put("hex", hexLine);
+                    dataRow.put("ascii", asciiLine);
+                    dataRow.put("startOffset", i);
+                    dataRow.put("endOffset", Math.min(i + groupLen, buffer.length));
+                    packetRows.add(dataRow);
+
+                    i += groupLen;
+                } while (i < buffer.length);
+
+                // Add empty row separator
+                Map<String, Object> separatorRow = new HashMap<>();
+                separatorRow.put("type", "separator");
+                packetRows.add(separatorRow);
+            } catch (Exception e) {
+                // Skip one bad packet so the rest of the analyzer still gets data
+            }
         }
         
         Map<String, Object> result = new HashMap<>();

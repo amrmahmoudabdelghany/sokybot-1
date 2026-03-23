@@ -18,7 +18,7 @@
       "className": "space-y-4",
       "children": [
         {
-          "type": "div",
+          "type": "Box",
           "className": "p-4 bg-slate-100 dark:bg-slate-800 rounded",
           "children": [
             {
@@ -32,14 +32,14 @@
               "type": "p",
               "className": "text-slate-600 dark:text-slate-400",
               "props": {
-                "children": "This page is defined entirely in JSON and demonstrates the declarative UI system."
+                "children": "This page is defined entirely in JSON and demonstrates the dev kit (Stack, Flex, Box, Card, Button)."
               }
             }
           ]
         },
         {
-          "type": "div",
-          "className": "flex gap-2",
+          "type": "Flex",
+          "props": { "gap": 2 },
           "children": [
             {
               "type": "Button",

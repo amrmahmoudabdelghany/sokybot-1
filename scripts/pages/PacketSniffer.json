@@ -5,8 +5,9 @@
   "className": "p-6 h-full",
   "children": [
     {
-      "type": "div",
-      "className": "border-b border-border flex space-x-1",
+      "type": "Flex",
+      "className": "border-b border-border space-x-1",
+      "props": { "gap": 1 },
       "children": [
         {
           "type": "Button",
@@ -33,17 +34,17 @@
       ]
     },
     {
-      "type": "div",
+      "type": "Box",
       "className": "flex-1 overflow-auto",
       "props": { "id": "tabContent" },
       "children": [
         {
-          "type": "div",
+          "type": "Box",
           "props": { "id": "trafficContent", "hidden": "${activeTab !== 'traffic'}" },
           "children": [{ "$ref": "traffic-monitor.json" }]
         },
         {
-          "type": "div",
+          "type": "Box",
           "props": { "id": "tracerContent", "hidden": "${activeTab !== 'tracer'}" },
           "children": [{ "$ref": "packet-tracer.json" }]
         }
@@ -58,7 +59,7 @@
       "children": [
         {
           "type": "DialogContent",
-          "className": "max-w-5xl max-h-[90vh] flex flex-col overflow-hidden",
+          "className": "max-w-5xl h-[90vh] max-h-[90vh] flex flex-col overflow-hidden bg-background text-foreground",
           "children": [
             {
               "type": "DialogHeader",
@@ -70,12 +71,14 @@
               ]
             },
             {
-              "type": "div",
-              "className": "flex items-center justify-between p-2 border-b border-border",
+              "type": "Flex",
+              "className": "items-center justify-between p-2 border-b border-border",
+              "props": { "gap": 4 },
               "children": [
                 {
-                  "type": "div",
-                  "className": "flex items-center gap-4",
+                  "type": "Flex",
+                  "className": "items-center gap-4",
+                  "props": { "gap": 4 },
                   "children": [
                     { "type": "span", "className": "text-sm", "props": { "children": "Selected: ${selectedByteCount} byte(s)" } },
                     { "type": "span", "className": "text-sm", "props": { "children": "Matches: ${matchCount}" } }
@@ -91,7 +94,7 @@
             },
             {
               "type": "hex-viewer",
-              "className": "flex-1 min-h-0",
+              "className": "flex-1 min-h-[240px] overflow-auto",
               "props": {
                 "dataSource": "packets",
                 "onSelectHex": "selectHex",
@@ -99,7 +102,7 @@
               }
             },
             {
-              "type": "div",
+              "type": "Box",
               "className": "border-t border-border flex-shrink-0",
               "children": [
                 {

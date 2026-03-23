@@ -22,16 +22,17 @@ export const MachineView: React.FC<MachineViewProps> = ({ machineId }) => {
 
         // Find all pages that match this machine
         // Match pages ending with machineFullName or containing machineFullName
+        const lowerMachineFullName = machineFullName.toLowerCase();
         Object.keys(extensionRegistry.pages || {}).forEach(pageId => {
+            const lowerPageId = pageId.toLowerCase();
             // Packet Analyzer is shown only as a modal from Packet Sniffer, not as a separate tab
-            const base = pageId.split('_')[0]?.toLowerCase() || '';
-            if (base === 'packetanalyzer') return;
+            if (lowerPageId.startsWith('packetanalyzer_')) return;
 
             // Match pages like "inventory_group.machine", "log_group.machine", etc.
-            if (pageId.endsWith('_' + machineFullName) ||
-                pageId.endsWith('.' + machineFullName) ||
-                (pageId.includes('_') && pageId.split('_').pop() === machineFullName) ||
-                (pageId.includes('.') && pageId.split('.').pop() === machineFullName)) {
+            if (lowerPageId.endsWith('_' + lowerMachineFullName) ||
+                lowerPageId.endsWith('.' + lowerMachineFullName) ||
+                (lowerPageId.includes('_') && lowerPageId.split('_').pop() === lowerMachineFullName) ||
+                (lowerPageId.includes('.') && lowerPageId.split('.').pop() === lowerMachineFullName)) {
                 machineTabs.push(pageId);
             }
         });

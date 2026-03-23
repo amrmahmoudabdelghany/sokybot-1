@@ -1,0 +1,72 @@
+{
+  "type": "Card",
+  "className": "w-full",
+  "children": [
+    {
+      "type": "CardHeader",
+      "children": [
+        {
+          "type": "CardTitle",
+          "props": { "children": "Dev kit tabs example" }
+        }
+      ]
+    },
+    {
+      "type": "CardContent",
+      "children": [
+        {
+          "type": "Tabs",
+          "props": { "defaultValue": "tab1" },
+          "children": [
+            {
+              "type": "TabsList",
+              "className": "grid w-full grid-cols-2",
+              "children": [
+                {
+                  "type": "TabsTrigger",
+                  "props": { "value": "tab1", "children": "Tab 1" }
+                },
+                {
+                  "type": "TabsTrigger",
+                  "props": { "value": "tab2", "children": "Tab 2" }
+                }
+              ]
+            },
+            {
+              "type": "TabsContent",
+              "props": { "value": "tab1" },
+              "children": [
+                {
+                  "type": "Box",
+                  "className": "p-4",
+                  "children": [
+                    {
+                      "type": "p",
+                      "props": { "children": "Content for tab 1." }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "TabsContent",
+              "props": { "value": "tab2" },
+              "children": [
+                {
+                  "type": "Box",
+                  "className": "p-4",
+                  "children": [
+                    {
+                      "type": "p",
+                      "props": { "children": "Content for tab 2." }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

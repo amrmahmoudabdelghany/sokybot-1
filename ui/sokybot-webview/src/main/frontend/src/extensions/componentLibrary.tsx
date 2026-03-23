@@ -1,41 +1,109 @@
 import React from 'react';
-import { Button } from '@sokybot/frontend-shared';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@sokybot/frontend-shared';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@sokybot/frontend-shared';
-import { Input } from '@sokybot/frontend-shared';
-import { Label } from '@sokybot/frontend-shared';
+import {
+    Button,
+    Card,
+    CardHeader,
+    CardTitle,
+    CardContent,
+    CardFooter,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter,
+    DialogDescription,
+    Input,
+    Label,
+    Tabs,
+    TabsList,
+    TabsTrigger,
+    TabsContent,
+    Badge,
+} from '@sokybot/frontend-shared';
 import { Progress } from '@/components/ui/progress';
 import { Slider } from '@/components/ui/slider';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Stack,
+    Flex,
+    Box,
+    Form,
+    Grid,
+    Separator,
+    Center,
+    Spacer,
+    KeyValue,
+    SectionTitle,
+    EmptyState,
+    Text,
+    TextArea,
+    Select,
+} from './devKitComponents';
+import { Alert, AlertTitle, AlertDescription } from '@sokybot/frontend-shared';
 import * as LucideIcons from 'lucide-react';
 
-
-
-
 /**
- * Component Library - Maps component names to React components
- * Supports shadcn/ui components, HTML elements, and Lucide icons
+ * Dev kit component library – maps declarative JSON `type` values to React components.
+ * Use these names in schema files for consistent, shadcn-based UI.
  */
 export const UIComponentLibrary: Record<string, React.ComponentType<any>> = {
-    // shadcn/ui components
-    'Button': Button,
+    // --- Dev kit layout primitives ---
+    'Stack': Stack,
+    'Flex': Flex,
+    'Box': Box,
+    'Form': Form,
+    'Grid': Grid,
+    'Separator': Separator,
+    'Center': Center,
+    'Spacer': Spacer,
+    // --- Dev kit content ---
+    'KeyValue': KeyValue,
+    'SectionTitle': SectionTitle,
+    'EmptyState': EmptyState,
+    'Text': Text,
+
+    // --- Layout (structure) ---
     'Card': Card,
     'CardHeader': CardHeader,
     'CardTitle': CardTitle,
     'CardContent': CardContent,
     'CardFooter': CardFooter,
+
+    // --- Inputs ---
+    'Input': Input,
+    'Label': Label,
+    'Checkbox': Checkbox,
+    'Slider': Slider,
+    'TextArea': TextArea,
+    'Select': Select,
+
+    // --- Actions ---
+    'Button': Button,
+
+    // --- Feedback ---
+    'Progress': Progress,
+    'Badge': Badge,
+    'Alert': Alert,
+    'AlertTitle': AlertTitle,
+    'AlertDescription': AlertDescription,
+
+    // --- Overlays ---
     'Dialog': Dialog,
     'DialogContent': DialogContent,
     'DialogHeader': DialogHeader,
     'DialogTitle': DialogTitle,
     'DialogTrigger': DialogTrigger,
-    'Input': Input,
-    'Label': Label,
-    'Progress': Progress,
-    'Slider': Slider,
-    'Checkbox': Checkbox,
+    'DialogFooter': DialogFooter,
+    'DialogDescription': DialogDescription,
 
-    // HTML elements (as string tags)
+    // --- Tabs ---
+    'Tabs': Tabs,
+    'TabsList': TabsList,
+    'TabsTrigger': TabsTrigger,
+    'TabsContent': TabsContent,
+
+    // --- HTML elements (lowercase) ---
     'div': 'div' as any,
     'span': 'span' as any,
     'p': 'p' as any,

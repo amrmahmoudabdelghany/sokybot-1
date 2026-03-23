@@ -14,8 +14,9 @@
       "type": "CardHeader",
       "children": [
         {
-          "type": "div",
-          "className": "flex justify-between items-center w-full",
+          "type": "Flex",
+          "className": "justify-between items-center w-full",
+          "props": { "gap": 2 },
           "children": [
             {
               "type": "CardTitle",
@@ -24,8 +25,8 @@
               }
             },
             {
-              "type": "div",
-              "className": "flex gap-2",
+              "type": "Flex",
+              "props": { "gap": 2 },
               "children": [
                 {
                   "type": "Button",
@@ -79,7 +80,7 @@
       "className": "p-0",
       "children": [
         {
-          "type": "div",
+          "type": "Box",
           "className": "overflow-x-auto",
           "children": [
             {

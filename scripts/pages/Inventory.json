@@ -1,10 +1,12 @@
 {
-    "type": "div",
-    "className": "h-full flex flex-col space-y-4",
+    "type": "Stack",
+    "className": "h-full space-y-4",
+    "props": { "gap": 4 },
     "children": [
         {
-            "type": "div",
-            "className": "flex justify-between items-center",
+            "type": "Flex",
+            "className": "justify-between items-center",
+            "props": { "gap": 2 },
             "children": [
                 {
                     "type": "h3",
@@ -30,18 +32,19 @@
             "props": {
                 "dataSource": "items",
                 "renderItem": {
-                    "type": "div",
-                    "className": "bg-card border border-border p-2 rounded flex flex-col items-center justify-center relative group hover:border-primary transition-colors h-20 w-20 shadow-sm",
+                    "type": "Stack",
+                    "className": "bg-card border border-border p-2 rounded items-center justify-center relative group hover:border-primary transition-colors h-20 w-20 shadow-sm",
+                    "props": { "gap": 0 },
                     "children": [
                         {
-                            "type": "div",
+                            "type": "Box",
                             "className": "w-8 h-8 rounded bg-secondary flex items-center justify-center text-xs text-muted-foreground mb-1",
                             "props": {
                                 "children": "${item.refId ? (item.refId.length() > 2 ? item.refId.substring(0, 2) : item.refId) : '?'}"
                             }
                         },
                         {
-                            "type": "div",
+                            "type": "Box",
                             "className": "text-[10px] text-center text-foreground leading-tight w-full truncate px-1",
                             "props": {
                                 "title": "${item.name}",
@@ -49,7 +52,7 @@
                             }
                         },
                         {
-                            "type": "div",
+                            "type": "Box",
                             "className": "absolute top-1 right-1 text-[10px] bg-secondary px-1 rounded text-yellow-500 font-mono border border-border",
                             "props": {
                                 "hidden": "${item.count <= 1}",
@@ -57,7 +60,7 @@
                             }
                         },
                         {
-                            "type": "div",
+                            "type": "Box",
                             "className": "absolute top-1 left-1 text-[8px] text-muted-foreground",
                             "props": {
                                 "children": "${item.slot}"
@@ -68,11 +71,13 @@
             }
         },
         {
-            "type": "div",
-            "className": "text-center text-muted-foreground py-8 italic",
+            "type": "EmptyState",
             "props": {
                 "hidden": "${items.length > 0}",
-                "children": "Inventory is empty"
+                "message": "Inventory is empty",
+                "icon": "Package",
+                "action": "refresh",
+                "actionLabel": "Refresh"
             }
         }
     ]

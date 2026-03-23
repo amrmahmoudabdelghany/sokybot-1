@@ -12,6 +12,12 @@ interface SokybotState {
     // Character Data (Cached by machineId)
     characterStates: Record<string, CharacterState>;
 
+    // Extension Registry
+    extensionRegistry: {
+        pages: Record<string, any>;
+        toolbarActions: Record<string, any>;
+    };
+
     // UI State
     isSidebarOpen: boolean;
     theme: string;
@@ -26,6 +32,9 @@ interface SokybotState {
     setGroups: (groups: GroupInfo[]) => void;
     setSelectedMachineId: (id: string | null) => void;
     setSelectedPageId: (id: string | null) => void;
+    setExtensionRegistry: (registry: { pages: Record<string, any>; toolbarActions: Record<string, any> }) => void;
+    addExtensionPage: (page: any) => void;
+    removeExtensionPage: (pageId: string) => void;
     updateCharacterState: (machineId: string, state: CharacterState) => void;
     setActiveTab: (machineId: string, tabId: string) => void;
     setHealthStatus: (status: string) => void;
@@ -33,6 +42,7 @@ interface SokybotState {
 
     // Async Actions
     fetchInitialData: () => Promise<void>;
+    fetchExtensionRegistry: () => Promise<void>;
     startBot: (machineId: string) => Promise<void>;
     stopBot: (machineId: string) => Promise<void>;
 }
@@ -42,6 +52,7 @@ export const useSokybotStore = create<SokybotState>((set) => ({
     groups: [],
     selectedMachineId: null,
     selectedPageId: null,
+    extensionRegistry: { pages: {}, toolbarActions: {} },
     characterStates: {},
     isSidebarOpen: true,
     theme: 'light',
@@ -53,6 +64,30 @@ export const useSokybotStore = create<SokybotState>((set) => ({
     setGroups: (groups) => set({ groups }),
     setSelectedMachineId: (id: string | null) => set({ selectedMachineId: id }),
     setSelectedPageId: (id: string | null) => set({ selectedPageId: id }),
+
+    setExtensionRegistry: (extensionRegistry) => set({ extensionRegistry }),
+
+    addExtensionPage: (page) => set((prev) => ({
+        extensionRegistry: {
+            ...prev.extensionRegistry,
+            pages: {
+                ...prev.extensionRegistry.pages,
+                [page.pageId]: page
+            }
+        }
+    })),
+
+    removeExtensionPage: (pageId) => set((prev) => {
+        const pages = { ...prev.extensionRegistry.pages };
+        delete pages[pageId];
+        return {
+            extensionRegistry: {
+                ...prev.extensionRegistry,
+                pages
+            }
+        };
+    }),
+
     updateCharacterState: (machineId: string, state: CharacterState) => set((prev) => ({
         characterStates: { ...prev.characterStates, [machineId]: state }
     })),
@@ -71,6 +106,15 @@ export const useSokybotStore = create<SokybotState>((set) => ({
             set({ machines, groups });
         } catch (err: any) {
             set({ lastError: err.message });
+        }
+    },
+
+    fetchExtensionRegistry: async () => {
+        try {
+            const registry = await rsocketService.getExtensionRegistry();
+            set({ extensionRegistry: registry });
+        } catch (err: any) {
+            console.error("Failed to fetch extension registry", err);
         }
     },
 

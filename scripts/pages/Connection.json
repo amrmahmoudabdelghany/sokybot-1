@@ -1,10 +1,12 @@
 {
-    "type": "div",
-    "className": "h-full flex flex-col space-y-6",
+    "type": "Stack",
+    "className": "h-full space-y-6",
+    "props": { "gap": 6 },
     "children": [
         {
-            "type": "div",
-            "className": "flex justify-between items-center border-b border-border pb-2",
+            "type": "Flex",
+            "className": "justify-between items-center border-b border-border pb-2",
+            "props": { "gap": 2 },
             "children": [
                 {
                     "type": "h3",
@@ -14,8 +16,9 @@
                     }
                 },
                 {
-                    "type": "div",
-                    "className": "flex space-x-2",
+                    "type": "Flex",
+                    "className": "space-x-2",
+                    "props": { "gap": 2 },
                     "children": [
                         {
                             "type": "Button",
@@ -40,27 +43,27 @@
             ]
         },
         {
-            "type": "div",
-            "className": "grid grid-cols-1 md:grid-cols-2 gap-6",
+            "type": "Grid",
+            "props": { "cols": 1, "colsMd": 2, "gap": 6 },
             "children": [
                 {
-                    "type": "div",
+                    "type": "Box",
                     "className": "bg-card border border-border rounded p-4 shadow-sm",
                     "children": [
                         {
-                            "type": "h4",
-                            "className": "text-sm font-semibold text-emerald-500 mb-3 uppercase tracking-wider",
-                            "props": {
-                                "children": "Login Credentials"
-                            }
+                            "type": "SectionTitle",
+                            "className": "text-emerald-500",
+                            "props": { "children": "Login Credentials" }
                         },
                         {
-                            "type": "div",
+                            "type": "Stack",
                             "className": "space-y-4",
+                            "props": { "gap": 4 },
                             "children": [
                                 {
-                                    "type": "div",
+                                    "type": "Stack",
                                     "className": "space-y-1",
+                                    "props": { "gap": 1 },
                                     "children": [
                                         {
                                             "type": "Label",
@@ -80,8 +83,9 @@
                                     ]
                                 },
                                 {
-                                    "type": "div",
+                                    "type": "Stack",
                                     "className": "space-y-1",
+                                    "props": { "gap": 1 },
                                     "children": [
                                         {
                                             "type": "Label",
@@ -102,8 +106,9 @@
                                     ]
                                 },
                                 {
-                                    "type": "div",
+                                    "type": "Stack",
                                     "className": "space-y-1",
+                                    "props": { "gap": 1 },
                                     "children": [
                                         {
                                             "type": "Label",
@@ -128,27 +133,28 @@
                     ]
                 },
                 {
-                    "type": "div",
+                    "type": "Stack",
                     "className": "space-y-6",
+                    "props": { "gap": 6 },
                     "children": [
                         {
-                            "type": "div",
+                            "type": "Box",
                             "className": "bg-card border border-border rounded p-4 shadow-sm",
                             "children": [
                                 {
-                                    "type": "h4",
-                                    "className": "text-sm font-semibold text-blue-500 mb-3 uppercase tracking-wider",
-                                    "props": {
-                                        "children": "Connection Config"
-                                    }
+                                    "type": "SectionTitle",
+                                    "className": "text-blue-500",
+                                    "props": { "children": "Connection Config" }
                                 },
                                 {
-                                    "type": "div",
+                                    "type": "Stack",
                                     "className": "space-y-4",
+                                    "props": { "gap": 4 },
                                     "children": [
                                         {
-                                            "type": "div",
+                                            "type": "Stack",
                                             "className": "space-y-1",
+                                            "props": { "gap": 1 },
                                             "children": [
                                                 {
                                                     "type": "Label",
@@ -168,8 +174,9 @@
                                             ]
                                         },
                                         {
-                                            "type": "div",
+                                            "type": "Stack",
                                             "className": "space-y-1",
+                                            "props": { "gap": 1 },
                                             "children": [
                                                 {
                                                     "type": "Label",
@@ -189,8 +196,9 @@
                                             ]
                                         },
                                         {
-                                            "type": "div",
-                                            "className": "flex items-center space-x-2 pt-2",
+                                            "type": "Flex",
+                                            "className": "items-center space-x-2 pt-2",
+                                            "props": { "gap": 2 },
                                             "children": [
                                                 {
                                                     "type": "Checkbox",
@@ -213,53 +221,46 @@
                             ]
                         },
                         {
-                            "type": "div",
+                            "type": "Box",
                             "className": "bg-card border border-border rounded p-4 shadow-sm",
                             "children": [
                                 {
-                                    "type": "h4",
-                                    "className": "text-sm font-semibold text-purple-500 mb-3 uppercase tracking-wider",
-                                    "props": {
-                                        "children": "Status"
-                                    }
+                                    "type": "SectionTitle",
+                                    "className": "text-purple-500",
+                                    "props": { "children": "Status" }
                                 },
                                 {
-                                    "type": "div",
-                                    "className": "flex items-center space-x-2",
+                                    "type": "Flex",
+                                    "className": "items-center space-x-2",
+                                    "props": { "gap": 2 },
                                     "children": [
                                         {
-                                            "type": "div",
+                                            "type": "Box",
                                             "className": "${connected ? 'w-3 h-3 rounded-full bg-green-500' : 'w-3 h-3 rounded-full bg-red-500'}"
                                         },
-                                        {
-                                            "type": "span",
-                                            "className": "text-sm",
-                                            "props": {
-                                                "children": "${connected ? 'Connected' : 'Disconnected'}"
-                                            }
-                                        }
+                                        { "type": "Text", "variant": "small", "props": { "children": "${connected ? 'Connected' : 'Disconnected'}" } }
                                     ]
                                 }
                             ]
                         },
                         {
-                            "type": "div",
+                            "type": "Box",
                             "className": "bg-card border border-border rounded p-4 shadow-sm",
                             "children": [
                                 {
-                                    "type": "h4",
-                                    "className": "text-sm font-semibold text-orange-500 mb-3 uppercase tracking-wider",
-                                    "props": {
-                                        "children": "Profiles"
-                                    }
+                                    "type": "SectionTitle",
+                                    "className": "text-orange-500",
+                                    "props": { "children": "Profiles" }
                                 },
                                 {
-                                    "type": "div",
+                                    "type": "Stack",
                                     "className": "space-y-4",
+                                    "props": { "gap": 4 },
                                     "children": [
                                         {
-                                            "type": "div",
+                                            "type": "Stack",
                                             "className": "space-y-1",
+                                            "props": { "gap": 1 },
                                             "children": [
                                                 {
                                                     "type": "Label",
@@ -279,8 +280,9 @@
                                             ]
                                         },
                                         {
-                                            "type": "div",
-                                            "className": "flex space-x-2",
+                                            "type": "Flex",
+                                            "className": "space-x-2",
+                                            "props": { "gap": 2 },
                                             "children": [
                                                 {
                                                     "type": "Button",
@@ -313,7 +315,7 @@
                                             ]
                                         },
                                         {
-                                            "type": "div",
+                                            "type": "Box",
                                             "className": "text-xs text-muted-foreground",
                                             "props": {
                                                 "children": "Available: ${profiles}"

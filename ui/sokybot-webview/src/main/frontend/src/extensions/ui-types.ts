@@ -1,6 +1,8 @@
 /**
- * Type definitions for declarative UI extension system
+ * Type definitions for declarative UI extension system.
+ * Shared by DeclarativeExtensionView, ComponentRenderer, and dev kit.
  */
+import type { ComponentType } from 'react';
 
 export interface UIComponent {
     type: string;  // Component type (shadcn name, HTML tag, or custom type)
@@ -37,6 +39,6 @@ export type ExtensionComponentType =
     | string;  // Allow custom types
 
 export interface ExtensionComponent {
-    component: React.ComponentType<any>;
+    component: ComponentType<any>;
     defaultProps?: Record<string, any>;
 }

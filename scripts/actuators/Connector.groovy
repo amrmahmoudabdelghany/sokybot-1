@@ -4,7 +4,7 @@ class Connector extends BaseActuator {
 
     @Override
     void setup() {
-        String testHost = "57.128.22.67"
+        String testHost = "192.168.100.112"
         int testPort = 15779
 
         def settingsProvider = settingsProvider("login", Map)

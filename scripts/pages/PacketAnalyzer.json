@@ -1,14 +1,17 @@
 {
-  "type": "div",
-  "className": "h-full flex flex-col",
+  "type": "Stack",
+  "className": "h-full",
+  "props": { "gap": 0 },
   "children": [
     {
-      "type": "div",
-      "className": "flex items-center justify-between p-2 border-b border-border",
+      "type": "Flex",
+      "className": "items-center justify-between p-2 border-b border-border",
+      "props": { "gap": 4 },
       "children": [
         {
-          "type": "div",
-          "className": "flex items-center gap-4",
+          "type": "Flex",
+          "className": "items-center gap-4",
+          "props": { "gap": 4 },
           "children": [
             {
               "type": "span",
@@ -47,7 +50,7 @@
       }
     },
     {
-      "type": "div",
+      "type": "Box",
       "className": "border-t border-border",
       "children": [
         {

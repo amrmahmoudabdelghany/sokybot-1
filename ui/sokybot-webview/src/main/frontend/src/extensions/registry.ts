@@ -1,10 +1,6 @@
-import React from 'react';
+import type { ComponentType } from 'react';
 import { DeclarativeExtensionView } from './DeclarativeExtensionView';
-// ExtensionComponent inlined to work around Vite serving ui-types.ts as empty
-interface ExtensionComponent {
-    component: React.ComponentType<any>;
-    defaultProps?: Record<string, any>;
-}
+import type { ExtensionComponent } from './ui-types';
 
 /**
  * Component Registry - Maps component types to React components
@@ -26,7 +22,7 @@ export const extensionComponentRegistry: Record<string, ExtensionComponent> = {
  */
 export function registerComponentType(
     type: string,
-    component: React.ComponentType<any>,
+    component: ComponentType<any>,
     defaultProps?: Record<string, any>
 ) {
     extensionComponentRegistry[type] = { component, defaultProps };

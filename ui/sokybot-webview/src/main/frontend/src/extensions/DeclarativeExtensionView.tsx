@@ -2,19 +2,8 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { rsocketService } from '../RSocketClient';
 import { ComponentRenderer } from './renderer/ComponentRenderer';
 import { resolveTemplateInObject, cleanResolvedParams } from './renderer/expressionUtils';
-// UIComponent inlined to work around Vite serving ui-types.ts as empty
-interface UIComponent {
-    type: string;
-    props?: Record<string, any>;
-    children?: UIComponent[] | string;
-    className?: string;
-    style?: Record<string, any>;
-    key?: string;
-    icon?: string;
-    iconProps?: Record<string, any>;
-    variant?: string;
-    size?: string;
-}
+import type { UIComponent } from './ui-types';
+import { validateSchema } from './schemaValidation';
 
 interface DeclarativeExtensionViewProps {
     pageId: string;
@@ -35,6 +24,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     );
     const [data, setData] = useState<Record<string, any>>({});
     const [loading, setLoading] = useState(!providedSchema);
+    const [schemaIssues, setSchemaIssues] = useState<string[]>([]);
 
     // Performance: Debounce state updates
     const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
@@ -71,6 +61,11 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
     // Performance: Memoize action handler
     const handleAction = useCallback(async (action: string, actionData: any) => {
+        // Optimistic close: dismiss dialog immediately so it's always dismissible
+        if (action === 'closeAnalyzer') {
+            setData(prev => ({ ...prev, analyzerOpen: false }));
+        }
+
         try {
             const result = await rsocketService.request<any>('extension.action', {
                 pageId,
@@ -90,6 +85,11 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                     const merged = state != null ? { ...prev, ...state } : { ...prev };
                     if (action === 'openAnalyzer' && result.success !== false) {
                         merged.analyzerOpen = true;
+                        // Ensure analyzer data is never dropped (hex viewer + variables table)
+                        if (Array.isArray(state?.packets)) merged.packets = state.packets;
+                        if (Array.isArray(state?.variables)) merged.variables = state.variables;
+                        if (state?.selectedByteCount != null) merged.selectedByteCount = state.selectedByteCount;
+                        if (state?.matchCount != null) merged.matchCount = state.matchCount;
                     }
                     // Preserve trafficPackets if we have more than the action response (e.g. stream appended more)
                     const incoming = state?.trafficPackets;
@@ -112,6 +112,9 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     useEffect(() => {
         if (!providedSchema) {
             fetchSchema();
+        } else {
+            const issues = validateSchema(providedSchema);
+            setSchemaIssues(issues.map(i => `${i.path}: ${i.message}`));
         }
     }, [pageId, machineId, providedSchema]);
 
@@ -151,23 +154,35 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
     const fetchSchema = async () => {
         setLoading(true);
+        console.log(`[${pageId}] Fetching schema for machine: ${machineId}`);
         try {
             const result = await rsocketService.request<any>('extension.schema', {
                 pageId,
                 machineId
             });
 
-            if (result.schema) {
+            if (result && result.schema) {
+                console.log(`[${pageId}] Schema loaded successfully`);
+                const issues = validateSchema(result.schema);
+                if (issues.length > 0) {
+                    console.warn(`[${pageId}] Schema validation issues:`, issues);
+                }
+                setSchemaIssues(issues.map(i => `${i.path}: ${i.message}`));
                 setSchema(result.schema);
+            } else {
+                console.warn(`[${pageId}] No schema returned from backend for page: ${pageId}`);
             }
 
-            if (result.data || result.state) {
+            if (result && (result.data || result.state)) {
                 const newState = result.data || result.state || {};
                 console.log(`[${pageId}] Initial state loaded:`, newState);
                 setData(newState);
+            } else {
+                console.log(`[${pageId}] No initial state provided`);
             }
-        } catch (err) {
-            console.error(`Failed to fetch schema for ${pageId}`, err);
+        } catch (err: any) {
+            console.error(`[${pageId}] Failed to fetch schema:`, err);
+            setSchemaIssues([`Network error: ${err.message || 'Unknown error'}`]);
         } finally {
             setLoading(false);
         }
@@ -330,6 +345,20 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
     if (loading) {
         return <div className="text-center py-4">Loading...</div>;
+    }
+
+    if (schemaIssues.length > 0) {
+        return (
+            <div className="p-4 space-y-2">
+                <div className="font-semibold text-red-600 dark:text-red-400">Invalid declarative schema</div>
+                <div className="text-sm text-muted-foreground">Fix the issues below (showing up to 20).</div>
+                <ul className="text-xs font-mono whitespace-pre-wrap break-words list-disc pl-6">
+                    {schemaIssues.slice(0, 20).map((msg, idx) => (
+                        <li key={idx}>{msg}</li>
+                    ))}
+                </ul>
+            </div>
+        );
     }
 
     if (!schema) {

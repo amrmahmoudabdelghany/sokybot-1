@@ -1,10 +1,12 @@
 {
-    "type": "div",
-    "className": "h-full flex flex-col space-y-6",
+    "type": "Stack",
+    "className": "h-full space-y-6",
+    "props": { "gap": 6 },
     "children": [
         {
-            "type": "div",
-            "className": "flex justify-between items-center border-b border-border pb-2",
+            "type": "Flex",
+            "className": "justify-between items-center border-b border-border pb-2",
+            "props": { "gap": 2 },
             "children": [
                 {
                     "type": "h3",
@@ -14,8 +16,9 @@
                     }
                 },
                 {
-                    "type": "div",
-                    "className": "flex space-x-2",
+                    "type": "Flex",
+                    "className": "space-x-2",
+                    "props": { "gap": 2 },
                     "children": [
                         {
                             "type": "Button",
@@ -40,47 +43,29 @@
             ]
         },
         {
-            "type": "div",
-            "className": "grid grid-cols-1 md:grid-cols-2 gap-6",
+            "type": "Grid",
+            "props": { "cols": 1, "colsMd": 2, "gap": 6 },
             "children": [
                 {
-                    "type": "div",
+                    "type": "Box",
                     "className": "bg-card border border-border rounded p-4 shadow-sm",
                     "children": [
                         {
-                            "type": "h4",
-                            "className": "text-sm font-semibold text-rose-500 mb-3 uppercase tracking-wider",
-                            "props": {
-                                "children": "Character Healing"
-                            }
+                            "type": "SectionTitle",
+                            "className": "text-rose-500",
+                            "props": { "children": "Character Healing" }
                         },
                         {
-                            "type": "div",
+                            "type": "Stack",
                             "className": "space-y-6",
+                            "props": { "gap": 6 },
                             "children": [
                                 {
-                                    "type": "div",
+                                    "type": "Stack",
                                     "className": "space-y-3",
+                                    "props": { "gap": 3 },
                                     "children": [
-                                        {
-                                            "type": "div",
-                                            "className": "flex justify-between items-center",
-                                            "children": [
-                                                {
-                                                    "type": "Label",
-                                                    "props": {
-                                                        "children": "HP Potion Threshold"
-                                                    }
-                                                },
-                                                {
-                                                    "type": "span",
-                                                    "className": "text-sm text-muted-foreground",
-                                                    "props": {
-                                                        "children": "${settings.hpPotionThreshold}%"
-                                                    }
-                                                }
-                                            ]
-                                        },
+                                        { "type": "KeyValue", "props": { "label": "HP Potion Threshold", "value": "${settings.hpPotionThreshold}%" } },
                                         {
                                             "type": "Slider",
                                             "props": {
@@ -95,8 +80,9 @@
                                             }
                                         },
                                         {
-                                            "type": "div",
-                                            "className": "flex items-center space-x-2",
+                                            "type": "Flex",
+                                            "className": "items-center space-x-2",
+                                            "props": { "gap": 2 },
                                             "children": [
                                                 {
                                                     "type": "Checkbox",
@@ -117,28 +103,11 @@
                                     ]
                                 },
                                 {
-                                    "type": "div",
+                                    "type": "Stack",
                                     "className": "space-y-3",
+                                    "props": { "gap": 3 },
                                     "children": [
-                                        {
-                                            "type": "div",
-                                            "className": "flex justify-between items-center",
-                                            "children": [
-                                                {
-                                                    "type": "Label",
-                                                    "props": {
-                                                        "children": "MP Potion Threshold"
-                                                    }
-                                                },
-                                                {
-                                                    "type": "span",
-                                                    "className": "text-sm text-muted-foreground",
-                                                    "props": {
-                                                        "children": "${settings.mpPotionThreshold}%"
-                                                    }
-                                                }
-                                            ]
-                                        },
+                                        { "type": "KeyValue", "props": { "label": "MP Potion Threshold", "value": "${settings.mpPotionThreshold}%" } },
                                         {
                                             "type": "Slider",
                                             "props": {
@@ -153,8 +122,9 @@
                                             }
                                         },
                                         {
-                                            "type": "div",
-                                            "className": "flex items-center space-x-2",
+                                            "type": "Flex",
+                                            "className": "items-center space-x-2",
+                                            "props": { "gap": 2 },
                                             "children": [
                                                 {
                                                     "type": "Checkbox",
@@ -179,31 +149,33 @@
                     ]
                 },
                 {
-                    "type": "div",
+                    "type": "Stack",
                     "className": "space-y-6",
+                    "props": { "gap": 6 },
                     "children": [
                         {
-                            "type": "div",
+                            "type": "Box",
                             "className": "bg-card border border-border rounded p-4 shadow-sm",
                             "children": [
                                 {
-                                    "type": "h4",
-                                    "className": "text-sm font-semibold text-purple-500 mb-3 uppercase tracking-wider",
-                                    "props": {
-                                        "children": "Live Status"
-                                    }
+                                    "type": "SectionTitle",
+                                    "className": "text-purple-500",
+                                    "props": { "children": "Live Status" }
                                 },
                                 {
-                                    "type": "div",
+                                    "type": "Stack",
                                     "className": "space-y-4",
+                                    "props": { "gap": 4 },
                                     "children": [
                                         {
-                                            "type": "div",
+                                            "type": "Stack",
                                             "className": "space-y-1",
+                                            "props": { "gap": 1 },
                                             "children": [
                                                 {
-                                                    "type": "div",
-                                                    "className": "flex justify-between text-sm",
+                                                    "type": "Flex",
+                                                    "className": "justify-between text-sm",
+                                                    "props": { "gap": 2 },
                                                     "children": [
                                                         {
                                                             "type": "span",
@@ -230,12 +202,14 @@
                                             ]
                                         },
                                         {
-                                            "type": "div",
+                                            "type": "Stack",
                                             "className": "space-y-1",
+                                            "props": { "gap": 1 },
                                             "children": [
                                                 {
-                                                    "type": "div",
-                                                    "className": "flex justify-between text-sm",
+                                                    "type": "Flex",
+                                                    "className": "justify-between text-sm",
+                                                    "props": { "gap": 2 },
                                                     "children": [
                                                         {
                                                             "type": "span",

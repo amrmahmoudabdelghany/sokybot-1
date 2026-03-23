@@ -1,14 +1,17 @@
 {
-  "type": "div",
-  "className": "space-y-4 h-full flex flex-col",
+  "type": "Stack",
+  "className": "space-y-4 h-full",
+  "props": { "gap": 4 },
   "children": [
     {
-      "type": "div",
-      "className": "flex items-center justify-between",
+      "type": "Flex",
+      "className": "items-center justify-between",
+      "props": { "gap": 2 },
       "children": [
         {
-          "type": "div",
-          "className": "flex items-center gap-2",
+          "type": "Flex",
+          "className": "items-center gap-2",
+          "props": { "gap": 2 },
           "children": [
             {
               "type": "icon",
@@ -34,11 +37,12 @@
           ]
         },
         {
-          "type": "div",
-          "className": "flex items-center gap-2",
+          "type": "Flex",
+          "className": "items-center gap-2",
+          "props": { "gap": 2 },
           "children": [
             {
-              "type": "div",
+              "type": "Box",
               "className": "relative",
               "children": [
                 {
@@ -84,25 +88,12 @@
       ]
     },
     {
-      "type": "div",
+      "type": "Alert",
+      "variant": "destructive",
       "props": {
-        "hidden": "${!error}"
-      },
-      "children": [
-        {
-          "type": "Card",
-          "className": "border-destructive",
-          "children": [
-            {
-              "type": "CardContent",
-              "className": "pt-6",
-              "props": {
-                "children": "${error}"
-              }
-            }
-          ]
-        }
-      ]
+        "hidden": "${!error}",
+        "children": "${error}"
+      }
     },
     {
       "type": "Card",
@@ -112,7 +103,7 @@
           "className": "p-0",
           "children": [
             {
-              "type": "div",
+              "type": "Box",
               "className": "overflow-x-auto",
               "children": [
                 {
@@ -148,8 +139,9 @@
                               "className": "p-4",
                               "children": [
                                 {
-                                  "type": "div",
+                                  "type": "Stack",
                                   "className": "flex flex-col",
+                                  "props": { "gap": 0 },
                                   "children": [
                                     {
                                       "type": "span",
@@ -181,7 +173,7 @@
                                     "variant": "outline",
                                     "children": [
                                       {
-                                        "type": "div",
+                                        "type": "Box",
                                         "className": "h-2 w-2 rounded-full",
                                         "props": {
                                           "style": {
@@ -200,8 +192,9 @@
                               "className": "p-4",
                               "children": [
                                 {
-                                  "type": "div",
+                                  "type": "Stack",
                                   "className": "flex flex-col gap-1",
+                                  "props": { "gap": 1 },
                                   "children": [
                                     {
                                       "type": "Badge",
@@ -230,8 +223,9 @@
                               "className": "p-4",
                               "children": [
                                 {
-                                  "type": "div",
-                                  "className": "flex items-center gap-2",
+                                  "type": "Flex",
+                                  "className": "items-center gap-2",
+                                  "props": { "gap": 2 },
                                   "children": [
                                     {
                                       "type": "Button",
@@ -305,7 +299,7 @@
                   ]
                 },
                 {
-                  "type": "div",
+                  "type": "Box",
                   "className": "p-8 text-center text-muted-foreground",
                   "props": {
                     "hidden": "${filteredBundles.length > 0}",
@@ -320,4 +314,3 @@
     }
   ]
 }
-

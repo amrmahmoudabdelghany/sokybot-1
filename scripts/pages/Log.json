@@ -1,7 +1,8 @@
 {
-    "type": "div",
-    "className": "w-full h-full flex flex-col",
+    "type": "Stack",
+    "className": "w-full h-full",
     "props": {
+        "gap": 0,
         "streamId": "Log",
         "stateKey": "Log",
         "streamParams": {
@@ -12,12 +13,14 @@
     },
     "children": [
         {
-            "type": "div",
-            "className": "flex justify-between items-center mb-2",
+            "type": "Flex",
+            "className": "justify-between items-center mb-2",
+            "props": { "gap": 2 },
             "children": [
                 {
-                    "type": "div",
-                    "className": "flex items-center gap-2",
+                    "type": "Flex",
+                    "className": "items-center gap-2",
+                    "props": { "gap": 2 },
                     "children": [
                         {
                             "type": "h3",
@@ -36,12 +39,13 @@
                     ]
                 },
                 {
-                    "type": "div",
-                    "className": "flex items-center gap-2",
+                    "type": "Flex",
+                    "className": "items-center gap-2",
+                    "props": { "gap": 2 },
                     "children": [
                         {
-                            "type": "select",
-                            "className": "h-7 rounded-md border border-input bg-background px-2 text-[11px]",
+                            "type": "Select",
+                            "className": "h-7 px-2 text-[11px]",
                             "props": {
                                 "value": "${Log && Log.level || 'ALL'}",
                                 "onChange": "setLogLevel",
@@ -56,8 +60,8 @@
                             }
                         },
                         {
-                            "type": "select",
-                            "className": "h-7 rounded-md border border-input bg-background px-2 text-[11px]",
+                            "type": "Select",
+                            "className": "h-7 px-2 text-[11px]",
                             "props": {
                                 "value": "${Log && Log.feature || 'ALL'}",
                                 "onChange": "setLogFeature",
@@ -86,15 +90,16 @@
             ]
         },
         {
-            "type": "div",
+            "type": "Box",
             "className": "bg-muted/30 border border-border text-foreground p-2 rounded h-96 overflow-y-auto font-mono text-xs shadow-inner",
             "children": [
                 {
-                    "type": "div",
-                    "className": "text-muted-foreground text-center italic mt-10",
+                    "type": "EmptyState",
+                    "className": "mt-10",
                     "props": {
                         "hidden": "${Log && Log.events && Log.events.length > 0}",
-                        "children": "Waiting for events..."
+                        "message": "Waiting for events...",
+                        "icon": "Activity"
                     }
                 },
                 {
@@ -102,12 +107,13 @@
                     "props": {
                         "dataSource": "Log && Log.events ? Log.events : []",
                         "renderItem": {
-                            "type": "div",
+                            "type": "Box",
                             "className": "border-b border-border/80 py-2.5 px-2 hover:bg-muted/40 transition-colors flex flex-col gap-1.5 rounded-sm",
                             "children": [
                                 {
-                                    "type": "div",
-                                    "className": "flex items-center gap-2 flex-wrap",
+                                    "type": "Flex",
+                                    "className": "items-center gap-2 flex-wrap",
+                                    "props": { "gap": 2 },
                                     "children": [
                                         {
                                             "type": "span",
@@ -143,7 +149,7 @@
                                     ]
                                 },
                                 {
-                                    "type": "div",
+                                    "type": "Box",
                                     "className": "pl-2.5 text-foreground text-[12px] break-words leading-snug border-l-2 rounded-sm ${(item.level || (item.event && item.event.level)) === 'ERROR' ? 'border-red-500/50 bg-red-500/5' : (item.level || (item.event && item.event.level)) === 'WARN' ? 'border-amber-500/50 bg-amber-500/5' : (item.level || (item.event && item.event.level)) === 'DEBUG' ? 'border-sky-500/50 bg-sky-500/5' : (item.level || (item.event && item.event.level)) === 'TRACE' ? 'border-zinc-500/50 bg-zinc-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}",
                                     "props": {
                                         "children": "${item.message || (item.event && item.event.message) || (typeof item.event === 'string' ? item.event : '') || ''}"

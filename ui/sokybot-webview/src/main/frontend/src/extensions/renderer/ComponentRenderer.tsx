@@ -1,20 +1,9 @@
 import React from 'react';
-// UIComponent inlined to work around Vite serving ui-types.ts as empty
-interface UIComponent {
-    type: string;
-    props?: Record<string, any>;
-    children?: UIComponent[] | string;
-    className?: string;
-    style?: Record<string, any>;
-    key?: string;
-    icon?: string;
-    iconProps?: Record<string, any>;
-    variant?: string;
-    size?: string;
-}
+import type { UIComponent } from '../ui-types';
 import { getComponentFromLibrary, renderIcon } from '../componentLibrary';
 import { cn } from '@sokybot/frontend-shared';
 import { getComponent } from '../registry';
+// Force Vite HMR on compiler error
 import { HexViewer } from '../components/HexViewer';
 import { safeEval, resolveTemplate, resolveTemplateInObject } from './expressionUtils';
 
@@ -82,6 +71,19 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         };
     }
 
+    // Handle onSubmit with action (e.g. Form)
+    if (resolvedProps.onSubmit && typeof resolvedProps.onSubmit === 'string') {
+        const action = resolvedProps.onSubmit;
+        resolvedProps.onSubmit = (e: React.FormEvent) => {
+            e.preventDefault();
+            if (onAction) {
+                onAction(action, resolvedProps.actionData || {}).catch(err => {
+                    console.error(`Action ${action} failed:`, err);
+                });
+            }
+        };
+    }
+
     // Handle icon prop
     if (resolvedProps.icon) {
         const iconElement = renderIcon(resolvedProps.icon, resolvedProps.iconProps || {});
@@ -133,6 +135,15 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 if (!open && onAction) onAction(actionName, {});
             };
         }
+    }
+
+    // EmptyState: bind action (string) to onActionClick so the empty-state button triggers the action
+    if (type === 'EmptyState' && typeof resolvedProps.action === 'string') {
+        const actionName = resolvedProps.action;
+        const actionData = resolvedProps.actionData || {};
+        resolvedProps.onActionClick = () => {
+            if (onAction) onAction(actionName, actionData).catch((err: unknown) => console.error(`Action ${actionName} failed:`, err));
+        };
     }
 
     // Handle dataSource with renderItem pattern (for rendering arrays)
@@ -189,7 +200,8 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
     // Handle table component
     if (type === 'table') {
-        const data = props.dataSource ? context[props.dataSource] : (props.data || []);
+        const rawData = props.dataSource ? context[props.dataSource] : props.data;
+        const data = Array.isArray(rawData) ? rawData : [];
         const columns = props.columns || [];
 
         const renderCell = (col: any, row: any) => {
@@ -249,7 +261,8 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 
     // Handle hex viewer component
     if (type === 'hex-viewer' || type === 'HexViewer') {
-        const packets = props.dataSource ? context[props.dataSource] : (props.packets || context.packets || []);
+        const rawPackets = props.dataSource ? context[props.dataSource] : (props.packets || context.packets);
+        const packets = Array.isArray(rawPackets) ? rawPackets : [];
         const selectedHex = context.selectedHex || props.selectedHex || '';
         const selectedByteCount = context.selectedByteCount || props.selectedByteCount || 0;
         const matchCount = context.matchCount || props.matchCount || 0;
@@ -396,6 +409,9 @@ function resolvePropsChildren(
             if (typeof item === 'string') {
                 return resolveTemplate(item, context);
             }
+            if (React.isValidElement(item)) {
+                return item;
+            }
             if (item && typeof item === 'object' && item.type) {
                 return (
                     <ComponentRenderer
@@ -410,6 +426,9 @@ function resolvePropsChildren(
             }
             return item;
         });
+    }
+    if (React.isValidElement(value)) {
+        return value;
     }
     if (value && typeof value === 'object' && value.type) {
         return (

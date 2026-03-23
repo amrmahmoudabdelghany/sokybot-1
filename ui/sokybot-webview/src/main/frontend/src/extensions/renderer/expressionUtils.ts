@@ -54,17 +54,23 @@ export function safeEval(expr: string, ctx: Record<string, any>): any {
 
 /**
  * Replace all ${...} template expressions in a string using safeEval.
- * Unresolvable expressions are kept as-is (original ${...} text).
+ * Unresolvable or undefined values use a sensible default (0 for count-like, '' otherwise).
  */
 export function resolveTemplate(template: string, ctx: Record<string, any>): string {
     if (!template || typeof template !== 'string') return template;
 
-    return template.replace(/\$\{([^}]+)\}/g, (match, expr) => {
+    return template.replace(/\$\{([^}]+)\}/g, (_match, expr) => {
         try {
-            const value = safeEval(expr, ctx);
-            return value != null ? String(value) : match;
+            const value = safeEval(expr.trim(), ctx);
+            if (value != null) return String(value);
+            // Undefined/null: use 0 for count-like keys so UI never shows literal "${...}"
+            const key = expr.trim();
+            const isCount = /count|length|size|num|total/i.test(key);
+            return isCount ? '0' : '';
         } catch {
-            return match;
+            const key = typeof expr === 'string' ? expr.trim() : '';
+            const isCount = /count|length|size|num|total/i.test(key);
+            return isCount ? '0' : '';
         }
     });
 }

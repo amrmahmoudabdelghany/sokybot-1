@@ -1,0 +1,65 @@
+{
+  "type": "Card",
+  "className": "w-full max-w-md",
+  "children": [
+    {
+      "type": "CardHeader",
+      "children": [
+        {
+          "type": "CardTitle",
+          "props": { "children": "Dev kit form example" }
+        }
+      ]
+    },
+    {
+      "type": "CardContent",
+      "children": [
+        {
+          "type": "Form",
+          "props": {
+            "onSubmit": "submitExampleForm",
+            "actionData": {}
+          },
+          "children": [
+            {
+              "type": "Stack",
+              "props": { "gap": 4 },
+              "children": [
+                {
+                  "type": "Flex",
+                  "props": { "gap": 2 },
+                  "children": [
+                    {
+                      "type": "Label",
+                      "props": { "htmlFor": "name", "children": "Name" }
+                    },
+                    {
+                      "type": "Input",
+                      "props": {
+                        "id": "name",
+                        "name": "name",
+                        "placeholder": "Your name"
+                      },
+                      "className": "flex-1"
+                    }
+                  ]
+                },
+                {
+                  "type": "Flex",
+                  "props": { "gap": 2 },
+                  "children": [
+                    {
+                      "type": "Button",
+                      "variant": "default",
+                      "props": { "type": "submit", "children": "Submit" }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

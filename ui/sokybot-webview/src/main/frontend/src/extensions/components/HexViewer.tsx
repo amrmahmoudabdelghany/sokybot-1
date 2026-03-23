@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+// Force Vite cache invalidation
 import { cn } from '@sokybot/frontend-shared';
 
 interface HexViewerProps {
@@ -92,7 +93,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
   }, [contextMenu]);
 
   const renderPacketRows = () => {
-    const rows: JSX.Element[] = [];
+    const rows: React.ReactElement[] = [];
 
     packets.forEach((packetRow: any, packetIndex: number) => {
       if (packetRow.type === 'header') {
@@ -127,20 +128,20 @@ export const HexViewer: React.FC<HexViewerProps> = ({
           <div
             key={`data-${packetIndex}-${packetRow.startOffset}`}
             className={cn(
-              "flex border-b border-border/50 py-0.5",
+              "flex border-b border-border/40 py-0.5 hover:bg-muted/20 transition-colors",
               isHighlighted && "bg-primary/20"
             )}
           >
             <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? lineRef : undefined}
-              className="w-24 px-2 text-xs text-muted-foreground select-none"
+              className="w-24 px-2 text-xs text-muted-foreground select-none border-r border-border/40"
               onScroll={handleScroll('line')}
             >
               {packetRow.lineNumber}
             </div>
             <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? hexRef : undefined}
-              className="flex-1 px-2 font-mono text-sm select-text text-foreground"
+              className="flex-1 px-2 font-mono text-sm select-text text-foreground border-r border-border/40"
               onScroll={handleScroll('hex')}
               onMouseUp={handleHexSelection}
               onContextMenu={handleContextMenu}
@@ -149,7 +150,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
             </div>
             <div
               ref={packetIndex === 0 && packetRow.startOffset === 0 ? asciiRef : undefined}
-              className="w-64 px-2 font-mono text-sm text-muted-foreground select-none"
+              className="w-64 px-2 font-mono text-[13px] text-muted-foreground select-text"
               onScroll={handleScroll('ascii')}
             >
               {packetRow.ascii}
@@ -167,29 +168,35 @@ export const HexViewer: React.FC<HexViewerProps> = ({
     return rows;
   };
 
+  const hasData = Array.isArray(packets) && packets.length > 0;
+
   return (
     <div className={cn("h-full flex flex-col relative", className)} style={style}>
-      <div className="flex-1 overflow-auto">
-        <div className="flex">
-          <div className="w-24 border-r border-border bg-muted/30">
-            <div className="sticky top-0 bg-muted/50 px-2 py-1 text-xs font-semibold border-b border-border">
-              Offset
+      <div className="flex-1 overflow-auto min-h-0 bg-background">
+        {hasData ? (
+          <div className="flex flex-col min-w-max">
+            {/* Header Row */}
+            <div className="flex sticky top-0 z-10 bg-muted/80 backdrop-blur-sm border-b border-border shadow-sm">
+              <div className="w-24 border-r border-border/60 px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Offset
+              </div>
+              <div className="flex-1 border-r border-border/60 px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Hex
+              </div>
+              <div className="w-64 px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                ASCII
+              </div>
             </div>
-            {renderPacketRows()}
-          </div>
-          <div className="flex-1 border-r border-border">
-            <div className="sticky top-0 bg-muted/50 px-2 py-1 text-xs font-semibold border-b border-border">
-              Hex
+            {/* Data Rows */}
+            <div className="flex-1">
+              {renderPacketRows()}
             </div>
-            {renderPacketRows()}
           </div>
-          <div className="w-64 bg-muted/30">
-            <div className="sticky top-0 bg-muted/50 px-2 py-1 text-xs font-semibold border-b border-border">
-              ASCII
-            </div>
-            {renderPacketRows()}
+        ) : (
+          <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground text-sm p-4">
+            No packet data to display
           </div>
-        </div>
+        )}
       </div>
 
       {contextMenu && (

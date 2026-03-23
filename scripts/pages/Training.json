@@ -1,10 +1,12 @@
 {
-    "type": "div",
-    "className": "h-full flex flex-col space-y-6",
+    "type": "Stack",
+    "className": "h-full space-y-6",
+    "props": { "gap": 6 },
     "children": [
         {
-            "type": "div",
-            "className": "flex justify-between items-center border-b border-border pb-2",
+            "type": "Flex",
+            "className": "justify-between items-center border-b border-border pb-2",
+            "props": { "gap": 2 },
             "children": [
                 {
                     "type": "h3",
@@ -25,27 +27,27 @@
             ]
         },
         {
-            "type": "div",
-            "className": "grid grid-cols-1 md:grid-cols-2 gap-6",
+            "type": "Grid",
+            "props": { "cols": 1, "colsMd": 2, "gap": 6 },
             "children": [
                 {
-                    "type": "div",
+                    "type": "Box",
                     "className": "bg-card border border-border rounded p-4 shadow-sm",
                     "children": [
                         {
-                            "type": "h4",
-                            "className": "text-sm font-semibold text-emerald-500 mb-3 uppercase tracking-wider",
-                            "props": {
-                                "children": "General"
-                            }
+                            "type": "SectionTitle",
+                            "className": "text-emerald-500",
+                            "props": { "children": "General" }
                         },
                         {
-                            "type": "div",
+                            "type": "Stack",
                             "className": "space-y-4",
+                            "props": { "gap": 4 },
                             "children": [
                                 {
-                                    "type": "div",
-                                    "className": "flex items-center space-x-2",
+                                    "type": "Flex",
+                                    "className": "items-center space-x-2",
+                                    "props": { "gap": 2 },
                                     "children": [
                                         {
                                             "type": "Checkbox",
@@ -64,8 +66,9 @@
                                     ]
                                 },
                                 {
-                                    "type": "div",
-                                    "className": "flex items-center space-x-2",
+                                    "type": "Flex",
+                                    "className": "items-center space-x-2",
+                                    "props": { "gap": 2 },
                                     "children": [
                                         {
                                             "type": "Checkbox",
@@ -88,91 +91,33 @@
                     ]
                 },
                 {
-                    "type": "div",
+                    "type": "Box",
                     "className": "bg-card border border-border rounded p-4 shadow-sm",
                     "children": [
                         {
-                            "type": "h4",
-                            "className": "text-sm font-semibold text-blue-500 mb-3 uppercase tracking-wider",
-                            "props": {
-                                "children": "Active Area"
-                            }
+                            "type": "SectionTitle",
+                            "className": "text-blue-500",
+                            "props": { "children": "Active Area" }
                         },
                         {
-                            "type": "div",
+                            "type": "Stack",
                             "className": "space-y-2 text-sm",
                             "props": {
-                                "hidden": "${activeArea === null || activeArea === undefined}",
-                                "children": [
-                                    {
-                                        "type": "div",
-                                        "className": "flex justify-between",
-                                        "children": [
-                                            {
-                                                "type": "span",
-                                                "className": "text-muted-foreground",
-                                                "props": {
-                                                    "children": "Name"
-                                                }
-                                            },
-                                            {
-                                                "type": "span",
-                                                "className": "text-foreground font-mono",
-                                                "props": {
-                                                    "children": "${activeArea.name}"
-                                                }
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        "type": "div",
-                                        "className": "flex justify-between",
-                                        "children": [
-                                            {
-                                                "type": "span",
-                                                "className": "text-muted-foreground",
-                                                "props": {
-                                                    "children": "Center (X, Y)"
-                                                }
-                                            },
-                                            {
-                                                "type": "span",
-                                                "className": "text-foreground font-mono",
-                                                "props": {
-                                                    "children": "${activeArea.x}, ${activeArea.y}"
-                                                }
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        "type": "div",
-                                        "className": "flex justify-between",
-                                        "children": [
-                                            {
-                                                "type": "span",
-                                                "className": "text-muted-foreground",
-                                                "props": {
-                                                    "children": "Radius"
-                                                }
-                                            },
-                                            {
-                                                "type": "span",
-                                                "className": "text-foreground font-mono",
-                                                "props": {
-                                                    "children": "${activeArea.radius}"
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            }
+                                "gap": 2,
+                                "hidden": "${activeArea === null || activeArea === undefined}"
+                            },
+                            "children": [
+                                { "type": "KeyValue", "props": { "label": "Name", "value": "${activeArea.name}" } },
+                                { "type": "KeyValue", "props": { "label": "Center (X, Y)", "value": "${activeArea.x}, ${activeArea.y}" } },
+                                { "type": "KeyValue", "props": { "label": "Radius", "value": "${activeArea.radius}" } }
+                            ]
                         },
                         {
-                            "type": "div",
-                            "className": "text-muted-foreground italic text-sm",
+                            "type": "EmptyState",
+                            "className": "py-4",
                             "props": {
                                 "hidden": "${activeArea !== null && activeArea !== undefined}",
-                                "children": "No active area set"
+                                "message": "No active area set"
                             }
                         }
                     ]

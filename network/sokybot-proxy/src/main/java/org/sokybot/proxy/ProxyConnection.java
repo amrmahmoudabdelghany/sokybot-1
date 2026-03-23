@@ -148,11 +148,13 @@ public class ProxyConnection implements IProxyConnection {
     private void publishOutboundPacket(MutablePacket packet) {
         try {
             byte[] raw = packet.unwrap();
+            if (raw == null || raw.length == 0) return;
             byte[] copy = Arrays.copyOf(raw, raw.length);
             ImmutablePacket snapshot = ImmutablePacket.wrap(copy, packet.getDataEncoding(), NetworkPeer.BOT);
             packetPublisher.publish(snapshot);
         } catch (Exception e) {
-            // Never let sniffer publishing break actual packet sending
+            // Never let sniffer publishing break actual packet sending; log for diagnosis
+            System.err.println("Sokybot Proxy [" + machineId + "]: Failed to publish BOT packet for sniffer: " + e.getMessage());
         }
     }
     
