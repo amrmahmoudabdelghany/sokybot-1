@@ -30,42 +30,42 @@ import io.netty.util.concurrent.GlobalEventExecutor;
  * Manages bidirectional proxy between game client and game server.
  */
 public class ProxyConnection implements IProxyConnection {
-    
+
     private final String machineId;
     private volatile IConnectionListener listener;
     private final EventLoopGroup bossGroup;
     private final EventLoopGroup workerGroup;
     private final EventAdmin eventAdmin;
     private final SimplePacketPublisher packetPublisher;
-    
+
     private final ChannelGroup channelGroup;
     private final NetworkComponents networkComponents;
-    
-    private Channel serverChannel;  // Listening for client
-    private Channel clientChannel;  // Connection to game client
-    private Channel gameServerChannel;  // Connection to game server
-    
+
+    private Channel serverChannel; // Listening for client
+    private Channel clientChannel; // Connection to game client
+    private Channel gameServerChannel; // Connection to game server
+
     private volatile boolean clientConnected = false;
     private volatile boolean serverConnected = false;
-    
+
     private boolean clientlessMode = false;
     private HandshakeHandler handshakeHandler;
-    
-    public ProxyConnection(String machineId, IConnectionListener listener, 
-                          EventLoopGroup bossGroup, EventLoopGroup workerGroup,
-                          EventAdmin eventAdmin) {
+
+    public ProxyConnection(String machineId, IConnectionListener listener,
+            EventLoopGroup bossGroup, EventLoopGroup workerGroup,
+            EventAdmin eventAdmin) {
         this.machineId = machineId;
         this.listener = listener;
         this.bossGroup = bossGroup;
         this.workerGroup = workerGroup;
         this.eventAdmin = eventAdmin;
-        
+
         this.packetPublisher = new SimplePacketPublisher();
-        
+
         this.channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         this.networkComponents = new NetworkComponents();
     }
-    
+
     @Override
     public void startLocalServer(int port) {
         ServerBootstrap bootstrap = new ServerBootstrap();
@@ -73,7 +73,7 @@ public class ProxyConnection implements IProxyConnection {
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ClientChannelInitializer(this, networkComponents, eventAdmin, channelGroup))
                 .childOption(ChannelOption.SO_KEEPALIVE, true);
-        
+
         try {
             ChannelFuture future = bootstrap.bind(port).sync();
             serverChannel = future.channel();
@@ -83,52 +83,66 @@ public class ProxyConnection implements IProxyConnection {
             throw new RuntimeException("Failed to start local server", e);
         }
     }
-    
+
     @Override
     public void connectToServer(String host, int port) {
+        if (serverConnected) {
+            return;
+        }
+
+        System.out.println("Sokybot Proxy [" + machineId + "]: Connecting to game server " + host + ":" + port);
+
+        // Reset crypto for new connection
+        networkComponents.reset();
+
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
                 .channel(NioSocketChannel.class)
                 .handler(new ServerChannelInitializer(this, networkComponents, eventAdmin, channelGroup))
                 .option(ChannelOption.SO_KEEPALIVE, true);
-        
+
         try {
             ChannelFuture future = bootstrap.connect(host, port).sync();
             gameServerChannel = future.channel();
             channelGroup.add(gameServerChannel);
             serverConnected = true;
-            
+
             System.out.println("Sokybot Proxy [" + machineId + "]: Connected to game server " + host + ":" + port);
-            
+
             if (listener != null) {
                 listener.onServerConnected();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Failed to connect to game server", e);
+        } catch (Exception e) {
+            System.err
+                    .println("Sokybot Proxy [" + machineId + "]: Failed to connect to game server: " + e.getMessage());
+            // Do not rethrow; let the bot retry connection smoothly on next cycle tick
+            // without blowing up the state machine
         }
     }
-    
+
     @Override
     public void disconnect() {
         System.out.println("Sokybot Proxy [" + machineId + "]: Disconnecting...");
-        
+
         channelGroup.close();
-        
+
         if (serverChannel != null) {
             serverChannel.close();
         }
-        
+
         clientConnected = false;
         serverConnected = false;
-        
+
         if (listener != null) {
             listener.onDisconnected(null);
         }
-        
+
         System.out.println("Sokybot Proxy [" + machineId + "]: Disconnected");
     }
-    
+
     @Override
     public void sendToServer(MutablePacket packet) {
         if (gameServerChannel != null && gameServerChannel.isActive()) {
@@ -136,7 +150,7 @@ public class ProxyConnection implements IProxyConnection {
             publishOutboundPacket(packet);
         }
     }
-    
+
     @Override
     public void sendToClient(MutablePacket packet) {
         if (clientChannel != null && clientChannel.isActive()) {
@@ -145,34 +159,36 @@ public class ProxyConnection implements IProxyConnection {
         }
     }
 
-    private void publishOutboundPacket(MutablePacket packet) {
+    public void publishOutboundPacket(MutablePacket packet) {
         try {
             byte[] raw = packet.unwrap();
-            if (raw == null || raw.length == 0) return;
+            if (raw == null || raw.length == 0)
+                return;
             byte[] copy = Arrays.copyOf(raw, raw.length);
             ImmutablePacket snapshot = ImmutablePacket.wrap(copy, packet.getDataEncoding(), NetworkPeer.BOT);
             packetPublisher.publish(snapshot);
         } catch (Exception e) {
             // Never let sniffer publishing break actual packet sending; log for diagnosis
-            System.err.println("Sokybot Proxy [" + machineId + "]: Failed to publish BOT packet for sniffer: " + e.getMessage());
+            System.err.println(
+                    "Sokybot Proxy [" + machineId + "]: Failed to publish BOT packet for sniffer: " + e.getMessage());
         }
     }
-    
+
     @Override
     public boolean isConnected() {
         return clientConnected && serverConnected;
     }
-    
+
     @Override
     public boolean isClientConnected() {
         return clientConnected;
     }
-    
+
     @Override
     public boolean isServerConnected() {
         return serverConnected;
     }
-    
+
     /**
      * Called by ClientChannelInitializer when client connects.
      */
@@ -180,86 +196,97 @@ public class ProxyConnection implements IProxyConnection {
         this.clientChannel = channel;
         this.clientConnected = true;
         channelGroup.add(channel);
-        
+
         System.out.println("Sokybot Proxy [" + machineId + "]: Client connected");
-        
+
         if (listener != null) {
             listener.onClientConnected();
         }
     }
-    
+
     /**
      * Called when a connection error occurs.
      */
     public void onConnectionError(Throwable cause) {
         System.err.println("Sokybot Proxy [" + machineId + "]: Connection error: " + cause.getMessage());
-        
+
         if (listener != null) {
             listener.onDisconnected(cause);
         }
     }
-    
+
     /**
      * Gets the client channel for the bridge.
      */
     public Channel getClientChannel() {
         return clientChannel;
     }
-    
+
     /**
      * Gets the server channel for the bridge.
      */
     public Channel getGameServerChannel() {
         return gameServerChannel;
     }
-    
+
     public String getMachineId() {
         return machineId;
     }
-    
+
     /**
      * Sets clientless mode (bot operates without game client).
      */
     public void setClientlessMode(boolean clientlessMode) {
         this.clientlessMode = clientlessMode;
     }
-    
+
     public boolean isClientlessMode() {
         return clientlessMode;
     }
-    
+
     /**
      * Gets the connection listener for handshake callbacks.
      */
     public IConnectionListener getListener() {
         return listener;
     }
-    
+
     /**
      * Gets network components for handshake handler.
      */
     public NetworkComponents getNetworkComponents() {
         return networkComponents;
     }
-    
+
     /**
      * Creates and returns the handshake handler for this connection.
      */
     public HandshakeHandler createHandshakeHandler() {
-        if (handshakeHandler == null) {
-            handshakeHandler = new HandshakeHandler(
-                networkComponents, 
-                listener, 
-                gameServerChannel, 
-                clientlessMode
-            );
-        } else {
-            // Update listener if handler already exists
-            handshakeHandler.setListener(listener);
-        }
+        // Always create a new handler to ensure fresh crypto state and correct channel
+        // reference
+        handshakeHandler = new HandshakeHandler(
+                networkComponents,
+                listener,
+                gameServerChannel,
+                this,
+                clientlessMode);
         return handshakeHandler;
     }
-    
+
+    public void onServerDisconnected() {
+        this.serverConnected = false;
+        if (listener != null) {
+            listener.onDisconnected(null);
+        }
+    }
+
+    public void onClientDisconnected() {
+        this.clientConnected = false;
+        if (listener != null) {
+            listener.onDisconnected(null);
+        }
+    }
+
     @Override
     public void setConnectionListener(IConnectionListener listener) {
         this.listener = listener;
@@ -268,9 +295,9 @@ public class ProxyConnection implements IProxyConnection {
             handshakeHandler.setListener(listener);
         }
     }
+
     @Override
     public IPacketPublisher getPacketPublisher() {
         return this.packetPublisher;
     }
 }
-

@@ -1,10 +1,12 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { UIComponent } from '../ui-types';
 import { getComponentFromLibrary, renderIcon } from '../componentLibrary';
 import { cn } from '@sokybot/frontend-shared';
 import { getComponent } from '../registry';
 // Force Vite HMR on compiler error
 import { HexViewer } from '../components/HexViewer';
+import { DiffHexViewer } from '../components/DiffHexViewer';
+import { LogViewer } from '../components/LogViewer';
 import { safeEval, resolveTemplate, resolveTemplateInObject } from './expressionUtils';
 
 interface ComponentRendererProps {
@@ -27,6 +29,30 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
 }) => {
     const { type, props = {}, children, style, className } = component;
 
+    const handleActionResult = (result: any) => {
+        if (!result || typeof window === 'undefined') return;
+        if (result.hexDump && typeof result.hexDump === 'string') {
+            const filename = result.filename || 'packets.hex';
+            const blob = new Blob([result.hexDump], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        if (result.binaryBase64 && typeof result.binaryBase64 === 'string') {
+            const bytes = Uint8Array.from(atob(result.binaryBase64), c => c.charCodeAt(0));
+            const blob = new Blob([bytes], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (result.filename || 'packets.bin').replace(/\.hex$/i, '.bin');
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    };
+
     // Resolve template expressions
     const resolvedClassName = resolveTemplate(className || '', context);
     const resolvedProps = resolveTemplateInObject(props, context);
@@ -40,7 +66,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             if (onAction) {
                 onAction(action, actionData).catch(err => {
                     console.error(`Action ${action} failed:`, err);
-                });
+                }).then((result) => handleActionResult(result));
             }
         };
     }
@@ -150,7 +176,9 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     if (resolvedProps.dataSource && resolvedProps.renderItem) {
         const data = safeEval(resolvedProps.dataSource, context);
         if (Array.isArray(data)) {
-            const renderItem = resolvedProps.renderItem;
+            // Keep the original template object so item-scoped expressions
+            // are resolved only inside each child renderer with item context.
+            const renderItem = props.renderItem;
             const renderedItems = data.map((item: any, index: number) => {
                 // Create a context with the item
                 const itemContext = { ...context, item, index };
@@ -202,60 +230,16 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     if (type === 'table') {
         const rawData = props.dataSource ? context[props.dataSource] : props.data;
         const data = Array.isArray(rawData) ? rawData : [];
-        const columns = props.columns || [];
-
-        const renderCell = (col: any, row: any) => {
-            const value = row[col.field] ?? '';
-            if (col.truncate && col.maxWidth) {
-                return (
-                    <div
-                        style={{ maxWidth: col.maxWidth, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                        title={col.title ? String(row[col.title] ?? '') : String(value)}
-                    >
-                        {value}
-                    </div>
-                );
-            }
-            return value;
-        };
-
         return (
-            <div className={cn('overflow-x-auto', resolvedClassName)} style={resolvedStyle}>
-                <table className="min-w-full border-collapse border border-slate-300 dark:border-slate-700">
-                    <thead>
-                        <tr className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100">
-                            {columns.map((col: any) => (
-                                <th key={col.field || col.key} className={cn('border p-2 text-left', col.className)}>
-                                    {col.label || col.field}
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {Array.isArray(data) && data.map((row: any, idx: number) => (
-                            <tr
-                                key={idx}
-                                className={props.rowClassName}
-                                onClick={() => {
-                                    if (props.onRowClick && onAction) {
-                                        onAction(props.onRowClick, { ...row, index: idx });
-                                    }
-                                }}
-                            >
-                                {columns.map((col: any) => (
-                                    <td
-                                        key={col.field || col.key}
-                                        className={cn('border p-2', col.className)}
-                                        title={!col.truncate && col.title ? String(row[col.title] ?? '') : undefined}
-                                    >
-                                        {renderCell(col, row)}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
+            <TableRenderer
+                data={data}
+                props={props}
+                resolvedClassName={resolvedClassName}
+                resolvedStyle={resolvedStyle}
+                context={context}
+                onAction={onAction}
+                handleActionResult={handleActionResult}
+            />
         );
     }
 
@@ -268,6 +252,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         const matchCount = context.matchCount || props.matchCount || 0;
         const matches = context.matches || props.matches || [];
         const groupLen = props.groupLen || context.groupLen || 16;
+        const structDefinitions = context.structDefinitions || props.structDefinitions || [];
 
         return (
             <HexViewer
@@ -277,6 +262,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 matchCount={matchCount}
                 matches={matches}
                 groupLen={groupLen}
+                structDefinitions={structDefinitions}
                 onSelectHex={(hex, startOffset, endOffset) => {
                     if (onAction && props.onSelectHex) {
                         onAction(props.onSelectHex, { hex, startOffset, endOffset });
@@ -287,6 +273,37 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                         onAction(props.onDefineVariable, { hex, packetName });
                     }
                 }}
+                onDefineField={(fieldData) => {
+                    if (onAction && props.onDefineField) {
+                        onAction(props.onDefineField, fieldData);
+                    }
+                }}
+                editable={Boolean(props.editable)}
+                defaultDirection={props.defaultDirection || 'C2S'}
+                onInjectPacket={(payload) => {
+                    if (onAction && props.onInjectPacket) {
+                        onAction(props.onInjectPacket, payload).then(handleActionResult);
+                    }
+                }}
+                className={resolvedClassName}
+                style={resolvedStyle}
+            />
+        );
+    }
+
+    if (type === 'diff-hex-viewer' || type === 'DiffHexViewer') {
+        const packetsA = Array.isArray(context[props.dataSourceA]) ? context[props.dataSourceA] : [];
+        const packetsB = Array.isArray(context[props.dataSourceB]) ? context[props.dataSourceB] : [];
+        return <DiffHexViewer packetsA={packetsA} packetsB={packetsB} className={resolvedClassName} style={resolvedStyle} />;
+    }
+
+    if (type === 'log-viewer' || type === 'LogViewer') {
+        const source = resolvedProps.dataSource || props.dataSource;
+        const rawEvents = typeof source === 'string' ? safeEval(source, context) : source;
+        const events = Array.isArray(rawEvents) ? rawEvents : [];
+        return (
+            <LogViewer
+                events={events}
                 className={resolvedClassName}
                 style={resolvedStyle}
             />
@@ -387,6 +404,383 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     return (
         <div className="text-red-500 p-2 border border-red-300 rounded">
             Unknown component type: {type}
+        </div>
+    );
+};
+
+interface TableRendererProps {
+    data: any[];
+    props: Record<string, any>;
+    resolvedClassName?: string;
+    resolvedStyle?: React.CSSProperties;
+    context: Record<string, any>;
+    onAction?: (action: string, data: any) => Promise<any>;
+    handleActionResult: (result: any) => void;
+}
+
+const TableRenderer: React.FC<TableRendererProps> = ({
+    data,
+    props,
+    resolvedClassName,
+    resolvedStyle,
+    context,
+    onAction,
+    handleActionResult
+}) => {
+    const columns = props.columns || [];
+    const selectedIndices = Array.isArray(context.selectedPacketIndices) ? context.selectedPacketIndices : [];
+    const expandable = Boolean(props.expandable);
+    const autoScrollEnabled = Boolean(props.autoScroll);
+    const rowConditionalStyle = props.rowConditionalStyle;
+    const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+    const rowRefs = useRef<Array<HTMLTableRowElement | null>>([]);
+    const [isPinnedToBottom, setIsPinnedToBottom] = useState(true);
+    const [showJumpToLatest, setShowJumpToLatest] = useState(false);
+    const [expandedRowIndex, setExpandedRowIndex] = useState<number | null>(null);
+    const [focusedRowIndex, setFocusedRowIndex] = useState<number>(-1);
+
+    const renderCell = (col: any, row: any) => {
+        let value = row[col.field] ?? '';
+        if (col.field === 'time' && !value && row.timestamp) {
+            const d = new Date(row.timestamp);
+            value = d.toLocaleTimeString('en-GB', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+        }
+        if (col.truncate && col.maxWidth) {
+            return (
+                <div
+                    style={{ maxWidth: col.maxWidth, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    title={col.title ? String(row[col.title] ?? '') : String(value)}
+                >
+                    {value}
+                </div>
+            );
+        }
+        return value;
+    };
+
+    const getRowConditionalStyle = useMemo(() => {
+        if (!rowConditionalStyle || typeof rowConditionalStyle !== 'object') {
+            return (_row: any) => undefined;
+        }
+        const field = rowConditionalStyle.field;
+        const values = rowConditionalStyle.values;
+        if (!field || !values || typeof values !== 'object') {
+            return (_row: any) => undefined;
+        }
+        return (row: any) => {
+            const rawValue = row?.[field];
+            const key = rawValue == null ? '' : String(rawValue);
+            const style = values[key];
+            if (style && typeof style === 'object') {
+                return style as React.CSSProperties;
+            }
+            return undefined;
+        };
+    }, [rowConditionalStyle]);
+
+    useEffect(() => {
+        if (!autoScrollEnabled || !isPinnedToBottom) {
+            return;
+        }
+        const container = scrollContainerRef.current;
+        if (!container) {
+            return;
+        }
+        container.scrollTop = container.scrollHeight;
+    }, [autoScrollEnabled, data.length, isPinnedToBottom]);
+
+    useEffect(() => {
+        if (!Array.isArray(data) || data.length === 0) {
+            setFocusedRowIndex(-1);
+            setExpandedRowIndex(prev => (prev == null ? prev : null));
+            return;
+        }
+        if (focusedRowIndex >= data.length) {
+            setFocusedRowIndex(data.length - 1);
+        }
+        if (expandedRowIndex != null && expandedRowIndex >= data.length) {
+            setExpandedRowIndex(null);
+        }
+    }, [data, focusedRowIndex, expandedRowIndex]);
+
+    const handleScroll = () => {
+        if (!autoScrollEnabled) {
+            return;
+        }
+        const container = scrollContainerRef.current;
+        if (!container) {
+            return;
+        }
+        const nearBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 24;
+        setIsPinnedToBottom(nearBottom);
+        setShowJumpToLatest(!nearBottom);
+    };
+
+    const jumpToLatest = () => {
+        const container = scrollContainerRef.current;
+        if (!container) {
+            return;
+        }
+        container.scrollTop = container.scrollHeight;
+        setIsPinnedToBottom(true);
+        setShowJumpToLatest(false);
+    };
+
+    const payloadToHexRows = (payload: unknown) => {
+        const normalized = String(payload ?? '').replace(/[^A-Fa-f0-9]/g, '').toUpperCase();
+        if (!normalized) return [];
+        const rows: Array<{ offset: string; hex: string; ascii: string }> = [];
+        for (let i = 0; i < normalized.length; i += 32) {
+            const chunk = normalized.slice(i, i + 32);
+            const bytes = chunk.match(/.{1,2}/g) || [];
+            const ascii = bytes
+                .map((byte) => {
+                    const code = parseInt(byte, 16);
+                    return code >= 32 && code <= 126 ? String.fromCharCode(code) : '.';
+                })
+                .join('');
+            rows.push({
+                offset: i.toString(16).toUpperCase().padStart(6, '0'),
+                hex: bytes.join(' '),
+                ascii
+            });
+        }
+        return rows;
+    };
+
+    return (
+        <div className={cn('relative', resolvedClassName)} style={resolvedStyle}>
+            <div
+                ref={scrollContainerRef}
+                className="overflow-x-auto overflow-y-auto max-h-full"
+                tabIndex={0}
+                onScroll={handleScroll}
+                onKeyDown={(event) => {
+                    if (!Array.isArray(data) || data.length === 0) {
+                        return;
+                    }
+                    if (event.key === 'ArrowDown') {
+                        event.preventDefault();
+                        const next = Math.min(data.length - 1, focusedRowIndex + 1);
+                        setFocusedRowIndex(next);
+                        rowRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+                        return;
+                    }
+                    if (event.key === 'ArrowUp') {
+                        event.preventDefault();
+                        const next = focusedRowIndex < 0 ? 0 : Math.max(0, focusedRowIndex - 1);
+                        setFocusedRowIndex(next);
+                        rowRefs.current[next]?.scrollIntoView({ block: 'nearest' });
+                        return;
+                    }
+                    if (event.key === 'Enter' && expandable && focusedRowIndex >= 0) {
+                        event.preventDefault();
+                        setExpandedRowIndex(prev => (prev === focusedRowIndex ? null : focusedRowIndex));
+                        return;
+                    }
+                    if (event.key === 'Escape') {
+                        event.preventDefault();
+                        setExpandedRowIndex(null);
+                        setFocusedRowIndex(-1);
+                        return;
+                    }
+                    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'c' && focusedRowIndex >= 0) {
+                        event.preventDefault();
+                        navigator.clipboard.writeText(String(data[focusedRowIndex]?.payload ?? '')).catch(() => undefined);
+                    }
+                }}
+            >
+                <table className="min-w-full border-collapse border border-slate-300 dark:border-slate-700">
+                    <thead>
+                        <tr className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                            {columns.map((col: any) => (
+                                <th key={col.field || col.key} className={cn('border p-2 text-left', col.className)}>
+                                    {col.label || col.field}
+                                </th>
+                            ))}
+                            {Array.isArray(props.rowActions) && props.rowActions.length > 0 && (
+                                <th className="border p-2 text-left">Actions</th>
+                            )}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {Array.isArray(data) && data.map((row: any, idx: number) => {
+                            const rowIndex = row.index ?? idx;
+                            const isExpanded = expandedRowIndex === rowIndex;
+                            const hexRows = isExpanded ? payloadToHexRows(row.payload) : [];
+                            const decodedFields = Array.isArray(row.decodedFields) ? row.decodedFields : [];
+                            const colspan = columns.length + (Array.isArray(props.rowActions) && props.rowActions.length > 0 ? 1 : 0);
+                            return (
+                                <React.Fragment key={rowIndex}>
+                                    <tr
+                                        ref={(el) => {
+                                            rowRefs.current[rowIndex] = el;
+                                        }}
+                                        className={cn(
+                                            props.rowClassName,
+                                            selectedIndices.includes(rowIndex) && 'bg-sky-500/20 dark:bg-sky-500/25 border-y border-sky-500/30'
+                                        )}
+                                        style={{
+                                            ...getRowConditionalStyle(row),
+                                            ...(focusedRowIndex === rowIndex
+                                                ? { outline: '2px solid rgb(56 189 248 / 0.9)', outlineOffset: '-2px' }
+                                                : {})
+                                        }}
+                                        onClick={(e) => {
+                                            const rowIndex = row.index ?? idx;
+                                            setFocusedRowIndex(rowIndex);
+                                            if (expandable && !e.ctrlKey && !e.metaKey) {
+                                                setExpandedRowIndex(prev => (prev === rowIndex ? null : rowIndex));
+                                            }
+                                            if (props.onRowClick && onAction) {
+                                                onAction(props.onRowClick, { ...row, index: rowIndex });
+                                            }
+                                            if (props.multiSelectAction && onAction) {
+                                                let next: number[];
+                                                if (e.ctrlKey || e.metaKey) {
+                                                    // Toggle selection
+                                                    next = selectedIndices.includes(rowIndex)
+                                                        ? selectedIndices.filter((value: number) => value !== rowIndex)
+                                                        : [...selectedIndices, rowIndex];
+                                                } else {
+                                                    // Single selection
+                                                    next = [idx];
+                                                }
+                                                onAction(props.multiSelectAction, { indices: next }).catch(err => {
+                                                    console.error(`Action ${props.multiSelectAction} failed:`, err);
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        {columns.map((col: any) => (
+                                            <td
+                                                key={col.field || col.key}
+                                                className={cn('border p-2', col.className)}
+                                                title={!col.truncate && col.title ? String(row[col.title] ?? '') : undefined}
+                                                onDoubleClick={() => {
+                                                    if (props.onCellClick && onAction) {
+                                                        onAction(props.onCellClick, {
+                                                            index: idx,
+                                                            field: col.field,
+                                                            value: row[col.field]
+                                                        }).catch(err => console.error(`Action ${props.onCellClick} failed:`, err));
+                                                    }
+                                                }}
+                                            >
+                                                {renderCell(col, row)}
+                                            </td>
+                                        ))}
+                                        {Array.isArray(props.rowActions) && props.rowActions.length > 0 && (
+                                            <td className="border p-1 whitespace-nowrap">
+                                                <div className="flex gap-1 justify-center">
+                                                    {props.rowActions.map((actionCfg: any, actionIdx: number) => (
+                                                        <button
+                                                            key={`${idx}-${actionIdx}`}
+                                                            type="button"
+                                                            className="px-1.5 py-0.5 text-xs border border-border rounded hover:bg-muted/80 transition-colors"
+                                                            title={actionCfg.title || actionCfg.label || 'Action'}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                if (onAction && actionCfg.action) {
+                                                                    onAction(actionCfg.action, { ...row, index: idx, ...(actionCfg.data || {}) })
+                                                                        .then(handleActionResult)
+                                                                        .catch(err => console.error(`Action ${actionCfg.action} failed:`, err));
+                                                                }
+                                                            }}
+                                                        >
+                                                            {actionCfg.label || 'Action'}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </td>
+                                        )}
+                                    </tr>
+                                    {expandable && isExpanded && (
+                                        <tr>
+                                            <td className="border p-0" colSpan={colspan}>
+                                                <div className="p-3 bg-muted/20 space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="text-xs font-semibold text-muted-foreground uppercase">Packet Details</div>
+                                                        <button
+                                                            type="button"
+                                                            className="px-2 py-1 text-xs border border-border rounded hover:bg-muted"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                navigator.clipboard.writeText(String(row.payload ?? '')).catch(() => undefined);
+                                                            }}
+                                                        >
+                                                            Copy Hex
+                                                        </button>
+                                                    </div>
+                                                    <div className="overflow-x-auto border border-border rounded">
+                                                        <table className="min-w-full text-xs font-mono">
+                                                            <thead>
+                                                                <tr className="bg-muted/40">
+                                                                    <th className="p-2 text-left">Offset</th>
+                                                                    <th className="p-2 text-left">Hex</th>
+                                                                    <th className="p-2 text-left">ASCII</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {hexRows.map((line) => (
+                                                                    <tr key={line.offset} className="border-t border-border/50">
+                                                                        <td className="p-2">{line.offset}</td>
+                                                                        <td className="p-2">{line.hex}</td>
+                                                                        <td className="p-2">{line.ascii}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                    {decodedFields.length > 0 && (
+                                                        <div className="overflow-x-auto border border-border rounded">
+                                                            <table className="min-w-full text-xs">
+                                                                <thead>
+                                                                    <tr className="bg-muted/40">
+                                                                        <th className="p-2 text-left">Field</th>
+                                                                        <th className="p-2 text-left">Type</th>
+                                                                        <th className="p-2 text-left">Hex</th>
+                                                                        <th className="p-2 text-left">Value</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {decodedFields.map((field: any, fieldIdx: number) => (
+                                                                        <tr key={`${field.name || 'field'}-${fieldIdx}`} className="border-t border-border/50">
+                                                                            <td className="p-2">{field.name || '-'}</td>
+                                                                            <td className="p-2">{field.type || '-'}</td>
+                                                                            <td className="p-2 font-mono">{field.hexValue || '-'}</td>
+                                                                            <td className="p-2">{String(field.decodedValue ?? '-')}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </tbody>
+                </table>
+            </div>
+            {autoScrollEnabled && showJumpToLatest && (
+                <button
+                    type="button"
+                    className="absolute bottom-3 right-3 z-10 rounded border border-border bg-background/95 px-2 py-1 text-xs text-foreground shadow hover:bg-muted"
+                    onClick={jumpToLatest}
+                >
+                    Jump to latest
+                </button>
+            )}
         </div>
     );
 };

@@ -1,6 +1,6 @@
 {
     "type": "Stack",
-    "className": "w-full h-full",
+    "className": "w-full h-full flex flex-col",
     "props": {
         "gap": 0,
         "streamId": "Log",
@@ -90,76 +90,11 @@
             ]
         },
         {
-            "type": "Box",
-            "className": "bg-muted/30 border border-border text-foreground p-2 rounded h-96 overflow-y-auto font-mono text-xs shadow-inner",
-            "children": [
-                {
-                    "type": "EmptyState",
-                    "className": "mt-10",
-                    "props": {
-                        "hidden": "${Log && Log.events && Log.events.length > 0}",
-                        "message": "Waiting for events...",
-                        "icon": "Activity"
-                    }
-                },
-                {
-                    "type": "div",
-                    "props": {
-                        "dataSource": "Log && Log.events ? Log.events : []",
-                        "renderItem": {
-                            "type": "Box",
-                            "className": "border-b border-border/80 py-2.5 px-2 hover:bg-muted/40 transition-colors flex flex-col gap-1.5 rounded-sm",
-                            "children": [
-                                {
-                                    "type": "Flex",
-                                    "className": "items-center gap-2 flex-wrap",
-                                    "props": { "gap": 2 },
-                                    "children": [
-                                        {
-                                            "type": "span",
-                                            "className": "text-muted-foreground text-[11px] whitespace-nowrap tabular-nums",
-                                            "props": {
-                                                "children": "${(item.timestamp ? new Date(item.timestamp).toLocaleTimeString() : (item.event && item.event.timestamp ? new Date(item.event.timestamp).toLocaleTimeString() : '—'))}"
-                                            }
-                                        },
-                                        {
-                                            "type": "span",
-                                            "className": "px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase ${(item.level || (item.event && item.event.level)) === 'ERROR' ? 'bg-red-500/25 text-red-400 border border-red-500/40' : (item.level || (item.event && item.event.level)) === 'WARN' ? 'bg-amber-500/25 text-amber-400 border border-amber-500/40' : (item.level || (item.event && item.event.level)) === 'DEBUG' ? 'bg-sky-500/25 text-sky-400 border border-sky-500/40' : (item.level || (item.event && item.event.level)) === 'TRACE' ? 'bg-zinc-500/25 text-zinc-400 border border-zinc-500/40' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'}",
-                                            "props": {
-                                                "children": "${item.level || (item.event && item.event.level) || 'INFO'}"
-                                            }
-                                        },
-                                        {
-                                            "type": "span",
-                                            "className": "text-[10px] text-muted-foreground uppercase font-medium",
-                                            "props": {
-                                                "hidden": "${!(item.category || (item.event && item.event.category))}",
-                                                "children": "${item.category || (item.event && item.event.category) || ''}"
-                                            }
-                                        },
-                                        {
-                                            "type": "span",
-                                            "className": "text-[10px] text-muted-foreground ml-auto truncate max-w-[280px] text-right",
-                                            "props": {
-                                                "hidden": "${!(item.source || (item.event && item.event.source))}",
-                                                "children": "${(item.source || (item.event && item.event.source) || '').split('.').pop() || ''}",
-                                                "title": "${item.source || (item.event && item.event.source) || ''}"
-                                            }
-                                        }
-                                    ]
-                                },
-                                {
-                                    "type": "Box",
-                                    "className": "pl-2.5 text-foreground text-[12px] break-words leading-snug border-l-2 rounded-sm ${(item.level || (item.event && item.event.level)) === 'ERROR' ? 'border-red-500/50 bg-red-500/5' : (item.level || (item.event && item.event.level)) === 'WARN' ? 'border-amber-500/50 bg-amber-500/5' : (item.level || (item.event && item.event.level)) === 'DEBUG' ? 'border-sky-500/50 bg-sky-500/5' : (item.level || (item.event && item.event.level)) === 'TRACE' ? 'border-zinc-500/50 bg-zinc-500/5' : 'border-emerald-500/30 bg-emerald-500/5'}",
-                                    "props": {
-                                        "children": "${item.message || (item.event && item.event.message) || (typeof item.event === 'string' ? item.event : '') || ''}"
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            ]
+            "type": "log-viewer",
+            "className": "flex-1 min-h-0",
+            "props": {
+                "dataSource": "Log && Log.events ? Log.events : []"
+            }
         }
     ]
 }

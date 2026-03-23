@@ -16,58 +16,175 @@
         {
           "type": "Flex",
           "className": "justify-between items-center w-full",
-          "props": { "gap": 2 },
+          "props": {
+            "gap": 2
+          },
           "children": [
             {
-              "type": "CardTitle",
+              "type": "Flex",
+              "className": "items-center gap-2",
               "props": {
-                "children": "Traffic Monitor"
-              }
+                "gap": 2
+              },
+              "children": [
+                {
+                  "type": "CardTitle",
+                  "props": {
+                    "children": "Traffic Monitor"
+                  }
+                },
+                {
+                  "type": "Flex",
+                  "className": "items-center gap-1.5",
+                  "props": {
+                    "gap": 1
+                  },
+                  "children": [
+                    {
+                      "type": "span",
+                      "className": "text-xs px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 font-mono",
+                      "props": {
+                        "children": "S:${serverCount || 0}"
+                      }
+                    },
+                    {
+                      "type": "span",
+                      "className": "text-xs px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-400 font-mono",
+                      "props": {
+                        "children": "C:${clientCount || 0}"
+                      }
+                    },
+                    {
+                      "type": "span",
+                      "className": "text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 font-mono",
+                      "props": {
+                        "children": "B:${botCount || 0}"
+                      }
+                    }
+                  ]
+                }
+              ]
             },
             {
               "type": "Flex",
-              "props": { "gap": 2 },
+              "className": "items-end",
+              "props": {
+                "gap": 2
+              },
               "children": [
                 {
-                  "type": "Button",
-                  "variant": "outline",
-                  "size": "sm",
-                  "icon": "Trash2",
-                  "iconProps": {
-                    "size": 16
-                  },
+                  "type": "Stack",
+                  "className": "items-end",
                   "props": {
-                    "onClick": "clearMonitor",
-                    "children": "Clear"
-                  }
-                },
-                {
-                  "type": "Button",
-                  "variant": "outline",
-                  "size": "sm",
-                  "icon": "${monitorIcon}",
-                  "iconProps": {
-                    "size": 16
+                    "gap": 1
                   },
-                  "props": {
-                    "onClick": "togglePause",
-                    "children": "${monitorActionText}"
-                  }
-                },
-                {
-                  "type": "Button",
-                  "variant": "default",
-                  "size": "sm",
-                  "icon": "Search",
-                  "iconProps": {
-                    "size": 16
-                  },
-                  "props": {
-                    "onClick": "openAnalyzer",
-                    "id": "analyzeBtn",
-                    "disabled": "${!trafficPackets || trafficPackets.length === 0}",
-                    "children": "Analyze (${trafficPackets ? trafficPackets.length : 0})"
-                  }
+                  "children": [
+                    {
+                      "type": "Flex",
+                      "props": {
+                        "gap": 2
+                      },
+                      "children": [
+                        {
+                          "type": "Button",
+                          "variant": "outline",
+                          "size": "sm",
+                          "icon": "Trash2",
+                          "iconProps": {
+                            "size": 16
+                          },
+                          "props": {
+                            "onClick": "clearMonitor",
+                            "children": "Clear"
+                          }
+                        },
+                        {
+                          "type": "Button",
+                          "variant": "outline",
+                          "size": "sm",
+                          "icon": "${monitorIcon}",
+                          "iconProps": {
+                            "size": 16
+                          },
+                          "props": {
+                            "onClick": "togglePause",
+                            "children": "${monitorActionText}"
+                          }
+                        },
+                        {
+                          "type": "Button",
+                          "variant": "${recordingActive ? 'destructive' : 'outline'}",
+                          "size": "sm",
+                          "icon": "${recordingActive ? 'Square' : 'Circle'}",
+                          "iconProps": {
+                            "size": 16
+                          },
+                          "props": {
+                            "onClick": "toggleRecording",
+                            "children": "${recordingActive ? 'Stop Recording' : 'Record'}"
+                          }
+                        },
+                        {
+                          "type": "Button",
+                          "variant": "default",
+                          "size": "sm",
+                          "icon": "Search",
+                          "iconProps": {
+                            "size": 16
+                          },
+                          "props": {
+                            "onClick": "openAnalyzer",
+                            "id": "analyzeBtn",
+                            "disabled": "${!trafficPackets || trafficPackets.length === 0}",
+                            "children": "Analyze (${trafficPackets ? trafficPackets.length : 0})"
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Flex",
+                      "props": {
+                        "gap": 2
+                      },
+                      "children": [
+                        {
+                          "type": "Button",
+                          "variant": "outline",
+                          "size": "sm",
+                          "icon": "Download",
+                          "props": {
+                            "onClick": "exportSelected",
+                            "disabled": "${!selectedPacketIndices || selectedPacketIndices.length === 0}",
+                            "children": "Export",
+                            "title": "Export Selected Packets"
+                          }
+                        },
+                        {
+                          "type": "Button",
+                          "variant": "outline",
+                          "size": "sm",
+                          "icon": "DownloadCloud",
+                          "props": {
+                            "onClick": "exportRecording",
+                            "children": "Recording",
+                            "title": "Export Session Recording"
+                          }
+                        },
+                        {
+                          "type": "Button",
+                          "variant": "outline",
+                          "size": "sm",
+                          "icon": "GitCompareArrows",
+                          "props": {
+                            "onClick": "diffPackets",
+                            "disabled": "${!selectedPacketIndices || selectedPacketIndices.length !== 2}",
+                            "children": "Diff",
+                            "title": "Diff Selected (requires 2)"
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
@@ -81,6 +198,51 @@
       "children": [
         {
           "type": "Box",
+          "className": "px-3 pt-3 space-y-2",
+          "children": [
+            {
+              "type": "Input",
+              "props": {
+                "value": "${monitorFilterQuery}",
+                "onChange": "filterMonitor",
+                "placeholder": "Filter query (e.g. opcode:0x30* AND source:SERVER AND payload_contains:\"0F 3A\")"
+              }
+            },
+            {
+              "type": "p",
+              "className": "text-xs text-red-400",
+              "props": {
+                "hidden": "${!monitorFilterError}",
+                "children": "${monitorFilterError}"
+              }
+            },
+            {
+              "type": "Box",
+              "className": "rounded border border-border/60 p-2",
+              "props": {
+                "hidden": "${!topOpcodes || topOpcodes.length === 0}"
+              },
+              "children": [
+                {
+                  "type": "Flex",
+                  "className": "items-center gap-2 flex-wrap",
+                  "props": {
+                    "dataSource": "topOpcodes",
+                    "renderItem": {
+                      "type": "span",
+                      "className": "text-[11px] font-mono px-2 py-1 rounded bg-muted text-foreground border border-border/60",
+                      "props": {
+                        "children": "${item.source}: ${item.name || item.opcode} (${item.count})"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Box",
           "className": "overflow-x-auto",
           "children": [
             {
@@ -89,6 +251,11 @@
               "props": {
                 "dataSource": "trafficPackets",
                 "columns": [
+                  {
+                    "field": "time",
+                    "label": "Time",
+                    "className": "text-left p-2 border whitespace-nowrap font-mono text-xs text-muted-foreground"
+                  },
                   {
                     "field": "source",
                     "label": "Source",
@@ -133,8 +300,49 @@
                     "truncate": true
                   }
                 ],
-                "onRowClick": "selectPacket",
-                "rowClassName": "hover:bg-muted/50 cursor-pointer"
+                "multiSelectAction": "selectPackets",
+                "autoScroll": true,
+                "expandable": true,
+                "rowConditionalStyle": {
+                  "field": "source",
+                  "values": {
+                    "SERVER": {
+                      "borderLeft": "3px solid rgb(249 115 22 / 0.8)",
+                      "backgroundColor": "rgba(249, 115, 22, 0.06)"
+                    },
+                    "CLIENT": {
+                      "borderLeft": "3px solid rgb(56 189 248 / 0.8)",
+                      "backgroundColor": "rgba(56, 189, 248, 0.06)"
+                    },
+                    "BOT": {
+                      "borderLeft": "3px solid rgb(139 92 246 / 0.8)",
+                      "backgroundColor": "rgba(139, 92, 246, 0.06)"
+                    }
+                  }
+                },
+                "rowActions": [
+                  {
+                    "label": "↻",
+                    "action": "openReplay",
+                    "title": "Replay Packet"
+                  },
+                  {
+                    "label": "</>",
+                    "action": "copyAsCode",
+                    "title": "Copy as Groovy"
+                  },
+                  {
+                    "label": "Hex",
+                    "action": "copyHex",
+                    "title": "Copy Hex Payload"
+                  },
+                  {
+                    "label": "JSON",
+                    "action": "copyJson",
+                    "title": "Copy as JSON"
+                  }
+                ],
+                "rowClassName": "hover:bg-muted/50 cursor-pointer transition-colors"
               }
             }
           ]

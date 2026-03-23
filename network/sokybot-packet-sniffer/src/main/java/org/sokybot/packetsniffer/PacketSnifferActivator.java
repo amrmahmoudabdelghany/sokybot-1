@@ -19,6 +19,8 @@ import org.sokybot.network.IPacketSubscription;
 import org.sokybot.proxy.IProxyConnection;
 import org.sokybot.packetsniffer.api.IPacketSnifferRegistry;
 import org.sokybot.packetsniffer.storage.JsonPacketStorage;
+import org.sokybot.packetsniffer.storage.StructDefinitionStorage;
+import org.sokybot.proxy.recording.IPacketRecorder;
 
 /**
  * Packet Sniffer Bundle Activator.
@@ -33,6 +35,7 @@ import org.sokybot.packetsniffer.storage.JsonPacketStorage;
 public class PacketSnifferActivator implements EventHandler {
 
     private static final JsonPacketStorage storage = new JsonPacketStorage("./packet-data.json");
+    private static final StructDefinitionStorage structStorage = new StructDefinitionStorage("./struct-definitions.json");
 
     private ISokybotContext sokybotContext;
     private final PacketSnifferRegistryImpl registry = new PacketSnifferRegistryImpl();
@@ -41,10 +44,22 @@ public class PacketSnifferActivator implements EventHandler {
 
     private BundleContext bundleContext;
     private ServiceRegistration<IPacketSnifferRegistry> registryRegistration;
+    private volatile IPacketRecorder packetRecorder;
 
     @Reference
     public void setSokybotContext(ISokybotContext sokybotContext) {
         this.sokybotContext = sokybotContext;
+    }
+
+    @Reference(cardinality = org.osgi.service.component.annotations.ReferenceCardinality.OPTIONAL, policy = org.osgi.service.component.annotations.ReferencePolicy.DYNAMIC)
+    public void setPacketRecorder(IPacketRecorder packetRecorder) {
+        this.packetRecorder = packetRecorder;
+    }
+
+    public void unsetPacketRecorder(IPacketRecorder packetRecorder) {
+        if (this.packetRecorder == packetRecorder) {
+            this.packetRecorder = null;
+        }
     }
 
     @Activate
@@ -126,11 +141,12 @@ public class PacketSnifferActivator implements EventHandler {
             return;
         }
 
-        PacketSnifferService service = new PacketSnifferService(storage, machineName);
+        PacketSnifferService service = new PacketSnifferService(storage, machineName, proxyConnection, packetRecorder,
+                structStorage);
         services.put(machineName, service);
         registry.put(machineName, service);
 
-        PacketSnifferObserver observer = new PacketSnifferObserver(service, machineName);
+        PacketSnifferObserver observer = new PacketSnifferObserver(service, machineName, packetRecorder);
         IPacketSubscription subscription = packetPublisher.subscribeAll(observer);
         subscriptions.put(machineName, subscription);
 

@@ -52,7 +52,8 @@ public class ScriptPageLoader extends AbstractScriptWatcher {
         } catch (Exception ignored) {
         }
         startWatching(dir);
-        log.info("ScriptPageLoader: pages directory={}, available pages after scan={} {}", dir, pages.size(), pages.keySet());
+        log.info("ScriptPageLoader: pages directory={}, available pages after scan={} {}", dir, pages.size(),
+                pages.keySet());
     }
 
     @Deactivate
@@ -86,7 +87,13 @@ public class ScriptPageLoader extends AbstractScriptWatcher {
     }
 
     public Set<String> getAvailablePages() {
-        return Collections.unmodifiableSet(pages.keySet());
+        Set<String> available = new HashSet<>();
+        for (Map.Entry<String, PageDefinition> entry : pages.entrySet()) {
+            if (entry.getValue() != null && entry.getValue().scriptPath != null) {
+                available.add(entry.getKey());
+            }
+        }
+        return Collections.unmodifiableSet(available);
     }
 
     /**
@@ -116,7 +123,11 @@ public class ScriptPageLoader extends AbstractScriptWatcher {
             log.debug("Detected schema for page: {}", baseName);
         }
 
-        notifyListeners(baseName);
+        // Only notify page reload listeners for actual scripted pages.
+        // JSON-only files (shared refs like traffic-monitor.json) are not standalone pages.
+        if (def.scriptPath != null) {
+            notifyListeners(baseName);
+        }
     }
 
     private void removePageDefinition(Path path) {
@@ -124,6 +135,7 @@ public class ScriptPageLoader extends AbstractScriptWatcher {
         String baseName = fileName.substring(0, fileName.lastIndexOf('.'));
 
         PageDefinition def = pages.get(baseName);
+        boolean hadScript = def != null && def.scriptPath != null;
         if (def != null) {
             if (fileName.endsWith(".groovy")) {
                 def.scriptPath = null;
@@ -134,7 +146,10 @@ public class ScriptPageLoader extends AbstractScriptWatcher {
             if (def.isEmpty()) {
                 pages.remove(baseName);
             }
-            notifyListeners(baseName);
+            // Notify if this page was scripted before removal, or still has a script.
+            if (hadScript || (def.scriptPath != null)) {
+                notifyListeners(baseName);
+            }
         }
     }
 
@@ -212,12 +227,14 @@ public class ScriptPageLoader extends AbstractScriptWatcher {
     @SuppressWarnings("unchecked")
     private void resolveRefs(Map<String, Object> node, Set<String> visited) {
         Object childrenObj = node.get("children");
-        if (!(childrenObj instanceof List)) return;
+        if (!(childrenObj instanceof List))
+            return;
 
         List<Object> children = (List<Object>) childrenObj;
         for (int i = 0; i < children.size(); i++) {
             Object child = children.get(i);
-            if (!(child instanceof Map)) continue;
+            if (!(child instanceof Map))
+                continue;
 
             Map<String, Object> childMap = (Map<String, Object>) child;
             String ref = (String) childMap.get("$ref");
@@ -230,11 +247,13 @@ public class ScriptPageLoader extends AbstractScriptWatcher {
                 try {
                     Map<String, Object> resolved = (Map<String, Object>) mapper.readValue(
                             Files.readAllBytes(refPath), Map.class);
+                    log.debug("Resolved $ref '{}' from path {}", ref, refPath);
                     childMap.remove("$ref");
                     for (Map.Entry<String, Object> entry : childMap.entrySet()) {
                         resolved.putIfAbsent(entry.getKey(), entry.getValue());
                     }
                     children.set(i, resolved);
+                    log.info("Successfully merged and replaced $ref '{}' in schema", ref);
                     visited.add(ref);
                     resolveRefs(resolved, visited);
                     visited.remove(ref);

@@ -66,10 +66,6 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
     public int registerOrthogonalState(IOrthogonalState state) {
         lock.writeLock().lock();
         try {
-            if (cycleActive) {
-                throw new IllegalStateException("Cannot register state while cycle is active");
-            }
-
             if (state == null) {
                 throw new IllegalArgumentException("State cannot be null");
             }
@@ -109,10 +105,6 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
     public int registerAfter(IOrthogonalState state, String afterState, int fallbackPriority) {
         lock.writeLock().lock();
         try {
-            if (cycleActive) {
-                throw new IllegalStateException("Cannot register state while cycle is active");
-            }
-
             // Find position of afterState
             int afterIndex = -1;
             for (int i = 0; i < orthogonalStateOrder.size(); i++) {
@@ -150,10 +142,6 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
     public boolean unregisterOrthogonalState(String stateName) {
         lock.writeLock().lock();
         try {
-            if (cycleActive) {
-                throw new IllegalStateException("Cannot unregister state while cycle is active");
-            }
-
             if (orthogonalStates.remove(stateName) != null) {
                 orthogonalStateOrder.removeIf(entry -> entry.stateName.equals(stateName));
                 allStates.remove(stateName);
@@ -170,10 +158,6 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
     public int registerCycle(ICycleDefinition cycle) {
         lock.writeLock().lock();
         try {
-            if (cycleActive) {
-                throw new IllegalStateException("Cannot register cycle while cycle is active");
-            }
-
             if (cycle == null) {
                 throw new IllegalArgumentException("Cycle cannot be null");
             }
@@ -262,10 +246,6 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
     public boolean unregisterCycle(String cycleName) {
         lock.writeLock().lock();
         try {
-            if (cycleActive) {
-                throw new IllegalStateException("Cannot unregister cycle while cycle is active");
-            }
-
             ICycleDefinition cycle = cycles.remove(cycleName);
             if (cycle != null) {
                 cycleOrder.removeIf(entry -> entry.cycleName.equals(cycleName));

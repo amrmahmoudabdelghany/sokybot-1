@@ -7,8 +7,6 @@ class Connector extends BaseActuator {
         String testHost = "192.168.100.112"
         int testPort = 15779
 
-        def settingsProvider = settingsProvider("login", Map)
-
         def cycle = new CycleDefinitionBuilder()
                 .name("connector-cycle")
                 .priority(1000)
@@ -38,6 +36,15 @@ class Connector extends BaseActuator {
                             sendToServer(0, ClientOpcode.AGENT_REQUEST) { it }
                             log.info("Sent agent request packet")
                         })
+                        .nextState(null)
+                        .targetState("RETRY_DELAY")
+                })
+                .state("RETRY_DELAY", { builder -> builder
+                        .guard({ ctx -> true })
+                        .action({ ctx ->
+                            // Optional: log or handle retry logic here
+                        })
+                        .delay(5000)
                         .nextState(null)
                 })
                 .build()

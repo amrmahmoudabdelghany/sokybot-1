@@ -9,6 +9,7 @@ import org.sokybot.network.packet.IPacketReader;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.proxy.IConnectionListener;
+import org.sokybot.proxy.ProxyConnection;
 
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.Channel;
@@ -26,6 +27,7 @@ public class HandshakeHandler {
     private final NetworkComponents networkComponents;
     private volatile IConnectionListener listener;
     private final Channel serverChannel;
+    private final ProxyConnection proxyConnection;
 
     private int clientSecret;
     private int serverSecret;
@@ -45,10 +47,12 @@ public class HandshakeHandler {
     public HandshakeHandler(NetworkComponents networkComponents,
             IConnectionListener listener,
             Channel serverChannel,
+            ProxyConnection proxyConnection,
             boolean clientlessMode) {
         this.networkComponents = networkComponents;
         this.listener = listener;
         this.serverChannel = serverChannel;
+        this.proxyConnection = proxyConnection;
         this.clientlessMode = clientlessMode;
     }
 
@@ -153,6 +157,7 @@ public class HandshakeHandler {
 
         System.out.println("Sokybot Proxy: Sending auth packet " + packet);
         serverChannel.writeAndFlush(packet);
+        proxyConnection.publishOutboundPacket(packet);
     }
 
     /**
@@ -198,6 +203,7 @@ public class HandshakeHandler {
             acceptancePacket.setPacketSource(NetworkPeer.BOT);
 
             serverChannel.writeAndFlush(acceptancePacket);
+            proxyConnection.publishOutboundPacket(acceptancePacket);
 
             System.out.println("Sokybot Proxy: Handshake accepted, Final Key: " + ByteBufUtil.hexDump(this.finalKey));
 
@@ -230,6 +236,7 @@ public class HandshakeHandler {
                 .build();
 
         serverChannel.writeAndFlush(moduleIdentification);
+        proxyConnection.publishOutboundPacket(moduleIdentification);
     }
 
     /**

@@ -98,12 +98,13 @@
               "props": {
                 "dataSource": "packets",
                 "onSelectHex": "selectHex",
-                "onDefineVariable": "defineVariable"
+                "onDefineVariable": "defineVariable",
+                "onDefineField": "defineField"
               }
             },
             {
               "type": "Box",
-              "className": "border-t border-border flex-shrink-0",
+              "className": "border-t border-border flex-shrink-0 grid grid-cols-2 gap-2",
               "children": [
                 {
                   "type": "table",
@@ -118,8 +119,81 @@
                     ],
                     "onRowClick": "selectVariable"
                   }
+                },
+                {
+                  "type": "table",
+                  "className": "h-[200px]",
+                  "props": {
+                    "dataSource": "decodedFields",
+                    "columns": [
+                      { "field": "name", "label": "Field", "className": "w-[130px]" },
+                      { "field": "type", "label": "Type", "className": "w-[90px]" },
+                      { "field": "hexValue", "label": "Hex", "className": "w-[140px] font-mono text-xs" },
+                      { "field": "decodedValue", "label": "Value", "className": "flex-1" }
+                    ]
+                  }
                 }
               ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Dialog",
+      "props": {
+        "open": "${diffOpen}",
+        "onOpenChange": "closeDiff"
+      },
+      "children": [
+        {
+          "type": "DialogContent",
+          "className": "max-w-6xl h-[88vh] max-h-[88vh] flex flex-col",
+          "children": [
+            {
+              "type": "DialogHeader",
+              "children": [
+                { "type": "DialogTitle", "props": { "children": "Packet Diff" } }
+              ]
+            },
+            {
+              "type": "diff-hex-viewer",
+              "className": "flex-1",
+              "props": {
+                "dataSourceA": "diffPacketsA",
+                "dataSourceB": "diffPacketsB"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Dialog",
+      "props": {
+        "open": "${replayOpen}",
+        "onOpenChange": "closeReplay"
+      },
+      "children": [
+        {
+          "type": "DialogContent",
+          "className": "max-w-4xl h-[80vh] max-h-[80vh] flex flex-col",
+          "children": [
+            {
+              "type": "DialogHeader",
+              "children": [
+                { "type": "DialogTitle", "props": { "children": "Edit & Replay Packet" } }
+              ]
+            },
+            {
+              "type": "hex-viewer",
+              "className": "flex-1",
+              "props": {
+                "dataSource": "replayPacketRows",
+                "editable": true,
+                "onInjectPacket": "injectPacket",
+                "defaultDirection": "${replayDirection}"
+              }
             }
           ]
         }

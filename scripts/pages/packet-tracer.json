@@ -100,6 +100,26 @@
                               }
                             ],
                             "onRowClick": "selectTracer",
+                            "rowConditionalStyle": {
+                              "field": "ignored",
+                              "values": {
+                                "true": {
+                                  "opacity": "0.4"
+                                }
+                              }
+                            },
+                            "rowActions": [
+                              {
+                                "label": "Focus",
+                                "action": "focusTracer",
+                                "title": "Filter traffic by this opcode"
+                              },
+                              {
+                                "label": "Toggle Ignore",
+                                "action": "toggleIgnore",
+                                "title": "Toggle ignore flag"
+                              }
+                            ],
                             "rowClassName": "hover:bg-muted/50 cursor-pointer"
                           }
                         }

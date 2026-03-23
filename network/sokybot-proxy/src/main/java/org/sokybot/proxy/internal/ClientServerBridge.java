@@ -104,6 +104,19 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
     }
 
     @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        NetworkPeer peer = ctx.channel().attr(NetworkAttributes.TRANSPORT).get();
+        if (peer == NetworkPeer.SERVER) {
+            System.out.println("Sokybot Proxy: Game server connection closed");
+            proxyConnection.onServerDisconnected();
+        } else if (peer == NetworkPeer.CLIENT) {
+            System.out.println("Sokybot Proxy: Client connection closed");
+            proxyConnection.onClientDisconnected();
+        }
+        super.channelInactive(ctx);
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         System.err.println("ClientServerBridge error: " + cause.getMessage());
         proxyConnection.onConnectionError(cause);

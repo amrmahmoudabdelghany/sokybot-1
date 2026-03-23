@@ -38,20 +38,22 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         setData(prev => {
             const updated = { ...prev };
 
-            // Handle new packets (append only)
-            if (delta.newPackets) {
-                const existing = prev.trafficPackets || [];
-                updated.trafficPackets = [...existing, ...delta.newPackets];
-                // Keep only last 1000 packets in memory
-                if (updated.trafficPackets.length > 1000) {
-                    updated.trafficPackets = updated.trafficPackets.slice(-1000);
-                }
-            }
-
-            // Merge other delta fields
             Object.keys(delta).forEach(key => {
-                if (key !== 'newPackets') {
-                    updated[key] = delta[key];
+                const newValue = delta[key];
+
+                // If the new value is an array and we are in a stream context, 
+                // we should probably append. 
+                // Special handling for known packet lists
+                if ((key === 'trafficPackets' || key === 'tracerPackets' || key === 'newPackets') && Array.isArray(newValue)) {
+                    const existing = prev[key] || [];
+                    updated[key] = [...existing, ...newValue];
+                    // Keep only last 1000 items in memory
+                    if (updated[key].length > 1000) {
+                        updated[key] = updated[key].slice(-1000);
+                    }
+                } else {
+                    // Default merge/overwrite for other state keys
+                    updated[key] = newValue;
                 }
             });
 
@@ -61,9 +63,89 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
     // Performance: Memoize action handler
     const handleAction = useCallback(async (action: string, actionData: any) => {
+        const toSafeHex = (value: unknown): string =>
+            String(value ?? '')
+                .replace(/[^A-Fa-f0-9]/g, '')
+                .toUpperCase();
+
+        const parseOpcodeLiteral = (value: unknown): string => {
+            const text = String(value ?? '').trim();
+            if (!text) return '0x0000';
+            if (/^0x[0-9a-f]+$/i.test(text)) return `0x${text.slice(2).toUpperCase()}`;
+            if (/^\d+$/.test(text)) return `0x${Number(text).toString(16).toUpperCase()}`;
+            return `0x${text.replace(/^0x/i, '').toUpperCase()}`;
+        };
+
+        const toNetworkPeerLiteral = (source: unknown): string => {
+            const normalized = String(source ?? '').toUpperCase();
+            if (normalized === 'SERVER') return 'NetworkPeer.SERVER';
+            if (normalized === 'CLIENT') return 'NetworkPeer.CLIENT';
+            return 'NetworkPeer.BOT';
+        };
+
+        const toEncodingLiteral = (encoding: unknown): string => {
+            const normalized = String(encoding ?? '').toUpperCase();
+            if (normalized === 'ENCRYPTED') return 'Encoding.ENCRYPTED';
+            return 'Encoding.PLAIN';
+        };
+
         // Optimistic close: dismiss dialog immediately so it's always dismissible
         if (action === 'closeAnalyzer') {
             setData(prev => ({ ...prev, analyzerOpen: false }));
+        }
+        if (action === 'clearLog') {
+            setData(prev => {
+                const currentLog = prev.Log && typeof prev.Log === 'object' ? prev.Log : {};
+                return {
+                    ...prev,
+                    Log: {
+                        ...currentLog,
+                        events: []
+                    }
+                };
+            });
+        }
+        if (action === 'copyAsCode') {
+            const payloadHex = toSafeHex(actionData?.payload);
+            const opcodeLiteral = parseOpcodeLiteral(actionData?.opcode);
+            const sourceLiteral = toNetworkPeerLiteral(actionData?.source);
+            const encodingLiteral = toEncodingLiteral(actionData?.encoding);
+            const byteLength = payloadHex.length > 0 ? payloadHex.length / 2 : Number(actionData?.size || 0);
+            const directionMethod = String(actionData?.source ?? '').toUpperCase() === 'SERVER'
+                ? 'sendToClient'
+                : 'sendToServer';
+            const snippet = [
+                'def hexToBytes = { String hex ->',
+                '    String clean = hex.replaceAll(/[^A-Fa-f0-9]/, "")',
+                '    byte[] out = new byte[(int)(clean.length() / 2)]',
+                '    for (int i = 0; i < clean.length(); i += 2) {',
+                '        out[(int)(i / 2)] = (byte) Integer.parseInt(clean.substring(i, i + 2), 16)',
+                '    }',
+                '    out',
+                '}',
+                '',
+                `def packet = MutablePacket.getBuilder(${byteLength}, ${opcodeLiteral})`,
+                `    .packetEncoding(${encodingLiteral})`,
+                '    .dataEncoding(Encoding.PLAIN)',
+                `    .packetSource(${sourceLiteral})`,
+                `    .putBytes(hexToBytes("${payloadHex}"))`,
+                '    .build()',
+                `context.getDispatcher().${directionMethod}(packet)`
+            ].join('\n');
+            const successful = await copyToClipboard(snippet);
+            return { success: successful, copied: successful };
+        }
+        if (action === 'copyHex') {
+            const payload = String(actionData?.payload ?? '');
+            const normalized = payload.replace(/[^A-Fa-f0-9]/g, '').toUpperCase();
+            const spacedHex = normalized.replace(/(..)(?=.)/g, '$1 ').trim();
+            const success = await copyToClipboard(spacedHex);
+            return { success, copied: success };
+        }
+        if (action === 'copyJson') {
+            const json = JSON.stringify(actionData ?? {}, null, 2);
+            const success = await copyToClipboard(json);
+            return { success, copied: success };
         }
 
         try {
@@ -78,8 +160,16 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             if (result.delta) {
                 applyDeltaUpdate(result.delta);
             }
+            // Some handlers return state in `result.state`, others return plain fields directly.
+            const hasPlainState =
+                result &&
+                typeof result === 'object' &&
+                !Array.isArray(result) &&
+                result.state == null &&
+                Object.keys(result).some(key => !['success', 'error', 'delta'].includes(key));
+            const state = result.state ?? (hasPlainState ? result : null);
+
             // Apply full state (for openAnalyzer ensure modal opens even if state shape differs)
-            const state = result.state;
             if (state != null || (action === 'openAnalyzer' && result.success !== false)) {
                 setData(prev => {
                     const merged = state != null ? { ...prev, ...state } : { ...prev };
@@ -191,7 +281,12 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     const discoverAndSubscribeStreams = (schema: any) => {
         if (!schema) return;
 
-        console.log(`[${pageId}] Scanning for streams in:`, schema.type || (Array.isArray(schema) ? 'Array' : 'Unknown'));
+        console.log(`[${pageId}] Scanning ${schema.type || 'Unknown'}:`, {
+            hasProps: !!schema.props,
+            streamId: schema.props?.streamId,
+            id: schema.props?.id,
+            props: schema.props
+        });
 
         if (Array.isArray(schema)) {
             schema.forEach(child => discoverAndSubscribeStreams(child));
@@ -367,3 +462,33 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
     return <div className="h-full overflow-auto">{renderedContent}</div>;
 };
+
+async function copyToClipboard(text: string): Promise<boolean> {
+    if (!text) return false;
+    try {
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(text);
+            return true;
+        }
+    } catch (err) {
+        console.error('navigator.clipboard.writeText failed', err);
+    }
+
+    try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
+        return successful;
+    } catch (err) {
+        console.error('Fallback copy failed', err);
+        return false;
+    }
+}
+

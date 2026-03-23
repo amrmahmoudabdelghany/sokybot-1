@@ -12,6 +12,7 @@ import org.sokybot.engine.core.waiting.WaitingStateManager;
 import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.proxy.IConnectionListener;
 import org.sokybot.proxy.IProxyConnection;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
@@ -25,7 +26,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Core engine implementation.
  * Main entry point for engine functionality.
  */
-public class EngineCore implements IEngine {
+public class EngineCore implements IEngine, IConnectionListener {
 
     private static final Logger log = LoggerFactory.getLogger(EngineCore.class);
 
@@ -113,6 +114,8 @@ public class EngineCore implements IEngine {
         // Initialize actuator registry (with BundleContext for OSGi service discovery)
         this.actuatorRegistry = new ActuatorRegistry(
                 workflowRegistry, workflowContext, this, actuators, bundleContext);
+
+        this.proxyConnection.setConnectionListener(this);
 
         log.info("EngineCore created for machine: {}", machineId);
     }
@@ -280,6 +283,52 @@ public class EngineCore implements IEngine {
      */
     public ActuatorRegistry getActuatorRegistry() {
         return actuatorRegistry;
+    }
+
+    @Override
+    public void onClientConnected() {
+        log.info("EngineCore: Client connected for machine {}", machineId);
+    }
+
+    @Override
+    public void onServerConnected() {
+        log.info("EngineCore: Game server connected for machine {}", machineId);
+        // Note: The handshake is handled automatically by the Netty pipeline
+        // (ClientServerBridge -> HandshakeHandler). No manual action needed here.
+    }
+
+    @Override
+    public void onSecuritySetupComplete() {
+        log.info("EngineCore: Security setup complete (Blowfish/CRC/Count initialized)");
+    }
+
+    @Override
+    public void onHandshakeComplete() {
+        log.info("EngineCore: Handshake complete for machine {}", machineId);
+    }
+
+    @Override
+    public void onHandshakeFailed(String reason) {
+        log.error("EngineCore: Handshake failed for machine {}: {}", machineId, reason);
+    }
+
+    @Override
+    public void onRedirectRequired(String host, int port, int loginId) {
+        log.info("EngineCore: Redirect requested to {}:{} (Login ID: {})", host, port, loginId);
+    }
+
+    @Override
+    public void onServerIdentified(String serviceName) {
+        log.info("EngineCore: Server identified as {} for machine {}", serviceName, machineId);
+    }
+
+    @Override
+    public void onDisconnected(Throwable cause) {
+        if (cause != null) {
+            log.error("EngineCore: Disconnected with error: {}", cause.getMessage());
+        } else {
+            log.info("EngineCore: Disconnected from network");
+        }
     }
 
     /**

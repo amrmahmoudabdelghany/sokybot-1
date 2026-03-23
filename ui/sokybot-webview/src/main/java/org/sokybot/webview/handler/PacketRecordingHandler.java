@@ -2,10 +2,13 @@ package org.sokybot.webview.handler;
 
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -33,7 +36,8 @@ import reactor.core.publisher.Mono;
         IRSocketHandler.METHOD_PROPERTY + "=recording.start",
         IRSocketHandler.METHOD_PROPERTY + "=recording.stop",
         IRSocketHandler.METHOD_PROPERTY + "=recording.status",
-        IRSocketHandler.METHOD_PROPERTY + "=recording.list"
+        IRSocketHandler.METHOD_PROPERTY + "=recording.list",
+        IRSocketHandler.METHOD_PROPERTY + "=recording.export"
 })
 public class PacketRecordingHandler implements IRSocketHandler {
 
@@ -52,7 +56,7 @@ public class PacketRecordingHandler implements IRSocketHandler {
 
     @Override
     public String[] getMethods() {
-        return new String[] { "recording.start", "recording.stop", "recording.status", "recording.list" };
+        return new String[] { "recording.start", "recording.stop", "recording.status", "recording.list", "recording.export" };
     }
 
     @Override
@@ -73,6 +77,8 @@ public class PacketRecordingHandler implements IRSocketHandler {
                 return handleStatus(request);
             case "recording.list":
                 return handleList(request);
+            case "recording.export":
+                return handleExport(request);
             default:
                 return Mono.just(RSocketResponse.methodNotFound(method));
         }
@@ -197,5 +203,73 @@ public class PacketRecordingHandler implements IRSocketHandler {
             summary.put("durationMs", recording.getDurationMs());
         }
         return summary;
+    }
+
+    private Mono<RSocketResponse> handleExport(RSocketRequest request) {
+        if (packetRecorder == null) {
+            return Mono.just(RSocketResponse.error(
+                    RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
+                    "Packet recorder not available"));
+        }
+
+        String machineId = request.getString("machineId");
+        if (machineId == null || machineId.isEmpty()) {
+            return Mono.just(RSocketResponse.error(
+                    RSocketResponse.ErrorCode.INVALID_PARAMS,
+                    "Missing required parameter: machineId"));
+        }
+
+        PacketRecording recording = packetRecorder.getActiveRecording(machineId).orElse(null);
+        if (recording == null) {
+            return Mono.just(RSocketResponse.error(
+                    RSocketResponse.ErrorCode.NOT_FOUND,
+                    "No active recording for machine: " + machineId));
+        }
+
+        List<RecordedPacket> packets = recording.getPackets();
+        String hexDump = toHexDump(packets);
+        String binaryBase64 = Base64.getEncoder().encodeToString(toBinary(packets));
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("machineId", machineId);
+        response.put("packetCount", packets.size());
+        response.put("hexDump", hexDump);
+        response.put("binaryBase64", binaryBase64);
+        return Mono.just(RSocketResponse.success(response));
+    }
+
+    private String toHexDump(List<RecordedPacket> packets) {
+        StringBuilder out = new StringBuilder();
+        for (RecordedPacket packet : packets) {
+            out.append("# ").append(TIMESTAMP_FORMATTER.format(packet.getTimestamp()))
+                    .append(" ").append(packet.getDirection())
+                    .append(" opcode=0x").append(String.format("%04X", packet.getOpcode() & 0xFFFF))
+                    .append(" len=").append(packet.getDataLength()).append('\n');
+            byte[] data = packet.getData();
+            for (int i = 0; i < data.length; i += 16) {
+                int end = Math.min(i + 16, data.length);
+                out.append(String.format("%06X  ", i));
+                for (int j = i; j < end; j++) {
+                    out.append(String.format("%02X ", data[j]));
+                }
+                out.append('\n');
+            }
+            out.append('\n');
+        }
+        return out.toString();
+    }
+
+    private byte[] toBinary(List<RecordedPacket> packets) {
+        int total = 0;
+        for (RecordedPacket packet : packets) {
+            total += 1 + 4 + packet.getDataLength();
+        }
+        ByteBuffer buffer = ByteBuffer.allocate(total).order(ByteOrder.LITTLE_ENDIAN);
+        for (RecordedPacket packet : packets) {
+            buffer.put((byte) (packet.getDirection().name().contains("SERVER") ? 0 : 1));
+            buffer.putInt(packet.getDataLength());
+            buffer.put(packet.getData());
+        }
+        return buffer.array();
     }
 }
