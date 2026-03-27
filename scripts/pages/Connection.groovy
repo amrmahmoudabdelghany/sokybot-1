@@ -16,7 +16,10 @@ class ConnectionPage extends BasePage implements EventHandler {
     @Override
     String[] getEventTopics(String machineFullName) {
         ["sokybot/network/${machineFullName}/Connected",
-         "sokybot/network/${machineFullName}/Disconnected"] as String[]
+         "sokybot/network/${machineFullName}/Disconnected",
+         "sokybot/game/${machineFullName}/AgentListEvent",
+         "sokybot/game/${machineFullName}/LoginResponseEvent",
+         "sokybot/game/${machineFullName}/AuthResponseEvent"] as String[]
     }
 
     @Override
@@ -31,13 +34,28 @@ class ConnectionPage extends BasePage implements EventHandler {
     Map<String, Object> getInitialState() {
         def settings = loginSettings?.get()
         boolean connected = false
-        try { connected = machineContext.getProxyConnection()?.isConnected() } catch (Exception ignore) {}
+        def loginState = null
+        try {
+            connected = machineContext.getProxyConnection()?.isServerConnected()
+            loginState = machineContext.getGameModel()?.getLoginState()
+        } catch (Exception ignore) {}
+
+        def agents = loginState?.getAgentList() ?: []
+        def agentOptions = agents.collect { a ->
+            [
+                    value: String.valueOf(a.getId()),
+                    label: "${a.getName()} (${a.getOnlineCount()}/${a.getCapacity()})"
+            ]
+        }
 
         return [
             settings: settings ?: [:],
             isDirty: loginSettings?.isDirty() ?: false,
             isUnlocked: credentialEncryptor?.isUnlocked() ?: false,
             connected: connected,
+            loginPhase: loginState?.getPhase()?.name() ?: "DISCONNECTED",
+            agentList: agents,
+            agentOptions: agentOptions,
             profileName: this.profileName,
             profiles: profileManager?.listProfiles(machineContext.getGroupName()) ?: []
         ]
@@ -49,6 +67,13 @@ class ConnectionPage extends BasePage implements EventHandler {
             switch (action) {
                 case "refresh": break
                 case "save": loginSettings?.save(); break
+                case "connect":
+                    machineContext.getEngine()?.sendEvent("CONNECT")
+                    break
+                case "disconnect":
+                    machineContext.getEngine()?.sendEvent("DISCONNECT")
+                    machineContext.getProxyConnection()?.disconnect()
+                    break
                 case "update":
                     if (data.containsKey("profileName")) {
                         this.profileName = data.get("profileName")

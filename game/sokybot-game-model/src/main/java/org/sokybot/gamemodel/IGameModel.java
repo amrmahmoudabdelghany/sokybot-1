@@ -19,6 +19,8 @@ public interface IGameModel {
 
     ITrainer getTrainer();
 
+    LoginState getLoginState();
+
     <T extends ISpawn> Flux<T> observe(int id, Class<T> type);
 
     <T extends ISpawn> Flux<ModelUpdate<T>> observeAll(Class<T> type);

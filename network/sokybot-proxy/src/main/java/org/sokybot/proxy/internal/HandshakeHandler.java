@@ -4,6 +4,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 import org.sokybot.network.NetworkPeer;
+import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.Encoding;
 import org.sokybot.network.packet.IPacketReader;
 import org.sokybot.network.packet.ImmutablePacket;
@@ -253,6 +254,22 @@ public class HandshakeHandler {
         if (listener != null) {
             listener.onServerIdentified(name);
         }
+
+        if (proxyConnection.hasPendingAuth()) {
+            sendAuthRequest(proxyConnection.consumePendingLoginId());
+        }
+    }
+
+    private void sendAuthRequest(int loginId) {
+        System.out.println("Sokybot Proxy: Sending AUTH_REQUEST with loginId=" + loginId);
+        MutablePacket authPacket = MutablePacket.getBuilder(4, ClientOpcode.AUTH_REQUEST)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .putInt(loginId)
+                .build();
+        serverChannel.writeAndFlush(authPacket);
+        proxyConnection.publishOutboundPacket(authPacket);
     }
 
     private long generateSecrets(long g, int x, long p) {

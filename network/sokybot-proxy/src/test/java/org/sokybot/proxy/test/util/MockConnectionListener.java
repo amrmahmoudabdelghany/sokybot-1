@@ -28,6 +28,7 @@ public class MockConnectionListener implements IConnectionListener {
     private CountDownLatch handshakeFailedLatch;
     private CountDownLatch redirectLatch;
     private CountDownLatch serverIdentifiedLatch;
+    private CountDownLatch authenticatedLatch;
     private CountDownLatch disconnectedLatch;
     
     public MockConnectionListener() {
@@ -95,6 +96,14 @@ public class MockConnectionListener implements IConnectionListener {
             serverIdentifiedLatch.countDown();
         }
     }
+
+    @Override
+    public void onAuthenticated() {
+        events.add("onAuthenticated");
+        if (authenticatedLatch != null) {
+            authenticatedLatch.countDown();
+        }
+    }
     
     @Override
     public void onDisconnected(Throwable cause) {
@@ -139,6 +148,10 @@ public class MockConnectionListener implements IConnectionListener {
     
     public void expectDisconnected() {
         this.disconnectedLatch = new CountDownLatch(1);
+    }
+
+    public void expectAuthenticated() {
+        this.authenticatedLatch = new CountDownLatch(1);
     }
     
     // ========== Wait Methods ==========
@@ -220,6 +233,16 @@ public class MockConnectionListener implements IConnectionListener {
         boolean completed = disconnectedLatch.await(timeoutMs, TimeUnit.MILLISECONDS);
         if (!completed) {
             throw new AssertionError("Disconnection did not occur within " + timeoutMs + "ms");
+        }
+    }
+
+    public void waitForAuthenticated(long timeoutMs) throws InterruptedException {
+        if (authenticatedLatch == null) {
+            expectAuthenticated();
+        }
+        boolean completed = authenticatedLatch.await(timeoutMs, TimeUnit.MILLISECONDS);
+        if (!completed) {
+            throw new AssertionError("Authentication did not occur within " + timeoutMs + "ms");
         }
     }
     

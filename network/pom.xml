@@ -14,9 +14,7 @@
     <description>Network proxy and security components</description>
     
     <modules>
-        <module>sokybot-packet-sniffer-api</module>
         <module>sokybot-proxy</module>
         <module>sokybot-security</module>
-        <module>sokybot-packet-sniffer</module>
     </modules>
 </project>

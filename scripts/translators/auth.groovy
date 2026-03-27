@@ -1,4 +1,5 @@
 import org.sokybot.gameevents.script.PacketReaderUtils
+import org.sokybot.gameevents.dto.AgentInfo
 import org.sokybot.gameevents.events.session.*
 import org.sokybot.gameevents.events.combat.AgentListEvent
 
@@ -17,25 +18,29 @@ translator(0x6102) { machine, packet ->
 translator(0xA101) { machine, packet ->
     try {
         def r = packet.streamReader
+        def agents = []
         def count = 0
+        def farmName = ""
         if (r.getByte() == 0x01) {
             r.getByte()
             short farmSize = r.getShort()
-            r.getBytes(farmSize)
+            farmName = new String(r.getBytes(farmSize))
             r.getByte()
             byte hasEntity = r.getByte()
             while (hasEntity == 0x01) {
-                r.getShort()
-                r.getBytes(r.getShort())
-                r.getShort()
-                r.getShort()
-                r.getByte()
+                short agentId = r.getShort()
+                short agentNameLen = r.getShort()
+                String agentName = new String(r.getBytes(agentNameLen))
+                short onlineCount = r.getShort()
+                short capacity = r.getShort()
+                byte status = r.getByte()
                 r.getByte()
                 hasEntity = r.getByte()
+                agents.add(new AgentInfo(agentId, agentName, onlineCount, capacity, status))
                 count++
             }
         }
-        return singleEvent(new AgentListEvent(machine, (byte)count))
+        return singleEvent(new AgentListEvent(machine, (byte)count, farmName, agents))
     } catch (Exception e) { return noEvents() }
 }
 

@@ -6,7 +6,9 @@ import org.sokybot.network.NetworkPeer;
 import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.GlobalOpcode;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.network.packet.IStreamReader;
 import org.sokybot.network.packet.MutablePacket;
+import org.sokybot.network.packet.ServerOpcode;
 import org.sokybot.proxy.ProxyConnection;
 
 import io.netty.channel.Channel;
@@ -44,7 +46,8 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
 
         // Opcodes that should not be forwarded from server to client
         this.preventedServerOpcodes = Set.of(
-                0xA102);
+                ServerOpcode.LOGIN_RESPONSE,
+                ServerOpcode.AUTH_RESPONSE);
     }
 
     @Override
@@ -54,18 +57,21 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
 
         // Handle handshake and identification packets from server in clientless mode
         if (peer == NetworkPeer.SERVER && proxyConnection.isClientlessMode()) {
+            if (opcode == ServerOpcode.LOGIN_RESPONSE) {
+                handleLoginResponse(msg);
+            } else if (opcode == ServerOpcode.AUTH_RESPONSE) {
+                handleAuthResponse(msg);
+            }
+
             HandshakeHandler handler = null;
             if (opcode == SETUP_OPCODE) {
-                // Security setup packet
-                handler = proxyConnection.createHandshakeHandler();
+                handler = proxyConnection.getOrCreateHandshakeHandler();
                 handler.handleSetupPacket(msg);
             } else if (opcode == CHALLENGE_OPCODE) {
-                // Challenge packet
-                handler = proxyConnection.createHandshakeHandler();
+                handler = proxyConnection.getOrCreateHandshakeHandler();
                 handler.handleChallengePacket(msg);
             } else if (opcode == ID_OPCODE) {
-                // Server identification packet
-                handler = proxyConnection.createHandshakeHandler();
+                handler = proxyConnection.getOrCreateHandshakeHandler();
                 handler.handleServerIdentification(msg);
             }
 
@@ -120,5 +126,35 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         System.err.println("ClientServerBridge error: " + cause.getMessage());
         proxyConnection.onConnectionError(cause);
+    }
+
+    private void handleLoginResponse(ImmutablePacket packet) {
+        try {
+            IStreamReader r = packet.getStreamReader();
+            byte resultCode = r.getByte();
+            if (resultCode == 0x01) {
+                int loginId = r.getInt();
+                String agentHost = r.getString();
+                int agentPort = r.getShort() & 0xFFFF;
+                proxyConnection.scheduleRedirect(agentHost, agentPort, loginId);
+            }
+        } catch (Exception ignored) {
+            // Keep packet flow resilient if parsing fails.
+        }
+    }
+
+    private void handleAuthResponse(ImmutablePacket packet) {
+        try {
+            IStreamReader r = packet.getStreamReader();
+            byte resultCode = r.getByte();
+            boolean success = (resultCode != 0x02);
+            if (success) {
+                proxyConnection.onAuthSuccess();
+            } else {
+                proxyConnection.onAuthFailed(resultCode);
+            }
+        } catch (Exception ignored) {
+            // Keep packet flow resilient if parsing fails.
+        }
     }
 }

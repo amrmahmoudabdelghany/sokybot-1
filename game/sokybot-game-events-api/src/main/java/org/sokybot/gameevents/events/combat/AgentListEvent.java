@@ -1,4 +1,9 @@
 package org.sokybot.gameevents.events.combat;
+
+import java.util.Collections;
+import java.util.List;
+
+import org.sokybot.gameevents.dto.AgentInfo;
 import org.sokybot.gameevents.events.core.IGameEvent;
 
 /**
@@ -10,11 +15,19 @@ public class AgentListEvent implements IGameEvent {
     private final String fullName;
     private final long timestamp;
     private final byte agentCount;
-    
-    public AgentListEvent(String machineFullName, byte agentCount) {
+    private final String farmName;
+    private final List<AgentInfo> agents;
+
+    public AgentListEvent(String machineFullName, byte agentCount, String farmName, List<AgentInfo> agents) {
         this.fullName = machineFullName;
         this.timestamp = System.currentTimeMillis();
         this.agentCount = agentCount;
+        this.farmName = farmName;
+        this.agents = agents == null ? Collections.emptyList() : Collections.unmodifiableList(agents);
+    }
+
+    public AgentListEvent(String machineFullName, byte agentCount) {
+        this(machineFullName, agentCount, "", Collections.emptyList());
     }
     
     @Override
@@ -30,4 +43,8 @@ public class AgentListEvent implements IGameEvent {
     public long getTimestamp() { return timestamp; }
     
     public byte getAgentCount() { return agentCount; }
+
+    public String getFarmName() { return farmName; }
+
+    public List<AgentInfo> getAgents() { return agents; }
 }

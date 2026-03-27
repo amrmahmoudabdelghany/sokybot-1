@@ -63,6 +63,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
     // Performance: Memoize action handler
     const handleAction = useCallback(async (action: string, actionData: any) => {
+        console.log(`[handleAction] action=${action}`, actionData);
         const toSafeHex = (value: unknown): string =>
             String(value ?? '')
                 .replace(/[^A-Fa-f0-9]/g, '')
@@ -104,6 +105,10 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                     }
                 };
             });
+        }
+        if (action === 'selectPackets') {
+            const indices = Array.isArray(actionData?.indices) ? actionData.indices : [];
+            setData(prev => ({ ...prev, selectedPacketIndices: indices }));
         }
         if (action === 'copyAsCode') {
             const payloadHex = toSafeHex(actionData?.payload);
@@ -154,6 +159,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 action,
                 data: actionData
             });
+            console.log(`[handleAction] result for ${action}:`, { success: result?.success, error: result?.error, hasDelta: !!result?.delta, hasState: result?.state != null, diffOpen: result?.state?.diffOpen });
             if (result == null) return result;
 
             // Apply delta updates efficiently
@@ -186,6 +192,18 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                     const existing = prev.trafficPackets;
                     if (Array.isArray(existing) && Array.isArray(incoming) && existing.length > incoming.length) {
                         merged.trafficPackets = existing;
+                    }
+                    // Preserve selectedPacketIndices from optimistic frontend state when the
+                    // server response returns a stale or empty list (e.g. due to async timing).
+                    const prevSel = prev.selectedPacketIndices;
+                    const incomingSel = merged.selectedPacketIndices;
+                    if (Array.isArray(prevSel) && prevSel.length > 0 &&
+                        (!Array.isArray(incomingSel) || incomingSel.length === 0) &&
+                        action !== 'clearMonitor') {
+                        console.log(`[handleAction] Preserving selection for ${action}: prev=${JSON.stringify(prevSel)}, incoming=${JSON.stringify(incomingSel)}`);
+                        merged.selectedPacketIndices = prevSel;
+                    } else if (Array.isArray(incomingSel) && incomingSel.length > 0) {
+                        console.log(`[handleAction] Updating selection for ${action}: incoming=${JSON.stringify(incomingSel)}`);
                     }
                     return merged;
                 });
@@ -417,7 +435,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         if (Array.isArray(schema)) {
             return schema.map((component, idx) => (
                 <ComponentRenderer
-                    key={component.key || idx}
+                    key={`${component.key || 'component'}-${idx}`}
                     component={component}
                     pageId={pageId}
                     machineId={machineId}

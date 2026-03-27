@@ -80,6 +80,11 @@ export function resolveTemplate(template: string, ctx: Record<string, any>): str
  */
 export function resolveTemplateInObject(obj: any, ctx: Record<string, any>): any {
     if (typeof obj === 'string') {
+        // Pure expression: preserve original type (array, number, boolean, object)
+        const pureMatch = obj.match(/^\$\{([^}]+)\}$/);
+        if (pureMatch) {
+            return safeEval(pureMatch[1].trim(), ctx) ?? '';
+        }
         return resolveTemplate(obj, ctx);
     }
     if (Array.isArray(obj)) {

@@ -186,7 +186,7 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 if (typeof renderItem === 'object') {
                     return (
                         <ComponentRenderer
-                            key={item.key || item.id || item.slot || index}
+                            key={`${item.key || item.id || item.slot || 'item'}-${index}`}
                             component={renderItem}
                             pageId={pageId}
                             machineId={machineId}
@@ -246,7 +246,10 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     // Handle hex viewer component
     if (type === 'hex-viewer' || type === 'HexViewer') {
         const rawPackets = props.dataSource ? context[props.dataSource] : (props.packets || context.packets);
-        const packets = Array.isArray(rawPackets) ? rawPackets : [];
+        let packets = Array.isArray(rawPackets) ? rawPackets : [];
+        if (packets.length === 0 && Array.isArray(context.trafficPackets)) {
+            packets = convertTrafficRowsToHexRows(context.trafficPackets);
+        }
         const selectedHex = context.selectedHex || props.selectedHex || '';
         const selectedByteCount = context.selectedByteCount || props.selectedByteCount || 0;
         const matchCount = context.matchCount || props.matchCount || 0;
@@ -408,6 +411,39 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     );
 };
 
+function convertTrafficRowsToHexRows(rows: any[]): any[] {
+    const result: any[] = [];
+    rows.forEach((row) => {
+        const source = String(row?.source ?? 'UNKNOWN');
+        const name = String(row?.name ?? 'UNKNOWN');
+        const opcode = String(row?.opcode ?? '0x0000');
+        const payload = String(row?.payload ?? '').replace(/[^A-Fa-f0-9]/g, '').toUpperCase();
+        if (!payload) return;
+
+        result.push({ type: 'header', source, name, opcode });
+        for (let i = 0; i < payload.length; i += 32) {
+            const chunk = payload.slice(i, i + 32);
+            const bytes = chunk.match(/.{1,2}/g) || [];
+            const ascii = bytes
+                .map((b) => {
+                    const code = parseInt(b, 16);
+                    return code >= 32 && code <= 126 ? String.fromCharCode(code) : '.';
+                })
+                .join('');
+            result.push({
+                type: 'data',
+                lineNumber: i.toString(16).toUpperCase().padStart(6, '0'),
+                hex: bytes.join(' '),
+                ascii,
+                startOffset: i / 2,
+                endOffset: i / 2 + bytes.length,
+            });
+        }
+        result.push({ type: 'separator' });
+    });
+    return result;
+}
+
 interface TableRendererProps {
     data: any[];
     props: Record<string, any>;
@@ -429,6 +465,9 @@ const TableRenderer: React.FC<TableRendererProps> = ({
 }) => {
     const columns = props.columns || [];
     const selectedIndices = Array.isArray(context.selectedPacketIndices) ? context.selectedPacketIndices : [];
+    const [localSelectedIndices, setLocalSelectedIndices] = useState<number[]>(selectedIndices);
+    const selectionRef = useRef<number[]>(localSelectedIndices);
+    selectionRef.current = localSelectedIndices;
     const expandable = Boolean(props.expandable);
     const autoScrollEnabled = Boolean(props.autoScroll);
     const rowConditionalStyle = props.rowConditionalStyle;
@@ -613,21 +652,26 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                         {Array.isArray(data) && data.map((row: any, idx: number) => {
                             const rowIndex = row.index ?? idx;
                             const isExpanded = expandedRowIndex === rowIndex;
+                            const isSelected = localSelectedIndices.includes(rowIndex);
                             const hexRows = isExpanded ? payloadToHexRows(row.payload) : [];
                             const decodedFields = Array.isArray(row.decodedFields) ? row.decodedFields : [];
                             const colspan = columns.length + (Array.isArray(props.rowActions) && props.rowActions.length > 0 ? 1 : 0);
                             return (
-                                <React.Fragment key={rowIndex}>
+                                <React.Fragment key={`${rowIndex}-${idx}`}>
                                     <tr
                                         ref={(el) => {
                                             rowRefs.current[rowIndex] = el;
                                         }}
-                                        className={cn(
-                                            props.rowClassName,
-                                            selectedIndices.includes(rowIndex) && 'bg-sky-500/20 dark:bg-sky-500/25 border-y border-sky-500/30'
-                                        )}
+                                        className={cn(props.rowClassName)}
                                         style={{
                                             ...getRowConditionalStyle(row),
+                                            ...(isSelected
+                                                ? {
+                                                    // Inline selected styling so it always wins over rowConditionalStyle backgrounds.
+                                                    backgroundColor: 'rgba(14, 165, 233, 0.24)',
+                                                    boxShadow: 'inset 0 0 0 1px rgba(14, 165, 233, 0.55)'
+                                                }
+                                                : {}),
                                             ...(focusedRowIndex === rowIndex
                                                 ? { outline: '2px solid rgb(56 189 248 / 0.9)', outlineOffset: '-2px' }
                                                 : {})
@@ -642,16 +686,26 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                                 onAction(props.onRowClick, { ...row, index: rowIndex });
                                             }
                                             if (props.multiSelectAction && onAction) {
+                                                const baseSelection = selectionRef.current;
                                                 let next: number[];
                                                 if (e.ctrlKey || e.metaKey) {
-                                                    // Toggle selection
-                                                    next = selectedIndices.includes(rowIndex)
-                                                        ? selectedIndices.filter((value: number) => value !== rowIndex)
-                                                        : [...selectedIndices, rowIndex];
+                                                    next = baseSelection.includes(rowIndex)
+                                                        ? baseSelection.filter((value: number) => value !== rowIndex)
+                                                        : [...baseSelection, rowIndex];
                                                 } else {
-                                                    // Single selection
-                                                    next = [idx];
+                                                    if (baseSelection.length === 0) {
+                                                        next = [rowIndex];
+                                                    } else if (baseSelection.length === 1 && baseSelection[0] !== rowIndex) {
+                                                        next = [baseSelection[0], rowIndex];
+                                                    } else if (baseSelection.length > 1 && !baseSelection.includes(rowIndex)) {
+                                                        next = [baseSelection[0], rowIndex];
+                                                    } else {
+                                                        next = [rowIndex];
+                                                    }
                                                 }
+                                                console.log('[table] multiSelect:', { baseSelection, next, rowIndex });
+                                                setLocalSelectedIndices(next);
+                                                selectionRef.current = next;
                                                 onAction(props.multiSelectAction, { indices: next }).catch(err => {
                                                     console.error(`Action ${props.multiSelectAction} failed:`, err);
                                                 });
@@ -728,8 +782,8 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                {hexRows.map((line) => (
-                                                                    <tr key={line.offset} className="border-t border-border/50">
+                                                                {hexRows.map((line, lineIdx) => (
+                                                                    <tr key={`${line.offset}-${lineIdx}`} className="border-t border-border/50">
                                                                         <td className="p-2">{line.offset}</td>
                                                                         <td className="p-2">{line.hex}</td>
                                                                         <td className="p-2">{line.ascii}</td>
@@ -809,7 +863,7 @@ function resolvePropsChildren(
             if (item && typeof item === 'object' && item.type) {
                 return (
                     <ComponentRenderer
-                        key={item.key || idx}
+                        key={`${item.key || 'item'}-${idx}`}
                         component={item}
                         pageId={pageId}
                         machineId={machineId}
@@ -857,7 +911,7 @@ function renderChildren(
     if (Array.isArray(children)) {
         return children.map((child, idx) => (
             <ComponentRenderer
-                key={child.key || idx}
+                key={`${child.key || 'child'}-${idx}`}
                 component={child}
                 pageId={pageId}
                 machineId={machineId}

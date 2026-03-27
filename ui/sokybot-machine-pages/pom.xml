@@ -81,14 +81,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- Packet Sniffer API (optional: for PacketSniffer/PacketAnalyzer scripted pages) -->
-        <dependency>
-            <groupId>org.sokybot</groupId>
-            <artifactId>sokybot-packet-sniffer-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        
         <!-- Jackson for JSON -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -179,7 +171,6 @@
                             org.sokybot.gameevents.*;version="[1,2)",
                             org.sokybot.gamemodel.*;version="[1,2)",
                             org.sokybot.webview.api.*;version="[1,2)",
-                            org.sokybot.packetsniffer.api.*;resolution:=optional,
                             !groovy.*,
                             !org.codehaus.groovy.*,
                             !org.apache.groovy.*,

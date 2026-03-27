@@ -8,8 +8,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.sokybot.logging.api.ILogStreamService;
 import org.sokybot.machinepages.api.IScriptedPage;
-import org.sokybot.packetsniffer.api.IPacketSnifferPage;
-import org.sokybot.packetsniffer.api.IPacketSnifferRegistry;
 import org.sokybot.webview.api.IWebviewConfigurator;
 
 /**
@@ -26,7 +24,6 @@ public class PageWebviewRegistrar {
 
     private IWebviewConfigurator webviewConfigurator;
     private ILogStreamService logStreamService;
-    private IPacketSnifferRegistry packetSnifferRegistry;
     private ScriptPageLoader pageLoader;
 
     @Reference
@@ -50,17 +47,6 @@ public class PageWebviewRegistrar {
         }
     }
 
-    @Reference(cardinality = ReferenceCardinality.OPTIONAL)
-    public void setPacketSnifferRegistry(IPacketSnifferRegistry packetSnifferRegistry) {
-        this.packetSnifferRegistry = packetSnifferRegistry;
-    }
-
-    public void unsetPacketSnifferRegistry(IPacketSnifferRegistry packetSnifferRegistry) {
-        if (this.packetSnifferRegistry == packetSnifferRegistry) {
-            this.packetSnifferRegistry = null;
-        }
-    }
-
     /**
      * Register a page with the webview configurator: add the declarative page,
      * schema handler, action handler, and stream handlers.
@@ -78,7 +64,7 @@ public class PageWebviewRegistrar {
         registerSchemaHandler(pageId, pageName, machineFullName, page);
         webviewConfigurator.registerActionHandler(pageId, page::handleAction);
         registerStreamHandler(pageId, pageName, machineFullName, page);
-        registerSnifferStreams(pageId, pageName, machineFullName);
+        registerSnifferStreams(pageId, pageName, page);
     }
 
     /**
@@ -154,23 +140,18 @@ public class PageWebviewRegistrar {
         }
     }
 
-    private void registerSnifferStreams(String pageId, String pageName, String machineFullName) {
-        if (packetSnifferRegistry == null) return;
-
+    private void registerSnifferStreams(String pageId, String pageName, IScriptedPage page) {
         if ("PacketSniffer".equalsIgnoreCase(pageName)) {
-            IPacketSnifferPage sniffer = packetSnifferRegistry.getSniffer(machineFullName);
-            if (sniffer != null) {
-                webviewConfigurator.registerStreamHandler(pageId, "packets", sniffer::streamPackets, "trafficPackets");
-                webviewConfigurator.registerStreamHandler(pageId, "statistics", sniffer::streamStatistics, "statistics");
-                sniffer.addStateChangeListener(
-                        state -> webviewConfigurator.sendEvent(pageId + ".stateChanged", state));
-            }
-        } else if ("PacketAnalyzer".equalsIgnoreCase(pageName)) {
-            IPacketSnifferPage sniffer = packetSnifferRegistry.getSniffer(machineFullName);
-            if (sniffer != null) {
-                sniffer.addStateChangeListener(
-                        state -> webviewConfigurator.sendEvent(pageId + ".stateChanged", state));
-            }
+            webviewConfigurator.registerStreamHandler(
+                    pageId,
+                    "packets",
+                    params -> page.streamData("packets", params),
+                    "trafficPackets");
+            webviewConfigurator.registerStreamHandler(
+                    pageId,
+                    "statistics",
+                    params -> page.streamData("statistics", params),
+                    "statistics");
         }
     }
 

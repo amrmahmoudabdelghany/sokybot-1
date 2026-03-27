@@ -7,7 +7,9 @@
     {
       "type": "Flex",
       "className": "border-b border-border space-x-1",
-      "props": { "gap": 1 },
+      "props": {
+        "gap": 1
+      },
       "children": [
         {
           "type": "Button",
@@ -15,7 +17,9 @@
           "className": "rounded-t-lg data-[active=true]:bg-muted data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r data-[active=true]:border-b-0 border-transparent",
           "props": {
             "onClick": "switchTab",
-            "actionData": { "tab": "traffic" },
+            "actionData": {
+              "tab": "traffic"
+            },
             "data-active": "${activeTab === 'traffic'}",
             "children": "Traffic Monitor"
           }
@@ -26,7 +30,9 @@
           "className": "rounded-t-lg data-[active=true]:bg-muted data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r data-[active=true]:border-b-0 border-transparent",
           "props": {
             "onClick": "switchTab",
-            "actionData": { "tab": "tracer" },
+            "actionData": {
+              "tab": "tracer"
+            },
             "data-active": "${activeTab === 'tracer'}",
             "children": "Packet Tracer"
           }
@@ -35,18 +41,36 @@
     },
     {
       "type": "Box",
-      "className": "flex-1 overflow-auto",
-      "props": { "id": "tabContent" },
+      "className": "flex-1 flex flex-col min-h-0",
+      "props": {
+        "id": "tabContent"
+      },
       "children": [
         {
           "type": "Box",
-          "props": { "id": "trafficContent", "hidden": "${activeTab !== 'traffic'}" },
-          "children": [{ "$ref": "traffic-monitor.json" }]
+          "className": "flex-1 flex flex-col min-h-0",
+          "props": {
+            "id": "trafficContent",
+            "hidden": "${activeTab !== 'traffic'}"
+          },
+          "children": [
+            {
+              "$ref": "traffic-monitor.json"
+            }
+          ]
         },
         {
           "type": "Box",
-          "props": { "id": "tracerContent", "hidden": "${activeTab !== 'tracer'}" },
-          "children": [{ "$ref": "packet-tracer.json" }]
+          "className": "flex-1 flex flex-col min-h-0",
+          "props": {
+            "id": "tracerContent",
+            "hidden": "${activeTab !== 'tracer'}"
+          },
+          "children": [
+            {
+              "$ref": "packet-tracer.json"
+            }
+          ]
         }
       ]
     },
@@ -66,35 +90,56 @@
               "children": [
                 {
                   "type": "DialogTitle",
-                  "props": { "children": "Packet Analyzer" }
+                  "props": {
+                    "children": "Packet Analyzer"
+                  }
                 }
               ]
             },
             {
               "type": "Flex",
               "className": "items-center justify-between p-2 border-b border-border",
-              "props": { "gap": 4 },
+              "props": {
+                "gap": 4
+              },
               "children": [
                 {
                   "type": "Flex",
                   "className": "items-center gap-4",
-                  "props": { "gap": 4 },
+                  "props": {
+                    "gap": 4
+                  },
                   "children": [
-                    { "type": "span", "className": "text-sm", "props": { "children": "Selected: ${selectedByteCount} byte(s)" } },
-                    { "type": "span", "className": "text-sm", "props": { "children": "Matches: ${matchCount}" } }
+                    {
+                      "type": "span",
+                      "className": "text-sm",
+                      "props": {
+                        "children": "Selected: ${selectedByteCount} byte(s)"
+                      }
+                    },
+                    {
+                      "type": "span",
+                      "className": "text-sm",
+                      "props": {
+                        "children": "Matches: ${matchCount}"
+                      }
+                    }
                   ]
                 },
                 {
                   "type": "Button",
                   "variant": "outline",
                   "size": "sm",
-                  "props": { "onClick": "closeAnalyzer", "children": "Close" }
+                  "props": {
+                    "onClick": "closeAnalyzer",
+                    "children": "Close"
+                  }
                 }
               ]
             },
             {
               "type": "hex-viewer",
-              "className": "flex-1 min-h-[240px] overflow-auto",
+              "className": "flex-1 min-h-0",
               "props": {
                 "dataSource": "packets",
                 "onSelectHex": "selectHex",
@@ -112,10 +157,26 @@
                   "props": {
                     "dataSource": "variables",
                     "columns": [
-                      { "field": "packet", "label": "Packet", "className": "w-[150px]" },
-                      { "field": "varName", "label": "Var", "className": "w-[150px]" },
-                      { "field": "value", "label": "Value", "className": "w-[120px]" },
-                      { "field": "comment", "label": "Comment", "className": "flex-1" }
+                      {
+                        "field": "packet",
+                        "label": "Packet",
+                        "className": "w-[150px]"
+                      },
+                      {
+                        "field": "varName",
+                        "label": "Var",
+                        "className": "w-[150px]"
+                      },
+                      {
+                        "field": "value",
+                        "label": "Value",
+                        "className": "w-[120px]"
+                      },
+                      {
+                        "field": "comment",
+                        "label": "Comment",
+                        "className": "flex-1"
+                      }
                     ],
                     "onRowClick": "selectVariable"
                   }
@@ -126,10 +187,26 @@
                   "props": {
                     "dataSource": "decodedFields",
                     "columns": [
-                      { "field": "name", "label": "Field", "className": "w-[130px]" },
-                      { "field": "type", "label": "Type", "className": "w-[90px]" },
-                      { "field": "hexValue", "label": "Hex", "className": "w-[140px] font-mono text-xs" },
-                      { "field": "decodedValue", "label": "Value", "className": "flex-1" }
+                      {
+                        "field": "name",
+                        "label": "Field",
+                        "className": "w-[130px]"
+                      },
+                      {
+                        "field": "type",
+                        "label": "Type",
+                        "className": "w-[90px]"
+                      },
+                      {
+                        "field": "hexValue",
+                        "label": "Hex",
+                        "className": "w-[140px] font-mono text-xs"
+                      },
+                      {
+                        "field": "decodedValue",
+                        "label": "Value",
+                        "className": "flex-1"
+                      }
                     ]
                   }
                 }
@@ -153,7 +230,12 @@
             {
               "type": "DialogHeader",
               "children": [
-                { "type": "DialogTitle", "props": { "children": "Packet Diff" } }
+                {
+                  "type": "DialogTitle",
+                  "props": {
+                    "children": "Packet Diff"
+                  }
+                }
               ]
             },
             {
@@ -182,12 +264,17 @@
             {
               "type": "DialogHeader",
               "children": [
-                { "type": "DialogTitle", "props": { "children": "Edit & Replay Packet" } }
+                {
+                  "type": "DialogTitle",
+                  "props": {
+                    "children": "Edit & Replay Packet"
+                  }
+                }
               ]
             },
             {
               "type": "hex-viewer",
-              "className": "flex-1",
+              "className": "flex-1 min-h-0",
               "props": {
                 "dataSource": "replayPacketRows",
                 "editable": true,

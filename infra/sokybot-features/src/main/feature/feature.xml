@@ -121,9 +121,6 @@
         <bundle>mvn:org.sokybot/sokybot-loader-api/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-engine-api/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-game-events-api/${project.version}</bundle>
-        <!-- Packet Sniffer API bundle required by sokybot-packet-sniffer -->
-        <bundle>mvn:org.sokybot/sokybot-packet-sniffer-api/${project.version}</bundle>
-        
         <!-- Infrastructure -->
         <bundle>mvn:org.sokybot/sokybot-commons/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-security/${project.version}</bundle>
@@ -152,7 +149,6 @@
         <!-- UI (Webview-based) -->
         <bundle>mvn:org.sokybot/sokybot-webview/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-machine-pages/${project.version}</bundle>
-        <bundle>mvn:org.sokybot/sokybot-packet-sniffer/${project.version}</bundle>
         
         <!-- Development CLI -->
         <bundle>mvn:org.sokybot/sokybot-dev-shell/${project.version}</bundle>        

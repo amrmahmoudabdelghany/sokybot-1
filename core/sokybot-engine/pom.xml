@@ -137,13 +137,6 @@
             <version>3.6.0</version>
             <scope>provided</scope>
         </dependency>
-        <!-- Packet Sniffer API (optional: for scripted pages that use IPacketSnifferRegistry) -->
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-packet-sniffer-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -165,11 +158,12 @@
                             org.sokybot.settings.api.*;version="[1.0,2)",
                             org.sokybot.settings.security;version="[1.0,2)",
                             org.sokybot.settings;version="[1.0,2)",
+                            org.sokybot.commons;version="[1.0,2)",
+                            org.sokybot.commons.*;version="[1.0,2)",
                             org.sokybot.network;version="[1.0,2)",
                             org.sokybot.network.*;version="[1.0,2)",
                             org.sokybot.gamemodel.*;version="[1.0,2)",
                             org.sokybot.gameevents.*;version="[1.0,2)",
-                            org.sokybot.packetsniffer.api.*;resolution:=optional,
                             !javax.swing.*,
                             !java.awt.*,
                             *;resolution:=optional

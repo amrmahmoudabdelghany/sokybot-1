@@ -80,6 +80,31 @@ check_karaf_dist() {
     fi
 }
 
+# Clear only the bundle cache when system JARs are newer than cache.
+# This prevents Karaf from booting stale bundles after local rebuilds.
+check_and_clear_stale_cache() {
+    local CACHE_DIR="$KARAF_DATA/cache"
+    local SYSTEM_SOKYBOT_DIR="$KARAF_DIST/system/org/sokybot"
+
+    if [ ! -d "$CACHE_DIR" ] || [ ! -d "$SYSTEM_SOKYBOT_DIR" ]; then
+        return 0
+    fi
+
+    local STALE=false
+    while IFS= read -r -d '' jar; do
+        if [ "$jar" -nt "$CACHE_DIR" ]; then
+            STALE=true
+            break
+        fi
+    done < <(find "$SYSTEM_SOKYBOT_DIR" -name '*.jar' -print0 2>/dev/null)
+
+    if [ "$STALE" = true ]; then
+        log_warn "Detected newer system JARs than Karaf cache. Clearing stale bundle cache..."
+        rm -rf "$CACHE_DIR"
+        log_success "Karaf bundle cache cleared. Fresh bundles will be loaded on startup."
+    fi
+}
+
 is_process_running() {
     if pgrep -f "$1" > /dev/null; then
         return 0
@@ -120,6 +145,7 @@ check_docker_transparency() {
 
 cmd_backend_start() {
     check_karaf_dist_or_build
+    check_and_clear_stale_cache
     
     local FOREGROUND=false
     local WATCH=false
@@ -294,23 +320,32 @@ cmd_watch() {
             fi
 
             JAR_NAME=$(basename "$FILE")
-            # Convert JAR name to symbolic name (rough)
-            # sokybot-commons-1.0-SNAPSHOT.jar -> org.sokybot.sokybot-commons
-            SYMBOLIC_NAME="org.sokybot.${JAR_NAME%-1.0-SNAPSHOT.jar}"
             BASE_BUNDLE_NAME=$(echo "$JAR_NAME" | sed -r 's/-[0-9]+(\.[0-9]+)*(-SNAPSHOT)?\.jar$//')
+            SYSTEM_DIR="$KARAF_DIST/system/org/sokybot/${BASE_BUNDLE_NAME}/1.0-SNAPSHOT"
             
             log_info "Detected change in: $JAR_NAME ($BASE_BUNDLE_NAME)"
+
+            # Keep assembly system repo in sync with the latest build output.
+            if [ -d "$SYSTEM_DIR" ]; then
+                cp "$FILE" "$SYSTEM_DIR/$JAR_NAME"
+                log_info "Synced JAR to assembly: $SYSTEM_DIR"
+            fi
             
             # Find bundle ID in Karaf
             BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $BASE_BUNDLE_NAME" 2>/dev/null | awk '{print $1}' | head -n 1)
 
             if [ -n "$BUNDLE_ID" ]; then
                 log_info "Updating bundle $BUNDLE_ID ($BASE_BUNDLE_NAME)..."
-                "$KARAF_BIN/client" "bundle:update $BUNDLE_ID"
-                "$KARAF_BIN/client" "bundle:refresh $BUNDLE_ID"
-                log_success "Hot-reloaded $BASE_BUNDLE_NAME (ID: $BUNDLE_ID)"
+                if "$KARAF_BIN/client" "bundle:update $BUNDLE_ID" 2>/dev/null && \
+                        "$KARAF_BIN/client" "bundle:refresh $BUNDLE_ID" 2>/dev/null; then
+                    log_success "Hot-reloaded $BASE_BUNDLE_NAME (ID: $BUNDLE_ID)"
+                else
+                    rm -rf "$KARAF_DATA/cache"
+                    log_warn "Karaf client reload failed; cache cleared so next restart loads fresh bundles."
+                fi
             else
-                log_warn "Bundle '$BASE_BUNDLE_NAME' not active in Karaf. Use 'soky deploy' for first install."
+                rm -rf "$KARAF_DATA/cache"
+                log_warn "Bundle '$BASE_BUNDLE_NAME' not active/reloadable; cache cleared for next restart."
             fi
         fi
     done

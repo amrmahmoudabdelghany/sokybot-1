@@ -18,7 +18,9 @@ import reactor.core.publisher.Sinks;
 import reactor.core.publisher.Flux;
 import org.sokybot.gamemodel.ModelUpdate;
 import org.sokybot.gamemodel.ModelUpdateType;
+import org.sokybot.gamemodel.LoginState;
 import org.sokybot.gameevents.dto.MonsterData;
+import org.sokybot.gameevents.events.combat.AgentListEvent;
 import org.sokybot.gameevents.events.entity.EntityAngleUpdateEvent;
 import org.sokybot.gameevents.events.entity.EntityDespawnEvent;
 import org.sokybot.gameevents.events.entity.EntityHPMPUpdateEvent;
@@ -26,12 +28,11 @@ import org.sokybot.gameevents.events.entity.EntityMovementEvent;
 import org.sokybot.gameevents.events.entity.EntitySpeedUpdateEvent;
 import org.sokybot.gameevents.events.entity.EntityStoppedEvent;
 import org.sokybot.gameevents.events.spawn.MonsterSpawnEvent;
+import org.sokybot.gameevents.events.session.AuthResponseEvent;
+import org.sokybot.gameevents.events.session.LoginResponseEvent;
 import org.sokybot.gameevents.events.skill.SkillCastEvent;
 import org.sokybot.gameevents.events.skill.SkillCastErrorEvent;
 import org.sokybot.gamemodel.IGameModel;
-import org.sokybot.gamemodel.model.ISpawn;
-import org.sokybot.gamemodel.model.ITrainer;
-
 import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.ITrainer;
 
@@ -48,6 +49,7 @@ public class GameModelImpl implements IGameModel {
     // Internal mutable map
     private final Map<Integer, Spawn> spawns = new ConcurrentHashMap<>();
     private final Trainer trainer = new Trainer();
+    private final LoginState loginState = new LoginState();
 
     // Movement handling
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2); // 2 threads enough?
@@ -73,6 +75,9 @@ public class GameModelImpl implements IGameModel {
         subscriptions.add(eventBus.on(EntityAngleUpdateEvent.class).subscribe(this::handleAngle));
         subscriptions.add(eventBus.on(SkillCastEvent.class).subscribe(this::handleSkillCast));
         subscriptions.add(eventBus.on(SkillCastErrorEvent.class).subscribe(this::handleSkillCastError));
+        subscriptions.add(eventBus.on(AgentListEvent.class).subscribe(this::handleAgentList));
+        subscriptions.add(eventBus.on(LoginResponseEvent.class).subscribe(this::handleLoginResponse));
+        subscriptions.add(eventBus.on(AuthResponseEvent.class).subscribe(this::handleAuthResponse));
     }
 
     public void stop() {
@@ -122,6 +127,11 @@ public class GameModelImpl implements IGameModel {
     @Override
     public ITrainer getTrainer() {
         return trainer;
+    }
+
+    @Override
+    public LoginState getLoginState() {
+        return loginState;
     }
 
     @Override
@@ -236,6 +246,35 @@ public class GameModelImpl implements IGameModel {
         log.warn("Skill cast error detected: {}", event.getErrorType());
         trainer.setLastError(event.getErrorType());
         emitUpdate(trainer, ModelUpdateType.UPDATED);
+    }
+
+    private void handleAgentList(AgentListEvent event) {
+        loginState.setAgentList(event.getAgents());
+        loginState.setPhase(LoginState.Phase.AGENTS_RECEIVED);
+    }
+
+    private void handleLoginResponse(LoginResponseEvent event) {
+        if (event.isSuccess()) {
+            loginState.setLoginId(event.getLoginId());
+            loginState.setAgentHost(event.getAgentHost());
+            loginState.setAgentPort(event.getAgentPort());
+            loginState.setFailureReason(null);
+            loginState.setPhase(LoginState.Phase.LOGIN_SUCCESS);
+        } else {
+            loginState.setFailureReason("Gateway login failed: code " + event.getResultCode());
+            loginState.setPhase(LoginState.Phase.FAILED);
+        }
+    }
+
+    private void handleAuthResponse(AuthResponseEvent event) {
+        loginState.setAuthSuccess(event.isSuccess());
+        if (event.isSuccess()) {
+            loginState.setFailureReason(null);
+            loginState.setPhase(LoginState.Phase.AUTHENTICATED);
+        } else {
+            loginState.setFailureReason("Agent auth failed: code " + event.getResultCode());
+            loginState.setPhase(LoginState.Phase.FAILED);
+        }
     }
 
     private Fighter resolveFighter(int id) {

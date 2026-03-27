@@ -373,7 +373,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
   }, [editable, packets]);
 
   return (
-    <div className={cn("h-full flex flex-col relative", className)} style={style}>
+    <div className={cn("h-full flex flex-col relative min-h-0", className)} style={style}>
       <div className="flex-1 overflow-auto min-h-0 bg-background">
         {hasData ? (
           <div className="flex flex-col min-w-max">

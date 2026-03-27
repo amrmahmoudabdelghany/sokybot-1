@@ -28,7 +28,8 @@ import groovy.lang.Script;
 /**
  * Groovy implementation of IScriptEngine.
  *
- * <p>Star imports can be configured via the system property
+ * <p>
+ * Star imports can be configured via the system property
  * {@code sokybot.groovy.imports} (comma-separated package names).
  * Single-class imports can be configured via
  * {@code sokybot.groovy.imports.classes} (comma-separated FQCNs).
@@ -45,6 +46,7 @@ public class GroovyScriptEngine implements IScriptEngine {
             "org.sokybot.engine.api.workflow",
             "org.sokybot.network.packet",
             "org.sokybot.network",
+            "org.sokybot.commons",
             "org.sokybot.settings.api",
             "org.sokybot.machinepages.api",
             "org.sokybot.runtime",
@@ -52,13 +54,11 @@ public class GroovyScriptEngine implements IScriptEngine {
             "org.sokybot.gameevents.enums",
             "org.sokybot.gameevents.dto",
             "org.osgi.service.event",
-            "org.slf4j"
-    );
+            "org.slf4j");
 
     private static final List<String> DEFAULT_CLASS_IMPORTS = List.of(
             "reactor.core.publisher.Flux",
-            "reactor.core.publisher.Sinks"
-    );
+            "reactor.core.publisher.Sinks");
 
     private ExecutorService executor;
     private CompilerConfiguration config;
@@ -93,7 +93,10 @@ public class GroovyScriptEngine implements IScriptEngine {
         }
         classCache.clear();
         if (sharedClassLoader != null) {
-            try { sharedClassLoader.close(); } catch (Exception ignored) {}
+            try {
+                sharedClassLoader.close();
+            } catch (Exception ignored) {
+            }
         }
     }
 

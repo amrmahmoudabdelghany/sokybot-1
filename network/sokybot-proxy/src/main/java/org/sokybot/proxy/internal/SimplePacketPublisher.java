@@ -41,14 +41,15 @@ public class SimplePacketPublisher extends SimpleChannelInboundHandler<Immutable
     @Override
     public IPacketSubscription subscribe(IPacketObserver observer, int... opcodes) {
         // Composite subscription could be implemented here
-        // For simplicity, we can just subscribe individually but returning a composite subscription
+        // For simplicity, we can just subscribe individually but returning a composite
+        // subscription
         // simplifies management for consumers.
-        
+
         // However, standard simplistic implementation for now:
         for (int opcode : opcodes) {
             subscribe(opcode, observer);
         }
-        
+
         return () -> {
             for (int opcode : opcodes) {
                 CopyOnWriteArrayList<IPacketObserver> list = observers.get(opcode);
@@ -62,19 +63,31 @@ public class SimplePacketPublisher extends SimpleChannelInboundHandler<Immutable
     @Override
     public IPacketSubscription subscribeAll(IPacketObserver observer) {
         globalObservers.add(observer);
+        ClassLoader cl = observer.getClass().getClassLoader();
+        System.out.println("[Java] SimplePacketPublisher: subscribeAll observer="
+                + observer.getClass().getName()
+                + ", classLoader=" + (cl == null ? "bootstrap" : cl.getClass().getName())
+                + ", totalGlobalObservers=" + globalObservers.size());
         return () -> globalObservers.remove(observer);
     }
 
     public void publish(ImmutablePacket packet) {
         // Notify global observers (subscribed to all packets)
+        if (!globalObservers.isEmpty()) {
+            System.out.println("[Java] SimplePacketPublisher: publishing packet 0x"
+                    + Integer.toHexString(packet.getOpcode()) + " to " + globalObservers.size() + " global observers");
+        }
         for (IPacketObserver observer : globalObservers) {
             try {
                 observer.onPacket(packet);
             } catch (Exception e) {
+                System.err.println("[Java] SimplePacketPublisher: global observer "
+                        + observer.getClass().getName() + " threw "
+                        + e.getClass().getName() + ": " + e.getMessage());
                 e.printStackTrace();
             }
         }
-        
+
         // Notify opcode-specific observers
         CopyOnWriteArrayList<IPacketObserver> list = observers.get(packet.getOpcode());
         if (list != null) {
@@ -82,7 +95,10 @@ public class SimplePacketPublisher extends SimpleChannelInboundHandler<Immutable
                 try {
                     observer.onPacket(packet);
                 } catch (Exception e) {
-                   e.printStackTrace(); // Log error but don't stop others
+                    System.err.println("[Java] SimplePacketPublisher: opcode observer "
+                            + observer.getClass().getName() + " threw "
+                            + e.getClass().getName() + ": " + e.getMessage());
+                    e.printStackTrace(); // Log error but don't stop others
                 }
             }
         }

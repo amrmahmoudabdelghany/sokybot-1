@@ -1,6 +1,7 @@
 package org.sokybot.proxy;
 
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 
 import org.osgi.service.event.EventAdmin;
 import org.sokybot.network.NetworkPeer;
@@ -50,6 +51,8 @@ public class ProxyConnection implements IProxyConnection {
 
     private boolean clientlessMode = false;
     private HandshakeHandler handshakeHandler;
+    private volatile boolean redirecting = false;
+    private volatile int pendingLoginId = -1;
 
     public ProxyConnection(String machineId, IConnectionListener listener,
             EventLoopGroup bossGroup, EventLoopGroup workerGroup,
@@ -92,8 +95,9 @@ public class ProxyConnection implements IProxyConnection {
 
         System.out.println("Sokybot Proxy [" + machineId + "]: Connecting to game server " + host + ":" + port);
 
-        // Reset crypto for new connection
+        // Reset crypto and handshake state for new connection
         networkComponents.reset();
+        resetHandshakeHandler();
 
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(workerGroup)
@@ -259,23 +263,34 @@ public class ProxyConnection implements IProxyConnection {
     }
 
     /**
-     * Creates and returns the handshake handler for this connection.
+     * Returns the existing handshake handler, or creates a new one if none exists.
+     * The handler is kept across the multi-step handshake (Initialize → Finalize)
+     * so that cryptographic state (secrets, keys, initialized flag) is preserved.
+     * It is reset on disconnect/reconnect via {@link #resetHandshakeHandler()}.
      */
-    public HandshakeHandler createHandshakeHandler() {
-        // Always create a new handler to ensure fresh crypto state and correct channel
-        // reference
-        handshakeHandler = new HandshakeHandler(
-                networkComponents,
-                listener,
-                gameServerChannel,
-                this,
-                clientlessMode);
+    public HandshakeHandler getOrCreateHandshakeHandler() {
+        if (handshakeHandler == null) {
+            handshakeHandler = new HandshakeHandler(
+                    networkComponents,
+                    listener,
+                    gameServerChannel,
+                    this,
+                    clientlessMode);
+        }
         return handshakeHandler;
+    }
+
+    /**
+     * Clears the handshake handler so a fresh one is created on next connection.
+     */
+    public void resetHandshakeHandler() {
+        this.handshakeHandler = null;
     }
 
     public void onServerDisconnected() {
         this.serverConnected = false;
-        if (listener != null) {
+        resetHandshakeHandler();
+        if (!redirecting && listener != null) {
             listener.onDisconnected(null);
         }
     }
@@ -299,5 +314,61 @@ public class ProxyConnection implements IProxyConnection {
     @Override
     public IPacketPublisher getPacketPublisher() {
         return this.packetPublisher;
+    }
+
+    public void scheduleRedirect(String host, int port, int loginId) {
+        this.pendingLoginId = loginId;
+        this.redirecting = true;
+        this.serverConnected = false;
+
+        if (listener != null) {
+            listener.onRedirectRequired(host, port, loginId);
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                disconnectGameServer();
+                connectToServer(host, port);
+            } catch (Exception e) {
+                this.redirecting = false;
+                if (listener != null) {
+                    listener.onDisconnected(e);
+                }
+            }
+        });
+    }
+
+    public boolean hasPendingAuth() {
+        return pendingLoginId >= 0;
+    }
+
+    public int consumePendingLoginId() {
+        int id = pendingLoginId;
+        pendingLoginId = -1;
+        return id;
+    }
+
+    public void onAuthSuccess() {
+        this.redirecting = false;
+        if (listener != null) {
+            listener.onAuthenticated();
+        }
+    }
+
+    public void onAuthFailed(byte resultCode) {
+        this.redirecting = false;
+        if (listener != null) {
+            listener.onDisconnected(new RuntimeException("Agent auth failed: code " + resultCode));
+        }
+    }
+
+    private void disconnectGameServer() {
+        if (gameServerChannel != null) {
+            gameServerChannel.close().syncUninterruptibly();
+            channelGroup.remove(gameServerChannel);
+            gameServerChannel = null;
+        }
+        networkComponents.reset();
+        resetHandshakeHandler();
     }
 }

@@ -41,6 +41,11 @@ public interface IConnectionListener {
      * Corresponds to opcode 0x2001.
      */
     void onServerIdentified(String serviceName);
+
+    /**
+     * Called when agent authentication (0x6103/0xA103) succeeds.
+     */
+    void onAuthenticated();
     
     /**
      * Called when either connection is closed.

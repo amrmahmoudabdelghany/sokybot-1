@@ -9,6 +9,7 @@ export default {
         "./app/**/*.{ts,tsx}",
         "./src/**/*.{ts,tsx}",
         "../../../../sokybot-frontend-shared/src/**/*.{ts,tsx}",
+        "../../../../../scripts/pages/**/*.json",
     ],
     presets: [require('../../../../sokybot-frontend-shared/tailwind-preset.js')],
     prefix: "",

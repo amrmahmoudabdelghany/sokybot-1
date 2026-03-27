@@ -12,6 +12,7 @@ import org.sokybot.engine.core.waiting.WaitingStateManager;
 import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.gamemodel.LoginState;
 import org.sokybot.proxy.IConnectionListener;
 import org.sokybot.proxy.IProxyConnection;
 import org.osgi.framework.BundleContext;
@@ -222,13 +223,13 @@ public class EngineCore implements IEngine, IConnectionListener {
                 break;
 
             case "CONNECT":
-                // Enable connector cycle
-                enableCycle("connector-cycle");
+                enableCycle("login-cycle");
                 break;
 
             case "DISCONNECT":
-                // Disable connector cycle
-                disableCycle("connector-cycle");
+                disableCycle("login-cycle");
+                dispatcher.disconnect();
+                gameModel.getLoginState().reset();
                 break;
 
             default:
@@ -320,6 +321,16 @@ public class EngineCore implements IEngine, IConnectionListener {
     @Override
     public void onServerIdentified(String serviceName) {
         log.info("EngineCore: Server identified as {} for machine {}", serviceName, machineId);
+        if ("GatewayServer".equalsIgnoreCase(serviceName)) {
+            gameModel.getLoginState().setPhase(LoginState.Phase.GATEWAY_CONNECTED);
+        } else if ("AgentServer".equalsIgnoreCase(serviceName)) {
+            gameModel.getLoginState().setPhase(LoginState.Phase.AGENT_CONNECTED);
+        }
+    }
+
+    @Override
+    public void onAuthenticated() {
+        log.info("EngineCore: Agent authentication complete for machine {}", machineId);
     }
 
     @Override

@@ -37,6 +37,24 @@
                                 "onClick": "save",
                                 "children": "Save Settings"
                             }
+                        },
+                        {
+                            "type": "Button",
+                            "variant": "secondary",
+                            "size": "sm",
+                            "props": {
+                                "onClick": "connect",
+                                "children": "Connect"
+                            }
+                        },
+                        {
+                            "type": "Button",
+                            "variant": "outline",
+                            "size": "sm",
+                            "props": {
+                                "onClick": "disconnect",
+                                "children": "Disconnect"
+                            }
                         }
                     ]
                 }
@@ -185,12 +203,28 @@
                                                     }
                                                 },
                                                 {
+                                                    "type": "Select",
+                                                    "props": {
+                                                        "value": "${settings.targetAgent}",
+                                                        "onChange": "update",
+                                                        "name": "targetAgent",
+                                                        "children": [
+                                                            { "type": "option", "props": { "value": "", "children": "Select agent (or keep manual value)" } },
+                                                            { "type": "option", "props": { "value": "${agentOptions[0] && agentOptions[0].value || ''}", "children": "${agentOptions[0] && agentOptions[0].label || ''}" } },
+                                                            { "type": "option", "props": { "value": "${agentOptions[1] && agentOptions[1].value || ''}", "children": "${agentOptions[1] && agentOptions[1].label || ''}" } },
+                                                            { "type": "option", "props": { "value": "${agentOptions[2] && agentOptions[2].value || ''}", "children": "${agentOptions[2] && agentOptions[2].label || ''}" } },
+                                                            { "type": "option", "props": { "value": "${agentOptions[3] && agentOptions[3].value || ''}", "children": "${agentOptions[3] && agentOptions[3].label || ''}" } },
+                                                            { "type": "option", "props": { "value": "${agentOptions[4] && agentOptions[4].value || ''}", "children": "${agentOptions[4] && agentOptions[4].label || ''}" } }
+                                                        ]
+                                                    }
+                                                },
+                                                {
                                                     "type": "Input",
                                                     "props": {
                                                         "value": "${settings.targetAgent}",
                                                         "onChange": "update",
                                                         "name": "targetAgent",
-                                                        "placeholder": "Agent ID"
+                                                        "placeholder": "Manual Agent ID"
                                                     }
                                                 }
                                             ]
@@ -238,8 +272,16 @@
                                             "type": "Box",
                                             "className": "${connected ? 'w-3 h-3 rounded-full bg-green-500' : 'w-3 h-3 rounded-full bg-red-500'}"
                                         },
-                                        { "type": "Text", "variant": "small", "props": { "children": "${connected ? 'Connected' : 'Disconnected'}" } }
+                                        { "type": "Text", "variant": "small", "props": { "children": "${connected ? 'Connected' : 'Disconnected'}" } },
+                                        { "type": "Text", "variant": "small", "props": { "children": "Phase: ${loginPhase}" } }
                                     ]
+                                },
+                                {
+                                    "type": "Box",
+                                    "className": "text-xs text-muted-foreground mt-2",
+                                    "props": {
+                                        "children": "Agents discovered: ${agentList}"
+                                    }
                                 }
                             ]
                         },

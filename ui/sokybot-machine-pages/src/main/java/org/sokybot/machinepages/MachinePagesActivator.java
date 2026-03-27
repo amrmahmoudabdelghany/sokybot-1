@@ -121,24 +121,28 @@ public class MachinePagesActivator implements EventHandler {
 
     private void installMachinePages(IMachineContext ctx) {
         String machineFullName = ctx.fullName();
-        if (machineServices.containsKey(machineFullName)) {
-            return;
-        }
+        synchronized (machineServices) {
+            if (machineServices.containsKey(machineFullName)) {
+                return;
+            }
 
-        log.info("Installing Machine Pages for: {}", machineFullName);
+            log.info("Installing Machine Pages for: {}", machineFullName);
 
-        MachineServices services = new MachineServices(machineFullName, ctx);
-        machineServices.put(machineFullName, services);
+            MachineServices services = new MachineServices(machineFullName, ctx);
+            machineServices.put(machineFullName, services);
 
-        for (String pageName : pageLoader.getAvailablePages()) {
-            registerScriptedPage(services, pageName);
+            for (String pageName : pageLoader.getAvailablePages()) {
+                registerScriptedPage(services, pageName);
+            }
         }
     }
 
     private void uninstallMachinePages(String machineFullName) {
-        MachineServices services = machineServices.remove(machineFullName);
-        if (services != null) {
-            services.shutdown();
+        synchronized (machineServices) {
+            MachineServices services = machineServices.remove(machineFullName);
+            if (services != null) {
+                services.shutdown();
+            }
         }
     }
 
@@ -153,7 +157,9 @@ public class MachinePagesActivator implements EventHandler {
     private void registerScriptedPage(MachineServices services, String pageName) {
         var pageOpt = pageLoader.createPage(pageName, services.machineContext);
         if (pageOpt.isEmpty()) {
-            log.warn("Page '{}' could not be created for machine {} (script missing, failed to compile, or did not return IScriptedPage – check logs above for details)", pageName, services.machineFullName);
+            log.warn(
+                    "Page '{}' could not be created for machine {} (script missing, failed to compile, or did not return IScriptedPage – check logs above for details)",
+                    pageName, services.machineFullName);
             return;
         }
         var page = pageOpt.get();
@@ -168,10 +174,12 @@ public class MachinePagesActivator implements EventHandler {
     }
 
     private void registerEventHandler(MachineServices services, String pageName, IScriptedPage page) {
-        if (bundleContext == null || !(page instanceof EventHandler)) return;
+        if (bundleContext == null || !(page instanceof EventHandler))
+            return;
 
         String[] topics = page.getEventTopics(services.machineFullName);
-        if (topics == null || topics.length == 0) return;
+        if (topics == null || topics.length == 0)
+            return;
 
         Dictionary<String, Object> props = new Hashtable<>();
         props.put(EventConstants.EVENT_TOPIC, topics);
@@ -210,7 +218,10 @@ public class MachinePagesActivator implements EventHandler {
             }
             ServiceRegistration<EventHandler> reg = handlerRegistrations.remove(name);
             if (reg != null) {
-                try { reg.unregister(); } catch (IllegalStateException ignored) {}
+                try {
+                    reg.unregister();
+                } catch (IllegalStateException ignored) {
+                }
             }
         }
 
