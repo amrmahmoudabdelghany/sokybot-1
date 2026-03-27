@@ -15,14 +15,15 @@ import java.nio.file.Paths;
 import org.sokybot.pk2.exception.Pk2IOException;
 import org.sokybot.pk2.exception.Pk2InvalidJMXFileAttributeException;
 
-import lombok.*;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.ToString;
 
 /**
  * @author AMROO
  */
 @Getter
 @ToString
-@Builder
 public class JMXFile {
 
 	@NonNull
@@ -35,6 +36,13 @@ public class JMXFile {
 	private final int size;
 
 	private final JMXDirectory parent = null;
+
+	private JMXFile(String pkFilePath, String name, long position, int size) {
+		this.pkFilePath = pkFilePath;
+		this.name = name;
+		this.position = position;
+		this.size = size;
+	}
 
 	/**
 	 * TODO write description for this method
@@ -80,47 +88,69 @@ public class JMXFile {
 		return this.name.substring(index + 1);
 	}
 
-	static JMXFileBuilder builder() {
-		return new _Builder();
+	public static JMXFileBuilder builder() {
+		return new JMXFileBuilder();
 	}
 
+	public static class JMXFileBuilder {
 
+		private String pkFilePath;
+		private String name;
+		private long position;
+		private int size;
 
-	private static class _Builder extends JMXFileBuilder {
-
-		private Pk2InvalidJMXFileAttributeException newException(String message) {
-			return new Pk2InvalidJMXFileAttributeException(message, super.name, super.size, super.position);
+		public JMXFileBuilder pkFilePath(String pkFilePath) {
+			this.pkFilePath = pkFilePath;
+			return this;
 		}
 
-		@Override
+		public JMXFileBuilder name(String name) {
+			this.name = name;
+			return this;
+		}
+
+		public JMXFileBuilder position(long position) {
+			this.position = position;
+			return this;
+		}
+
+		public JMXFileBuilder size(int size) {
+			this.size = size;
+			return this;
+		}
+
+		private Pk2InvalidJMXFileAttributeException newException(String message) {
+			return new Pk2InvalidJMXFileAttributeException(message, name, size, position);
+		}
+
 		public JMXFile build() {
 
-			if (super.pkFilePath.isBlank())
+			if (pkFilePath == null || pkFilePath.isBlank())
 				throw newException("Invalid JMXFile Attribute (Pk2 File Path  is blank)");
 
-			if (super.name.isBlank())
+			if (name == null || name.isBlank())
 				throw newException("Invalid JMXFile Attribute (name is blank)");
 
-			if (super.size < 0)
-				throw newException("Invalid JMXFile Attribute ( size : " + super.size + " )");
+			if (size < 0)
+				throw newException("Invalid JMXFile Attribute ( size : " + size + " )");
 
-			if (super.position < 0)
-				throw newException("Invalid JMXFile Attribute ( location : " + super.position + " ) ");
+			if (position < 0)
+				throw newException("Invalid JMXFile Attribute ( location : " + position + " ) ");
 
 			try {
-				long pk2FileSize = Files.size(Paths.get(super.pkFilePath));
-				long fileUb = (super.position + super.size) - 1;
+				long pk2FileSize = Files.size(Paths.get(pkFilePath));
+				long fileUb = (position + size) - 1;
 
 				if (fileUb <= -1 || fileUb >= pk2FileSize) {
-					throw newException("Invalid JMXFile boundaries start  " + super.position + " , end "
-							+ (super.position + super.size) + "Where file size " + pk2FileSize);
+					throw newException("Invalid JMXFile boundaries start  " + position + " , end "
+							+ (position + size) + "Where file size " + pk2FileSize);
 				}
 			} catch (IOException e) {
-				throw new Pk2IOException("An exception happened while trying to determine size of" + super.pkFilePath,
-						super.pkFilePath, e);
+				throw new Pk2IOException("An exception happened while trying to determine size of" + pkFilePath,
+						pkFilePath, e);
 			}
 
-			return super.build();
+			return new JMXFile(pkFilePath, name, position, size);
 		}
 
 	}

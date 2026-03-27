@@ -105,12 +105,12 @@ public class MachineContextImpl implements IMachineContext {
                                     events.forEach(event -> {
                                         java.util.Map<String, Object> props = new java.util.HashMap<>();
                                         props.put("event", event);
-                                        // Enforce machine affiliation in event or properties?
-                                        // Event usually carries it.
+                                        props.put("machineId", machineId);
+                                        props.put("fullName", machineId);
                                         // Post to EventAdmin
-                                        // Topic convention: sokybot/game/<machineId>/<SimpleClassName>
-                                        String topic = "sokybot/game/" + machineId + "/"
-                                                + event.getClass().getSimpleName();
+                                        // Topic convention: sokybot/game/<sanitizedMachine>/<SimpleClassName>
+                                        String topic = org.sokybot.commons.osgi.OsgiEventTopics.gameTopic(machineId,
+                                                event.getClass().getSimpleName());
                                         if (log.isDebugEnabled()) {
                                             log.debug("Posting game event machine={} topic={} type={}", machineId, topic,
                                                     event.getClass().getName());

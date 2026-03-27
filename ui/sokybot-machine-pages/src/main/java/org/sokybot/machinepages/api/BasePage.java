@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sokybot.commons.osgi.OsgiEventTopics;
 import org.sokybot.runtime.IMachineContext;
 import org.sokybot.settings.api.ISettingsProvider;
 import org.sokybot.settings.api.ISettingsRegistry;
@@ -55,6 +56,14 @@ public abstract class BasePage implements IScriptedPage {
         this.title = title;
         this.icon = icon;
         this.log = LoggerFactory.getLogger(getClass());
+    }
+
+    /**
+     * Machine full names use {@code Group.Machine}; OSGi event topics must not contain {@code '.'}.
+     * Use for {@code getEventTopics} only; real ids stay in contexts and event properties.
+     */
+    protected static String osgiEventTopicSegment(String machineFullName) {
+        return OsgiEventTopics.segment(machineFullName);
     }
 
     @Override

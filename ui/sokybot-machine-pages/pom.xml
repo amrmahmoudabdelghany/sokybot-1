@@ -17,6 +17,13 @@
     <description>Machine pages (Inventory, Skills, Training, Environment, Log) using declarative UI system</description>
 
     <dependencies>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Webview Extension API -->
         <dependency>
             <groupId>org.sokybot</groupId>

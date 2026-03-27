@@ -15,11 +15,12 @@ class ConnectionPage extends BasePage implements EventHandler {
 
     @Override
     String[] getEventTopics(String machineFullName) {
-        ["sokybot/network/${machineFullName}/Connected",
-         "sokybot/network/${machineFullName}/Disconnected",
-         "sokybot/game/${machineFullName}/AgentListEvent",
-         "sokybot/game/${machineFullName}/LoginResponseEvent",
-         "sokybot/game/${machineFullName}/AuthResponseEvent"] as String[]
+        def mid = osgiEventTopicSegment(machineFullName)
+        ["sokybot/network/${mid}/Connected",
+         "sokybot/network/${mid}/Disconnected",
+         "sokybot/game/${mid}/AgentListEvent",
+         "sokybot/game/${mid}/LoginResponseEvent",
+         "sokybot/game/${mid}/AuthResponseEvent"] as String[]
     }
 
     @Override

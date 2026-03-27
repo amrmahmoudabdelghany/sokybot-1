@@ -13,8 +13,9 @@ class LogPage extends BasePage implements EventHandler {
 
     @Override
     String[] getEventTopics(String machineFullName) {
-        ["sokybot/game/${machineFullName}/*",
-         "sokybot/network/${machineFullName}/*"] as String[]
+        def mid = osgiEventTopicSegment(machineFullName)
+        ["sokybot/game/${mid}/*",
+         "sokybot/network/${mid}/*"] as String[]
     }
 
     @Override

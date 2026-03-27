@@ -27,6 +27,12 @@ class Login extends BaseActuator {
     private static final long LOGIN_RESPONSE_TIMEOUT_MS = 15000L
     private static final long AGENT_AUTH_TIMEOUT_MS = 45000L
 
+    /** OSGi Event topics reject {@code '.'} in segments (machine ids are {@code Group.Machine}). */
+    private static String osgiEventTopicSeg(String s) {
+        if (s == null || s.isEmpty()) return '_'
+        return s.replaceAll(/[^A-Za-z0-9_-]/, '_')
+    }
+
     Login() { super("login") }
 
     @Override
@@ -771,7 +777,7 @@ class Login extends BaseActuator {
             if (reason != null && !reason.isEmpty()) {
                 props.put("reason", reason)
             }
-            eventAdmin.postEvent(new Event("sokybot/network/${machineId}/EnginePhase", props))
+            eventAdmin.postEvent(new Event("sokybot/network/${osgiEventTopicSeg(machineId)}/EnginePhase", props))
         } catch (Exception ignored) {
             // Never fail cycle execution on telemetry/event updates.
         }

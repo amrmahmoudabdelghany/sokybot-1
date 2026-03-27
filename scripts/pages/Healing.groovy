@@ -10,8 +10,9 @@ class HealingPage extends BasePage implements EventHandler {
 
     @Override
     String[] getEventTopics(String machineFullName) {
-        ["sokybot/game/${machineFullName}/UpdateHP",
-         "sokybot/game/${machineFullName}/UpdateMP"] as String[]
+        def mid = osgiEventTopicSegment(machineFullName)
+        ["sokybot/game/${mid}/UpdateHP",
+         "sokybot/game/${mid}/UpdateMP"] as String[]
     }
 
     @Override

@@ -59,9 +59,17 @@ public class MachineStatusStreamHandler implements IRSocketStreamHandler, EventH
 
         if (topic != null && topic.startsWith("sokybot/game/") && topic.endsWith("/AgentListEvent")) {
             // Avoid putting the raw IGameEvent on the stream payload (JSON serialization).
-            String[] segments = topic.split("/");
-            if (segments.length >= 4) {
-                payload.put("machineId", segments[2]);
+            Object mid = event.getProperty("fullName");
+            if (mid == null) {
+                mid = event.getProperty("machineId");
+            }
+            if (mid != null) {
+                payload.put("machineId", mid);
+            } else {
+                String[] segments = topic.split("/");
+                if (segments.length >= 4) {
+                    payload.put("machineId", segments[2]);
+                }
             }
             payload.put("transition", "AgentListReceived");
             payload.put("topic", topic);

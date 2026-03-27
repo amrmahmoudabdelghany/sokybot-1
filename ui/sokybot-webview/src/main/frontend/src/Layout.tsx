@@ -126,9 +126,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             targetAgent: "",
             selectedCharacter: ""
         };
-    const showConnectCard = currentMachineStatus.loginPhase === "MISSING_GATEWAY"
+    // CONNECTING_GATEWAY is also used as a *display* phase when the transport is live but the
+    // model is still DISCONNECTED (see CharacterStateHandler). In that case `connected` is true
+    // and we must not keep showing the gateway Connect card.
+    const showConnectCard =
+        currentMachineStatus.loginPhase === "MISSING_GATEWAY"
         || currentMachineStatus.loginPhase === "DISCONNECTED"
-        || currentMachineStatus.loginPhase === "CONNECTING_GATEWAY";
+        || (currentMachineStatus.loginPhase === "CONNECTING_GATEWAY" && !currentMachineStatus.connected);
+
+    /** Login cycle uses WAITING_FOR_* while the gateway returns the agent list; MISSING_* when the user must pick. */
+    const showAgentServerCard =
+        currentMachineStatus.loginPhase === "MISSING_AGENT_SERVER"
+        || currentMachineStatus.loginPhase === "WAITING_FOR_AGENTS"
+        || currentMachineStatus.loginPhase === "WAITING_FOR_AGENTS_TIMEOUT";
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -232,10 +242,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         authenticated: statusEvent.authenticated !== undefined
                             ? Boolean(statusEvent.authenticated)
                             : Boolean(prev[selectedMachineId]?.authenticated),
-                        inGame: prev[selectedMachineId]?.inGame || false,
-                        agentOptions: prev[selectedMachineId]?.agentOptions || [],
-                        availableCharacters: prev[selectedMachineId]?.availableCharacters || [],
-                        selectedCharacter: prev[selectedMachineId]?.selectedCharacter ?? null
+                        inGame: statusEvent.inGame !== undefined
+                            ? Boolean(statusEvent.inGame)
+                            : Boolean(prev[selectedMachineId]?.inGame),
+                        agentOptions: Array.isArray(statusEvent.agentOptions)
+                            ? statusEvent.agentOptions
+                            : (prev[selectedMachineId]?.agentOptions || []),
+                        availableCharacters: Array.isArray(statusEvent.availableCharacters)
+                            ? statusEvent.availableCharacters
+                            : (prev[selectedMachineId]?.availableCharacters || []),
+                        selectedCharacter: statusEvent.selectedCharacter !== undefined && statusEvent.selectedCharacter !== null
+                            ? String(statusEvent.selectedCharacter)
+                            : (prev[selectedMachineId]?.selectedCharacter ?? null)
                     }
                 }));
                 void refreshMachineStatusSnapshot(selectedMachineId);
@@ -640,21 +658,41 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 </div>
                             )}
 
-                            {currentMachineStatus.loginPhase === "MISSING_AGENT_SERVER" && (
+                            {showAgentServerCard && (
                                 <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
                                     <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Agent Server</div>
+                                    {currentMachineStatus.loginPhase === "WAITING_FOR_AGENTS"
+                                        && currentMachineStatus.agentOptions.length === 0 && (
+                                        <p className="text-[11px] text-muted-foreground leading-snug">
+                                            Waiting for the gateway to return the agent list…
+                                        </p>
+                                    )}
+                                    {currentMachineStatus.loginPhase === "WAITING_FOR_AGENTS_TIMEOUT" && (
+                                        <p className="text-[11px] text-amber-600/90 dark:text-amber-400/90 leading-snug">
+                                            Agent list timed out. Pick an agent if the list appears, or set a manual agent on the Connection page and retry.
+                                        </p>
+                                    )}
                                     <select
                                         className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                                         value={currentOnboardingForm.targetAgent}
                                         onChange={(e) => selectedMachineId && updateOnboardingForm(selectedMachineId, { targetAgent: e.target.value })}
                                     >
-                                        <option value="">Select agent server</option>
+                                        <option value="">
+                                            {currentMachineStatus.agentOptions.length === 0
+                                                ? "Select discovered agent"
+                                                : "Select agent server"}
+                                        </option>
                                         {currentMachineStatus.agentOptions.map((option) => (
                                             <option key={option.value} value={option.value}>{option.label}</option>
                                         ))}
                                     </select>
                                     <Button
                                         className="w-full"
+                                        disabled={
+                                            !currentOnboardingForm.targetAgent
+                                            || (currentMachineStatus.loginPhase === "WAITING_FOR_AGENTS"
+                                                && currentMachineStatus.agentOptions.length === 0)
+                                        }
                                         onClick={async () => {
                                             if (!selectedMachineId || !currentOnboardingForm.targetAgent) return;
                                             await saveLoginPayload(selectedMachineId, { targetAgent: currentOnboardingForm.targetAgent }, false);

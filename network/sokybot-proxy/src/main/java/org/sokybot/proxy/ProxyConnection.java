@@ -441,6 +441,8 @@ public class ProxyConnection implements IProxyConnection {
             props.put("port", port);
         }
 
-        eventAdmin.postEvent(new Event("sokybot/network/" + machineId + "/" + transition, props));
+        eventAdmin.postEvent(new Event(
+                org.sokybot.commons.osgi.OsgiEventTopics.networkTopic(machineId, transition),
+                props));
     }
 }

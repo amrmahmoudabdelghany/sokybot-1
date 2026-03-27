@@ -8,7 +8,8 @@ class InventoryPage extends BasePage implements EventHandler {
 
     @Override
     String[] getEventTopics(String machineFullName) {
-        ["sokybot/game/${machineFullName}/InventoryUpdate"] as String[]
+        def mid = osgiEventTopicSegment(machineFullName)
+        ["sokybot/game/${mid}/InventoryUpdate"] as String[]
     }
 
     @Override

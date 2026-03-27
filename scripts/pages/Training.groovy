@@ -10,7 +10,8 @@ class TrainingPage extends BasePage implements EventHandler {
 
     @Override
     String[] getEventTopics(String machineFullName) {
-        ["sokybot/game/${machineFullName}/TrainerStuckEvent"] as String[]
+        def mid = osgiEventTopicSegment(machineFullName)
+        ["sokybot/game/${mid}/TrainerStuckEvent"] as String[]
     }
 
     @Override

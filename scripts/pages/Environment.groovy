@@ -8,8 +8,9 @@ class EnvironmentPage extends BasePage implements EventHandler {
 
     @Override
     String[] getEventTopics(String machineFullName) {
-        ["sokybot/game/${machineFullName}/EntitySpawn",
-         "sokybot/game/${machineFullName}/EntityDespawn"] as String[]
+        def mid = osgiEventTopicSegment(machineFullName)
+        ["sokybot/game/${mid}/EntitySpawn",
+         "sokybot/game/${mid}/EntityDespawn"] as String[]
     }
 
     @Override

@@ -719,6 +719,10 @@ export interface MachineStatusEvent {
     connected?: boolean;
     authenticated?: boolean;
     loginPhase?: string;
+    inGame?: boolean;
+    agentOptions?: Array<{ value: string; label: string }>;
+    availableCharacters?: string[];
+    selectedCharacter?: string | null;
     timestamp?: number;
     reason?: string;
     host?: string;

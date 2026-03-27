@@ -10,8 +10,9 @@ class SkillsPage extends BasePage implements EventHandler {
 
     @Override
     String[] getEventTopics(String machineFullName) {
-        ["sokybot/game/${machineFullName}/SkillUpdate",
-         "sokybot/game/${machineFullName}/SkillPointsUpdate"] as String[]
+        def mid = osgiEventTopicSegment(machineFullName)
+        ["sokybot/game/${mid}/SkillUpdate",
+         "sokybot/game/${mid}/SkillPointsUpdate"] as String[]
     }
 
     @Override

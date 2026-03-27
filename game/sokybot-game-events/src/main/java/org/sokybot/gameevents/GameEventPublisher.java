@@ -141,7 +141,7 @@ public class GameEventPublisher {
 
     private void publishEvent(String machineFullName, IGameEvent event) {
         String eventType = event.getClass().getSimpleName();
-        String topic = "sokybot/game/" + machineFullName + "/" + eventType;
+        String topic = org.sokybot.commons.osgi.OsgiEventTopics.gameTopic(machineFullName, eventType);
 
         Map<String, Object> properties = new HashMap<>();
         properties.put("event", event);
