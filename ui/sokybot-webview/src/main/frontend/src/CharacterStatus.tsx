@@ -3,6 +3,7 @@ import { rsocketService } from './RSocketClient';
 import type { CharacterState } from './RSocketClient';
 import type { MachineStatusEvent } from './RSocketClient';
 import { Button, cn } from '@sokybot/frontend-shared';
+import { useBotLifecycleMutation } from './query/sokybotQueries';
 
 interface CharacterStatusProps {
     machineId?: string; // Optional machine ID to filter/request
@@ -16,6 +17,7 @@ interface CharacterStatusProps {
 }
 
 export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId, onConnectionStateChange }) => {
+    const botLifecycle = useBotLifecycleMutation();
     const [state, setState] = useState<CharacterState | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -109,12 +111,10 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId, onC
     const handleToggleBot = async () => {
         if (!machineId) return;
         try {
-            if (runtimeState.isRunning) {
-                await rsocketService.stopBot(machineId);
-            } else {
-                await rsocketService.startBot(machineId);
-            }
-            // Refetch state after action
+            await botLifecycle.mutateAsync({
+                machineId,
+                running: runtimeState.isRunning,
+            });
             void fetchState();
         } catch (err) {
             console.error("Failed to toggle bot", err);

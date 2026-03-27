@@ -1,9 +1,17 @@
+import java.nio.charset.StandardCharsets
+
 import org.sokybot.gameevents.script.PacketReaderUtils
 import org.sokybot.gameevents.dto.AgentInfo
 import org.sokybot.gameevents.events.session.*
 import org.sokybot.gameevents.events.combat.AgentListEvent
 
-def parseAgentListWithLayout = { r, skipDividerAfterFarm ->
+/**
+ * Gateway 0xA101 layout differs by client flavor:
+ * - Many private / vSRO builds use UTF-16LE agent names (ushort = wchar count, see party.groovy 0x306E).
+ * - Older/iSRO-style often uses single-byte names (ushort = byte length).
+ * Try multiple combinations so LoginState receives a non-empty agent list.
+ */
+def parseAgentListWithLayout = { r, skipDividerAfterFarm, unicodeFarm, unicodeAgents ->
     def agents = []
     def count = 0
     def farmName = ""
@@ -12,7 +20,8 @@ def parseAgentListWithLayout = { r, skipDividerAfterFarm ->
     }
     r.getByte()
     short farmSize = r.getShort()
-    farmName = new String(r.getBytes(farmSize))
+    int fl = farmSize & 0xFFFF
+    farmName = unicodeFarm ? r.getUnicodeString(fl) : new String(r.getBytes(fl), StandardCharsets.UTF_8)
     if (!skipDividerAfterFarm) {
         r.getByte()
     }
@@ -20,7 +29,8 @@ def parseAgentListWithLayout = { r, skipDividerAfterFarm ->
     while (hasEntity == 0x01) {
         short agentId = r.getShort()
         short agentNameLen = r.getShort()
-        String agentName = new String(r.getBytes(agentNameLen))
+        int nl = agentNameLen & 0xFFFF
+        String agentName = unicodeAgents ? r.getUnicodeString(nl) : new String(r.getBytes(nl), StandardCharsets.UTF_8)
         short onlineCount = r.getShort()
         short capacity = r.getShort()
         byte status = r.getByte()
@@ -33,12 +43,24 @@ def parseAgentListWithLayout = { r, skipDividerAfterFarm ->
 }
 
 def parseAgentListEvent = { machine, packet ->
-    def first = parseAgentListWithLayout(packet.streamReader, false)
-    if (!first.agents.isEmpty()) {
-        return new AgentListEvent(machine, (byte) first.count, first.farmName, first.agents)
+    def skipOpts = [false, true]
+    // Prefer Unicode agent names first (typical vSRO/private gateway); then ANSI (older iSRO-style).
+    def farmOpts = [false, true]
+    def agentOpts = [true, false]
+    for (def skipDiv : skipOpts) {
+        for (def uniFarm : farmOpts) {
+            for (def uniAgent : agentOpts) {
+                try {
+                    def parsed = parseAgentListWithLayout(packet.streamReader, skipDiv, uniFarm, uniAgent)
+                    if (parsed.agents != null && !parsed.agents.isEmpty()) {
+                        return new AgentListEvent(machine, (byte) parsed.count, parsed.farmName, parsed.agents)
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+        }
     }
-    def second = parseAgentListWithLayout(packet.streamReader, true)
-    return new AgentListEvent(machine, (byte) second.count, second.farmName, second.agents)
+    return null
 }
 
 // Login request (0x6102) - client packet, may be used for logging
@@ -55,7 +77,11 @@ translator(0x6102) { machine, packet ->
 // Agent list (0xA101) — ServerOpcode.AGENT_LIST / AgentListEvent
 translator(0xA101) { machine, packet ->
     try {
-        return singleEvent(parseAgentListEvent(machine, packet))
+        def ev = parseAgentListEvent(machine, packet)
+        if (ev == null) {
+            return noEvents()
+        }
+        return singleEvent(ev)
     } catch (Exception e) { return noEvents() }
 }
 

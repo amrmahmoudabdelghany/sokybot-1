@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { format, formatDistanceToNow } from 'date-fns';
 import { cn } from '@sokybot/frontend-shared';
 
 interface LogViewerProps {
@@ -51,33 +53,23 @@ function toDate(timestamp: any): Date | null {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function formatRelative(date: Date | null): string {
-    if (!date) return '';
-    const diffMs = Date.now() - date.getTime();
-    if (diffMs < 1000) return 'just now';
-    const sec = Math.floor(diffMs / 1000);
-    if (sec < 60) return `${sec}s ago`;
-    const min = Math.floor(sec / 60);
-    if (min < 60) return `${min}m ago`;
-    const hr = Math.floor(min / 60);
-    if (hr < 24) return `${hr}h ago`;
-    return `${Math.floor(hr / 24)}d ago`;
-}
-
 function escapeRegex(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function formatTime(date: Date | null): string {
+function formatLogTime(date: Date | null): string {
     if (!date) return '—';
-    const base = date.toLocaleTimeString();
-    const ms = date.getMilliseconds().toString().padStart(3, '0');
-    return `${base}.${ms}`;
+    return format(date, 'HH:mm:ss.SSS');
+}
+
+function formatLogRelative(date: Date | null): string {
+    if (!date) return '';
+    return formatDistanceToNow(date, { addSuffix: true });
 }
 
 function formatEventLine(entry: any): string {
     const level = normalizeLevel(entry);
-    const time = formatTime(toDate(entry?.timestamp));
+    const time = formatLogTime(toDate(entry?.timestamp));
     const category = String(entry?.category || 'SYSTEM').toUpperCase();
     const source = String(entry?.source || 'unknown');
     const shortSource = source.split('.').pop() || source;
@@ -145,12 +137,6 @@ export const LogViewer: React.FC<LogViewerProps> = ({ events, className, style }
         };
     }, []);
 
-    useEffect(() => {
-        if (!paused && containerRef.current) {
-            containerRef.current.scrollTop = 0;
-        }
-    }, [frozenEvents, paused]);
-
     const baseEvents = paused ? frozenEvents : events;
     const searchedEvents = useMemo(() => {
         const query = searchQuery.trim().toLowerCase();
@@ -169,6 +155,23 @@ export const LogViewer: React.FC<LogViewerProps> = ({ events, className, style }
     const displayedEvents = useMemo(() => {
         return searchedEvents.filter(entry => enabledLevels.has(normalizeLevel(entry) as LogLevel));
     }, [searchedEvents, enabledLevels]);
+
+    const rowVirtualizer = useVirtualizer({
+        count: displayedEvents.length,
+        getScrollElement: () => containerRef.current,
+        estimateSize: () => 88,
+        overscan: 12,
+        getItemKey: (index) => {
+            const item = displayedEvents[index];
+            return String(item?.id ?? `${index}-${item?.timestamp ?? ''}`);
+        },
+    });
+
+    useEffect(() => {
+        if (!paused && displayedEvents.length > 0) {
+            rowVirtualizer.scrollToOffset(0, { align: 'start' });
+        }
+    }, [frozenEvents, paused, displayedEvents.length, rowVirtualizer]);
 
     const counts = useMemo(() => {
         const byLevel: Record<string, number> = {
@@ -242,8 +245,7 @@ export const LogViewer: React.FC<LogViewerProps> = ({ events, className, style }
     };
 
     const jumpToLatest = () => {
-        if (!containerRef.current) return;
-        containerRef.current.scrollTop = 0;
+        rowVirtualizer.scrollToOffset(0, { align: 'start' });
         setShowJumpToTop(false);
     };
 
@@ -308,8 +310,16 @@ export const LogViewer: React.FC<LogViewerProps> = ({ events, className, style }
                 )}
 
                 {displayedEvents.length > 0 && (
-                    <div>
-                        {displayedEvents.map((item, idx) => {
+                    <div
+                        style={{
+                            height: `${rowVirtualizer.getTotalSize()}px`,
+                            width: '100%',
+                            position: 'relative',
+                        }}
+                    >
+                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                            const item = displayedEvents[virtualRow.index];
+                            const idx = virtualRow.index;
                             const level = normalizeLevel(item);
                             const time = toDate(item?.timestamp);
                             const source = String(item?.source || '');
@@ -324,15 +334,24 @@ export const LogViewer: React.FC<LogViewerProps> = ({ events, className, style }
 
                             return (
                                 <div
-                                    key={entryId}
+                                    key={virtualRow.key}
+                                    data-index={virtualRow.index}
+                                    ref={rowVirtualizer.measureElement}
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: '100%',
+                                        transform: `translateY(${virtualRow.start}px)`,
+                                    }}
                                     className="border-b border-border/80 py-2.5 px-2 hover:bg-muted/40 transition-colors flex flex-col gap-1.5 rounded-sm"
                                 >
                                     <div className="items-center gap-2 flex flex-wrap">
                                         <span className="text-muted-foreground text-[11px] whitespace-nowrap tabular-nums">
-                                            {time ? time.toLocaleTimeString() : '—'}
+                                            {formatLogTime(time)}
                                         </span>
                                         <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                            {formatRelative(time)}
+                                            {formatLogRelative(time)}
                                         </span>
                                         <span className={cn('px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide uppercase', levelClasses(level))}>
                                             {level}

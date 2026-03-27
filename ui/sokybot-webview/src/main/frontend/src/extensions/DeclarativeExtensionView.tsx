@@ -1,10 +1,18 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { useMachine } from '@xstate/react';
+import type { AnyActorRef } from 'xstate';
 import { rsocketService } from '../RSocketClient';
+import { useExtensionSchemaQuery, useInvalidateSokybotQueries } from '../query/sokybotQueries';
+import { streamTransportMachine } from '../machines/streamTransport.machine';
+import { extensionPageMachine } from '../machines/extensionPage.machine';
+import { getStreamChannelVersion } from '../machines/streamChannel.machine';
 import { ComponentRenderer } from './renderer/ComponentRenderer';
 import { resolveTemplateInObject, cleanResolvedParams } from './renderer/expressionUtils';
 import type { UIComponent, StreamBindingConfig } from './ui-types';
 import { validateSchema } from './schemaValidation';
 import { applyStreamBatch, type StreamEnvelope } from './streamState';
+
+type RegistrySystem = { get: (key: never) => AnyActorRef | undefined };
 
 interface DeclarativeExtensionViewProps {
     pageId: string;
@@ -20,24 +28,46 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     machineId,
     schema: providedSchema
 }) => {
-    const [schema, setSchema] = useState<UIComponent | UIComponent[] | null>(
-        providedSchema || null
-    );
     const [data, setData] = useState<Record<string, any>>({});
-    const [loading, setLoading] = useState(!providedSchema);
-    const [schemaIssues, setSchemaIssues] = useState<string[]>([]);
+    const pageDataEpochRef = useRef('');
+    const initialQueryStateAppliedRef = useRef(false);
+
+    const { invalidateExtensionSchema } = useInvalidateSokybotQueries();
+
+    const extensionSchemaQuery = useExtensionSchemaQuery(pageId, machineId, {
+        enabled: !providedSchema && Boolean(pageId),
+    });
+
+    const resolvedSchema = (providedSchema ??
+        extensionSchemaQuery.data?.schema ??
+        null) as UIComponent | UIComponent[] | null;
+
+    const schemaIssues = useMemo(() => {
+        if (!providedSchema && extensionSchemaQuery.isError) {
+            const msg =
+                extensionSchemaQuery.error instanceof Error
+                    ? extensionSchemaQuery.error.message
+                    : 'Unknown error';
+            return [`Network error: ${msg}`];
+        }
+        if (!resolvedSchema) return [];
+        const issues = validateSchema(resolvedSchema);
+        return issues.map((i) => `${i.path}: ${i.message}`);
+    }, [
+        providedSchema,
+        resolvedSchema,
+        extensionSchemaQuery.isError,
+        extensionSchemaQuery.error,
+    ]);
+
+    const loading = Boolean(providedSchema) ? false : extensionSchemaQuery.isPending;
 
     const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
     const streamSubscriptionsRef = useRef<Map<string, any>>(new Map());
     const lastStreamParamsRef = useRef<Map<string, string>>(new Map());
     const streamBindingsRef = useRef<Map<string, StreamBindingConfig>>(new Map());
     const streamQueuesRef = useRef<Map<string, StreamEnvelope[]>>(new Map());
-    const flushIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
-    const streamVersionRef = useRef<Map<string, number>>(new Map());
-    const streamConnectLockRef = useRef<Map<string, boolean>>(new Map());
-    const streamConnectTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
     const streamLastActivityRef = useRef<Map<string, number>>(new Map());
-    const streamStatusIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
     const applyDeltaUpdate = useCallback((delta: Record<string, any>) => {
         setData(prev => ({ ...prev, ...delta }));
@@ -87,9 +117,64 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         });
     }, []);
 
-    const setTransportState = useCallback((state: 'connected' | 'disconnected') => {
+    const notifyTransport = useCallback((state: 'connected' | 'disconnected') => {
         setData(prev => ({ ...prev, transportState: state, transportUpdatedAt: Date.now() }));
     }, []);
+
+    /** Reset page data when navigating so we do not merge stale state across machines. */
+    useEffect(() => {
+        const epoch = `${pageId}\0${machineId ?? ''}`;
+        if (pageDataEpochRef.current !== epoch) {
+            pageDataEpochRef.current = epoch;
+            initialQueryStateAppliedRef.current = false;
+            if (!providedSchema) {
+                setData({});
+                void invalidateExtensionSchema(pageId, machineId);
+            }
+        }
+    }, [pageId, machineId, providedSchema, invalidateExtensionSchema]);
+
+    useEffect(() => {
+        if (providedSchema) return;
+        if (!extensionSchemaQuery.isSuccess || !extensionSchemaQuery.data) return;
+        if (initialQueryStateAppliedRef.current) return;
+        const row = extensionSchemaQuery.data;
+        const next = (row.data || row.state || {}) as Record<string, any>;
+        setData(next);
+        initialQueryStateAppliedRef.current = true;
+    }, [providedSchema, extensionSchemaQuery.isSuccess, extensionSchemaQuery.data]);
+
+    const [, transportSend] = useMachine(streamTransportMachine, {
+        input: { notify: notifyTransport },
+    });
+
+    const onStaleCheck = useCallback(() => {
+        const now = Date.now();
+        const staleAfterMs = 15000;
+        streamLastActivityRef.current.forEach((last, streamId) => {
+            if (now - last >= staleAfterMs) {
+                setStreamStatus(streamId, 'stalled', { lastActivityAt: last, staleAfterMs });
+            }
+        });
+    }, [setStreamStatus]);
+
+    const extensionPageInput = useMemo(
+        () => ({
+            pageId,
+            onExtensionDelta: applyDeltaUpdate,
+            onFlush: flushStreamQueues,
+            onStaleCheck,
+            onTransportConnect: () => transportSend({ type: 'CONNECT' }),
+            onTransportDisconnect: () => transportSend({ type: 'DISCONNECT' }),
+            onStreamStatus: (streamId: string, status: string, details?: Record<string, unknown>) =>
+                setStreamStatus(streamId, status, details as Record<string, any> | undefined),
+        }),
+        [pageId, applyDeltaUpdate, flushStreamQueues, onStaleCheck, transportSend, setStreamStatus]
+    );
+
+    const [, extensionPageSend, extensionPageActor] = useMachine(extensionPageMachine, {
+        input: extensionPageInput,
+    });
 
     // Performance: Memoize action handler
     const handleAction = useCallback(async (action: string, actionData: any) => {
@@ -202,10 +287,16 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 typeof result === 'object' &&
                 !Array.isArray(result) &&
                 result.state == null &&
-                Object.keys(result).some(key => !['success', 'error', 'delta'].includes(key));
+                Object.keys(result).some(
+                    key => !['success', 'error', 'delta', 'invalidateExtensionSchema'].includes(key)
+                );
             const state = result.state ?? (hasPlainState ? result : null);
 
             // Apply full state (for openAnalyzer ensure modal opens even if state shape differs)
+            if (result && typeof result === 'object' && result.invalidateExtensionSchema === true) {
+                void invalidateExtensionSchema(pageId, machineId);
+            }
+
             if (state != null || (action === 'openAnalyzer' && result.success !== false)) {
                 setData(prev => {
                     const merged = state != null ? { ...prev, ...state } : { ...prev };
@@ -244,110 +335,33 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             console.error(`Action ${action} failed`, err);
             throw err;
         }
-    }, [pageId, applyDeltaUpdate]);
+    }, [pageId, machineId, applyDeltaUpdate, invalidateExtensionSchema]);
 
-    // Effect 1: Fetch schema if not provided
+    // Effect: Manage subscriptions (Streams & Events)
     useEffect(() => {
-        if (!providedSchema) {
-            fetchSchema();
-        } else {
-            const issues = validateSchema(providedSchema);
-            setSchemaIssues(issues.map(i => `${i.path}: ${i.message}`));
-        }
-    }, [pageId, machineId, providedSchema]);
+        extensionPageSend({ type: 'ACTIVATE' });
 
-    // Effect 2: Manage subscriptions (Streams & Events)
-    useEffect(() => {
         // Cleanup previous subscriptions
         streamSubscriptionsRef.current.forEach(sub => sub?.unsubscribe());
         streamSubscriptionsRef.current.clear();
         lastStreamParamsRef.current.clear();
 
         // Discover streams in schema
-        discoverAndSubscribeStreams(providedSchema || schema);
-
-        // Subscribe to state change events (delta updates)
-        const subscription = rsocketService.subscribeToExtensionEvents(
-            (event) => {
-                const payload = event as any;
-                if (payload.type === `${pageId}.stateChanged` && payload.delta) {
-                    applyDeltaUpdate(payload.delta);
-                }
-            },
-            (error) => console.error("Extension event error", error)
-        );
-
-        if (flushIntervalRef.current) clearInterval(flushIntervalRef.current);
-        flushIntervalRef.current = setInterval(flushStreamQueues, 75);
-        setTransportState('connected');
-        if (streamStatusIntervalRef.current) clearInterval(streamStatusIntervalRef.current);
-        streamStatusIntervalRef.current = setInterval(() => {
-            const now = Date.now();
-            const staleAfterMs = 15000;
-            streamLastActivityRef.current.forEach((last, streamId) => {
-                if (now - last >= staleAfterMs) {
-                    setStreamStatus(streamId, 'stalled', { lastActivityAt: last, staleAfterMs });
-                }
-            });
-        }, 1000);
+        discoverAndSubscribeStreams(providedSchema || resolvedSchema);
 
         return () => {
-            subscription?.unsubscribe();
             if (updateTimeoutRef.current) {
                 clearTimeout(updateTimeoutRef.current);
             }
-            // Cleanup streams
             streamSubscriptionsRef.current.forEach(sub => sub?.unsubscribe());
             streamSubscriptionsRef.current.clear();
             lastStreamParamsRef.current.clear();
             streamBindingsRef.current.clear();
             streamQueuesRef.current.clear();
-            streamVersionRef.current.clear();
-            if (flushIntervalRef.current) clearInterval(flushIntervalRef.current);
-            if (streamStatusIntervalRef.current) clearInterval(streamStatusIntervalRef.current);
-            streamConnectTimeoutRef.current.forEach(timeout => clearTimeout(timeout));
-            streamConnectTimeoutRef.current.clear();
-            streamConnectLockRef.current.clear();
             streamLastActivityRef.current.clear();
-            setTransportState('disconnected');
+            extensionPageSend({ type: 'DEACTIVATE' });
         };
-    }, [pageId, machineId, providedSchema, schema, applyDeltaUpdate, flushStreamQueues, setStreamStatus, setTransportState]);
-
-    const fetchSchema = async () => {
-        setLoading(true);
-        console.log(`[${pageId}] Fetching schema for machine: ${machineId}`);
-        try {
-            const result = await rsocketService.request<any>('extension.schema', {
-                pageId,
-                machineId
-            });
-
-            if (result && result.schema) {
-                console.log(`[${pageId}] Schema loaded successfully`);
-                const issues = validateSchema(result.schema);
-                if (issues.length > 0) {
-                    console.warn(`[${pageId}] Schema validation issues:`, issues);
-                }
-                setSchemaIssues(issues.map(i => `${i.path}: ${i.message}`));
-                setSchema(result.schema);
-            } else {
-                console.warn(`[${pageId}] No schema returned from backend for page: ${pageId}`);
-            }
-
-            if (result && (result.data || result.state)) {
-                const newState = result.data || result.state || {};
-                console.log(`[${pageId}] Initial state loaded:`, newState);
-                setData(newState);
-            } else {
-                console.log(`[${pageId}] No initial state provided`);
-            }
-        } catch (err: any) {
-            console.error(`[${pageId}] Failed to fetch schema:`, err);
-            setSchemaIssues([`Network error: ${err.message || 'Unknown error'}`]);
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [pageId, machineId, providedSchema, resolvedSchema, extensionPageSend, extensionPageActor]);
 
     const discoverAndSubscribeStreams = (schema: any) => {
         if (!schema) return;
@@ -421,48 +435,65 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     ) => {
         const maxQueueSize = Math.max(64, Number(binding?.maxQueueSize ?? 2000));
         const key = streamId;
-        if (streamConnectLockRef.current.get(key)) {
+
+        extensionPageSend({ type: 'STREAM_CHANNEL_ENSURE', streamId: key });
+        const channelActor = (extensionPageActor.system as RegistrySystem).get(`stream-${key}` as never);
+        if (!channelActor) {
+            console.error(`[${pageId}] Missing stream channel actor for ${key}`);
+            return;
+        }
+
+        if (channelActor.getSnapshot().matches('connecting')) {
             console.warn(`[${pageId}] Stream ${key} connect ignored: already connecting`);
             return;
         }
-        streamConnectLockRef.current.set(key, true);
-        setStreamStatus(key, 'connecting');
-        const nextVersion = (streamVersionRef.current.get(key) || 0) + 1;
-        streamVersionRef.current.set(key, nextVersion);
-        const connectTimeout = setTimeout(() => {
-            if (streamConnectLockRef.current.get(key)) {
-                streamConnectLockRef.current.set(key, false);
-                setStreamStatus(key, 'timeout', { message: 'Connection attempt timed out (10s)' });
-            }
-        }, 10000);
-        streamConnectTimeoutRef.current.set(key, connectTimeout);
+
+        const reconnectTransport =
+            extensionPageActor.getSnapshot().context.transportDisconnectedByAllStreamsFail;
+        extensionPageSend({
+            type: 'STREAM_SUBSCRIBE_START',
+            streamId: key,
+            reconnectTransport,
+        });
+
+        channelActor.send({ type: 'CONNECT_ATTEMPT' });
+        const generation = getStreamChannelVersion(channelActor.getSnapshot());
 
         const subscription = rsocketService.subscribe(
             `extension.stream:${pageId}:${streamId}`,
             (streamData: any) => {
-                if (streamVersionRef.current.get(key) !== nextVersion) {
+                if (getStreamChannelVersion(channelActor.getSnapshot()) !== generation) {
                     return;
                 }
                 streamLastActivityRef.current.set(key, Date.now());
-                if (streamConnectLockRef.current.get(key)) {
-                    streamConnectLockRef.current.set(key, false);
-                    const timeout = streamConnectTimeoutRef.current.get(key);
-                    if (timeout) clearTimeout(timeout);
-                    streamConnectTimeoutRef.current.delete(key);
-                }
                 if (streamData?.type === 'STREAM_TERMINATED') {
-                    setStreamStatus(key, 'disconnected', { reason: streamData?.reason || 'terminated' });
-                    return;
-                }
-                if (streamData?.type === 'STATUS') {
-                    const status = streamData?.bindingState || (streamData?.isSubscribed ? 'running' : 'unsubscribed');
-                    setStreamStatus(key, status, {
-                        ...streamData,
-                        heartbeatAt: streamData?.timestamp || Date.now(),
+                    channelActor.send({
+                        type: 'TERMINATED',
+                        reason: streamData?.reason || 'terminated',
                     });
                     return;
                 }
-                setStreamStatus(key, 'running', { lastPacketAt: Date.now() });
+                if (streamData?.type === 'STATUS') {
+                    const status =
+                        streamData?.bindingState ||
+                        (streamData?.isSubscribed ? 'running' : 'unsubscribed');
+                    channelActor.send({
+                        type: 'STATUS',
+                        status,
+                        details: {
+                            ...streamData,
+                            timestamp: streamData?.timestamp,
+                            isSubscribed: streamData?.isSubscribed,
+                        },
+                    });
+                    return;
+                }
+                const chSnap = channelActor.getSnapshot();
+                if (chSnap.matches('connecting')) {
+                    channelActor.send({ type: 'FIRST_DATA' });
+                } else {
+                    channelActor.send({ type: 'DATA_TICK' });
+                }
                 const queue = streamQueuesRef.current.get(key) || [];
                 queue.push({ payload: streamData, binding: binding || { streamId }, streamId });
                 if (queue.length > maxQueueSize) {
@@ -471,12 +502,11 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 streamQueuesRef.current.set(key, queue);
             },
             (error) => {
-                streamConnectLockRef.current.set(key, false);
-                const timeout = streamConnectTimeoutRef.current.get(key);
-                if (timeout) clearTimeout(timeout);
-                streamConnectTimeoutRef.current.delete(key);
-                setStreamStatus(key, 'disconnected', { error: String(error?.message || error || 'stream error') });
-                setTransportState('disconnected');
+                channelActor.send({
+                    type: 'ERROR',
+                    message: String((error as Error)?.message || error || 'stream error'),
+                });
+                extensionPageSend({ type: 'STREAM_ERROR', streamId: key });
                 console.error(`Stream ${streamId} error`, error);
             },
             { params: { ...params, pageId }, initialRequestN: 64, requestN: 64, maxInFlight: maxQueueSize }
@@ -487,7 +517,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
     // Effect 3: Re-subscribe streams when their resolved parameters change
     useEffect(() => {
-        const schemaToScan = providedSchema || schema;
+        const schemaToScan = providedSchema || resolvedSchema;
         if (!schemaToScan) {
             return;
         }
@@ -540,14 +570,14 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         };
 
         visit(schemaToScan);
-    }, [data, pageId, providedSchema, schema]);
+    }, [data, pageId, providedSchema, resolvedSchema, extensionPageSend, extensionPageActor]);
 
     // Performance: Memoize rendered components
     const renderedContent = useMemo(() => {
-        if (!schema) return null;
+        if (!resolvedSchema) return null;
 
-        if (Array.isArray(schema)) {
-            return schema.map((component, idx) => (
+        if (Array.isArray(resolvedSchema)) {
+            return resolvedSchema.map((component, idx) => (
                 <ComponentRenderer
                     key={`${component.key || 'component'}-${idx}`}
                     component={component}
@@ -561,14 +591,14 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
 
         return (
             <ComponentRenderer
-                component={schema}
+                component={resolvedSchema}
                 pageId={pageId}
                 machineId={machineId}
                 context={data}
                 onAction={handleAction}
             />
         );
-    }, [schema, pageId, machineId, data, handleAction]);
+    }, [resolvedSchema, pageId, machineId, data, handleAction]);
 
     if (loading) {
         return <div className="text-center py-4">Loading...</div>;
@@ -588,7 +618,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         );
     }
 
-    if (!schema) {
+    if (!resolvedSchema) {
         return <div>No schema available for {pageId}</div>;
     }
 

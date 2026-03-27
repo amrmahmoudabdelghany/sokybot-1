@@ -243,29 +243,43 @@ public class GroupContextImpl implements IGroupContext {
     // Not exposed in public IGroupContext interface (internal implementation
     // detail)
     Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> getTranslators() {
-        if (sharedTranslators == null) {
-            synchronized (translatorsLock) {
-                if (sharedTranslators == null) {
-                    // Lazy initialization - create once per game
-                    IGameDataLookup lookup = getGameDataLookup();
-                    if (lookup != null) {
-                        org.sokybot.gameevents.events.core.ITranslatorFactory factory = getTranslatorFactory();
-                        if (factory != null) {
-                            sharedTranslators = factory.createTranslators(lookup, null);
-                            log.info("Created {} shared translators for game: {} (version: {})",
-                                    sharedTranslators.size(), groupInfo.getGamePath(), lookup.getVersion());
-                        } else {
-                            log.warn("ITranslatorFactory not available - cannot create translators");
-                            sharedTranslators = Map.of();
-                        }
+        synchronized (translatorsLock) {
+            if (sharedTranslators == null) {
+                IGameDataLookup lookup = getGameDataLookup();
+                org.sokybot.gameevents.events.core.ITranslatorFactory factory = getTranslatorFactory();
+                if (factory == null) {
+                    log.warn("ITranslatorFactory not available - cannot create translators");
+                    sharedTranslators = Map.of();
+                } else {
+                    if (lookup == null) {
+                        log.warn(
+                                "GameDataLookup not available for group {} — creating script translators only (gateway 0xA101 etc. still work once scripts are loaded)",
+                                groupInfo.getName());
+                    }
+                    java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> created = factory
+                            .createTranslators(lookup, null);
+                    if (created.isEmpty()) {
+                        log.warn(
+                                "Translator factory returned 0 translators for group {} — scripts may still be loading; call will retry later",
+                                groupInfo.getName());
+                        sharedTranslators = null;
                     } else {
-                        log.warn("GameDataLookup not available - cannot create translators");
-                        sharedTranslators = Map.of();
+                        sharedTranslators = created;
+                        log.info("Created {} shared translators for game: {} (version: {})", sharedTranslators.size(),
+                                lookup != null ? lookup.getGamePath() : groupInfo.getGamePath(),
+                                lookup != null ? Integer.toString(lookup.getVersion()) : "n/a");
                     }
                 }
             }
+            return sharedTranslators != null ? sharedTranslators : java.util.Map.of();
         }
-        return sharedTranslators;
+    }
+
+    /** Clears cached translators so the next {@link #getTranslators()} rebuilds (e.g. after scripts finish loading). */
+    void invalidateSharedTranslators() {
+        synchronized (translatorsLock) {
+            sharedTranslators = null;
+        }
     }
 
     private org.sokybot.gameevents.events.core.ITranslatorFactory getTranslatorFactory() {

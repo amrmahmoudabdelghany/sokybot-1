@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { rsocketService } from '../RSocketClient';
-import type { GroupInfo, GroupDetails } from '../RSocketClient';
+import type { GroupDetails } from '../RSocketClient';
+import { useGroupsQuery } from '../query/sokybotQueries';
 import { Button } from '@sokybot/frontend-shared';
 import { cn } from '@sokybot/frontend-shared';
 import { X, Server, Gamepad2, Settings2, User, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -13,7 +14,7 @@ interface Props {
 
 const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) => {
     const [currentStep, setCurrentStep] = useState(1);
-    const [groups, setGroups] = useState<GroupInfo[]>([]);
+    const { data: groups = [], isLoading: groupsLoading, isError: groupsError } = useGroupsQuery(isOpen);
     const [selectedGroup, setSelectedGroup] = useState('');
     const [gameData, setGameData] = useState<GroupDetails | null>(null);
     const [loading, setLoading] = useState(false);
@@ -36,22 +37,24 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
     useEffect(() => {
         if (isOpen) {
             setCurrentStep(1);
-            setLoading(true);
             setError(null);
-            // Fetch groups using new typed API
-            rsocketService.getGroups()
-                .then((groupList) => {
-                    setGroups(groupList);
-                    if (groupList.length > 0) {
-                        setSelectedGroup(groupList[0].name);
-                    } else {
-                        setSelectedGroup('');
-                    }
-                })
-                .catch(err => setError("Failed to load groups: " + err.message))
-                .finally(() => setLoading(false));
         }
     }, [isOpen]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        if (groups.length > 0) {
+            setSelectedGroup((prev) => prev || groups[0].name);
+        } else {
+            setSelectedGroup('');
+        }
+    }, [isOpen, groups]);
+
+    useEffect(() => {
+        if (isOpen && groupsError) {
+            setError('Failed to load groups');
+        }
+    }, [isOpen, groupsError]);
 
     // Fetch Game Data when Group Changes
     useEffect(() => {
@@ -148,6 +151,8 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
 
     if (!isOpen) return null;
 
+    const step1Blocked = loading || groupsLoading;
+
     const inputClass = "flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
     const labelClass = "text-xs font-medium leading-none text-foreground/80 block mb-1";
 
@@ -203,7 +208,7 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                                 <select
                                     value={selectedGroup}
                                     onChange={(e) => setSelectedGroup(e.target.value)}
-                                    disabled={loading}
+                                    disabled={step1Blocked}
                                     className={inputClass}
                                 >
                                     {groups.map(g => (
@@ -367,7 +372,7 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" onClick={onClose} disabled={loading}>Cancel</Button>
                         {currentStep === 1 ? (
-                            <Button size="sm" onClick={handleNext} disabled={!canProceedToStep2() || loading}>
+                            <Button size="sm" onClick={handleNext} disabled={!canProceedToStep2() || step1Blocked}>
                                 Next
                                 <ChevronRight className="h-4 w-4 ml-1" />
                             </Button>

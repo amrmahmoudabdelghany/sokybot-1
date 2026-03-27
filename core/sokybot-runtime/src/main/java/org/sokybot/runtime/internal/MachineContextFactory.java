@@ -38,14 +38,29 @@ class MachineContextFactory {
         // Create Proxy Connection
         org.sokybot.proxy.IProxyConnection connection = proxyFactory.createConnection(machineId);
 
-        // Create Game Model (using machine name for unique model per bot)
-        org.sokybot.gamemodel.IGameModel gameModel = gameModelFactory.create(machineInfo.getMachineName());
+        // Create Game Model (full id group.machine so events match IGameEvent#getFullName())
+        org.sokybot.gamemodel.IGameModel gameModel = gameModelFactory.create(machineId);
 
         // Get shared translators from GroupContext (per-game, memory optimized)
         // Access package-private method since MachineContextFactory is in same package
         GroupContextImpl groupContextImpl = (GroupContextImpl) groupContext;
-        java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators = groupContextImpl
-                .getTranslators();
+        java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators = java.util.Map
+                .of();
+        for (int tAttempt = 0; tAttempt < 6; tAttempt++) {
+            if (tAttempt > 0) {
+                try {
+                    Thread.sleep(250);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+                groupContextImpl.invalidateSharedTranslators();
+            }
+            sharedTranslators = groupContextImpl.getTranslators();
+            if (!sharedTranslators.isEmpty()) {
+                break;
+            }
+        }
 
         // Create per-bot ChunkedPacketManager (stateful, must be per-bot)
         org.sokybot.gameevents.ChunkedPacketManager chunkManager = new org.sokybot.gameevents.ChunkedPacketManager();

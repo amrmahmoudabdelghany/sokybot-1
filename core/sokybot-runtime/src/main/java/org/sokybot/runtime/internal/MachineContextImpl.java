@@ -2,6 +2,7 @@ package org.sokybot.runtime.internal;
 
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
+import org.sokybot.gameevents.GatewayAgentListTranslator;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 
@@ -71,64 +72,73 @@ public class MachineContextImpl implements IMachineContext {
             // Get factories from OSGi service registry
             IEngineFactory engineFactory = getService(IEngineFactory.class);
             org.osgi.service.event.EventAdmin eventAdmin = getService(org.osgi.service.event.EventAdmin.class);
+            org.sokybot.commons.event.IReactiveEventBus reactiveBus = getService(
+                    org.sokybot.commons.event.IReactiveEventBus.class);
 
             if (engineFactory == null) {
                 throw new IllegalStateException("IEngineFactory not available");
             }
 
-            // 2. Create engine instance (engine factory creates Spring context internally)
+            // Wire translators BEFORE creating the engine: createEngine may call engine.start() (e.g. resume-on-boot),
+            // which enables the login cycle immediately. If we subscribed after that, early packets (e.g. 0xA101) are
+            // dropped and LoginState never receives the agent list.
+            //
+            // If the machine was installed before script translators or game data were ready, the constructor may
+            // have captured an empty map — resolve from the group again here (with short retries).
+            java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> translatorsToWire = sharedTranslators;
+            if (translatorsToWire == null || translatorsToWire.isEmpty()) {
+                if (groupContext instanceof GroupContextImpl) {
+                    GroupContextImpl g = (GroupContextImpl) groupContext;
+                    for (int tAttempt = 0; tAttempt < 12; tAttempt++) {
+                        if (tAttempt > 0) {
+                            try {
+                                Thread.sleep(400);
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                                break;
+                            }
+                            g.invalidateSharedTranslators();
+                        }
+                        translatorsToWire = g.getTranslators();
+                        if (translatorsToWire != null && !translatorsToWire.isEmpty()) {
+                            log.info("Resolved {} packet translators for machine {} after deferred load (attempt {})",
+                                    translatorsToWire.size(), machineId, tAttempt + 1);
+                            break;
+                        }
+                    }
+                }
+            }
+            if (proxyConnection != null) {
+                org.sokybot.network.IPacketPublisher publisher = proxyConnection.getPacketPublisher();
+                if (publisher != null) {
+                    if (translatorsToWire != null && !translatorsToWire.isEmpty()) {
+                        translatorsToWire.forEach(
+                                (opcode, translator) -> wireTranslatorBridge(publisher, opcode, translator, machineId,
+                                        eventAdmin, reactiveBus));
+                        log.info("Wired {} shared translators for machine {} (using per-bot chunk manager)",
+                                translatorsToWire.size(), machineId);
+                    } else {
+                        log.warn(
+                                "No shared packet translators for machine {} — only built-in 0xA101 bridge is active (other opcodes not bridged)",
+                                machineId);
+                    }
+                    // Second subscriber for 0xA101 when the shared map uses another translator (e.g. script):
+                    // script may return no events while this parser still succeeds. If the map already exposes
+                    // GatewayAgentListTranslator.INSTANCE, one subscription is enough.
+                    if (translatorsToWire == null || translatorsToWire.get(0xA101) != GatewayAgentListTranslator.INSTANCE) {
+                        wireTranslatorBridge(publisher, 0xA101, GatewayAgentListTranslator.INSTANCE, machineId,
+                                eventAdmin, reactiveBus);
+                        log.info("Wired built-in gateway agent-list translator (0xA101) for machine {}", machineId);
+                    }
+                }
+            }
+
             engine = engineFactory.createEngine(
                     machineId,
                     proxyConnection,
                     this.gameModel,
-                    groupContext.name(), // Get group name from groupContext instead of machineInfo
+                    groupContext.name(),
                     machineInfo.getMachineName());
-
-            // 3. Wire shared translators if available (per-game, shared across bots)
-            // Each bot has its own ChunkedPacketManager (per-bot state)
-            if (sharedTranslators != null && !sharedTranslators.isEmpty() && proxyConnection != null) {
-                org.sokybot.network.IPacketPublisher publisher = proxyConnection.getPacketPublisher();
-                if (publisher != null) {
-                    sharedTranslators.forEach((opcode, translator) -> {
-                        org.sokybot.network.IPacketSubscription sub = publisher.subscribe((packet) -> {
-                            try {
-                                // Translate packet - chunk manager accessed via registry
-                                java.util.List<org.sokybot.gameevents.events.core.IGameEvent> events = translator
-                                        .translate(machineId, packet, chunkManager);
-                                if (log.isDebugEnabled() && opcode != null && opcode.intValue() == 0xA101) {
-                                    int eventCount = events != null ? events.size() : 0;
-                                    log.debug("Translator bridge machine={} opcode=0xA101 produced {} events", machineId,
-                                            eventCount);
-                                }
-
-                                if (events != null && eventAdmin != null) {
-                                    events.forEach(event -> {
-                                        java.util.Map<String, Object> props = new java.util.HashMap<>();
-                                        props.put("event", event);
-                                        props.put("machineId", machineId);
-                                        props.put("fullName", machineId);
-                                        // Post to EventAdmin
-                                        // Topic convention: sokybot/game/<sanitizedMachine>/<SimpleClassName>
-                                        String topic = org.sokybot.commons.osgi.OsgiEventTopics.gameTopic(machineId,
-                                                event.getClass().getSimpleName());
-                                        if (log.isDebugEnabled()) {
-                                            log.debug("Posting game event machine={} topic={} type={}", machineId, topic,
-                                                    event.getClass().getName());
-                                        }
-                                        eventAdmin.postEvent(new org.osgi.service.event.Event(topic, props));
-                                    });
-                                }
-                            } catch (Exception e) {
-                                log.error("Error translating packet opcode 0x{} for machine {}",
-                                        Integer.toHexString(opcode).toUpperCase(), machineId, e);
-                            }
-                        }, opcode);
-                        subscriptions.add(sub);
-                    });
-                    log.info("Wired {} shared translators for machine {} (using per-bot chunk manager)",
-                            sharedTranslators.size(), machineId);
-                }
-            }
 
             log.info("Machine context initialized: {}", machineId);
 
@@ -141,6 +151,64 @@ public class MachineContextImpl implements IMachineContext {
             MDC.remove("sokybot.log.machineName");
             MDC.remove("sokybot.log.groupName");
         }
+    }
+
+    private void wireTranslatorBridge(org.sokybot.network.IPacketPublisher publisher, Integer opcode,
+            org.sokybot.gameevents.events.core.IPacketTranslator translator, String machineId,
+            org.osgi.service.event.EventAdmin eventAdmin,
+            org.sokybot.commons.event.IReactiveEventBus reactiveBus) {
+        int op = opcode == null ? translator.getOpcode() : opcode.intValue();
+        org.sokybot.network.IPacketSubscription sub = publisher.subscribe((packet) -> {
+            try {
+                java.util.List<org.sokybot.gameevents.events.core.IGameEvent> events = translator.translate(machineId,
+                        packet, chunkManager);
+                if (log.isDebugEnabled() && op == 0xA101) {
+                    int eventCount = events != null ? events.size() : 0;
+                    log.debug("Translator bridge machine={} opcode=0xA101 translator={} produced {} events", machineId,
+                            translator.getClass().getName(), eventCount);
+                }
+                if (op == 0xA101 && (events == null || events.isEmpty())) {
+                    if (translator == GatewayAgentListTranslator.INSTANCE) {
+                        log.debug(
+                                "Built-in 0xA101 translator produced no events for machine {} (size={}); capture payload hex if this persists",
+                                machineId, packet != null ? packet.getPacketSize() : -1);
+                    } else {
+                        log.warn(
+                                "Agent list packet (0xA101) produced no events for machine {} (size={}) via {}; built-in bridge may still parse",
+                                machineId, packet != null ? packet.getPacketSize() : -1,
+                                translator.getClass().getName());
+                    }
+                }
+                if (events != null) {
+                    for (org.sokybot.gameevents.events.core.IGameEvent event : events) {
+                        if (event == null) {
+                            continue;
+                        }
+                        gameModel.dispatchGameEvent(event);
+                        java.util.Map<String, Object> props = new java.util.HashMap<>();
+                        props.put("event", event);
+                        props.put("machineId", machineId);
+                        props.put("fullName", machineId);
+                        String topic = org.sokybot.commons.osgi.OsgiEventTopics.gameTopic(machineId,
+                                event.getClass().getSimpleName());
+                        if (log.isDebugEnabled()) {
+                            log.debug("Posting game event machine={} topic={} type={}", machineId, topic,
+                                    event.getClass().getName());
+                        }
+                        if (eventAdmin != null) {
+                            eventAdmin.postEvent(new org.osgi.service.event.Event(topic, props));
+                        }
+                        if (reactiveBus != null) {
+                            reactiveBus.publish(event);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error translating packet opcode 0x{} for machine {}",
+                        Integer.toHexString(op).toUpperCase(), machineId, e);
+            }
+        }, op);
+        subscriptions.add(sub);
     }
 
     private static final int SERVICE_LOOKUP_RETRIES = 15;

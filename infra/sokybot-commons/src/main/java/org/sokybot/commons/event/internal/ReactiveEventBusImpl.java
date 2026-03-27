@@ -1,9 +1,6 @@
 package org.sokybot.commons.event.internal;
 
 import org.osgi.service.component.annotations.Component;
-import org.osgi.service.event.Event;
-import org.osgi.service.event.EventConstants;
-import org.osgi.service.event.EventHandler;
 import org.sokybot.commons.event.IReactiveEventBus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,14 +9,14 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
 
 /**
- * Implementation of IReactiveEventBus.
- * Bridges OSGi Events to Reactor Flux stream.
+ * In-process reactive event bus. Game events are delivered via {@link #publish(Object)} from the
+ * code paths that also post to Event Admin ({@code sokybot/game/...}), because many Event Admin
+ * implementations match {@code *} as a single topic segment and do not deliver
+ * {@code sokybot/game/<machine>/<EventType>} to a handler registered as
+ * {@code sokybot/game/*}.
  */
-@Component(service = { IReactiveEventBus.class, EventHandler.class }, property = {
-        EventConstants.EVENT_TOPIC + "=sokybot/game/*",
-        EventConstants.EVENT_TOPIC + "=sokybot/game/*/*"
-})
-public class ReactiveEventBusImpl implements IReactiveEventBus, EventHandler {
+@Component(service = IReactiveEventBus.class)
+public class ReactiveEventBusImpl implements IReactiveEventBus {
 
     private static final Logger log = LoggerFactory.getLogger(ReactiveEventBusImpl.class);
 
@@ -29,14 +26,6 @@ public class ReactiveEventBusImpl implements IReactiveEventBus, EventHandler {
     public ReactiveEventBusImpl() {
         this.sink = Sinks.many().multicast().onBackpressureBuffer();
         this.flux = this.sink.asFlux().publish().autoConnect();
-    }
-
-    @Override
-    public void handleEvent(Event event) {
-        Object eventObj = event.getProperty("event");
-        if (eventObj != null) {
-            publish(eventObj);
-        }
     }
 
     @Override

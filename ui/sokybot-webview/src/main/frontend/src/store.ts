@@ -1,157 +1,80 @@
 import { create } from 'zustand';
-import { rsocketService } from './RSocketClient';
-import type { MachineInfo, GroupInfo, CharacterState } from './RSocketClient';
-
-function normalizeMachines(input: MachineInfo[]): MachineInfo[] {
-    const deduped = new Map<string, MachineInfo>();
-    input.forEach((machine) => {
-        if (!machine?.machineId) return;
-        const prev = deduped.get(machine.machineId);
-        // Keep latest snapshot while preserving any known groupName when missing in the new payload.
-        deduped.set(machine.machineId, {
-            ...(prev || {}),
-            ...machine,
-            groupName: machine.groupName || prev?.groupName,
-        });
-    });
-    return Array.from(deduped.values());
-}
+import { immer } from 'zustand/middleware/immer';
+import type { CharacterState } from './RSocketClient';
 
 interface SokybotState {
-    // Machines & Groups
-    machines: MachineInfo[];
-    groups: GroupInfo[];
     selectedMachineId: string | null;
     selectedPageId: string | null;
 
-    // Character Data (Cached by machineId)
     characterStates: Record<string, CharacterState>;
 
-    // Extension Registry
     extensionRegistry: {
-        pages: Record<string, any>;
-        toolbarActions: Record<string, any>;
+        pages: Record<string, unknown>;
+        toolbarActions: Record<string, unknown>;
     };
 
-    // UI State
     isSidebarOpen: boolean;
     theme: string;
     machineTabs: Record<string, string>;
 
-    // Stats & Health
     healthStatus: string;
-    lastError: string | null;
 
-    // Actions
-    setMachines: (machines: MachineInfo[]) => void;
-    setGroups: (groups: GroupInfo[]) => void;
     setSelectedMachineId: (id: string | null) => void;
     setSelectedPageId: (id: string | null) => void;
-    setExtensionRegistry: (registry: { pages: Record<string, any>; toolbarActions: Record<string, any> }) => void;
-    addExtensionPage: (page: any) => void;
+    setExtensionRegistry: (registry: { pages: Record<string, unknown>; toolbarActions: Record<string, unknown> }) => void;
+    addExtensionPage: (page: Record<string, unknown> & { pageId: string }) => void;
     removeExtensionPage: (pageId: string) => void;
     updateCharacterState: (machineId: string, state: CharacterState) => void;
     setActiveTab: (machineId: string, tabId: string) => void;
     setHealthStatus: (status: string) => void;
-    setLastError: (error: string | null) => void;
-
-    // Async Actions
-    fetchInitialData: () => Promise<void>;
-    fetchExtensionRegistry: () => Promise<void>;
-    startBot: (machineId: string) => Promise<void>;
-    stopBot: (machineId: string) => Promise<void>;
 }
 
-export const useSokybotStore = create<SokybotState>((set) => ({
-    machines: [],
-    groups: [],
-    selectedMachineId: null,
-    selectedPageId: null,
-    extensionRegistry: { pages: {}, toolbarActions: {} },
-    characterStates: {},
-    isSidebarOpen: true,
-    theme: 'light',
-    machineTabs: {},
-    healthStatus: 'unknown',
-    lastError: null,
+export const useSokybotStore = create<SokybotState>()(
+    immer((set) => ({
+        selectedMachineId: null,
+        selectedPageId: null,
+        extensionRegistry: { pages: {}, toolbarActions: {} },
+        characterStates: {},
+        isSidebarOpen: true,
+        theme: 'light',
+        machineTabs: {},
+        healthStatus: 'unknown',
 
-    setMachines: (machines) => set({ machines: normalizeMachines(machines) }),
-    setGroups: (groups) => set({ groups }),
-    setSelectedMachineId: (id: string | null) => set({ selectedMachineId: id }),
-    setSelectedPageId: (id: string | null) => set({ selectedPageId: id }),
+        setSelectedMachineId: (id) =>
+            set((state) => {
+                state.selectedMachineId = id;
+            }),
+        setSelectedPageId: (id) =>
+            set((state) => {
+                state.selectedPageId = id;
+            }),
 
-    setExtensionRegistry: (extensionRegistry) => set({ extensionRegistry }),
+        setExtensionRegistry: (extensionRegistry) =>
+            set((state) => {
+                state.extensionRegistry = extensionRegistry;
+            }),
 
-    addExtensionPage: (page) => set((prev) => ({
-        extensionRegistry: {
-            ...prev.extensionRegistry,
-            pages: {
-                ...prev.extensionRegistry.pages,
-                [page.pageId]: page
-            }
-        }
-    })),
+        addExtensionPage: (page) =>
+            set((state) => {
+                state.extensionRegistry.pages[page.pageId] = page;
+            }),
 
-    removeExtensionPage: (pageId) => set((prev) => {
-        const pages = { ...prev.extensionRegistry.pages };
-        delete pages[pageId];
-        return {
-            extensionRegistry: {
-                ...prev.extensionRegistry,
-                pages
-            }
-        };
-    }),
+        removeExtensionPage: (pageId) =>
+            set((state) => {
+                delete state.extensionRegistry.pages[pageId];
+            }),
 
-    updateCharacterState: (machineId: string, state: CharacterState) => set((prev) => ({
-        characterStates: { ...prev.characterStates, [machineId]: state }
-    })),
-    setActiveTab: (machineId: string, tabId: string) => set((prev) => ({
-        machineTabs: { ...prev.machineTabs, [machineId]: tabId }
-    })),
-    setHealthStatus: (status: string) => set({ healthStatus: status }),
-    setLastError: (error: string | null) => set({ lastError: error }),
-
-    fetchInitialData: async () => {
-        try {
-            const [machines, groups] = await Promise.all([
-                rsocketService.getMachines(),
-                rsocketService.getGroups()
-            ]);
-            set({ machines: normalizeMachines(machines), groups });
-        } catch (err: any) {
-            set({ lastError: err.message });
-        }
-    },
-
-    fetchExtensionRegistry: async () => {
-        try {
-            const registry = await rsocketService.getExtensionRegistry();
-            set({ extensionRegistry: registry });
-        } catch (err: any) {
-            console.error("Failed to fetch extension registry", err);
-        }
-    },
-
-    startBot: async (machineId) => {
-        try {
-            await rsocketService.startBot(machineId);
-            // Optimistic update or refresh
-            const machines = await rsocketService.getMachines();
-            set({ machines: normalizeMachines(machines) });
-        } catch (err: any) {
-            set({ lastError: err.message });
-        }
-    },
-
-    stopBot: async (machineId) => {
-        try {
-            await rsocketService.stopBot(machineId);
-            // Optimistic update or refresh
-            const machines = await rsocketService.getMachines();
-            set({ machines: normalizeMachines(machines) });
-        } catch (err: any) {
-            set({ lastError: err.message });
-        }
-    }
-}));
+        updateCharacterState: (machineId, characterState) =>
+            set((state) => {
+                state.characterStates[machineId] = characterState;
+            }),
+        setActiveTab: (machineId, tabId) =>
+            set((state) => {
+                state.machineTabs[machineId] = tabId;
+            }),
+        setHealthStatus: (status) =>
+            set((state) => {
+                state.healthStatus = status;
+            }),
+    }))
+);

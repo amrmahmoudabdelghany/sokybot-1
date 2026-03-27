@@ -144,7 +144,8 @@
                             org.sokybot.gameevents.script
                         </Export-Package>
                         <Private-Package>
-                            org.sokybot.gameevents.store.internal
+                            org.sokybot.gameevents.store.internal,
+                            org.sokybot.gameevents.internal.gateway
                         </Private-Package>
                         <Import-Package>
                             org.sokybot.commons.*;version="[1.0,2)",
@@ -153,6 +154,7 @@
                             *;resolution:=optional
                         </Import-Package>
                         <Service-Component>OSGI-INF/*.xml</Service-Component>
+                        <_dsannotations>*</_dsannotations>
                     </instructions>
                 </configuration>
             </plugin>

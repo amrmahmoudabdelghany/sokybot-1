@@ -73,6 +73,10 @@ export interface UIComponent {
     className?: string;  // Tailwind classes
     style?: Record<string, any>;
     key?: string;
+    /** Declarative visibility via json-rules-engine (facts = render context). Omit to use props.hidden only. */
+    visibilityRule?: unknown;
+    /** When rules emit `disabled`, merged with props.disabled / readOnly (facts = render context). */
+    disabledRule?: unknown;
 
     // Special props for library integration
     icon?: string;  // Lucide icon name

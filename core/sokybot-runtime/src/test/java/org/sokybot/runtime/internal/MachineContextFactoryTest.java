@@ -83,7 +83,7 @@ class MachineContextFactoryTest extends RuntimeTestBase {
         
         assertNotNull(context);
         verify(proxyFactory).createConnection(anyString());
-        verify(gameModelFactory).create(eq(TEST_MACHINE_NAME));
+        verify(gameModelFactory).create(eq(TEST_GROUP_NAME + "." + TEST_MACHINE_NAME));
     }
     
     @Test

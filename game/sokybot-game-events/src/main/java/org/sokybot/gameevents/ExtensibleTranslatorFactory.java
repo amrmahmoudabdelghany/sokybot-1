@@ -70,9 +70,10 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
         
         // Collect all unique opcodes from all providers
         Set<Integer> allOpcodes = collectAllOpcodes(lookup);
-        
+        String gamePath = lookup != null ? lookup.getGamePath() : "(no game data lookup)";
+        String version = lookup != null ? Integer.toString(lookup.getVersion()) : "n/a";
         log.debug("Creating translators for game: {} (version: {}), discovered {} opcodes", 
-                 lookup.getGamePath(), lookup.getVersion(), allOpcodes.size());
+                 gamePath, version, allOpcodes.size());
         
         // Create translator for each opcode using highest priority provider
         int created = 0;
@@ -85,7 +86,7 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
         }
         
         log.info("Created {} translators for game: {} (version: {}) from {} providers", 
-                created, lookup.getGamePath(), lookup.getVersion(), providers.size());
+                created, gamePath, version, providers.size());
         
         return translators;
     }
@@ -139,7 +140,7 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
         }
         
         log.warn("No translator provider found for opcode: 0x{} (game: {})",
-                String.format("%04X", opcode), lookup.getGamePath());
+                String.format("%04X", opcode), lookup != null ? lookup.getGamePath() : "(no lookup)");
         return null;
     }
 }

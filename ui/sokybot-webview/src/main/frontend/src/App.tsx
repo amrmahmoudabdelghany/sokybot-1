@@ -6,34 +6,49 @@ import { MachineView } from './MachineView'
 import { useExtensionRegistry } from './extensions/ExtensionRegistry'
 import { ExtensionView } from './extensions/ExtensionView'
 import { ErrorBoundary } from './ErrorBoundary'
+import {
+  useMachinesQuery,
+  useGroupsQuery,
+  useExtensionRegistryQuery,
+} from './query/sokybotQueries'
+import { extensionUiEventDataSchema } from './schemas/extensionEvents'
 import './App.css'
 
 function App() {
   const {
     selectedMachineId,
     selectedPageId,
-    fetchInitialData,
-    fetchExtensionRegistry,
     addExtensionPage,
     removeExtensionPage,
-    lastError
+    setExtensionRegistry,
   } = useSokybotStore();
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const extensionRegistry = useExtensionRegistry();
+
+  const machinesQuery = useMachinesQuery(isConnected);
+  const groupsQuery = useGroupsQuery(isConnected);
+  const extensionRegistryQuery = useExtensionRegistryQuery(isConnected);
+
+  useEffect(() => {
+    if (extensionRegistryQuery.data) {
+      setExtensionRegistry(
+        extensionRegistryQuery.data as {
+          pages: Record<string, unknown>;
+          toolbarActions: Record<string, unknown>;
+        }
+      );
+    }
+  }, [extensionRegistryQuery.data, setExtensionRegistry]);
 
   const connectToBackend = async () => {
     setError(null);
     try {
       await rsocketService.connect();
       setIsConnected(true);
-      fetchInitialData();
-      fetchExtensionRegistry().then(() => {
-        console.log("Global extension registry initialized");
-      });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to connect to RSocket", err);
-      const msg = err?.message || "Connection closed";
+      const msg = err instanceof Error ? err.message : "Connection closed";
       setError(msg.includes("Connection closed") ? "Connection closed" : msg);
     }
   };
@@ -45,32 +60,43 @@ function App() {
   useEffect(() => {
     if (!isConnected) return;
 
-    // Listen for extension events
     const subscription = rsocketService.subscribeToExtensionEvents(
       (event) => {
         if (event.type === 'ui.extension' && event.data) {
-          const data = event.data;
+          const parsed = extensionUiEventDataSchema.safeParse(event.data);
+          if (!parsed.success) {
+            console.warn('Invalid extension UI event payload', parsed.error.flatten());
+            return;
+          }
+          const data = parsed.data;
           if (data.type === 'extension.page.added') {
             addExtensionPage({
-              pageId: data.pageId as string,
-              title: data.title as string,
-              iconPath: data.iconPath as string,
+              pageId: data.pageId,
+              title: data.title,
+              iconPath: data.iconPath,
               schema: data.schema,
               componentType: 'declarative',
-              props: {}
+              props: {},
             });
           } else if (data.type === 'extension.page.removed') {
-            removeExtensionPage(data.pageId as string);
+            removeExtensionPage(data.pageId);
           }
         }
       },
-      (error) => console.error("Extension event error", error)
+      (err) => console.error("Extension event error", err)
     );
 
     return () => subscription?.unsubscribe();
   }, [isConnected, addExtensionPage, removeExtensionPage]);
 
-  const displayError = error || lastError;
+  const bootstrapFailed =
+    isConnected && (machinesQuery.isError || groupsQuery.isError);
+  const bootstrapErr = machinesQuery.error ?? groupsQuery.error;
+  const queryError = bootstrapFailed
+    ? (bootstrapErr instanceof Error ? bootstrapErr.message : 'Failed to load machines or groups')
+    : null;
+
+  const displayError = error || queryError;
 
   if (displayError) {
     return (
@@ -105,7 +131,11 @@ function App() {
     }
 
     if (selectedPageId && extensionRegistry.pages[selectedPageId]) {
-      const page = extensionRegistry.pages[selectedPageId];
+      const page = extensionRegistry.pages[selectedPageId] as {
+        pageId: string;
+        componentType?: string;
+        props?: Record<string, unknown>;
+      };
       return (
         <ExtensionView
           pageId={page.pageId}
@@ -124,7 +154,7 @@ function App() {
   };
 
   return (
-    <Layout>
+    <Layout isBackendConnected={isConnected}>
       <ErrorBoundary>
         {renderMainContent()}
       </ErrorBoundary>

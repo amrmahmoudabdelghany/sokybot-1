@@ -39,11 +39,13 @@ import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.ITrainer;
 
 import org.sokybot.gameevents.dto.GamePosition;
+import org.sokybot.gameevents.events.core.IGameEvent;
 
 public class GameModelImpl implements IGameModel {
 
     private static final Logger log = LoggerFactory.getLogger(GameModelImpl.class);
 
+    /** Full machine id ({@code group.machineName}); must match {@link IGameEvent#getFullName()}. */
     private final String machineName;
     private final IReactiveEventBus eventBus;
     private final java.util.List<Disposable> subscriptions = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -66,8 +68,14 @@ public class GameModelImpl implements IGameModel {
         this.eventBus = eventBus;
     }
 
+    private boolean isForThisMachine(IGameEvent event) {
+        String fn = event.getFullName();
+        return fn != null && fn.equals(machineName);
+    }
+
     public void start() {
-        // Subscribe to events using Reactive Bus
+        // World/combat events via reactive bus (may originate from other publishers). Login/session events
+        // are applied via {@link #dispatchGameEvent(IGameEvent)} from the packet translator bridge only.
         subscriptions.add(eventBus.on(MonsterSpawnEvent.class).subscribe(this::handleMonsterSpawn));
         subscriptions.add(eventBus.on(EntityDespawnEvent.class).subscribe(this::handleDespawn));
         subscriptions.add(eventBus.on(EntityMovementEvent.class).subscribe(this::handleMovement));
@@ -77,11 +85,24 @@ public class GameModelImpl implements IGameModel {
         subscriptions.add(eventBus.on(EntityAngleUpdateEvent.class).subscribe(this::handleAngle));
         subscriptions.add(eventBus.on(SkillCastEvent.class).subscribe(this::handleSkillCast));
         subscriptions.add(eventBus.on(SkillCastErrorEvent.class).subscribe(this::handleSkillCastError));
-        subscriptions.add(eventBus.on(AgentListEvent.class).subscribe(this::handleAgentList));
-        subscriptions.add(eventBus.on(LoginResponseEvent.class).subscribe(this::handleLoginResponse));
-        subscriptions.add(eventBus.on(AuthResponseEvent.class).subscribe(this::handleAuthResponse));
-        subscriptions.add(eventBus.on(CharacterSelectionActionEvent.class).subscribe(this::handleCharacterSelection));
-        subscriptions.add(eventBus.on(CharacterLoadedEvent.class).subscribe(this::handleCharacterLoaded));
+    }
+
+    @Override
+    public void dispatchGameEvent(IGameEvent event) {
+        if (event == null || !isForThisMachine(event)) {
+            return;
+        }
+        if (event instanceof AgentListEvent) {
+            handleAgentList((AgentListEvent) event);
+        } else if (event instanceof LoginResponseEvent) {
+            handleLoginResponse((LoginResponseEvent) event);
+        } else if (event instanceof AuthResponseEvent) {
+            handleAuthResponse((AuthResponseEvent) event);
+        } else if (event instanceof CharacterSelectionActionEvent) {
+            handleCharacterSelection((CharacterSelectionActionEvent) event);
+        } else if (event instanceof CharacterLoadedEvent) {
+            handleCharacterLoaded((CharacterLoadedEvent) event);
+        }
     }
 
     public void stop() {
@@ -171,6 +192,9 @@ public class GameModelImpl implements IGameModel {
     // Note: handleEvent(Event) removed in favor of typed subscriptions
 
     private void handleMonsterSpawn(MonsterSpawnEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         MonsterData md = event.getMonster();
         Monster m = new Monster(md);
         // Initial pos calculation?
@@ -195,6 +219,9 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleHPMP(EntityHPMPUpdateEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         int id = event.getEntityId();
         if (id == trainer.getUniqueId()) {
             if (event.getNewHP() != null)
@@ -213,6 +240,9 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleSpeed(EntitySpeedUpdateEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         int id = event.getEntityId();
         Fighter f = resolveFighter(id);
         if (f != null) {
@@ -224,6 +254,9 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleAngle(EntityAngleUpdateEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         int id = event.getEntityId();
         Spawn s = resolveSpawn(id);
         if (s != null) {
@@ -233,6 +266,9 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleSkillCast(SkillCastEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         if (event.isSuccess()) {
             Integer casterId = event.getCasterId();
             Integer targetId = event.getTargetId();
@@ -247,12 +283,18 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleSkillCastError(SkillCastErrorEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         log.warn("Skill cast error detected: {}", event.getErrorType());
         trainer.setLastError(event.getErrorType());
         emitUpdate(trainer, ModelUpdateType.UPDATED);
     }
 
     private void handleAgentList(AgentListEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         loginState.setAgentList(event.getAgents());
         loginState.setPhase(LoginState.Phase.AGENTS_RECEIVED);
         int receivedCount = event.getAgents() != null ? event.getAgents().size() : 0;
@@ -261,6 +303,9 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleLoginResponse(LoginResponseEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         if (event.isSuccess()) {
             loginState.setLoginId(event.getLoginId());
             loginState.setAgentHost(event.getAgentHost());
@@ -274,6 +319,9 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleAuthResponse(AuthResponseEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         loginState.setAuthSuccess(event.isSuccess());
         if (event.isSuccess()) {
             loginState.setFailureReason(null);
@@ -285,12 +333,18 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleCharacterSelection(CharacterSelectionActionEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         if (event.getResult() == 1 && event.getCharacters() != null) {
             loginState.setAvailableCharacters(event.getCharacters());
         }
     }
 
     private void handleCharacterLoaded(CharacterLoadedEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         if (event.getCharacterName() != null && !event.getCharacterName().isBlank()) {
             loginState.setSelectedCharacterName(event.getCharacterName());
         }
@@ -312,6 +366,9 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleMovement(EntityMovementEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         int id = event.getEntityId();
         Fighter fighter = resolveFighter(id);
 
@@ -382,6 +439,9 @@ public class GameModelImpl implements IGameModel {
     }
 
     private void handleStopped(EntityStoppedEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
         int id = event.getEntityId();
         stopMovement(id);
         // Optional: snap to final pos?

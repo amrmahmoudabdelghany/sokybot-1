@@ -52,6 +52,62 @@ export function safeEval(expr: string, ctx: Record<string, any>): any {
     }
 }
 
+/** Gson-style JSON view of a Java byte[] (or similar) — not safe to pass to React as a text child. */
+function isGsonByteArrayLike(o: object): boolean {
+    return (
+        'values' in o &&
+        'empty' in o &&
+        'valueCount' in o &&
+        ('bytes' in o || 'strings' in o)
+    );
+}
+
+/**
+ * Turn backend objects into a single display string for template output and React text leaves.
+ */
+export function formatObjectForReactText(o: object): string {
+    if (o instanceof Date) return o.toISOString();
+    if (isGsonByteArrayLike(o)) {
+        const any = o as Record<string, unknown>;
+        const n =
+            typeof any.valueCount === 'number'
+                ? any.valueCount
+                : Array.isArray(any.values)
+                  ? any.values.length
+                  : 0;
+        return `[binary data, ${n} bytes]`;
+    }
+    try {
+        return JSON.stringify(o);
+    } catch {
+        return '[object]';
+    }
+}
+
+/**
+ * Values from a whole-string "${...}" template must not stay as arbitrary objects:
+ * they are used as DOM props / React children where only primitives are valid.
+ */
+function coercePureTemplateResult(raw: unknown): unknown {
+    if (raw == null) return '';
+    const t = typeof raw;
+    if (t === 'string' || t === 'number' || t === 'boolean') return raw;
+    if (raw instanceof Date) return raw.toISOString();
+    if (Array.isArray(raw)) {
+        if (raw.length === 0) return '';
+        if (raw.every((e) => e == null || ['string', 'number', 'boolean'].includes(typeof e))) {
+            return raw.map((e) => (e == null ? '' : String(e))).join(', ');
+        }
+        try {
+            return JSON.stringify(raw);
+        } catch {
+            return '';
+        }
+    }
+    if (t === 'object') return formatObjectForReactText(raw as object);
+    return String(raw);
+}
+
 /**
  * Replace all ${...} template expressions in a string using safeEval.
  * Unresolvable or undefined values use a sensible default (0 for count-like, '' otherwise).
@@ -83,7 +139,8 @@ export function resolveTemplateInObject(obj: any, ctx: Record<string, any>): any
         // Pure expression: preserve original type (array, number, boolean, object)
         const pureMatch = obj.match(/^\$\{([^}]+)\}$/);
         if (pureMatch) {
-            return safeEval(pureMatch[1].trim(), ctx) ?? '';
+            const raw = safeEval(pureMatch[1].trim(), ctx);
+            return coercePureTemplateResult(raw);
         }
         return resolveTemplate(obj, ctx);
     }

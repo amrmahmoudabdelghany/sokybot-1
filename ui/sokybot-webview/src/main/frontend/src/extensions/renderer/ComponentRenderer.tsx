@@ -8,7 +8,14 @@ import { HexViewer } from '../components/HexViewer';
 import { DiffHexViewer } from '../components/DiffHexViewer';
 import { LogViewer } from '../components/LogViewer';
 import { StreamTablePanel } from '../components/StreamTablePanel';
-import { safeEval, resolveTemplate, resolveTemplateInObject } from './expressionUtils';
+import {
+    safeEval,
+    resolveTemplate,
+    resolveTemplateInObject,
+    formatObjectForReactText,
+} from './expressionUtils';
+import { useJsonVisibilityRule } from '../../rules/useJsonVisibilityRule';
+import { useJsonDisabledRule } from '../../rules/useJsonDisabledRule';
 
 interface ComponentRendererProps {
     component: UIComponent;
@@ -28,7 +35,17 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     context = {},
     onAction
 }) => {
-    const { type, props = {}, children, style, className } = component;
+    const { type, props = {}, children, style, className, visibilityRule, disabledRule } = component;
+    const jsonVisibility = useJsonVisibilityRule(visibilityRule, context as Record<string, unknown>);
+    const jsonDisabled = useJsonDisabledRule(disabledRule, context as Record<string, unknown>);
+    const mergeDisabled = jsonDisabled === true;
+    if (jsonVisibility === 'pending') {
+        return null;
+    }
+    if (jsonVisibility === false) {
+        return null;
+    }
+
     const debounceTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
     const [localInputDraft, setLocalInputDraft] = useState<any>(undefined);
 
@@ -223,6 +240,15 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
         } else {
             resolvedProps.disabled = Boolean(d);
         }
+    }
+    if (mergeDisabled) {
+        resolvedProps.disabled = true;
+    }
+    if (mergeDisabled && isTextInputLike) {
+        const ro = resolvedProps.readOnly;
+        const roBool =
+            ro === undefined ? false : typeof ro === 'string' ? ro === 'true' || ro === '1' : Boolean(ro);
+        resolvedProps.readOnly = roBool || mergeDisabled;
     }
 
     // Dialog: coerce open to boolean; when onOpenChange is an action name, call it when dialog closes
@@ -971,6 +997,24 @@ const TableRenderer: React.FC<TableRendererProps> = ({
     );
 };
 
+/** Avoid passing plain objects into <option>, <span>, etc. as React children. */
+function coerceLeafReactChild(value: unknown): React.ReactNode {
+    if (value == null) return null;
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        return value;
+    }
+    if (React.isValidElement(value)) return value;
+    if (typeof value === 'object') {
+        if (Array.isArray(value)) {
+            return value.map((v, i) => (
+                <React.Fragment key={i}>{coerceLeafReactChild(v)}</React.Fragment>
+            ));
+        }
+        return formatObjectForReactText(value as object);
+    }
+    return String(value);
+}
+
 /**
  * Resolve props.children which may be a string, an array of UIComponent objects, or a mixed array
  */
@@ -1004,7 +1048,7 @@ function resolvePropsChildren(
                     />
                 );
             }
-            return item;
+            return coerceLeafReactChild(item);
         });
     }
     if (React.isValidElement(value)) {
@@ -1021,7 +1065,7 @@ function resolvePropsChildren(
             />
         );
     }
-    return value;
+    return coerceLeafReactChild(value);
 }
 
 /**

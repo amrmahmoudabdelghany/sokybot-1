@@ -6,6 +6,9 @@ import path from "path"
 
 // https://vite.dev/config/
 export default defineConfig({
+  optimizeDeps: {
+    include: ['json-rules-engine'],
+  },
   plugins: [
     react(),
     nodePolyfills({
@@ -26,6 +29,19 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
       "react": path.resolve(__dirname, "node_modules/react"),
       "react-dom": path.resolve(__dirname, "node_modules/react-dom"),
+      // xstate / json-rules-engine pull these shims; explicit paths for Rollup
+      "vite-plugin-node-polyfills/shims/global": path.resolve(
+        __dirname,
+        "node_modules/vite-plugin-node-polyfills/shims/global/dist/index.js"
+      ),
+      "vite-plugin-node-polyfills/shims/process": path.resolve(
+        __dirname,
+        "node_modules/vite-plugin-node-polyfills/shims/process/dist/index.js"
+      ),
+      "vite-plugin-node-polyfills/shims/buffer": path.resolve(
+        __dirname,
+        "node_modules/vite-plugin-node-polyfills/shims/buffer/dist/index.js"
+      ),
     },
   },
   server: {

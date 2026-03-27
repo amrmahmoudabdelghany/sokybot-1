@@ -3,18 +3,16 @@ package org.sokybot.gameevents;
 import org.osgi.service.component.annotations.*;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
-import org.osgi.service.event.EventConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sokybot.commons.event.IReactiveEventBus;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.events.core.IPacketTranslator;
 import org.sokybot.network.IPacketObserver;
-import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.IPacketSubscription;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.proxy.IProxyConnection;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +34,20 @@ public class GameEventPublisher {
 
     private EventAdmin eventAdmin;
 
+    private volatile IReactiveEventBus reactiveEventBus;
+
     @Reference
     protected void setEventAdmin(EventAdmin eventAdmin) {
         this.eventAdmin = eventAdmin;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    protected void bindReactiveEventBus(IReactiveEventBus bus) {
+        this.reactiveEventBus = bus;
+    }
+
+    protected void unbindReactiveEventBus(IReactiveEventBus bus) {
+        this.reactiveEventBus = null;
     }
 
     /**
@@ -153,6 +162,10 @@ public class GameEventPublisher {
 
         Event osgiEvent = new Event(topic, properties);
         eventAdmin.postEvent(osgiEvent);
+        IReactiveEventBus bus = reactiveEventBus;
+        if (bus != null) {
+            bus.publish(event);
+        }
 
         log.debug("Published event: {} from {}", eventType, machineFullName);
     }
