@@ -109,10 +109,13 @@ public class MachineControlHandler implements IRSocketHandler {
         }
 
         try {
-            ctx.getEngine().start();
+            boolean alreadyRunning = ctx.isRunning();
+            if (!alreadyRunning) {
+                ctx.getEngine().start();
+            }
             ctx.getEngine().sendEvent("CONNECT");
             Map<String, Object> result = new HashMap<>();
-            result.put("status", "started");
+            result.put("status", alreadyRunning ? "already_running" : "started");
             result.put("machineId", machineId);
             return Mono.just(RSocketResponse.success(result));
         } catch (Exception e) {
@@ -176,7 +179,7 @@ public class MachineControlHandler implements IRSocketHandler {
     }
 
     private Mono<RSocketResponse> handleList(RSocketRequest request) {
-        List<Map<String, Object>> machines = new ArrayList<>();
+        Map<String, Map<String, Object>> machineMap = new java.util.LinkedHashMap<>();
 
         if (sokybotContext != null) {
             for (IGroupContext group : sokybotContext.getGroups()) {
@@ -186,7 +189,7 @@ public class MachineControlHandler implements IRSocketHandler {
                     info.put("name", machine.getMachineName());
                     info.put("groupName", group.name());
                     info.put("isRunning", machine.isRunning());
-                    machines.add(info);
+                    machineMap.put(machine.fullName(), info);
                 }
             }
         } else if (groupContext != null) {
@@ -195,14 +198,14 @@ public class MachineControlHandler implements IRSocketHandler {
                 info.put("machineId", machine.fullName());
                 info.put("name", machine.getMachineName());
                 info.put("isRunning", machine.isRunning());
-                machines.add(info);
+                machineMap.put(machine.fullName(), info);
             }
         }
 
+        List<Map<String, Object>> machines = new ArrayList<>(machineMap.values());
         return Mono.just(RSocketResponse.success(machines));
     }
 
-    @SuppressWarnings("unchecked")
     private Mono<RSocketResponse> handleCreate(RSocketRequest request) {
         String group = request.getString("group");
         String name = request.getString("name");

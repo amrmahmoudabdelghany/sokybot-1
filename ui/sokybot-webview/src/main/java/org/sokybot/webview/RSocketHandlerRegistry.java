@@ -12,7 +12,9 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sokybot.webview.api.IRSocketHandler;
+import org.sokybot.webview.api.IRSocketFireAndForgetHandler;
 import org.sokybot.webview.api.IRSocketStreamHandler;
+import org.sokybot.webview.api.IRSocketChannelHandler;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
 
@@ -32,6 +34,8 @@ public class RSocketHandlerRegistry {
     
     private final Map<String, IRSocketHandler> handlers = new ConcurrentHashMap<>();
     private final Map<String, IRSocketStreamHandler> streamHandlers = new ConcurrentHashMap<>();
+    private final Map<String, IRSocketFireAndForgetHandler> fireAndForgetHandlers = new ConcurrentHashMap<>();
+    private final Map<String, IRSocketChannelHandler> channelHandlers = new ConcurrentHashMap<>();
     
     // ========== Request-Response Handlers ==========
     
@@ -166,6 +170,98 @@ public class RSocketHandlerRegistry {
             logger.error("Exception invoking stream handler: {}", streamName, e);
             return Flux.just(RSocketResponse.internalError(e).toMap());
         }
+    }
+
+    // ========== Fire-and-Forget Handlers ==========
+    @Reference(
+        cardinality = ReferenceCardinality.MULTIPLE,
+        policy = ReferencePolicy.DYNAMIC
+    )
+    protected void bindFireAndForgetHandler(IRSocketFireAndForgetHandler handler) {
+        String[] methods = handler.getMethods();
+        if (methods == null || methods.length == 0) {
+            logger.warn("Fire-and-forget handler {} has no methods defined, skipping", handler.getClass().getName());
+            return;
+        }
+        for (String method : methods) {
+            if (method != null && !method.isEmpty()) {
+                fireAndForgetHandlers.put(method, handler);
+                logger.info("Registered fire-and-forget handler: {} -> {}", method, handler.getClass().getSimpleName());
+            }
+        }
+    }
+
+    protected void unbindFireAndForgetHandler(IRSocketFireAndForgetHandler handler) {
+        String[] methods = handler.getMethods();
+        if (methods == null) {
+            return;
+        }
+        for (String method : methods) {
+            if (method != null) {
+                fireAndForgetHandlers.remove(method);
+                logger.info("Unregistered fire-and-forget handler: {}", method);
+            }
+        }
+    }
+
+    public Mono<Void> handleFireAndForget(RSocketRequest request) {
+        if (request == null || request.getMethod() == null) {
+            return Mono.empty();
+        }
+        IRSocketFireAndForgetHandler handler = fireAndForgetHandlers.get(request.getMethod());
+        if (handler == null) {
+            logger.debug("No fire-and-forget handler found for method: {}", request.getMethod());
+            return Mono.empty();
+        }
+        return handler.handleFireAndForget(request)
+            .onErrorResume(error -> {
+                logger.error("Error handling fire-and-forget for method: {}", request.getMethod(), error);
+                return Mono.empty();
+            });
+    }
+
+    // ========== Channel Handlers ==========
+    @Reference(
+        cardinality = ReferenceCardinality.MULTIPLE,
+        policy = ReferencePolicy.DYNAMIC
+    )
+    protected void bindChannelHandler(IRSocketChannelHandler handler) {
+        String channel = handler.getChannelName();
+        if (channel != null && !channel.isEmpty()) {
+            channelHandlers.put(channel, handler);
+            logger.info("Registered channel handler: {} -> {}", channel, handler.getClass().getSimpleName());
+        } else {
+            logger.warn("Channel handler {} has null/empty channel name, skipping", handler.getClass().getName());
+        }
+    }
+
+    protected void unbindChannelHandler(IRSocketChannelHandler handler) {
+        String channel = handler.getChannelName();
+        if (channel != null) {
+            channelHandlers.remove(channel);
+            logger.info("Unregistered channel handler: {}", channel);
+        }
+    }
+
+    public Flux<Object> handleChannel(RSocketRequest initialRequest, Flux<RSocketRequest> inbound) {
+        if (initialRequest == null || initialRequest.getMethod() == null) {
+            return Flux.just(RSocketResponse.error(
+                RSocketResponse.ErrorCode.INVALID_REQUEST,
+                "Initial channel request or method is null"
+            ).toMap());
+        }
+        IRSocketChannelHandler handler = channelHandlers.get(initialRequest.getMethod());
+        if (handler == null) {
+            logger.debug("No channel handler found for: {}", initialRequest.getMethod());
+            return Flux.just(RSocketResponse.methodNotFound(initialRequest.getMethod()).toMap());
+        }
+        return handler.handleChannel(initialRequest, inbound)
+            .onBackpressureBuffer(1024, dropped ->
+                logger.debug("Dropped channel payload due to overflow: {}", dropped))
+            .onErrorResume(error -> {
+                logger.error("Error handling channel: {}", initialRequest.getMethod(), error);
+                return Flux.just(RSocketResponse.internalError(error).toMap());
+            });
     }
     
     /**

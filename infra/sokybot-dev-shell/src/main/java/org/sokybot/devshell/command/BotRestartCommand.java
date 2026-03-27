@@ -24,6 +24,7 @@ public class BotRestartCommand extends DevCommand {
                         bot.getEngine().stop();
                     }
                     bot.getEngine().start();
+                    bot.getEngine().sendEvent("CONNECT");
                     println("Bot restarted.");
                 } catch (Exception e) {
                     error("Failed to restart bot: %s", e.getMessage());

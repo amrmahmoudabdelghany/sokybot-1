@@ -2,14 +2,20 @@ package org.sokybot.gamemodel;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 import org.sokybot.gameevents.dto.AgentInfo;
+import org.sokybot.gameevents.events.character.CharacterSelectionActionEvent;
 
 public class LoginState {
 
     public enum Phase {
         DISCONNECTED,
+        CONNECTING_GATEWAY,
         GATEWAY_CONNECTED,
+        WAITING_FOR_AGENTS,
+        WAITING_FOR_AGENTS_TIMEOUT,
         AGENTS_RECEIVED,
         LOGIN_SENT,
         LOGIN_SUCCESS,
@@ -17,6 +23,14 @@ public class LoginState {
         AGENT_CONNECTED,
         AUTH_SENT,
         AUTHENTICATED,
+        MANUAL_VERIFICATION_REQUIRED,
+        RETRY_DELAY,
+        RETRY_DISABLED,
+        RETRY_LIMIT_REACHED,
+        MISSING_GATEWAY,
+        MISSING_CREDENTIALS,
+        MISSING_AGENT_SERVER,
+        MISSING_CHARACTER_SELECTION,
         FAILED
     }
 
@@ -26,6 +40,8 @@ public class LoginState {
     private volatile int agentPort;
     private volatile boolean authSuccess;
     private volatile List<AgentInfo> agentList = Collections.emptyList();
+    private volatile List<CharacterSelectionActionEvent.CharSelectionEntry> availableCharacters = Collections.emptyList();
+    private volatile String selectedCharacterName;
     private volatile String failureReason;
 
     public synchronized void reset() {
@@ -35,6 +51,8 @@ public class LoginState {
         this.agentPort = 0;
         this.authSuccess = false;
         this.agentList = Collections.emptyList();
+        this.availableCharacters = Collections.emptyList();
+        this.selectedCharacterName = null;
         this.failureReason = null;
     }
 
@@ -84,6 +102,30 @@ public class LoginState {
 
     public void setAgentList(List<AgentInfo> agentList) {
         this.agentList = agentList == null ? Collections.emptyList() : Collections.unmodifiableList(agentList);
+    }
+
+    public List<CharacterSelectionActionEvent.CharSelectionEntry> getAvailableCharacters() {
+        return availableCharacters;
+    }
+
+    public void setAvailableCharacters(List<CharacterSelectionActionEvent.CharSelectionEntry> availableCharacters) {
+        this.availableCharacters = availableCharacters == null ? Collections.emptyList()
+                : Collections.unmodifiableList(availableCharacters);
+    }
+
+    public List<String> getAvailableCharacterNames() {
+        return availableCharacters.stream()
+                .map(CharacterSelectionActionEvent.CharSelectionEntry::getName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
+    public String getSelectedCharacterName() {
+        return selectedCharacterName;
+    }
+
+    public void setSelectedCharacterName(String selectedCharacterName) {
+        this.selectedCharacterName = selectedCharacterName;
     }
 
     public String getFailureReason() {

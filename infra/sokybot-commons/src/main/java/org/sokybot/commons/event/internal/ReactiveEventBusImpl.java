@@ -16,7 +16,8 @@ import reactor.core.publisher.Sinks;
  * Bridges OSGi Events to Reactor Flux stream.
  */
 @Component(service = { IReactiveEventBus.class, EventHandler.class }, property = {
-        EventConstants.EVENT_TOPIC + "=sokybot/game/*"
+        EventConstants.EVENT_TOPIC + "=sokybot/game/*",
+        EventConstants.EVENT_TOPIC + "=sokybot/game/*/*"
 })
 public class ReactiveEventBusImpl implements IReactiveEventBus, EventHandler {
 

@@ -50,11 +50,17 @@ public class EngineCore implements IEngine, IConnectionListener {
     // State management
     private final AtomicReference<EngineState> state = new AtomicReference<>(EngineState.STOPPED);
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
+    private final AtomicReference<DesiredMode> desiredMode = new AtomicReference<>(DesiredMode.IDLE);
 
     // Actuator management
     private final ActuatorRegistry actuatorRegistry;
     private final java.util.List<org.sokybot.engine.api.extension.IActuator> actuators;
     private final BundleContext bundleContext;
+
+    private enum DesiredMode {
+        IDLE,
+        TRAINING
+    }
 
     public EngineCore(String machineId, String groupName, String machineName,
             IProxyConnection proxyConnection, IGameModel gameModel,
@@ -142,6 +148,9 @@ public class EngineCore implements IEngine, IConnectionListener {
             // Initialize actuators
             actuatorRegistry.initializeActuators();
 
+            // Login-cycle is enabled from machine.start via EngineCore.sendEvent("CONNECT").
+            // Engines created for resume-on-boot stay idle until the user starts them from the UI.
+
             // Start parent cycle executor
             parentExecutor.start();
 
@@ -211,25 +220,32 @@ public class EngineCore implements IEngine, IConnectionListener {
         // Handle events
         switch (eventName.toUpperCase()) {
             case "START_TRAINING":
+                desiredMode.set(DesiredMode.TRAINING);
                 // Enable training cycle
                 enableCycle("training-cycle");
                 state.compareAndSet(EngineState.IDLE, EngineState.ACTIVE);
                 break;
 
             case "STOP_TRAINING":
+                desiredMode.set(DesiredMode.IDLE);
                 // Disable training cycle
                 disableCycle("training-cycle");
                 state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
                 break;
 
             case "CONNECT":
+                workflowContext.getPersistentData().put("explicitConnectRequested", true);
                 enableCycle("login-cycle");
                 break;
 
             case "DISCONNECT":
+                desiredMode.set(DesiredMode.IDLE);
+                workflowContext.getPersistentData().remove("explicitConnectRequested");
                 disableCycle("login-cycle");
+                disableCycle("training-cycle");
                 dispatcher.disconnect();
                 gameModel.getLoginState().reset();
+                state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
                 break;
 
             default:
@@ -331,6 +347,20 @@ public class EngineCore implements IEngine, IConnectionListener {
     @Override
     public void onAuthenticated() {
         log.info("EngineCore: Agent authentication complete for machine {}", machineId);
+        reconcileDesiredMode();
+    }
+
+    private void reconcileDesiredMode() {
+        DesiredMode mode = desiredMode.get();
+        if (mode == DesiredMode.TRAINING) {
+            enableCycle("training-cycle");
+            state.compareAndSet(EngineState.IDLE, EngineState.ACTIVE);
+            log.info("Reconciled desired mode after authentication: TRAINING");
+        } else {
+            disableCycle("training-cycle");
+            state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
+            log.info("Reconciled desired mode after authentication: IDLE");
+        }
     }
 
     @Override

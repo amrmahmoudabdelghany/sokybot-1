@@ -8,7 +8,6 @@ import org.sokybot.runtime.IMachineContext;
 import org.sokybot.runtime.internal.domain.MachineInfo;
 import org.sokybot.engine.IEngine;
 import org.sokybot.engine.IEngineFactory;
-import org.sokybot.proxy.IConnectionListener;
 import org.sokybot.proxy.IProxyConnection;
 import org.sokybot.proxy.IProxyConnectionFactory;
 import org.slf4j.Logger;
@@ -32,7 +31,8 @@ public class MachineContextImpl implements IMachineContext {
     private final IGroupContext groupContext;
     private final BundleContext bundleContext;
 
-    private IEngine engine;
+    private volatile IEngine engine;
+    private volatile boolean engineInitialized;
     private IProxyConnection proxyConnection;
     private org.sokybot.gamemodel.IGameModel gameModel;
     private java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators;
@@ -53,7 +53,7 @@ public class MachineContextImpl implements IMachineContext {
         this.gameModel = gameModel;
         this.sharedTranslators = sharedTranslators;
         this.chunkManager = chunkManager;
-        initializeMachineComponents();
+        log.info("Machine context created (engine will initialize lazily): {}", fullName());
     }
 
     private void initializeMachineComponents() {
@@ -95,6 +95,11 @@ public class MachineContextImpl implements IMachineContext {
                                 // Translate packet - chunk manager accessed via registry
                                 java.util.List<org.sokybot.gameevents.events.core.IGameEvent> events = translator
                                         .translate(machineId, packet, chunkManager);
+                                if (log.isDebugEnabled() && opcode != null && opcode.intValue() == 0xA101) {
+                                    int eventCount = events != null ? events.size() : 0;
+                                    log.debug("Translator bridge machine={} opcode=0xA101 produced {} events", machineId,
+                                            eventCount);
+                                }
 
                                 if (events != null && eventAdmin != null) {
                                     events.forEach(event -> {
@@ -106,6 +111,10 @@ public class MachineContextImpl implements IMachineContext {
                                         // Topic convention: sokybot/game/<machineId>/<SimpleClassName>
                                         String topic = "sokybot/game/" + machineId + "/"
                                                 + event.getClass().getSimpleName();
+                                        if (log.isDebugEnabled()) {
+                                            log.debug("Posting game event machine={} topic={} type={}", machineId, topic,
+                                                    event.getClass().getName());
+                                        }
                                         eventAdmin.postEvent(new org.osgi.service.event.Event(topic, props));
                                     });
                                 }
@@ -125,7 +134,6 @@ public class MachineContextImpl implements IMachineContext {
 
         } catch (Exception e) {
             log.error("Failed to initialize machine components for: {}", machineId, e);
-            throw new RuntimeException("Failed to initialize machine: " + machineId, e);
         } finally {
             // Clear MDC context for this thread.
             MDC.remove("sokybot.log.category");
@@ -135,8 +143,8 @@ public class MachineContextImpl implements IMachineContext {
         }
     }
 
-    private static final int SERVICE_LOOKUP_RETRIES = 5;
-    private static final long SERVICE_LOOKUP_DELAY_MS = 200;
+    private static final int SERVICE_LOOKUP_RETRIES = 15;
+    private static final long SERVICE_LOOKUP_DELAY_MS = 500;
 
     @Override
     public <T> T getService(Class<T> serviceClass) {
@@ -188,7 +196,16 @@ public class MachineContextImpl implements IMachineContext {
 
     @Override
     public IEngine getEngine() {
+        ensureEngineInitialized();
         return this.engine;
+    }
+
+    private synchronized void ensureEngineInitialized() {
+        if (engineInitialized) {
+            return;
+        }
+        engineInitialized = true;
+        initializeMachineComponents();
     }
 
     @Override

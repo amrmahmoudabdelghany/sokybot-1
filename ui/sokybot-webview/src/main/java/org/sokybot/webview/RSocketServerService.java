@@ -9,6 +9,7 @@ import io.rsocket.util.DefaultPayload;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import org.reactivestreams.Publisher;
 
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -132,7 +133,13 @@ public class RSocketServerService {
         event.put("type", eventType);
         event.put("data", data);
         event.put("timestamp", System.currentTimeMillis());
-        extensionEventSink.tryEmitNext(event);
+        extensionEventSink.emitNext(event, (signalType, emitResult) -> {
+            if (emitResult.isSuccess()) {
+                return true;
+            }
+            logger.debug("Failed to emit extension event {} due to {}", signalType, emitResult);
+            return emitResult == Sinks.EmitResult.FAIL_NON_SERIALIZED;
+        });
     }
 
     /**
@@ -187,9 +194,64 @@ public class RSocketServerService {
                         logger.debug("Received stream request: {}", requestData);
                         return handleRequestStream(requestData);
                     }
+
+                    @Override
+                    public Mono<Void> fireAndForget(Payload payload) {
+                        String requestData = payload.getDataUtf8();
+                        logger.debug("Received fire-and-forget request: {}", requestData);
+                        return handleFireAndForget(requestData);
+                    }
+
+                    @Override
+                    public Flux<Payload> requestChannel(Publisher<Payload> payloads) {
+                        logger.debug("Received request-channel request");
+                        return handleRequestChannel(payloads);
+                    }
                 });
             }
         };
+    }
+
+    private Mono<Void> handleFireAndForget(String requestData) {
+        try {
+            RSocketRequest request = parseRequest(requestData);
+            if (request == null || request.getMethod() == null) {
+                return Mono.empty();
+            }
+            return handlerRegistry.handleFireAndForget(request);
+        } catch (Exception e) {
+            logger.error("Error processing fire-and-forget request", e);
+            return Mono.empty();
+        }
+    }
+
+    private Flux<Payload> handleRequestChannel(Publisher<Payload> payloads) {
+        Flux<RSocketRequest> requests = Flux.from(payloads)
+                .map(payload -> parseRequest(payload.getDataUtf8()))
+                .filter(request -> request != null && request.getMethod() != null);
+
+        return requests.switchOnFirst((signal, flux) -> {
+            if (!signal.hasValue()) {
+                return Flux.just(toPayload(RSocketResponse.error(
+                        RSocketResponse.ErrorCode.INVALID_REQUEST,
+                        "Channel requires an initial request payload")));
+            }
+            RSocketRequest initial = signal.get();
+            return handlerRegistry.handleChannel(initial, flux.skip(1))
+                    .map(data -> {
+                        try {
+                            return DefaultPayload.create(mapper.writeValueAsString(data));
+                        } catch (JsonProcessingException e) {
+                            logger.error("Error serializing channel data", e);
+                            return DefaultPayload.create("{\"error\":\"serialization_failed\"}");
+                        }
+                    })
+                    .onBackpressureBuffer(1024, dropped -> logger.debug("Dropped channel frame due to overflow: {}", dropped))
+                    .onErrorResume(error -> {
+                        logger.error("Error handling request-channel", error);
+                        return Flux.just(toPayload(RSocketResponse.internalError(error)));
+                    });
+        });
     }
 
     private Mono<Payload> handleRequestResponse(String requestData) {

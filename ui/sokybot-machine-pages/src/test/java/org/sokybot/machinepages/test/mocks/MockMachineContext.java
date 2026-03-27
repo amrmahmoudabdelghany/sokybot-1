@@ -5,6 +5,7 @@ import java.util.Map;
 
 import org.sokybot.engine.IEngine;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.gamemodel.LoginState;
 import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.ITrainer;
 import org.sokybot.proxy.IProxyConnection;
@@ -113,6 +114,7 @@ public class MockMachineContext implements IMachineContext {
 
         private ITrainer trainer;
         private final Map<Integer, ISpawn> spawns = new HashMap<>();
+        private final LoginState loginState = new LoginState();
 
         public MockGameModel withTrainer(ITrainer trainer) {
             this.trainer = trainer;
@@ -151,6 +153,11 @@ public class MockMachineContext implements IMachineContext {
         @Override
         public ITrainer getTrainer() {
             return trainer;
+        }
+
+        @Override
+        public LoginState getLoginState() {
+            return loginState;
         }
 
         @Override

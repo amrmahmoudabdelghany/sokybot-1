@@ -3,6 +3,44 @@ import org.sokybot.gameevents.dto.AgentInfo
 import org.sokybot.gameevents.events.session.*
 import org.sokybot.gameevents.events.combat.AgentListEvent
 
+def parseAgentListWithLayout = { r, skipDividerAfterFarm ->
+    def agents = []
+    def count = 0
+    def farmName = ""
+    if (r.getByte() != 0x01) {
+        return [agents: agents, count: 0, farmName: farmName]
+    }
+    r.getByte()
+    short farmSize = r.getShort()
+    farmName = new String(r.getBytes(farmSize))
+    if (!skipDividerAfterFarm) {
+        r.getByte()
+    }
+    byte hasEntity = r.getByte()
+    while (hasEntity == 0x01) {
+        short agentId = r.getShort()
+        short agentNameLen = r.getShort()
+        String agentName = new String(r.getBytes(agentNameLen))
+        short onlineCount = r.getShort()
+        short capacity = r.getShort()
+        byte status = r.getByte()
+        r.getByte()
+        hasEntity = r.getByte()
+        agents.add(new AgentInfo(agentId, agentName, onlineCount, capacity, status))
+        count++
+    }
+    return [agents: agents, count: count, farmName: farmName]
+}
+
+def parseAgentListEvent = { machine, packet ->
+    def first = parseAgentListWithLayout(packet.streamReader, false)
+    if (!first.agents.isEmpty()) {
+        return new AgentListEvent(machine, (byte) first.count, first.farmName, first.agents)
+    }
+    def second = parseAgentListWithLayout(packet.streamReader, true)
+    return new AgentListEvent(machine, (byte) second.count, second.farmName, second.agents)
+}
+
 // Login request (0x6102) - client packet, may be used for logging
 translator(0x6102) { machine, packet ->
     try {
@@ -14,33 +52,10 @@ translator(0x6102) { machine, packet ->
     } catch (Exception e) { return noEvents() }
 }
 
-// Agent list (0xA101)
+// Agent list (0xA101) — ServerOpcode.AGENT_LIST / AgentListEvent
 translator(0xA101) { machine, packet ->
     try {
-        def r = packet.streamReader
-        def agents = []
-        def count = 0
-        def farmName = ""
-        if (r.getByte() == 0x01) {
-            r.getByte()
-            short farmSize = r.getShort()
-            farmName = new String(r.getBytes(farmSize))
-            r.getByte()
-            byte hasEntity = r.getByte()
-            while (hasEntity == 0x01) {
-                short agentId = r.getShort()
-                short agentNameLen = r.getShort()
-                String agentName = new String(r.getBytes(agentNameLen))
-                short onlineCount = r.getShort()
-                short capacity = r.getShort()
-                byte status = r.getByte()
-                r.getByte()
-                hasEntity = r.getByte()
-                agents.add(new AgentInfo(agentId, agentName, onlineCount, capacity, status))
-                count++
-            }
-        }
-        return singleEvent(new AgentListEvent(machine, (byte)count, farmName, agents))
+        return singleEvent(parseAgentListEvent(machine, packet))
     } catch (Exception e) { return noEvents() }
 }
 
@@ -60,7 +75,7 @@ translator(0xA102) { machine, packet ->
     } catch (Exception e) { return noEvents() }
 }
 
-// Auth response (0xA103)
+// Gateway auth response (0xA103) — ServerOpcode.AUTH_RESPONSE
 translator(0xA103) { machine, packet ->
     try {
         def r = packet.streamReader

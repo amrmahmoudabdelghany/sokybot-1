@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSokybotStore } from './store';
 import { useExtensionRegistry } from './extensions/ExtensionRegistry';
 import { CharacterStatus } from './CharacterStatus';
+import { rsocketService } from './RSocketClient';
 import { useTheme } from './components/theme-provider';
 import { CreateGroupDialog } from './components/CreateGroupDialog';
 import CreateMachineDialog from './components/CreateMachineDialog';
@@ -39,16 +40,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     // Helper to get machine tabs (duplicated from MachineView for now)
     const getMachineTabs = (machineId: string) => {
         const machineTabs: string[] = [];
-        const lowerMachineId = machineId.toLowerCase();
 
         Object.keys(extensionRegistry.pages || {}).forEach(pageId => {
-            const lowerPageId = pageId.toLowerCase();
             // Packet Analyzer is shown only as a modal from Packet Sniffer, not as a separate tab
-            if (lowerPageId.startsWith('packetanalyzer_')) return;
+            if (pageId.toLowerCase().startsWith('packetanalyzer_')) return;
 
             // Strict match: pageId must end with exactly _machineId
-            if (lowerPageId === lowerMachineId ||
-                lowerPageId.endsWith("_" + lowerMachineId)) {
+            if (pageId === machineId ||
+                pageId.endsWith("_" + machineId)) {
                 machineTabs.push(pageId);
             }
         });
@@ -72,6 +71,64 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const [isCreateGroupOpen, setCreateGroupOpen] = useState(false);
     const [isCreateMachineOpen, setCreateMachineOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [connectInFlightByMachine, setConnectInFlightByMachine] = useState<Record<string, boolean>>({});
+    const [machineStatusById, setMachineStatusById] = useState<Record<string, {
+        loginPhase: string;
+        connected: boolean;
+        authenticated: boolean;
+        inGame: boolean;
+        agentOptions: Array<{ value: string; label: string }>;
+        availableCharacters: string[];
+        selectedCharacter: string | null;
+    }>>({});
+    const [onboardingFormByMachine, setOnboardingFormByMachine] = useState<Record<string, {
+        targetGateway: string;
+        username: string;
+        password: string;
+        passcode: string;
+        targetAgent: string;
+        selectedCharacter: string;
+    }>>({});
+    const currentMachineStatus = selectedMachineId
+        ? (machineStatusById[selectedMachineId] || {
+            loginPhase: "DISCONNECTED",
+            connected: false,
+            authenticated: false,
+            inGame: false,
+            agentOptions: [],
+            availableCharacters: [],
+            selectedCharacter: null
+        })
+        : {
+            loginPhase: "DISCONNECTED",
+            connected: false,
+            authenticated: false,
+            inGame: false,
+            agentOptions: [],
+            availableCharacters: [],
+            selectedCharacter: null
+        };
+
+    const currentOnboardingForm = selectedMachineId
+        ? (onboardingFormByMachine[selectedMachineId] || {
+            targetGateway: "",
+            username: "",
+            password: "",
+            passcode: "",
+            targetAgent: "",
+            selectedCharacter: ""
+        })
+        : {
+            targetGateway: "",
+            username: "",
+            password: "",
+            passcode: "",
+            targetAgent: "",
+            selectedCharacter: ""
+        };
+    const showConnectCard = currentMachineStatus.loginPhase === "MISSING_GATEWAY"
+        || currentMachineStatus.loginPhase === "DISCONNECTED"
+        || currentMachineStatus.loginPhase === "CONNECTING_GATEWAY";
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -83,6 +140,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         }
     };
 
+
+    // Normalize machines once so rendering stays stable even if backend sends duplicate rows.
+    const uniqueMachines = React.useMemo(() => {
+        const byId = new Map<string, typeof machines[number]>();
+        machines.forEach((machine) => {
+            if (!machine?.machineId) return;
+            const existing = byId.get(machine.machineId);
+            byId.set(machine.machineId, {
+                ...(existing || {}),
+                ...machine,
+                groupName: machine.groupName || existing?.groupName
+            });
+        });
+        return Array.from(byId.values());
+    }, [machines]);
 
     // Get group names for display
     const groupNames = groups.map(g => g.name);
@@ -100,6 +172,127 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
 
     const hasSystemLog = !!extensionRegistry.pages?.['SystemLog'];
+
+    const parseMachineParts = React.useCallback((machineId: string) => {
+        const parts = machineId.split('.', 2);
+        if (parts.length < 2) return null;
+        return { group: parts[0], name: parts[1] };
+    }, []);
+
+    const refreshMachineStatusSnapshot = React.useCallback(async (machineId: string) => {
+        try {
+            const data = await rsocketService.getCharacterState(machineId);
+            setMachineStatusById((prev) => ({
+                ...prev,
+                [machineId]: {
+                    loginPhase: data?.loginPhase || prev[machineId]?.loginPhase || "DISCONNECTED",
+                    connected: Boolean(data?.connected),
+                    authenticated: Boolean(data?.authenticated),
+                    inGame: Boolean(data?.inGame),
+                    agentOptions: Array.isArray(data?.agentOptions) ? data.agentOptions : (prev[machineId]?.agentOptions || []),
+                    availableCharacters: Array.isArray(data?.availableCharacters) ? data.availableCharacters : (prev[machineId]?.availableCharacters || []),
+                    selectedCharacter: data?.selectedCharacter ?? prev[machineId]?.selectedCharacter ?? null
+                }
+            }));
+            const saved = data?.savedLogin;
+            const savedGateway = saved && typeof saved.targetGateway === "string" ? saved.targetGateway : "";
+            const savedAgent = saved && typeof saved.targetAgent === "string" ? saved.targetAgent : "";
+            setOnboardingFormByMachine((prev) => ({
+                ...prev,
+                [machineId]: {
+                    targetGateway: prev[machineId]?.targetGateway || savedGateway,
+                    username: prev[machineId]?.username || "",
+                    password: prev[machineId]?.password || "",
+                    passcode: prev[machineId]?.passcode || "",
+                    targetAgent: prev[machineId]?.targetAgent || savedAgent || String(data?.agentOptions?.[0]?.value || ""),
+                    selectedCharacter: prev[machineId]?.selectedCharacter || String(data?.selectedCharacter || data?.availableCharacters?.[0] || "")
+                }
+            }));
+        } catch (err) {
+            console.error("Failed to refresh machine status snapshot", err);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        if (!selectedMachineId) return;
+        void refreshMachineStatusSnapshot(selectedMachineId);
+        const sub = rsocketService.subscribeToMachineStatus(
+            selectedMachineId,
+            (statusEvent) => {
+                if (!statusEvent || statusEvent.machineId !== selectedMachineId) return;
+                setMachineStatusById((prev) => ({
+                    ...prev,
+                    [selectedMachineId]: {
+                        loginPhase: statusEvent.loginPhase !== undefined && statusEvent.loginPhase !== ""
+                            ? statusEvent.loginPhase
+                            : (prev[selectedMachineId]?.loginPhase || "DISCONNECTED"),
+                        connected: statusEvent.connected !== undefined
+                            ? Boolean(statusEvent.connected)
+                            : Boolean(prev[selectedMachineId]?.connected),
+                        authenticated: statusEvent.authenticated !== undefined
+                            ? Boolean(statusEvent.authenticated)
+                            : Boolean(prev[selectedMachineId]?.authenticated),
+                        inGame: prev[selectedMachineId]?.inGame || false,
+                        agentOptions: prev[selectedMachineId]?.agentOptions || [],
+                        availableCharacters: prev[selectedMachineId]?.availableCharacters || [],
+                        selectedCharacter: prev[selectedMachineId]?.selectedCharacter ?? null
+                    }
+                }));
+                void refreshMachineStatusSnapshot(selectedMachineId);
+            },
+            (err) => console.error("Layout machine status stream error", err)
+        );
+        const intervalId = window.setInterval(() => {
+            void refreshMachineStatusSnapshot(selectedMachineId);
+        }, 4000);
+        return () => {
+            window.clearInterval(intervalId);
+            if (sub && typeof sub.unsubscribe === 'function') {
+                sub.unsubscribe();
+            }
+        };
+    }, [selectedMachineId, refreshMachineStatusSnapshot]);
+
+    const updateOnboardingForm = (machineId: string, patch: Partial<{
+        targetGateway: string;
+        username: string;
+        password: string;
+        passcode: string;
+        targetAgent: string;
+        selectedCharacter: string;
+    }>) => {
+        setOnboardingFormByMachine((prev) => ({
+            ...prev,
+            [machineId]: {
+                targetGateway: prev[machineId]?.targetGateway || "",
+                username: prev[machineId]?.username || "",
+                password: prev[machineId]?.password || "",
+                passcode: prev[machineId]?.passcode || "",
+                targetAgent: prev[machineId]?.targetAgent || "",
+                selectedCharacter: prev[machineId]?.selectedCharacter || "",
+                ...patch
+            }
+        }));
+    };
+
+    const saveLoginPayload = async (machineId: string, payload: Record<string, unknown>, startAfterSave?: boolean) => {
+        const parts = parseMachineParts(machineId);
+        if (!parts) return;
+        if (startAfterSave) {
+            setConnectInFlightByMachine((prev) => ({ ...prev, [machineId]: true }));
+        }
+        try {
+            await rsocketService.initializeMachine(parts.group, parts.name, "login", payload);
+            if (startAfterSave) {
+                await rsocketService.startBot(machineId);
+            }
+            await refreshMachineStatusSnapshot(machineId);
+        } finally {
+            if (startAfterSave) {
+                setConnectInFlightByMachine((prev) => ({ ...prev, [machineId]: false }));
+            }
+        }
+    };
 
     return (
         <div className="flex h-screen bg-background text-foreground font-sans transition-colors duration-300 overflow-hidden">
@@ -126,8 +319,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-6 scrollbar-thin scrollbar-thumb-border/40 scrollbar-track-transparent">
                     {groupNames.map(group => {
-                        const groupMachines = machines.filter(m =>
-                            m.groupName === group || getMachineGroup(m.machineId) === group
+                        const groupMachines = uniqueMachines.filter(m =>
+                            (m.groupName || getMachineGroup(m.machineId)) === group
                         );
                         const groupLogPageId = `GroupLog_${group}`;
                         const hasGroupLog = !!extensionRegistry.pages?.[groupLogPageId];
@@ -219,10 +412,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     })}
 
                     {/* Orphaned machines or if no groups defined yet (legacy fallback) */}
-                    {groupNames.length === 0 && machines.length > 0 && (
+                    {groupNames.length === 0 && uniqueMachines.length > 0 && (
                         <div className="space-y-1">
                             <div className="px-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2">Default</div>
-                            {machines.map(m => (
+                            {uniqueMachines.map(m => (
                                 <div key={m.machineId} className="space-y-1">
                                     <Button
                                         variant={selectedMachineId === m.machineId ? "secondary" : "ghost"}
@@ -282,14 +475,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         </div>
                     )}
 
-                    {groupNames.length === 0 && machines.length === 0 && (
+                    {groupNames.length === 0 && uniqueMachines.length === 0 && (
                         <div className="text-muted-foreground text-xs italic p-8 text-center border-2 border-dashed border-border/30 rounded-lg mx-2 bg-secondary/10">
                             No groups or bots found.<br />Create a group to start.
                         </div>
                     )}
                 </div>
                 <div className="p-4 border-t border-border/40 text-[10px] font-medium text-muted-foreground/60 flex justify-between items-center bg-card/30">
-                    <span>{machines.length} Total Bots</span>
+                    <span>{uniqueMachines.length} Total Bots</span>
                     <div className="flex items-center gap-2">
                         {hasSystemLog && (
                             <Button
@@ -384,14 +577,167 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {/* Right Sidebar (Dashboard) */}
             {selectedMachineId && (
                 <div className="w-80 border-l border-border/40 bg-card/80 backdrop-blur-md flex flex-col transition-all duration-300 z-20 shadow-[-4px_0_20px_rgba(0,0,0,0.02)]">
-                    <div className="h-16 px-4 flex items-center border-b border-border/40">
-                        <div className="flex items-center gap-2 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                            <Activity className="h-4 w-4 text-primary" />
-                            Live Dashboard
+                    <div className="h-20 px-4 py-2 border-b border-border/40 bg-card/60">
+                        <div className="w-full h-full flex flex-col justify-between">
+                            <div className="w-full flex items-center justify-between text-[10px]">
+                                <span className="font-bold uppercase tracking-widest text-muted-foreground">Status</span>
+                                <span className="font-mono text-foreground/90">{currentMachineStatus.loginPhase}</span>
+                            </div>
+                            <div className="w-full grid grid-cols-2 gap-2">
+                                <span className={cn(
+                                    "inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold border",
+                                    currentMachineStatus.connected
+                                        ? "bg-emerald-600/15 text-emerald-400 border-emerald-500/30"
+                                        : "bg-secondary/70 text-secondary-foreground border-border"
+                                )}>
+                                    <span className={cn(
+                                        "h-1.5 w-1.5 rounded-full",
+                                        currentMachineStatus.connected ? "bg-emerald-400" : "bg-muted-foreground/60"
+                                    )} />
+                                    <span>Connection</span>
+                                    <span className="font-mono">{currentMachineStatus.connected ? "ON" : "OFF"}</span>
+                                </span>
+                                <span className={cn(
+                                    "inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold border",
+                                    currentMachineStatus.authenticated
+                                        ? "bg-primary/15 text-primary border-primary/30"
+                                        : "bg-secondary/70 text-secondary-foreground border-border"
+                                )}>
+                                    <span className={cn(
+                                        "h-1.5 w-1.5 rounded-full",
+                                        currentMachineStatus.authenticated ? "bg-primary" : "bg-muted-foreground/60"
+                                    )} />
+                                    <span>Auth</span>
+                                    <span className="font-mono">{currentMachineStatus.authenticated ? "OK" : "WAIT"}</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4">
-                        <CharacterStatus machineId={selectedMachineId} />
+                        <div className="space-y-4">
+                            {showConnectCard && (
+                                <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
+                                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Connect</div>
+                                    <input
+                                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                        placeholder="Target Gateway (IP or host)"
+                                        value={currentOnboardingForm.targetGateway}
+                                        onChange={(e) => selectedMachineId && updateOnboardingForm(selectedMachineId, { targetGateway: e.target.value })}
+                                    />
+                                    <Button
+                                        className="w-full"
+                                        disabled={Boolean(selectedMachineId && connectInFlightByMachine[selectedMachineId])}
+                                        onClick={async () => {
+                                            if (!selectedMachineId || !currentOnboardingForm.targetGateway.trim()) return;
+                                            await saveLoginPayload(selectedMachineId, {
+                                                targetGateway: currentOnboardingForm.targetGateway.trim(),
+                                                autoLogin: true
+                                            }, true);
+                                        }}
+                                    >
+                                        {selectedMachineId && connectInFlightByMachine[selectedMachineId] ? "Connecting..." : "Connect"}
+                                    </Button>
+                                </div>
+                            )}
+
+                            {currentMachineStatus.loginPhase === "MISSING_AGENT_SERVER" && (
+                                <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
+                                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Agent Server</div>
+                                    <select
+                                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                        value={currentOnboardingForm.targetAgent}
+                                        onChange={(e) => selectedMachineId && updateOnboardingForm(selectedMachineId, { targetAgent: e.target.value })}
+                                    >
+                                        <option value="">Select agent server</option>
+                                        {currentMachineStatus.agentOptions.map((option) => (
+                                            <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
+                                    </select>
+                                    <Button
+                                        className="w-full"
+                                        onClick={async () => {
+                                            if (!selectedMachineId || !currentOnboardingForm.targetAgent) return;
+                                            await saveLoginPayload(selectedMachineId, { targetAgent: currentOnboardingForm.targetAgent }, false);
+                                        }}
+                                    >
+                                        Save Agent Server
+                                    </Button>
+                                </div>
+                            )}
+
+                            {currentMachineStatus.loginPhase === "MISSING_CREDENTIALS" && (
+                                <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
+                                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Authentication</div>
+                                    <input
+                                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                        placeholder="Username"
+                                        value={currentOnboardingForm.username}
+                                        onChange={(e) => selectedMachineId && updateOnboardingForm(selectedMachineId, { username: e.target.value })}
+                                    />
+                                    <input
+                                        type="password"
+                                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                        placeholder="Password"
+                                        value={currentOnboardingForm.password}
+                                        onChange={(e) => selectedMachineId && updateOnboardingForm(selectedMachineId, { password: e.target.value })}
+                                    />
+                                    <input
+                                        type="password"
+                                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                        placeholder="Passcode"
+                                        value={currentOnboardingForm.passcode}
+                                        onChange={(e) => selectedMachineId && updateOnboardingForm(selectedMachineId, { passcode: e.target.value })}
+                                    />
+                                    <Button
+                                        className="w-full"
+                                        onClick={async () => {
+                                            if (!selectedMachineId) return;
+                                            await saveLoginPayload(selectedMachineId, {
+                                                username: currentOnboardingForm.username,
+                                                password: currentOnboardingForm.password,
+                                                passcode: currentOnboardingForm.passcode,
+                                                autoLogin: true
+                                            }, false);
+                                        }}
+                                    >
+                                        Save Credentials
+                                    </Button>
+                                </div>
+                            )}
+
+                            {currentMachineStatus.loginPhase === "MISSING_CHARACTER_SELECTION" && (
+                                <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
+                                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Character List</div>
+                                    <select
+                                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                                        value={currentOnboardingForm.selectedCharacter}
+                                        onChange={(e) => selectedMachineId && updateOnboardingForm(selectedMachineId, { selectedCharacter: e.target.value })}
+                                    >
+                                        <option value="">Select character</option>
+                                        {currentMachineStatus.availableCharacters.map((name) => (
+                                            <option key={name} value={name}>{name}</option>
+                                        ))}
+                                    </select>
+                                    <Button
+                                        className="w-full"
+                                        onClick={async () => {
+                                            if (!selectedMachineId || !currentOnboardingForm.selectedCharacter) return;
+                                            await saveLoginPayload(selectedMachineId, {
+                                                selectedCharacter: currentOnboardingForm.selectedCharacter
+                                            }, false);
+                                        }}
+                                    >
+                                        Save Character
+                                    </Button>
+                                </div>
+                            )}
+
+                            {currentMachineStatus.inGame && (
+                                <CharacterStatus
+                                    machineId={selectedMachineId}
+                                />
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

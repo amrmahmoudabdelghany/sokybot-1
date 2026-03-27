@@ -20,6 +20,8 @@ import org.sokybot.gamemodel.ModelUpdate;
 import org.sokybot.gamemodel.ModelUpdateType;
 import org.sokybot.gamemodel.LoginState;
 import org.sokybot.gameevents.dto.MonsterData;
+import org.sokybot.gameevents.events.character.CharacterLoadedEvent;
+import org.sokybot.gameevents.events.character.CharacterSelectionActionEvent;
 import org.sokybot.gameevents.events.combat.AgentListEvent;
 import org.sokybot.gameevents.events.entity.EntityAngleUpdateEvent;
 import org.sokybot.gameevents.events.entity.EntityDespawnEvent;
@@ -78,6 +80,8 @@ public class GameModelImpl implements IGameModel {
         subscriptions.add(eventBus.on(AgentListEvent.class).subscribe(this::handleAgentList));
         subscriptions.add(eventBus.on(LoginResponseEvent.class).subscribe(this::handleLoginResponse));
         subscriptions.add(eventBus.on(AuthResponseEvent.class).subscribe(this::handleAuthResponse));
+        subscriptions.add(eventBus.on(CharacterSelectionActionEvent.class).subscribe(this::handleCharacterSelection));
+        subscriptions.add(eventBus.on(CharacterLoadedEvent.class).subscribe(this::handleCharacterLoaded));
     }
 
     public void stop() {
@@ -251,6 +255,9 @@ public class GameModelImpl implements IGameModel {
     private void handleAgentList(AgentListEvent event) {
         loginState.setAgentList(event.getAgents());
         loginState.setPhase(LoginState.Phase.AGENTS_RECEIVED);
+        int receivedCount = event.getAgents() != null ? event.getAgents().size() : 0;
+        log.debug("Machine {} handleAgentList received {} agents; phase -> {}", machineName, receivedCount,
+                LoginState.Phase.AGENTS_RECEIVED);
     }
 
     private void handleLoginResponse(LoginResponseEvent event) {
@@ -274,6 +281,18 @@ public class GameModelImpl implements IGameModel {
         } else {
             loginState.setFailureReason("Agent auth failed: code " + event.getResultCode());
             loginState.setPhase(LoginState.Phase.FAILED);
+        }
+    }
+
+    private void handleCharacterSelection(CharacterSelectionActionEvent event) {
+        if (event.getResult() == 1 && event.getCharacters() != null) {
+            loginState.setAvailableCharacters(event.getCharacters());
+        }
+    }
+
+    private void handleCharacterLoaded(CharacterLoadedEvent event) {
+        if (event.getCharacterName() != null && !event.getCharacterName().isBlank()) {
+            loginState.setSelectedCharacterName(event.getCharacterName());
         }
     }
 

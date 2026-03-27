@@ -50,4 +50,12 @@ public interface ISettingsRegistry {
      * @param data        The raw key-value mapping of settings
      */
     void writeRawSettings(String groupName, String machineName, String scope, java.util.Map<String, Object> data);
+
+    /**
+     * Read persisted settings for a scope as a raw map (e.g. for UI hydration).
+     * Values may include encrypted strings; callers must not expose secrets.
+     *
+     * @return empty map when file is missing or unreadable
+     */
+    java.util.Map<String, Object> readRawSettings(String groupName, String machineName, String scope);
 }

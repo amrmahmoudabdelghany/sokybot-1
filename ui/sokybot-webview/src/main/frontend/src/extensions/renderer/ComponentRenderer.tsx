@@ -7,6 +7,7 @@ import { getComponent } from '../registry';
 import { HexViewer } from '../components/HexViewer';
 import { DiffHexViewer } from '../components/DiffHexViewer';
 import { LogViewer } from '../components/LogViewer';
+import { StreamTablePanel } from '../components/StreamTablePanel';
 import { safeEval, resolveTemplate, resolveTemplateInObject } from './expressionUtils';
 
 interface ComponentRendererProps {
@@ -28,6 +29,15 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     onAction
 }) => {
     const { type, props = {}, children, style, className } = component;
+    const debounceTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+    const [localInputDraft, setLocalInputDraft] = useState<any>(undefined);
+
+    useEffect(() => {
+        return () => {
+            Object.values(debounceTimersRef.current).forEach((timer) => clearTimeout(timer));
+            debounceTimersRef.current = {};
+        };
+    }, []);
 
     const handleActionResult = (result: any) => {
         if (!result || typeof window === 'undefined') return;
@@ -57,6 +67,26 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     const resolvedClassName = resolveTemplate(className || '', context);
     const resolvedProps = resolveTemplateInObject(props, context);
     const resolvedStyle = style ? resolveTemplateInObject(style, context) : undefined;
+    const isTextInputLike = type === 'Input' || type === 'input' || type === 'TextArea' || type === 'textarea';
+    const serverValueSnapshot = resolvedProps.value;
+
+    if (isTextInputLike && localInputDraft !== undefined) {
+        resolvedProps.value = localInputDraft;
+    }
+
+    if (isTextInputLike && localInputDraft === undefined) {
+        const value = resolvedProps.value;
+        resolvedProps.value = value == null ? '' : String(value);
+    }
+
+    useEffect(() => {
+        if (!isTextInputLike) return;
+        if (localInputDraft === undefined) return;
+        if (serverValueSnapshot === undefined || serverValueSnapshot === null) return;
+        if (serverValueSnapshot === localInputDraft) {
+            setLocalInputDraft(undefined);
+        }
+    }, [isTextInputLike, localInputDraft, serverValueSnapshot]);
 
     // Handle onClick with action
     if (resolvedProps.onClick && typeof resolvedProps.onClick === 'string') {
@@ -74,12 +104,39 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
     // Handle onChange with action
     if (resolvedProps.onChange && typeof resolvedProps.onChange === 'string') {
         const action = resolvedProps.onChange;
+        const fieldName = typeof resolvedProps.name === 'string' ? resolvedProps.name : undefined;
+        const supportsDebounce = type === 'Input' || type === 'input' || type === 'TextArea' || type === 'textarea';
+        const debounceMs = Number(resolvedProps.debounceMs || 300);
         resolvedProps.onChange = (e: any) => {
             const value = e.target?.value ?? e;
+            if (supportsDebounce && typeof value === 'string') {
+                setLocalInputDraft(value);
+            }
+            const payload = {
+                ...(fieldName ? { [fieldName]: value } : {}),
+                value,
+                ...resolvedProps.actionData
+            };
+            const invoke = () => {
+                if (onAction) {
+                    onAction(action, payload).catch(err => {
+                        console.error(`Action ${action} failed:`, err);
+                    });
+                }
+            };
             if (onAction) {
-                onAction(action, { value, ...resolvedProps.actionData }).catch(err => {
-                    console.error(`Action ${action} failed:`, err);
-                });
+                const shouldDebounce = supportsDebounce && typeof value === 'string' && debounceMs > 0;
+                if (shouldDebounce) {
+                    const debounceKey = `${action}:${fieldName || 'value'}`;
+                    const existing = debounceTimersRef.current[debounceKey];
+                    if (existing) clearTimeout(existing);
+                    debounceTimersRef.current[debounceKey] = setTimeout(() => {
+                        delete debounceTimersRef.current[debounceKey];
+                        invoke();
+                    }, debounceMs);
+                } else {
+                    invoke();
+                }
             }
         };
     }
@@ -92,6 +149,25 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
             if (onAction) {
                 onAction(action, { value, ...resolvedProps.actionData }).catch(err => {
                     console.error(`Action ${action} failed:`, err);
+                });
+            }
+        };
+    }
+
+    // Handle onCheckedChange with action (e.g. Checkbox)
+    if (resolvedProps.onCheckedChange && typeof resolvedProps.onCheckedChange === 'string') {
+        const action = resolvedProps.onCheckedChange;
+        const fieldName = typeof resolvedProps.name === 'string' ? resolvedProps.name : undefined;
+        resolvedProps.onCheckedChange = (checked: any) => {
+            const value = checked === 'indeterminate' ? false : Boolean(checked);
+            if (onAction) {
+                onAction(action, {
+                    ...(fieldName ? { [fieldName]: value } : {}),
+                    value,
+                    ...resolvedProps.actionData
+                }).catch(err => {
+                    console.error(`Action ${action} failed:`, err);
+                    // Keep UI source-of-truth server-driven; failed updates are reverted on next state sync.
                 });
             }
         };
@@ -240,6 +316,36 @@ export const ComponentRenderer: React.FC<ComponentRendererProps> = ({
                 onAction={onAction}
                 handleActionResult={handleActionResult}
             />
+        );
+    }
+
+    if (type === 'stream-table-panel') {
+        const binding = component.stream || resolvedProps.stream || props.stream;
+        const stateKey = binding?.stateKey || binding?.streamId;
+        const rawData = stateKey ? context[stateKey] : [];
+        const tableData = Array.isArray(rawData) ? rawData : [];
+        return (
+            <div className={cn('w-full h-full min-h-0 flex flex-col', resolvedClassName)} style={resolvedStyle}>
+                <StreamTablePanel
+                    binding={binding || { streamId: 'unknown', stateKey: 'unknown' }}
+                    context={context}
+                    onAction={onAction}
+                    title={resolvedProps.title || 'Stream Table'}
+                    filterKey={resolvedProps.filterKey}
+                    filterAction={resolvedProps.filterAction}
+                />
+                <div className="flex-1 min-h-0 flex flex-col">
+                    <TableRenderer
+                        data={tableData}
+                        props={resolvedProps.table || {}}
+                        resolvedClassName="w-full h-full min-h-0"
+                        resolvedStyle={undefined}
+                        context={context}
+                        onAction={onAction}
+                        handleActionResult={handleActionResult}
+                    />
+                </div>
+            </div>
         );
     }
 
@@ -464,10 +570,15 @@ const TableRenderer: React.FC<TableRendererProps> = ({
     handleActionResult
 }) => {
     const columns = props.columns || [];
+    const rowKeyField = String(props.rowKey || 'index');
     const selectedIndices = Array.isArray(context.selectedPacketIndices) ? context.selectedPacketIndices : [];
+    const selectedKeys = Array.isArray(context.selectedRowKeys) ? context.selectedRowKeys.map((k: any) => String(k)) : [];
     const [localSelectedIndices, setLocalSelectedIndices] = useState<number[]>(selectedIndices);
+    const [localSelectedKeys, setLocalSelectedKeys] = useState<string[]>(selectedKeys);
     const selectionRef = useRef<number[]>(localSelectedIndices);
+    const selectionKeyRef = useRef<string[]>(localSelectedKeys);
     selectionRef.current = localSelectedIndices;
+    selectionKeyRef.current = localSelectedKeys;
     const expandable = Boolean(props.expandable);
     const autoScrollEnabled = Boolean(props.autoScroll);
     const rowConditionalStyle = props.rowConditionalStyle;
@@ -597,7 +708,7 @@ const TableRenderer: React.FC<TableRendererProps> = ({
         <div className={cn('relative', resolvedClassName)} style={resolvedStyle}>
             <div
                 ref={scrollContainerRef}
-                className="overflow-x-auto overflow-y-auto max-h-full"
+                className="h-full min-h-0 overflow-x-auto overflow-y-auto"
                 tabIndex={0}
                 onScroll={handleScroll}
                 onKeyDown={(event) => {
@@ -651,8 +762,10 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                     <tbody>
                         {Array.isArray(data) && data.map((row: any, idx: number) => {
                             const rowIndex = row.index ?? idx;
+                            const isSystemMarker = row?.type === 'SYSTEM_MARKER';
                             const isExpanded = expandedRowIndex === rowIndex;
-                            const isSelected = localSelectedIndices.includes(rowIndex);
+                            const rowKeyValue = String(row?.[rowKeyField] ?? rowIndex);
+                            const isSelected = localSelectedKeys.includes(rowKeyValue) || localSelectedIndices.includes(rowIndex);
                             const hexRows = isExpanded ? payloadToHexRows(row.payload) : [];
                             const decodedFields = Array.isArray(row.decodedFields) ? row.decodedFields : [];
                             const colspan = columns.length + (Array.isArray(props.rowActions) && props.rowActions.length > 0 ? 1 : 0);
@@ -677,6 +790,7 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                                 : {})
                                         }}
                                         onClick={(e) => {
+                                            if (isSystemMarker) return;
                                             const rowIndex = row.index ?? idx;
                                             setFocusedRowIndex(rowIndex);
                                             if (expandable && !e.ctrlKey && !e.metaKey) {
@@ -687,26 +801,37 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                             }
                                             if (props.multiSelectAction && onAction) {
                                                 const baseSelection = selectionRef.current;
+                                                const baseKeySelection = selectionKeyRef.current;
                                                 let next: number[];
+                                                let nextKeys: string[];
                                                 if (e.ctrlKey || e.metaKey) {
                                                     next = baseSelection.includes(rowIndex)
                                                         ? baseSelection.filter((value: number) => value !== rowIndex)
                                                         : [...baseSelection, rowIndex];
+                                                    nextKeys = baseKeySelection.includes(rowKeyValue)
+                                                        ? baseKeySelection.filter((value: string) => value !== rowKeyValue)
+                                                        : [...baseKeySelection, rowKeyValue];
                                                 } else {
                                                     if (baseSelection.length === 0) {
                                                         next = [rowIndex];
+                                                        nextKeys = [rowKeyValue];
                                                     } else if (baseSelection.length === 1 && baseSelection[0] !== rowIndex) {
                                                         next = [baseSelection[0], rowIndex];
+                                                        nextKeys = [baseKeySelection[0] || String(baseSelection[0]), rowKeyValue];
                                                     } else if (baseSelection.length > 1 && !baseSelection.includes(rowIndex)) {
                                                         next = [baseSelection[0], rowIndex];
+                                                        nextKeys = [baseKeySelection[0] || String(baseSelection[0]), rowKeyValue];
                                                     } else {
                                                         next = [rowIndex];
+                                                        nextKeys = [rowKeyValue];
                                                     }
                                                 }
                                                 console.log('[table] multiSelect:', { baseSelection, next, rowIndex });
                                                 setLocalSelectedIndices(next);
+                                                setLocalSelectedKeys(nextKeys);
                                                 selectionRef.current = next;
-                                                onAction(props.multiSelectAction, { indices: next }).catch(err => {
+                                                selectionKeyRef.current = nextKeys;
+                                                onAction(props.multiSelectAction, { indices: next, rowKeys: nextKeys }).catch(err => {
                                                     console.error(`Action ${props.multiSelectAction} failed:`, err);
                                                 });
                                             }
@@ -739,9 +864,16 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                                             type="button"
                                                             className="px-1.5 py-0.5 text-xs border border-border rounded hover:bg-muted/80 transition-colors"
                                                             title={actionCfg.title || actionCfg.label || 'Action'}
+                                                            disabled={isSystemMarker}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
+                                                                if (isSystemMarker) return;
                                                                 if (onAction && actionCfg.action) {
+                                                                    const liveRow = data.find((candidate: any) => String(candidate?.[rowKeyField] ?? '') === rowKeyValue);
+                                                                    if (!liveRow) {
+                                                                        console.warn(`Skipping row action ${actionCfg.action}: row key evicted`, rowKeyValue);
+                                                                        return;
+                                                                    }
                                                                     onAction(actionCfg.action, { ...row, index: idx, ...(actionCfg.data || {}) })
                                                                         .then(handleActionResult)
                                                                         .catch(err => console.error(`Action ${actionCfg.action} failed:`, err));

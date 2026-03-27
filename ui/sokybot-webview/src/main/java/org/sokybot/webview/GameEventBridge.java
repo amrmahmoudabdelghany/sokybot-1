@@ -16,7 +16,8 @@ import java.util.Map;
     immediate = true,
     service = { EventHandler.class, GameEventBridge.class },
     property = {
-        EventConstants.EVENT_TOPIC + "=sokybot/game/*"
+        EventConstants.EVENT_TOPIC + "=sokybot/game/*",
+        EventConstants.EVENT_TOPIC + "=sokybot/network/*"
     }
 )
 public class GameEventBridge implements EventHandler {

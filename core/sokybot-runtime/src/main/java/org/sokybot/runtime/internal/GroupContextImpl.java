@@ -19,7 +19,6 @@ import org.sokybot.runtime.internal.domain.MachineInfo;
 import org.sokybot.runtime.internal.persistence.MachineInfoRepository;
 import org.sokybot.runtime.internal.persistence.FileMachineInfoRepository;
 import org.sokybot.runtime.ContextLifecycleEvents;
-import org.sokybot.runtime.internal.MachineContextFactory;
 import org.sokybot.exception.NameUniquenessConstraintViolationException;
 import org.sokybot.game.navigation.IRouteFinder;
 import org.sokybot.game.navigation.IRouteFinderFactory;
@@ -90,6 +89,12 @@ public class GroupContextImpl implements IGroupContext {
 
                 String machineName = machine.getMachineName();
                 try {
+                    String existing = findExistingMachineNameIgnoreCase(machineName);
+                    if (existing != null) {
+                        log.warn("Skipping machine '{}' because '{}' already exists (case-insensitive collision)",
+                                machineName, existing);
+                        return;
+                    }
                     check(machineName);
 
                     // Create machine context
@@ -301,6 +306,25 @@ public class GroupContextImpl implements IGroupContext {
         if (machines.containsKey(name)) {
             throw new NameUniquenessConstraintViolationException("Machine name must be unique", name);
         }
+        String existingIgnoreCase = findExistingMachineNameIgnoreCase(name);
+        if (existingIgnoreCase != null) {
+            throw new NameUniquenessConstraintViolationException(
+                    "Machine name must be unique (case-insensitive), conflicts with '" + existingIgnoreCase + "'",
+                    name);
+        }
+    }
+
+    private String findExistingMachineNameIgnoreCase(String candidate) {
+        if (candidate == null) {
+            return null;
+        }
+        String normalized = candidate.trim();
+        for (String existing : machines.keySet()) {
+            if (existing != null && existing.equalsIgnoreCase(normalized)) {
+                return existing;
+            }
+        }
+        return null;
     }
 
     private void publishMachineCreated(IMachineContext context) {

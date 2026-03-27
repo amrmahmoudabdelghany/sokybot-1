@@ -2,6 +2,21 @@ import { create } from 'zustand';
 import { rsocketService } from './RSocketClient';
 import type { MachineInfo, GroupInfo, CharacterState } from './RSocketClient';
 
+function normalizeMachines(input: MachineInfo[]): MachineInfo[] {
+    const deduped = new Map<string, MachineInfo>();
+    input.forEach((machine) => {
+        if (!machine?.machineId) return;
+        const prev = deduped.get(machine.machineId);
+        // Keep latest snapshot while preserving any known groupName when missing in the new payload.
+        deduped.set(machine.machineId, {
+            ...(prev || {}),
+            ...machine,
+            groupName: machine.groupName || prev?.groupName,
+        });
+    });
+    return Array.from(deduped.values());
+}
+
 interface SokybotState {
     // Machines & Groups
     machines: MachineInfo[];
@@ -60,7 +75,7 @@ export const useSokybotStore = create<SokybotState>((set) => ({
     healthStatus: 'unknown',
     lastError: null,
 
-    setMachines: (machines) => set({ machines }),
+    setMachines: (machines) => set({ machines: normalizeMachines(machines) }),
     setGroups: (groups) => set({ groups }),
     setSelectedMachineId: (id: string | null) => set({ selectedMachineId: id }),
     setSelectedPageId: (id: string | null) => set({ selectedPageId: id }),
@@ -103,7 +118,7 @@ export const useSokybotStore = create<SokybotState>((set) => ({
                 rsocketService.getMachines(),
                 rsocketService.getGroups()
             ]);
-            set({ machines, groups });
+            set({ machines: normalizeMachines(machines), groups });
         } catch (err: any) {
             set({ lastError: err.message });
         }
@@ -123,7 +138,7 @@ export const useSokybotStore = create<SokybotState>((set) => ({
             await rsocketService.startBot(machineId);
             // Optimistic update or refresh
             const machines = await rsocketService.getMachines();
-            set({ machines });
+            set({ machines: normalizeMachines(machines) });
         } catch (err: any) {
             set({ lastError: err.message });
         }
@@ -134,7 +149,7 @@ export const useSokybotStore = create<SokybotState>((set) => ({
             await rsocketService.stopBot(machineId);
             // Optimistic update or refresh
             const machines = await rsocketService.getMachines();
-            set({ machines });
+            set({ machines: normalizeMachines(machines) });
         } catch (err: any) {
             set({ lastError: err.message });
         }

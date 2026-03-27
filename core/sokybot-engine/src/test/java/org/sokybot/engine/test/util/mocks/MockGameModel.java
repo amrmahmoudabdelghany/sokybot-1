@@ -2,6 +2,7 @@ package org.sokybot.engine.test.util.mocks;
 
 import org.mockito.Mockito;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.gamemodel.LoginState;
 import org.sokybot.gamemodel.model.IMonster;
 import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.ITrainer;
@@ -19,6 +20,7 @@ public class MockGameModel implements IGameModel {
     private ITrainer trainer;
     private final Map<Integer, ISpawn> spawns = new HashMap<>();
     private ISpawn selected;
+    private LoginState loginState = new LoginState();
 
     /**
      * Creates a new MockGameModel.
@@ -105,6 +107,11 @@ public class MockGameModel implements IGameModel {
     @Override
     public ITrainer getTrainer() {
         return trainer;
+    }
+
+    @Override
+    public LoginState getLoginState() {
+        return loginState;
     }
 
     @Override

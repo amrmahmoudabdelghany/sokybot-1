@@ -4,8 +4,11 @@ import org.osgi.framework.BundleContext;
 
 import java.util.Map;
 import java.util.List;
+import java.util.Set;
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 import org.sokybot.engine.IEngine;
 import org.sokybot.engine.IEngineFactory;
@@ -33,6 +36,7 @@ import org.slf4j.LoggerFactory;
 public class EngineFactory implements IEngineFactory {
 
     private static final Logger log = LoggerFactory.getLogger(EngineFactory.class);
+    private static final String BUILD_SIGNATURE = "EngineFactory-2026-03-27-R2";
 
     private final Map<String, EngineCore> engines = new ConcurrentHashMap<>();
 
@@ -40,11 +44,20 @@ public class EngineFactory implements IEngineFactory {
     private final List<IActuator> actuators = new CopyOnWriteArrayList<>();
 
     private BundleContext bundleContext;
+    private boolean resumeOnBoot;
+    private Set<String> resumeMachines;
 
     @Activate
     protected void activate(BundleContext context) {
         this.bundleContext = context;
-        log.info("Engine Factory activated");
+        this.resumeOnBoot = Boolean.parseBoolean(System.getProperty("sokybot.engine.resumeOnBoot", "false"));
+        String rawResumeMachines = System.getProperty("sokybot.engine.resumeMachines", "").trim();
+        this.resumeMachines = Arrays.stream(rawResumeMachines.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+        log.info("Engine Factory activated [{}] (resumeOnBoot={}, resumeMachines={})",
+                BUILD_SIGNATURE, resumeOnBoot, resumeMachines.size());
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -102,10 +115,12 @@ public class EngineFactory implements IEngineFactory {
                 engines.put(machineId, engine);
 
                 log.info("Engine created successfully for machine: {}", machineId);
-
-                // AUTO-START for testing
-                log.info("AUTO-STARTING engine for machine: {}", machineId);
-                engine.start();
+                if (shouldResumeOnBoot(machineId, groupName, machineName)) {
+                    log.info("Resuming engine on boot for machine: {} (idle until machine.start / CONNECT)", machineId);
+                    engine.start();
+                } else {
+                    log.info("Engine created in STOPPED state for machine: {}", machineId);
+                }
 
                 return engine;
 
@@ -132,5 +147,18 @@ public class EngineFactory implements IEngineFactory {
     @Override
     public IEngine getEngine(String machineId) {
         return engines.get(machineId);
+    }
+
+    private boolean shouldResumeOnBoot(String machineId, String groupName, String machineName) {
+        if (!resumeOnBoot) {
+            return false;
+        }
+        if (resumeMachines.isEmpty()) {
+            return true;
+        }
+        String groupMachine = groupName + "." + machineName;
+        return resumeMachines.contains(machineId)
+                || resumeMachines.contains(groupMachine)
+                || resumeMachines.contains(machineName);
     }
 }

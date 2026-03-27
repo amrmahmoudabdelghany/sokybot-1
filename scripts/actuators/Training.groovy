@@ -26,7 +26,7 @@ class Training extends BaseActuator {
                     def settings = settingsProvider?.get()
                     return settings != null && isLoggedIn(ctx) && settings.isAutoAttack()
                 })
-                .interruptionGuard({ ctx -> potionBehavior.needsPotion(ctx, settingsProvider?.get()) })
+                .interruptionGuard({ ctx -> isLoggedIn(ctx) && potionBehavior.needsPotion(ctx, settingsProvider?.get()) })
                 .interruptionPriority(500)
                 .interruptionAction({ ctx -> log.warn("Interrupting training due to low HP/MP") })
                 .interruptible(true)

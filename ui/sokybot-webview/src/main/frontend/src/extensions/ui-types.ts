@@ -4,6 +4,68 @@
  */
 import type { ComponentType } from 'react';
 
+export type StreamMergeMode = 'replace' | 'append' | 'delta' | 'snapshot';
+export type OrphanDeltaPolicy = 'ignore' | 'upsert';
+export type PauseQueuePolicy = 'bufferBounded' | 'dropIncoming';
+export type FlushWhilePausedPolicy = 'applyImmediately' | 'deferUntilResume';
+export type MissingRowKeyPolicy = 'reject' | 'generate';
+
+export interface StreamControlConfig {
+    flushSignalType?: string; // default: FLUSH
+    snapshotSignalType?: string; // default: SNAPSHOT
+    deleteField?: string; // default: _delete
+}
+
+export interface StreamBindingConfig {
+    streamId: string;
+    stateKey?: string;
+    mode?: StreamMergeMode;
+    streamParams?: Record<string, any>;
+    maxCapacity?: number;
+    rollingWindow?: number;
+    maxQueueSize?: number;
+    rowKey?: string;
+    rowKeyExtractor?: string;
+    orphanDeltaPolicy?: OrphanDeltaPolicy;
+    pauseQueuePolicy?: PauseQueuePolicy;
+    flushWhilePaused?: FlushWhilePausedPolicy;
+    missingRowKeyPolicy?: MissingRowKeyPolicy;
+    preFilterExpression?: string;
+    initialSnapshot?: boolean;
+    maxRowSize?: number;
+    control?: StreamControlConfig;
+}
+
+export interface RSocketRequestBinding {
+    kind: 'request';
+    method: string;
+    params?: Record<string, unknown>;
+}
+
+export interface RSocketStreamBinding {
+    kind: 'stream';
+    method: string;
+    params?: Record<string, unknown>;
+}
+
+export interface RSocketFireAndForgetBinding {
+    kind: 'fireAndForget';
+    method: string;
+    params?: Record<string, unknown>;
+}
+
+export interface RSocketChannelBinding {
+    kind: 'channel';
+    method: string;
+    params?: Record<string, unknown>;
+}
+
+export type RSocketBinding =
+    | RSocketRequestBinding
+    | RSocketStreamBinding
+    | RSocketFireAndForgetBinding
+    | RSocketChannelBinding;
+
 export interface UIComponent {
     type: string;  // Component type (shadcn name, HTML tag, or custom type)
     props?: Record<string, any>;
@@ -17,6 +79,8 @@ export interface UIComponent {
     iconProps?: Record<string, any>;
     variant?: string;  // For shadcn components with variants
     size?: string;     // For shadcn components with sizes
+    stream?: StreamBindingConfig;
+    rsocket?: RSocketBinding;
 }
 
 export interface UIPage {

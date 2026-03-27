@@ -66,20 +66,30 @@ class ConnectionPage extends BasePage implements EventHandler {
         try {
             switch (action) {
                 case "refresh": break
-                case "save": loginSettings?.save(); break
+                case "save":
+                    boolean running = false
+                    try {
+                        running = machineContext?.getEngine()?.isRunning() ?: false
+                    } catch (Exception ignored) {}
+                    loginSettings?.save()
+                    return withSuccess(getInitialState() + [
+                            applyOnRestart: running,
+                            saveMessage: running
+                                    ? "Connection settings saved. Changes apply next bot start."
+                                    : "Connection settings saved."
+                    ])
                 case "connect":
-                    machineContext.getEngine()?.sendEvent("CONNECT")
-                    break
                 case "disconnect":
-                    machineContext.getEngine()?.sendEvent("DISCONNECT")
-                    machineContext.getProxyConnection()?.disconnect()
-                    break
+                    return withError("Connection controls moved to Machine Status. Use Start/Stop Bot.")
                 case "update":
                     if (data.containsKey("profileName")) {
                         this.profileName = data.get("profileName")
                         emitStateUpdate()
                     }
-                    applyFrom(loginSettings, data, ["username", "password", "targetGateway", "autoLogin", "targetAgent", "passcode"])
+                    applyFrom(loginSettings, data, [
+                            "username", "password", "targetGateway", "autoLogin", "targetAgent", "passcode", "selectedCharacter",
+                            "autoReconnect", "retryBaseDelayMs", "retryMaxDelayMs", "maxRetryAttempts", "infiniteRetryMode"
+                    ])
                     break
                 case "unlock":
                     credentialEncryptor?.unlock((String) data.get("passphrase"))

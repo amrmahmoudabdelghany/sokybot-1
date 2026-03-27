@@ -24,6 +24,7 @@ public class BotStartCommand extends DevCommand {
                     println("Starting bot '%s'...", botName);
                     try {
                         bot.getEngine().start();
+                        bot.getEngine().sendEvent("CONNECT");
                         println("Bot started.");
                     } catch (Exception e) {
                         error("Failed to start bot: %s", e.getMessage());

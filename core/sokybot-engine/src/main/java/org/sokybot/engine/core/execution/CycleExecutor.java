@@ -57,10 +57,10 @@ public class CycleExecutor {
         if (entryGuard != null) {
             try {
                 if (!entryGuard.evaluate(context)) {
-                    log.debug("Entry guard failed for cycle '{}', skipping", cycle.getName());
+                    log.info("Entry guard failed for cycle '{}', skipping", cycle.getName());
                     return false;
                 }
-            } catch (WorkflowException e) {
+            } catch (Exception e) {
                 log.error("Error evaluating entry guard for cycle '{}': {}", cycle.getName(), e.getMessage(), e);
                 return false;
             }
@@ -124,8 +124,11 @@ public class CycleExecutor {
             // Safety check: prevent infinite loops
             int iterations = stateIterations.merge(stateName, 1, Integer::sum);
             if (iterations > MAX_STATE_ITERATIONS) {
-                log.error("State '{}' in cycle '{}' exceeded max iterations ({}), exiting cycle",
-                         stateName, cycle.getName(), MAX_STATE_ITERATIONS);
+                log.error("State '{}' in cycle '{}' exceeded max iterations ({}), exiting cycle. " +
+                         "interruptionStats={}, contextState={}",
+                         stateName, cycle.getName(), MAX_STATE_ITERATIONS,
+                         interruptionManager.getInterruptionStats(),
+                         context.getCurrentStateName());
                 return;
             }
             
@@ -141,7 +144,7 @@ public class CycleExecutor {
                 // Save state
                 SavedState savedState = interruptionManager.interruptCurrentCycle(interruptingCycle, context);
                 
-                // Execute interrupting cycle
+                // Execute interrupting cycle (its finally block will call clearCurrentCycle)
                 CycleExecutor interruptingExecutor = new CycleExecutor(
                     interruptionManager, queueProcessor, context);
                 interruptingExecutor.executeCycle(interruptingCycle);
@@ -149,6 +152,10 @@ public class CycleExecutor {
                 // Resume from saved state
                 ICycleState resumedState = interruptionManager.resumeCycle(savedState, context);
                 if (resumedState != null) {
+                    // Restore tracking for this (original) cycle so further
+                    // interruption checks see the correct running context
+                    interruptionManager.setCurrentCycle(
+                            cycle.getName(), resumedState, cycle.getDesiredPriority());
                     currentState = resumedState;
                     continue;
                 } else {

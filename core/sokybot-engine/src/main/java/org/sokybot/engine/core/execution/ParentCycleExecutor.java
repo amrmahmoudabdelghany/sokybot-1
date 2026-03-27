@@ -140,8 +140,11 @@ public class ParentCycleExecutor {
                     Thread.currentThread().interrupt();
                     log.info("Parent cycle executor interrupted");
                     break;
-                } catch (Exception e) {
-                    log.error("Error in parent cycle execution: {}", e.getMessage(), e);
+                } catch (Throwable t) {
+                    log.error("Fatal error in parent cycle execution: {}", t.getMessage(), t);
+                    if (t instanceof Error) {
+                        throw (Error) t;
+                    }
                     // Return to WAITING state on error
                     waitingManager.enterWaiting(context);
                 }
@@ -264,17 +267,21 @@ public class ParentCycleExecutor {
 
         log.debug("Executing cycle: {}", cycle.getName());
 
-        // Create cycle executor
-        CycleExecutor cycleExecutor = new CycleExecutor(
-                interruptionManager, queueProcessor, context);
+        try {
+            // Create cycle executor
+            CycleExecutor cycleExecutor = new CycleExecutor(
+                    interruptionManager, queueProcessor, context);
 
-        // Execute cycle
-        boolean completed = cycleExecutor.executeCycle(cycle);
+            // Execute cycle
+            boolean completed = cycleExecutor.executeCycle(cycle);
 
-        if (completed) {
-            log.debug("Cycle '{}' completed", cycle.getName());
-        } else {
-            log.debug("Cycle '{}' exited early or was interrupted", cycle.getName());
+            if (completed) {
+                log.debug("Cycle '{}' completed", cycle.getName());
+            } else {
+                log.debug("Cycle '{}' exited early or was interrupted", cycle.getName());
+            }
+        } catch (Exception e) {
+            log.error("Uncaught error executing cycle '{}': {}", cycle.getName(), e.getMessage(), e);
         }
     }
 

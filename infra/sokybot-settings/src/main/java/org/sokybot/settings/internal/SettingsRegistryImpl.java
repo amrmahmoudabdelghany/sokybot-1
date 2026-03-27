@@ -10,6 +10,7 @@ import org.sokybot.settings.api.ISettingsRegistry;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,25 +53,45 @@ public class SettingsRegistryImpl implements ISettingsRegistry {
 
         registrations.put(scope, new ScopeRegistration<>(type, defaultsFactory));
         log.info("Registered settings scope '{}' with type {}", scope, type.getSimpleName());
+        resolveDeferredProviders(scope);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> ISettingsProvider<T> getProvider(String groupName, String machineName, String scope, Class<T> type) {
         String key = groupName + "/" + machineName + "/" + scope;
+        ScopeRegistration<?> registration = registrations.get(scope);
+
+        if (registration == null) {
+            ISettingsProvider<?> provider = providers.computeIfAbsent(
+                    key,
+                    k -> new DeferredSettingsProvider<>(scope, key));
+            ScopeRegistration<?> registrationAfter = registrations.get(scope);
+            if (registrationAfter != null && provider instanceof DeferredSettingsProvider<?>) {
+                bindDeferredProvider((DeferredSettingsProvider<Object>) provider, groupName, machineName, scope, registrationAfter);
+            }
+            return (ISettingsProvider<T>) provider;
+        }
+
+        if (!isTypeCompatible(type, registration.type)) {
+            throw new IllegalArgumentException("Type mismatch for scope " + scope
+                    + ": expected " + registration.type.getName()
+                    + " (loader=" + String.valueOf(registration.type.getClassLoader()) + ")"
+                    + ", got " + type.getName()
+                    + " (loader=" + String.valueOf(type.getClassLoader()) + ")");
+        }
+
+        ISettingsProvider<?> existingProvider = providers.get(key);
+        if (existingProvider instanceof DeferredSettingsProvider<?>) {
+            bindDeferredProvider((DeferredSettingsProvider<Object>) existingProvider, groupName, machineName, scope, registration);
+            return (ISettingsProvider<T>) existingProvider;
+        }
+        if (existingProvider != null) {
+            return (ISettingsProvider<T>) existingProvider;
+        }
 
         return (ISettingsProvider<T>) providers.computeIfAbsent(key, k -> {
-            ScopeRegistration<?> registration = registrations.get(scope);
-            if (registration == null) {
-                throw new IllegalArgumentException("Scope not registered: " + scope);
-            }
-
-            if (!registration.type.equals(type)) {
-                throw new IllegalArgumentException("Type mismatch for scope " + scope);
-            }
-
             Path settingsFile = getSettingsFile(groupName, machineName, scope);
-
             return new SettingsProviderImpl<>(
                     (Class<T>) registration.type,
                     (Supplier<T>) registration.defaultsFactory,
@@ -78,6 +99,51 @@ public class SettingsRegistryImpl implements ISettingsRegistry {
                     objectMapper,
                     credentialEncryptor);
         });
+    }
+
+    @SuppressWarnings("unchecked")
+    private void resolveDeferredProviders(String scope) {
+        ScopeRegistration<?> registration = registrations.get(scope);
+        if (registration == null) {
+            return;
+        }
+
+        String suffix = "/" + scope;
+        providers.forEach((key, provider) -> {
+            if (!key.endsWith(suffix) || !(provider instanceof DeferredSettingsProvider<?>)) {
+                return;
+            }
+
+            String[] parts = key.split("/", 3);
+            if (parts.length != 3) {
+                log.warn("Unexpected provider key format: {}", key);
+                return;
+            }
+
+            bindDeferredProvider(
+                    (DeferredSettingsProvider<Object>) provider,
+                    parts[0],
+                    parts[1],
+                    scope,
+                    registration);
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private void bindDeferredProvider(
+            DeferredSettingsProvider<Object> deferred,
+            String groupName,
+            String machineName,
+            String scope,
+            ScopeRegistration<?> registration) {
+        Path settingsFile = getSettingsFile(groupName, machineName, scope);
+        SettingsProviderImpl<Object> concreteProvider = new SettingsProviderImpl<>(
+                (Class<Object>) registration.type,
+                (Supplier<Object>) registration.defaultsFactory,
+                settingsFile,
+                objectMapper,
+                credentialEncryptor);
+        deferred.bind(concreteProvider);
     }
 
     @Override
@@ -104,6 +170,30 @@ public class SettingsRegistryImpl implements ISettingsRegistry {
         return name.replaceAll("[^a-zA-Z0-9.-]", "_");
     }
 
+    private boolean isTypeCompatible(Class<?> requestedType, Class<?> registeredType) {
+        if (requestedType == null || registeredType == null) {
+            return false;
+        }
+        if (requestedType == Object.class) {
+            return true;
+        }
+        if (requestedType.equals(registeredType)) {
+            return true;
+        }
+        if (requestedType.getName().equals(registeredType.getName())) {
+            // Hot-reloaded Groovy scripts can produce same FQCN under different classloaders.
+            // Treat these as compatible for scope lookup.
+            log.debug("Type compatibility by FQCN match: {} (requestedLoader={}) vs {} (registeredLoader={})",
+                    requestedType.getName(),
+                    String.valueOf(requestedType.getClassLoader()),
+                    registeredType.getName(),
+                    String.valueOf(registeredType.getClassLoader()));
+            return true;
+        }
+        return requestedType.isAssignableFrom(registeredType)
+                || registeredType.isAssignableFrom(requestedType);
+    }
+
     private static class ScopeRegistration<T> {
         final Class<T> type;
         final Supplier<T> defaultsFactory;
@@ -111,6 +201,25 @@ public class SettingsRegistryImpl implements ISettingsRegistry {
         ScopeRegistration(Class<T> type, Supplier<T> defaultsFactory) {
             this.type = type;
             this.defaultsFactory = defaultsFactory;
+        }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> readRawSettings(String groupName, String machineName, String scope) {
+        if (groupName == null || machineName == null || scope == null) {
+            return Collections.emptyMap();
+        }
+        Path settingsFile = getSettingsFile(groupName, machineName, scope);
+        if (!Files.exists(settingsFile)) {
+            return Collections.emptyMap();
+        }
+        try {
+            Map<String, Object> map = objectMapper.readValue(settingsFile.toFile(), Map.class);
+            return map != null ? map : Collections.emptyMap();
+        } catch (Exception e) {
+            log.warn("Failed to read raw settings from {}", settingsFile, e);
+            return Collections.emptyMap();
         }
     }
 

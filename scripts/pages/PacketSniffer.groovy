@@ -19,6 +19,8 @@ import reactor.core.publisher.Sinks
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -30,6 +32,7 @@ import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.regex.Pattern
+import java.io.FilenameFilter
 
 class TracerModel {
     NetworkPeer source
@@ -319,6 +322,8 @@ class PacketSnifferPage extends BasePage {
 
     private static final DateTimeFormatter PACKET_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray()
+    private static final int MAX_CORRUPT_FILES = 5
+    private static final long STATUS_HEARTBEAT_INTERVAL_MS = 30000L
 
     private final ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT)
     private final File tracerFile = new File("./packet-data.json")
@@ -343,6 +348,20 @@ class PacketSnifferPage extends BasePage {
     private int packetCount = 0
     private int lastSentPacketCount = 0
     private long lastUpdateTime = 0L
+    private volatile long lastPacketEmitTime = System.currentTimeMillis()
+    private long lastStatusEmitTime = 0L
+    private long totalPacketsSeen = 0L
+    private long droppedIgnoredCount = 0L
+    private long droppedFilterCount = 0L
+    private String lastDropReason = ""
+    private long lastDropTimestamp = 0L
+    private long lastDisplayedPacketTimestamp = 0L
+    private int subscriptionGeneration = 0
+    private String bindingState = "unbound"
+    private long lastBindAttemptAt = 0L
+    private String lastBindError = ""
+    private boolean isPublisherAvailable = false
+    private String boundProxyIdentity = ""
     private final Map<String, Object> cachedState = [:]
 
     private boolean diffOpen = false
@@ -371,60 +390,233 @@ class PacketSnifferPage extends BasePage {
         proxyConnection = machineContext.getProxyConnection()
         println "[Groovy] setup: machine=${machineContext.fullName()}, proxyConnection=${proxyConnection}"
         startBatchedUpdateProcessor()
-        subscribeToPackets()
+        ensurePacketSubscription()
     }
 
     private void loadPersistedData() {
         synchronized (mutex) {
             tracers.clear()
-            if (tracerFile.exists()) {
-                tracers.addAll(mapper.readValue(tracerFile, new TypeReference<List<TracerModel>>() {}))
-            }
+            tracers.addAll(safeReadList(tracerFile, new TypeReference<List<TracerModel>>() {}))
             tracerCache.clear()
+            boolean tracerNamesChanged = normalizeTracerOpcodeNamesInPlace()
             tracers.each { t -> tracerCache[cacheKey(t.source, t.opcode)] = t }
             structDefinitions.clear()
-            if (structFile.exists()) {
-                mapper.readValue(structFile, new TypeReference<List<StructDefinition>>() {}).each { d ->
-                    structDefinitions[d.opcode] = d
+            safeReadList(structFile, new TypeReference<List<StructDefinition>>() {}).each { d ->
+                structDefinitions[d.opcode] = d
+            }
+            if (tracerNamesChanged) {
+                try {
+                    saveTracers()
+                } catch (Exception ignored) {
                 }
             }
         }
     }
 
-    private void subscribeToPackets() {
-        if (!proxyConnection) {
-            println "[Groovy] subscribeToPackets: proxyConnection is NULL, skipping"
-            return
-        }
-        IPacketPublisher publisher = proxyConnection.getPacketPublisher()
-        if (!publisher) {
-            println "[Groovy] subscribeToPackets: publisher is NULL, skipping"
-            return
-        }
-        if (packetSubscription) {
-            try { packetSubscription.unsubscribe() } catch (Exception ignored) {}
-            packetSubscription = null
-        }
-        setSubscribed(false)
-        ClassLoader scriptClassLoader = this.getClass().getClassLoader()
-        println "[Groovy] subscribeToPackets: subscribing to all packets for ${machineContext.fullName()}"
-        IPacketObserver observer = [onPacket: { ImmutablePacket packet ->
-            ClassLoader prev = Thread.currentThread().getContextClassLoader()
-            try {
-                Thread.currentThread().setContextClassLoader(scriptClassLoader)
-                // println "[Groovy] onPacket: incoming opcode=0x${Integer.toHexString(packet.opcode)}"
-                tryRecord(packet)
-                display(packet)
-            } catch (Exception e) {
-                println "[Groovy] onPacket ERROR: ${e.message}"
-                e.printStackTrace()
-            } finally {
-                Thread.currentThread().setContextClassLoader(prev)
+    /** Re-align persisted tracer labels with resolveOpcodeName (fixes stale names e.g. 0xA101 vs AGENT_LIST). */
+    private boolean normalizeTracerOpcodeNamesInPlace() {
+        boolean changed = false
+        tracers.each { TracerModel t ->
+            int op = t.opcode & 0xFFFF
+            String resolved = resolveOpcodeName(op)
+            if (resolved != "UNKNOWN" && t.name != resolved) {
+                t.name = resolved
+                changed = true
             }
-        }] as IPacketObserver
-        packetSubscription = publisher.subscribeAll(observer)
-        setSubscribed(true)
-        println "[Groovy] subscribeToPackets: subscription created: ${packetSubscription}"
+        }
+        return changed
+    }
+
+    private <T> List<T> safeReadList(File file, TypeReference<List<T>> typeRef) {
+        if (file == null || !file.exists()) return []
+        try {
+            List<T> loaded = mapper.readValue(file, typeRef)
+            return loaded ?: []
+        } catch (Exception parseError) {
+            println "[Groovy] persistence load_status=corrupt path=${file.absolutePath} parse_error=${parseError.message}"
+            boolean quarantineSuccess = quarantineCorruptFile(file, parseError)
+            if (!quarantineSuccess) {
+                println "[Groovy] persistence quarantine_success=false path=${file.absolutePath} continuing_with_empty_state=true"
+            }
+            return []
+        }
+    }
+
+    private boolean quarantineCorruptFile(File file, Exception parseError) {
+        File parent = file.parentFile ?: new File(".")
+        String ts = String.valueOf(System.currentTimeMillis())
+        File target = new File(parent, file.name + ".corrupt." + ts)
+        boolean moved = false
+        try {
+            Files.move(file.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            moved = true
+            int pruned = pruneCorruptFiles(parent, file.name + ".corrupt.")
+            println "[Groovy] persistence quarantine_attempted=true quarantine_success=true path=${file.absolutePath} quarantined=${target.absolutePath} quarantine_pruned_count=${pruned}"
+        } catch (Exception moveError) {
+            println "[Groovy] persistence quarantine_attempted=true quarantine_success=false path=${file.absolutePath} io_error=${moveError.message} parse_error=${parseError.message}"
+        }
+        return moved
+    }
+
+    private int pruneCorruptFiles(File dir, String prefix) {
+        try {
+            File[] files = dir.listFiles({ d, name -> name.startsWith(prefix) } as FilenameFilter)
+            if (!files || files.length <= MAX_CORRUPT_FILES) return 0
+            List<File> sorted = files.toList().sort { a, b -> Long.compare(a.lastModified(), b.lastModified()) }
+            int removeCount = sorted.size() - MAX_CORRUPT_FILES
+            int deleted = 0
+            for (int i = 0; i < removeCount; i++) {
+                try {
+                    if (sorted[i].delete()) deleted++
+                } catch (Exception ignored) {}
+            }
+            return deleted
+        } catch (Exception e) {
+            println "[Groovy] persistence quarantine_prune_failed io_error=${e.message}"
+            return 0
+        }
+    }
+
+    private String connectionIdentity(IProxyConnection conn) {
+        if (!conn) return ""
+        return conn.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(conn))
+    }
+
+    private Map<String, Object> ensurePacketSubscription() {
+        synchronized (mutex) {
+            lastBindAttemptAt = System.currentTimeMillis()
+            proxyConnection = machineContext.getProxyConnection()
+            if (!proxyConnection) {
+                bindingState = "unbound"
+                isPublisherAvailable = false
+                setSubscribed(false)
+                lastBindError = "Proxy connection unavailable"
+                emitStatus(true)
+                return [success: false, code: "proxy_missing", message: lastBindError]
+            }
+            IPacketPublisher publisher = proxyConnection.getPacketPublisher()
+            if (!publisher) {
+                bindingState = "bound_unsubscribed"
+                isPublisherAvailable = false
+                setSubscribed(false)
+                lastBindError = "Packet publisher unavailable"
+                emitStatus(true)
+                return [success: false, code: "publisher_missing", message: lastBindError]
+            }
+            isPublisherAvailable = true
+            String currentIdentity = connectionIdentity(proxyConnection)
+            if (packetSubscription && isSubscribed() && boundProxyIdentity == currentIdentity) {
+                bindingState = "subscribed"
+                lastBindError = ""
+                emitStatus(true)
+                return [success: true, code: "already_bound", message: "Already bound to packet publisher"]
+            }
+            if (packetSubscription) {
+                try { packetSubscription.unsubscribe() } catch (Exception ignored) {}
+                packetSubscription = null
+            }
+            setSubscribed(false)
+            bindingState = "binding"
+            lastBindError = ""
+
+            ClassLoader scriptClassLoader = this.getClass().getClassLoader()
+            println "[Groovy] subscribeToPackets: subscribing to all packets for ${machineContext.fullName()}"
+            IPacketObserver observer = [onPacket: { ImmutablePacket packet ->
+                ClassLoader prev = Thread.currentThread().getContextClassLoader()
+                try {
+                    Thread.currentThread().setContextClassLoader(scriptClassLoader)
+                    tryRecord(packet)
+                    display(packet)
+                } catch (Exception e) {
+                    println "[Groovy] onPacket ERROR: ${e.message}"
+                    e.printStackTrace()
+                } finally {
+                    Thread.currentThread().setContextClassLoader(prev)
+                }
+            }] as IPacketObserver
+            try {
+                packetSubscription = publisher.subscribeAll(observer)
+                setSubscribed(true)
+                bindingState = "subscribed"
+                boundProxyIdentity = currentIdentity
+                subscriptionGeneration++
+                emitStatus(true)
+                println "[Groovy] subscribeToPackets: subscription created: ${packetSubscription}, generation=${subscriptionGeneration}"
+                return [success: true, code: "bound", message: "Packet stream bound", subscriptionGeneration: subscriptionGeneration]
+            } catch (Exception e) {
+                setSubscribed(false)
+                bindingState = "error"
+                lastBindError = e.message ?: "Subscription failed"
+                emitStatus(true)
+                return [success: false, code: "error", message: lastBindError]
+            }
+        }
+    }
+
+    private void refreshBindingState() {
+        synchronized (mutex) {
+            IProxyConnection current = machineContext.getProxyConnection()
+            String currentIdentity = connectionIdentity(current)
+            if (!current) {
+                if (isSubscribed()) {
+                    try { packetSubscription?.unsubscribe() } catch (Exception ignored) {}
+                    packetSubscription = null
+                }
+                setSubscribed(false)
+                isPublisherAvailable = false
+                bindingState = "unbound"
+                boundProxyIdentity = ""
+                return
+            }
+            IPacketPublisher publisher = current.getPacketPublisher()
+            if (!publisher) {
+                if (isSubscribed()) {
+                    try { packetSubscription?.unsubscribe() } catch (Exception ignored) {}
+                    packetSubscription = null
+                }
+                setSubscribed(false)
+                isPublisherAvailable = false
+                bindingState = "bound_unsubscribed"
+                boundProxyIdentity = currentIdentity
+                return
+            }
+            isPublisherAvailable = true
+            if (isSubscribed() && boundProxyIdentity == currentIdentity) {
+                bindingState = "subscribed"
+                return
+            }
+            if (!isSubscribed()) {
+                bindingState = "bound_unsubscribed"
+                boundProxyIdentity = currentIdentity
+            }
+        }
+    }
+
+    private Map<String, Object> buildStatusPayload() {
+        return [
+            type                : "STATUS",
+            isProxyBound        : machineContext.getProxyConnection() != null,
+            isPublisherAvailable: isPublisherAvailable,
+            isSubscribed        : isSubscribed(),
+            subscriptionGeneration: subscriptionGeneration,
+            bindingState        : bindingState,
+            lastBindAttemptAt   : lastBindAttemptAt,
+            lastBindError       : lastBindError,
+            totalPacketsSeen    : totalPacketsSeen,
+            droppedIgnoredCount : droppedIgnoredCount,
+            droppedFilterCount  : droppedFilterCount,
+            lastDropReason      : lastDropReason,
+            lastDropTimestamp   : lastDropTimestamp,
+            lastDisplayedPacketTimestamp: lastDisplayedPacketTimestamp,
+            timestamp           : System.currentTimeMillis()
+        ]
+    }
+
+    private void emitStatus(boolean force = false) {
+        long now = System.currentTimeMillis()
+        if (!force && now - lastStatusEmitTime < STATUS_HEARTBEAT_INTERVAL_MS) return
+        packetStreamSink.tryEmitNext(buildStatusPayload())
+        lastStatusEmitTime = now
     }
 
     private void tryRecord(ImmutablePacket packet) {
@@ -465,6 +657,9 @@ class PacketSnifferPage extends BasePage {
 
     void display(ImmutablePacket packet) {
         println "[Groovy] display: packet incoming for ${machineContext.fullName()} (monitorEnabled=${isMonitorEnabled()}), opcode=0x${Integer.toHexString(packet.opcode)}"
+        synchronized (mutex) {
+            totalPacketsSeen++
+        }
         if (!isMonitorEnabled()) return
         synchronized (mutex) {
             int opcode = packet.opcode
@@ -482,15 +677,28 @@ class PacketSnifferPage extends BasePage {
                 tracer.count = tracer.count + 1
             }
 
-            if (tracer.ignored) return
+            if (tracer.ignored) {
+                droppedIgnoredCount++
+                lastDropReason = "ignored"
+                lastDropTimestamp = System.currentTimeMillis()
+                return
+            }
             SnifferPacket tablePacket = new SnifferPacket(name: tracer.name, packet: packet, index: getMonitorPackets().size())
             Map<String, Object> row = buildPacketRow(packet, tracer.name, tablePacket.index)
-            if (!matchesCurrentFilter(row)) return
+            row.subscriptionGeneration = subscriptionGeneration
+            if (!matchesCurrentFilter(row)) {
+                droppedFilterCount++
+                lastDropReason = "filter"
+                lastDropTimestamp = System.currentTimeMillis()
+                return
+            }
             // Keep analyzer and action handlers consistent with visible traffic rows.
             // Streaming alone is not enough because analyzer reads from monitorPackets.
             getMonitorPackets().add(tablePacket)
             packetCount = getMonitorPackets().size()
             packetStreamSink.tryEmitNext(row)
+            lastPacketEmitTime = System.currentTimeMillis()
+            lastDisplayedPacketTimestamp = lastPacketEmitTime
         }
     }
 
@@ -521,11 +729,18 @@ class PacketSnifferPage extends BasePage {
                     getOpcodeFrequency().clear()
                     packetCount = 0
                     lastSentPacketCount = 0
+                    droppedFilterCount = 0L
+                    droppedIgnoredCount = 0L
+                    lastDropReason = ""
+                    lastDropTimestamp = 0L
                     response.success = true
                     break
                 case "togglePause":
                     setMonitorEnabled(!isMonitorEnabled())
                     response.success = true
+                    break
+                case "ensurePacketSubscription":
+                    response.putAll(ensurePacketSubscription())
                     break
                 case "openAnalyzer":
                     // Ensure analyzer sees the latest packets even if they are still queued.
@@ -595,12 +810,30 @@ class PacketSnifferPage extends BasePage {
                     try {
                         monitorFilterPredicate = PacketFilter.parse(monitorFilterQuery)
                         monitorFilterError = ""
+                        if (!monitorFilterQuery) {
+                            droppedFilterCount = 0L
+                            if (lastDropReason == "filter") {
+                                lastDropReason = ""
+                                lastDropTimestamp = 0L
+                            }
+                        }
                         response.success = true
                     } catch (Exception e) {
                         monitorFilterError = e.message
                         response.success = false
                         response.error = monitorFilterError
                     }
+                    break
+                case "unignoreAllTracers":
+                    getTracers().each { t -> t.ignored = false }
+                    saveTracers()
+                    droppedIgnoredCount = 0L
+                    if (lastDropReason == "ignored") {
+                        lastDropReason = ""
+                        lastDropTimestamp = 0L
+                    }
+                    response.success = true
+                    response.code = "unignored"
                     break
                 case "selectPackets":
                     getSelectedPacketIndices().clear()
@@ -763,10 +996,21 @@ class PacketSnifferPage extends BasePage {
         String filter = str(params.filter)
         boolean includeHistory = params.includeHistory as Boolean ?: false
         Flux<Map<String, Object>> stream = packetStreamSink.asFlux().filter { matchesCurrentFilter(it) }
+        Flux<Map<String, Object>> heartbeat = Flux.interval(java.time.Duration.ofMillis(STATUS_HEARTBEAT_INTERVAL_MS))
+                .map {
+                    refreshBindingState()
+                    return buildStatusPayload()
+                }
+                .filter { it != null }
         if (filter) {
             String needle = filter.toLowerCase(Locale.ROOT)
             stream = stream.filter { Map<String, Object> row -> str(row.name).toLowerCase(Locale.ROOT).contains(needle) }
         }
+        Flux<Map<String, Object>> initialStatus = Flux.defer {
+            refreshBindingState()
+            Flux.just(buildStatusPayload())
+        }
+        stream = Flux.concat(initialStatus, Flux.merge(stream, heartbeat))
         if (includeHistory) {
             return Flux.fromIterable(getRecentPackets(100)).concatWith(stream)
         }
@@ -795,6 +1039,7 @@ class PacketSnifferPage extends BasePage {
     }
 
     private boolean matchesCurrentFilter(Map<String, Object> row) {
+        if (row?.type == "STATUS" || row?.type == "STREAM_TERMINATED") return true
         try {
             return monitorFilterPredicate == null || monitorFilterPredicate.test(row)
         } catch (Exception e) {
@@ -825,11 +1070,24 @@ class PacketSnifferPage extends BasePage {
         Map<String, Object> state = [
             activeTab                : activeTab,
             monitorEnabled           : isMonitorEnabled(),
+            isProxyBound             : machineContext.getProxyConnection() != null,
+            isPublisherAvailable     : isPublisherAvailable,
+            isSubscribed             : isSubscribed(),
+            subscriptionGeneration   : subscriptionGeneration,
+            bindingState             : bindingState,
+            lastBindAttemptAt        : lastBindAttemptAt,
+            lastBindError            : lastBindError,
             tracerSearchFilter       : tracerSearchFilter,
             monitorFilterQuery       : monitorFilterQuery,
             monitorFilterError       : monitorFilterError,
             monitorFilterHint        : PacketFilter.supportedSyntaxHint(),
             packetCount              : packetCount,
+            totalPacketsSeen         : totalPacketsSeen,
+            droppedIgnoredCount      : droppedIgnoredCount,
+            droppedFilterCount       : droppedFilterCount,
+            lastDropReason           : lastDropReason,
+            lastDropTimestamp        : lastDropTimestamp,
+            lastDisplayedPacketTimestamp: lastDisplayedPacketTimestamp,
             serverCount              : serverCount,
             clientCount              : clientCount,
             botCount                 : botCount,
@@ -981,8 +1239,8 @@ class PacketSnifferPage extends BasePage {
     private static String resolveOpcodeName(int opcode) {
         return [
             (0x5000): "SETUP", (0x5001): "CHALLENGE", (0x2001): "MODULE_ID", (0x9000): "HANDSHAKE_ACCEPT",
-            (0x2002): "PATCH_INFO", (0xA100): "AUTH_REQUEST", (0xA101): "AUTH_RESPONSE", (0xA102): "LOGIN_RESPONSE",
-            (0xA103): "SERVER_LIST", (0x6005): "AGENT_REQUEST", (0x600D): "MASSIVE", (0x34B5): "TELEPORT_COMPLETE",
+            (0x2002): "PATCH_INFO", (0xA100): "AUTH_REQUEST", (0xA101): "AGENT_LIST", (0xA102): "LOGIN_RESPONSE",
+            (0xA103): "AUTH_RESPONSE", (0x6101): "AGENT_REQUEST", (0x600D): "MASSIVE", (0x34B5): "TELEPORT_COMPLETE",
             (0x3020): "CHARACTER_DATA", (0x3013): "ENTITY_SPAWN", (0x3015): "ENTITY_DESPAWN"
         ][opcode] ?: "UNKNOWN"
     }
@@ -1334,6 +1592,9 @@ class PacketSnifferPage extends BasePage {
 
     @Override
     void shutdown() {
+        try {
+            packetStreamSink.tryEmitNext([type: "STREAM_TERMINATED", reason: "PacketSniffer shutdown", timestamp: System.currentTimeMillis()])
+        } catch (Exception ignored) {}
         if (packetSubscription) {
             try { packetSubscription.unsubscribe() } catch (Exception ignored) {}
             packetSubscription = null

@@ -314,8 +314,8 @@ cmd_watch() {
     # Use inotifywait to watch for file moves (Maven replaces files) or modifications
     inotifywait -m -r -e close_write --format '%w%f' "$ROOT_DIR" | while read -r FILE; do
         if [[ "$FILE" == *"target/"*".jar" ]]; then
-            # Ignore -sources.jar and -javadoc.jar
-            if [[ "$FILE" == *"-sources.jar" ]] || [[ "$FILE" == *"-javadoc.jar" ]]; then
+            # Ignore Karaf's own cache/bundle files and documentation JARs
+            if [[ "$FILE" == *"-sources.jar" ]] || [[ "$FILE" == *"-javadoc.jar" ]] || [[ "$FILE" == *"target/assembly/data/"* ]]; then
                  continue
             fi
 

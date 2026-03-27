@@ -23,6 +23,18 @@ export interface RSocketResponse<T = unknown> {
     id?: string;
 }
 
+export interface SubscribeOptions {
+    params?: Record<string, unknown>;
+    initialRequestN?: number;
+    requestN?: number;
+    maxInFlight?: number;
+}
+
+export interface RSocketSubscription {
+    unsubscribe: () => void;
+    request: (n: number) => void;
+}
+
 /**
  * Standard error codes (following JSON-RPC conventions).
  */
@@ -176,12 +188,18 @@ export class RSocketService {
         method: string,
         onNext: (data: T) => void,
         onError?: (error: any) => void,
-        params?: Record<string, unknown>
-    ): { unsubscribe: () => void } {
+        options?: Record<string, unknown> | SubscribeOptions
+    ): RSocketSubscription {
         if (!this.client) {
             console.error("Client not connected");
-            return { unsubscribe: () => { } };
+            return { unsubscribe: () => { }, request: () => { } };
         }
+
+        const normalizedOptions: SubscribeOptions =
+            options && !('params' in options) && !('requestN' in options) && !('initialRequestN' in options) && !('maxInFlight' in options)
+                ? { params: options as Record<string, unknown> }
+                : (options as SubscribeOptions || {});
+        const params = normalizedOptions.params;
 
         const request: RSocketRequest = {
             method,
@@ -195,9 +213,14 @@ export class RSocketService {
         };
 
         let subscription: any;
+        let inFlight = 0;
+        const initialRequestN = Math.max(1, normalizedOptions.initialRequestN ?? normalizedOptions.requestN ?? 64);
+        const requestN = Math.max(1, normalizedOptions.requestN ?? initialRequestN);
+        const maxInFlight = Math.max(requestN, normalizedOptions.maxInFlight ?? requestN * 4);
 
         this.client.requestStream(payload).subscribe({
             onNext: (payload: any) => {
+                inFlight = Math.max(0, inFlight - 1);
                 try {
                     const data = typeof payload.data === 'string'
                         ? JSON.parse(payload.data)
@@ -210,6 +233,14 @@ export class RSocketService {
                         }
                     } else {
                         onNext(data as T);
+                    }
+
+                    if (subscription && inFlight < requestN) {
+                        const delta = Math.min(requestN, maxInFlight - inFlight);
+                        if (delta > 0) {
+                            subscription.request(delta);
+                            inFlight += delta;
+                        }
                     }
                 } catch (e) {
                     console.error("Failed to parse stream data", e);
@@ -224,7 +255,8 @@ export class RSocketService {
             },
             onSubscribe: (sub: any) => {
                 subscription = sub;
-                subscription.request(2147483647); // Request unlimited
+                subscription.request(initialRequestN);
+                inFlight = initialRequestN;
             }
         });
 
@@ -232,6 +264,13 @@ export class RSocketService {
             unsubscribe: () => {
                 if (subscription) {
                     subscription.cancel();
+                }
+            },
+            request: (n: number) => {
+                const count = Math.max(1, Math.floor(n || 1));
+                if (subscription) {
+                    subscription.request(count);
+                    inFlight += count;
                 }
             }
         };
@@ -253,10 +292,10 @@ export class RSocketService {
         message: string,
         onNext: (data: any) => void,
         onError?: (error: any) => void
-    ): { unsubscribe: () => void } {
+    ): RSocketSubscription {
         if (!this.client) {
             console.error("Client not connected");
-            return { unsubscribe: () => { } };
+            return { unsubscribe: () => { }, request: () => { } };
         }
 
         const payload = {
@@ -295,7 +334,89 @@ export class RSocketService {
                 if (subscription) {
                     subscription.cancel();
                 }
+            },
+            request: (n: number) => {
+                if (subscription) {
+                    subscription.request(Math.max(1, Math.floor(n || 1)));
+                }
             }
+        };
+    }
+
+    fireAndForget(method: string, params?: Record<string, unknown>): Promise<void> {
+        if (!this.client) {
+            return Promise.reject(new Error("Client not connected"));
+        }
+        const request: RSocketRequest = {
+            method,
+            params,
+            id: generateRequestId(),
+        };
+        const payload = {
+            data: JSON.stringify(request),
+            metadata: ""
+        };
+        return this.client.fireAndForget(payload);
+    }
+
+    requestChannel<TOut = unknown, TIn = unknown>(
+        method: string,
+        sourceItems: TOut[],
+        onNext: (data: TIn) => void,
+        onError?: (error: any) => void,
+        params?: Record<string, unknown>
+    ): RSocketSubscription {
+        if (!this.client) {
+            console.error("Client not connected");
+            return { unsubscribe: () => { }, request: () => { } };
+        }
+
+        const source = {
+            subscribe: (subscriber: any) => {
+                if (subscriber.onSubscribe) {
+                    subscriber.onSubscribe({
+                        request: (_n: number) => {
+                            // Eagerly emits buffered items when requested.
+                            sourceItems.forEach((item) => {
+                                subscriber.onNext({
+                                    data: JSON.stringify({
+                                        method,
+                                        params: { ...params, item },
+                                        id: generateRequestId(),
+                                    }),
+                                    metadata: ""
+                                });
+                            });
+                            subscriber.onComplete?.();
+                        },
+                        cancel: () => { }
+                    });
+                }
+            }
+        };
+
+        let subscription: any;
+        this.client.requestChannel(source).subscribe({
+            onNext: (payload: any) => {
+                try {
+                    const data = typeof payload.data === 'string'
+                        ? JSON.parse(payload.data)
+                        : payload.data;
+                    onNext(data as TIn);
+                } catch (e) {
+                    console.error("Failed to parse channel data", e);
+                }
+            },
+            onError: (error: any) => onError?.(error),
+            onSubscribe: (sub: any) => {
+                subscription = sub;
+                subscription.request(64);
+            }
+        });
+
+        return {
+            unsubscribe: () => subscription?.cancel?.(),
+            request: (n: number) => subscription?.request?.(Math.max(1, Math.floor(n || 1)))
         };
     }
 
@@ -458,6 +579,19 @@ export class RSocketService {
     ) {
         return this.subscribe<ExtensionEvent>('extension.events', onEvent, onError);
     }
+
+    subscribeToMachineStatus(
+        machineId: string,
+        onEvent: (event: MachineStatusEvent) => void,
+        onError?: (error: any) => void
+    ) {
+        return this.subscribe<MachineStatusEvent>(
+            'machine.status.stream',
+            onEvent,
+            onError,
+            { machineId }
+        );
+    }
 }
 
 /**
@@ -477,6 +611,15 @@ export class RSocketError extends Error {
 
 // ============ Type Definitions ============
 
+/** Non-secret persisted login fields from settings (for sidebar hydration). */
+export interface SavedLoginSnapshot {
+    targetGateway?: string;
+    targetAgent?: string;
+    usernameSet?: boolean;
+    autoLogin?: boolean;
+    autoReconnect?: boolean;
+}
+
 export interface CharacterState {
     entityId: number;
     characterName: string;
@@ -490,6 +633,15 @@ export interface CharacterState {
     x: number;
     y: number;
     isRunning: boolean;
+    connected?: boolean;
+    loginPhase?: string;
+    agentsDiscovered?: number;
+    authenticated?: boolean;
+    inGame?: boolean;
+    agentOptions?: Array<{ value: string; label: string }>;
+    availableCharacters?: string[];
+    selectedCharacter?: string | null;
+    savedLogin?: SavedLoginSnapshot;
 }
 
 export interface MachineInfo {
@@ -559,6 +711,19 @@ export interface ExtensionEvent {
     type: string;
     data: Record<string, unknown>;
     timestamp: number;
+}
+
+export interface MachineStatusEvent {
+    machineId: string;
+    transition?: string;
+    connected?: boolean;
+    authenticated?: boolean;
+    loginPhase?: string;
+    timestamp?: number;
+    reason?: string;
+    host?: string;
+    port?: number;
+    topic?: string;
 }
 
 export const rsocketService = new RSocketService();

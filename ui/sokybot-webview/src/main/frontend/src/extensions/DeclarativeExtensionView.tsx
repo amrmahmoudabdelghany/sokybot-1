@@ -2,8 +2,9 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { rsocketService } from '../RSocketClient';
 import { ComponentRenderer } from './renderer/ComponentRenderer';
 import { resolveTemplateInObject, cleanResolvedParams } from './renderer/expressionUtils';
-import type { UIComponent } from './ui-types';
+import type { UIComponent, StreamBindingConfig } from './ui-types';
 import { validateSchema } from './schemaValidation';
+import { applyStreamBatch, type StreamEnvelope } from './streamState';
 
 interface DeclarativeExtensionViewProps {
     pageId: string;
@@ -26,39 +27,68 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     const [loading, setLoading] = useState(!providedSchema);
     const [schemaIssues, setSchemaIssues] = useState<string[]>([]);
 
-    // Performance: Debounce state updates
     const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
-    // const lastUpdateRef = useRef<number>(0);
-    // const pendingUpdatesRef = useRef<Map<string, any>>(new Map());
     const streamSubscriptionsRef = useRef<Map<string, any>>(new Map());
     const lastStreamParamsRef = useRef<Map<string, string>>(new Map());
+    const streamBindingsRef = useRef<Map<string, StreamBindingConfig>>(new Map());
+    const streamQueuesRef = useRef<Map<string, StreamEnvelope[]>>(new Map());
+    const flushIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
+    const streamVersionRef = useRef<Map<string, number>>(new Map());
+    const streamConnectLockRef = useRef<Map<string, boolean>>(new Map());
+    const streamConnectTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
+    const streamLastActivityRef = useRef<Map<string, number>>(new Map());
+    const streamStatusIntervalRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-    // Efficient delta update application
     const applyDeltaUpdate = useCallback((delta: Record<string, any>) => {
-        setData(prev => {
-            const updated = { ...prev };
+        setData(prev => ({ ...prev, ...delta }));
+    }, []);
 
-            Object.keys(delta).forEach(key => {
-                const newValue = delta[key];
-
-                // If the new value is an array and we are in a stream context, 
-                // we should probably append. 
-                // Special handling for known packet lists
-                if ((key === 'trafficPackets' || key === 'tracerPackets' || key === 'newPackets') && Array.isArray(newValue)) {
-                    const existing = prev[key] || [];
-                    updated[key] = [...existing, ...newValue];
-                    // Keep only last 1000 items in memory
-                    if (updated[key].length > 1000) {
-                        updated[key] = updated[key].slice(-1000);
-                    }
-                } else {
-                    // Default merge/overwrite for other state keys
-                    updated[key] = newValue;
-                }
-            });
-
-            return updated;
+    const flushStreamQueues = useCallback(() => {
+        const pending: StreamEnvelope[] = [];
+        streamQueuesRef.current.forEach((items) => {
+            if (items.length > 0) pending.push(...items.splice(0, items.length));
         });
+        if (pending.length === 0) return;
+        setData(prev => applyStreamBatch(prev, pending));
+    }, []);
+
+    const setStreamStatus = useCallback((streamId: string, status: string, details?: Record<string, any>) => {
+        setData(prev => {
+            const current = prev.streamHealth && typeof prev.streamHealth === 'object' ? prev.streamHealth : {};
+            const previousStatus = current[streamId]?.status;
+            const nextEntry = {
+                ...(current[streamId] || {}),
+                status,
+                updatedAt: Date.now(),
+                ...(details || {}),
+            };
+            const nextData: Record<string, any> = { ...prev, streamHealth: { ...current, [streamId]: nextEntry } };
+
+            // Continuity marker: if stream recovers after being stalled/disconnected, annotate history.
+            if (status === 'running' && (previousStatus === 'stalled' || previousStatus === 'disconnected' || previousStatus === 'timeout')) {
+                const binding = streamBindingsRef.current.get(streamId);
+                const stateKey = binding?.stateKey || streamId;
+                const existingRows = Array.isArray(nextData[stateKey]) ? nextData[stateKey] : [];
+                const marker = {
+                    type: 'SYSTEM_MARKER',
+                    markerType: 'connection_gap',
+                    message: 'Connection interrupted - some packets may be missing',
+                    timestamp: Date.now(),
+                    source: 'SYSTEM',
+                    name: 'Stream continuity marker',
+                    opcode: '--',
+                    count: '--',
+                    crc: '--',
+                    payload: ''
+                };
+                nextData[stateKey] = [...existingRows, marker];
+            }
+            return nextData;
+        });
+    }, []);
+
+    const setTransportState = useCallback((state: 'connected' | 'disconnected') => {
+        setData(prev => ({ ...prev, transportState: state, transportUpdatedAt: Date.now() }));
     }, []);
 
     // Performance: Memoize action handler
@@ -237,16 +267,29 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         discoverAndSubscribeStreams(providedSchema || schema);
 
         // Subscribe to state change events (delta updates)
-        const subscription = rsocketService.streamEvents(
+        const subscription = rsocketService.subscribeToExtensionEvents(
             (event) => {
-                // console.log("Received extension event:", event);
-                if (event.type === `${pageId}.stateChanged` && event.delta) {
-                    // console.log(`[${pageId}] Applying delta update`, event.delta);
-                    applyDeltaUpdate(event.delta);
+                const payload = event as any;
+                if (payload.type === `${pageId}.stateChanged` && payload.delta) {
+                    applyDeltaUpdate(payload.delta);
                 }
             },
             (error) => console.error("Extension event error", error)
         );
+
+        if (flushIntervalRef.current) clearInterval(flushIntervalRef.current);
+        flushIntervalRef.current = setInterval(flushStreamQueues, 75);
+        setTransportState('connected');
+        if (streamStatusIntervalRef.current) clearInterval(streamStatusIntervalRef.current);
+        streamStatusIntervalRef.current = setInterval(() => {
+            const now = Date.now();
+            const staleAfterMs = 15000;
+            streamLastActivityRef.current.forEach((last, streamId) => {
+                if (now - last >= staleAfterMs) {
+                    setStreamStatus(streamId, 'stalled', { lastActivityAt: last, staleAfterMs });
+                }
+            });
+        }, 1000);
 
         return () => {
             subscription?.unsubscribe();
@@ -257,8 +300,18 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             streamSubscriptionsRef.current.forEach(sub => sub?.unsubscribe());
             streamSubscriptionsRef.current.clear();
             lastStreamParamsRef.current.clear();
+            streamBindingsRef.current.clear();
+            streamQueuesRef.current.clear();
+            streamVersionRef.current.clear();
+            if (flushIntervalRef.current) clearInterval(flushIntervalRef.current);
+            if (streamStatusIntervalRef.current) clearInterval(streamStatusIntervalRef.current);
+            streamConnectTimeoutRef.current.forEach(timeout => clearTimeout(timeout));
+            streamConnectTimeoutRef.current.clear();
+            streamConnectLockRef.current.clear();
+            streamLastActivityRef.current.clear();
+            setTransportState('disconnected');
         };
-    }, [pageId, machineId, providedSchema, schema]);
+    }, [pageId, machineId, providedSchema, schema, applyDeltaUpdate, flushStreamQueues, setStreamStatus, setTransportState]);
 
     const fetchSchema = async () => {
         setLoading(true);
@@ -312,11 +365,28 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         }
 
         // Check if component has stream
-        if (schema.type === 'stream' || schema.props?.streamId) {
-            const streamId = schema.props?.streamId || schema.id;
-            const rawStreamParams = schema.props?.streamParams || {};
-            const stateKey = schema.props?.stateKey;
-            const streamMode = schema.props?.streamMode;
+        const binding: StreamBindingConfig | undefined = schema.stream || (schema.props?.streamId ? {
+            streamId: schema.props.streamId,
+            stateKey: schema.props.stateKey,
+            mode: schema.props.streamMode || 'replace',
+            streamParams: schema.props.streamParams || {},
+            maxCapacity: schema.props.maxCapacity,
+            rollingWindow: schema.props.rollingWindow,
+            rowKey: schema.props.rowKey,
+            rowKeyExtractor: schema.props.rowKeyExtractor,
+            orphanDeltaPolicy: schema.props.orphanDeltaPolicy,
+            maxQueueSize: schema.props.maxQueueSize,
+            preFilterExpression: schema.props.preFilterExpression,
+            pauseQueuePolicy: schema.props.pauseQueuePolicy,
+            flushWhilePaused: schema.props.flushWhilePaused,
+            initialSnapshot: schema.props.initialSnapshot,
+            maxRowSize: schema.props.maxRowSize,
+            control: schema.props.control,
+        } : undefined);
+
+        if (schema.type === 'stream' || binding) {
+            const streamId = binding?.streamId || schema.props?.streamId || schema.id;
+            const rawStreamParams = binding?.streamParams || {};
 
             if (streamId) {
                 const resolvedParams = cleanResolvedParams(resolveTemplateInObject(rawStreamParams, data));
@@ -324,10 +394,13 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 lastStreamParamsRef.current.set(streamId, serialized);
 
                 console.log(
-                    `[${pageId}] Found stream: ${streamId} with mode: ${streamMode}`,
+                    `[${pageId}] Found stream: ${streamId} with mode: ${binding?.mode}`,
                     resolvedParams
                 );
-                subscribeToStream(streamId, resolvedParams, stateKey, streamMode);
+                if (binding) {
+                    streamBindingsRef.current.set(streamId, binding);
+                }
+                subscribeToStream(streamId, resolvedParams, binding);
             }
         }
 
@@ -344,32 +417,69 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     const subscribeToStream = (
         streamId: string,
         params: Record<string, any>,
-        stateKey?: string,
-        mode?: string
+        binding?: StreamBindingConfig
     ) => {
-        // Use structured subscribe method
-        // Backend expects: extension.stream:pageId:streamId
+        const maxQueueSize = Math.max(64, Number(binding?.maxQueueSize ?? 2000));
+        const key = streamId;
+        if (streamConnectLockRef.current.get(key)) {
+            console.warn(`[${pageId}] Stream ${key} connect ignored: already connecting`);
+            return;
+        }
+        streamConnectLockRef.current.set(key, true);
+        setStreamStatus(key, 'connecting');
+        const nextVersion = (streamVersionRef.current.get(key) || 0) + 1;
+        streamVersionRef.current.set(key, nextVersion);
+        const connectTimeout = setTimeout(() => {
+            if (streamConnectLockRef.current.get(key)) {
+                streamConnectLockRef.current.set(key, false);
+                setStreamStatus(key, 'timeout', { message: 'Connection attempt timed out (10s)' });
+            }
+        }, 10000);
+        streamConnectTimeoutRef.current.set(key, connectTimeout);
+
         const subscription = rsocketService.subscribe(
             `extension.stream:${pageId}:${streamId}`,
             (streamData: any) => {
-                console.log(`[Stream:${streamId}] Received data`, streamData);
-                if (stateKey) {
-                    if (mode === 'append') {
-                        setData(prev => {
-                            const existing = Array.isArray(prev[stateKey]) ? prev[stateKey] : [];
-                            // Keep last 1000 items
-                            const updated = [...existing, streamData].slice(-1000);
-                            return { ...prev, [stateKey]: updated };
-                        });
-                    } else {
-                        setData(prev => ({ ...prev, [stateKey]: streamData }));
-                    }
-                } else {
-                    setData(prev => ({ ...prev, [streamId]: streamData }));
+                if (streamVersionRef.current.get(key) !== nextVersion) {
+                    return;
                 }
+                streamLastActivityRef.current.set(key, Date.now());
+                if (streamConnectLockRef.current.get(key)) {
+                    streamConnectLockRef.current.set(key, false);
+                    const timeout = streamConnectTimeoutRef.current.get(key);
+                    if (timeout) clearTimeout(timeout);
+                    streamConnectTimeoutRef.current.delete(key);
+                }
+                if (streamData?.type === 'STREAM_TERMINATED') {
+                    setStreamStatus(key, 'disconnected', { reason: streamData?.reason || 'terminated' });
+                    return;
+                }
+                if (streamData?.type === 'STATUS') {
+                    const status = streamData?.bindingState || (streamData?.isSubscribed ? 'running' : 'unsubscribed');
+                    setStreamStatus(key, status, {
+                        ...streamData,
+                        heartbeatAt: streamData?.timestamp || Date.now(),
+                    });
+                    return;
+                }
+                setStreamStatus(key, 'running', { lastPacketAt: Date.now() });
+                const queue = streamQueuesRef.current.get(key) || [];
+                queue.push({ payload: streamData, binding: binding || { streamId }, streamId });
+                if (queue.length > maxQueueSize) {
+                    queue.splice(0, queue.length - maxQueueSize);
+                }
+                streamQueuesRef.current.set(key, queue);
             },
-            (error) => console.error(`Stream ${streamId} error`, error),
-            { ...params, pageId }
+            (error) => {
+                streamConnectLockRef.current.set(key, false);
+                const timeout = streamConnectTimeoutRef.current.get(key);
+                if (timeout) clearTimeout(timeout);
+                streamConnectTimeoutRef.current.delete(key);
+                setStreamStatus(key, 'disconnected', { error: String(error?.message || error || 'stream error') });
+                setTransportState('disconnected');
+                console.error(`Stream ${streamId} error`, error);
+            },
+            { params: { ...params, pageId }, initialRequestN: 64, requestN: 64, maxInFlight: maxQueueSize }
         );
 
         streamSubscriptionsRef.current.set(streamId, subscription);
@@ -390,11 +500,15 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 return;
             }
 
-            if (node.type === 'stream' || node.props?.streamId) {
-                const streamId = node.props?.streamId || node.id;
-                const rawStreamParams = node.props?.streamParams || {};
-                const stateKey = node.props?.stateKey;
-                const streamMode = node.props?.streamMode;
+            const binding: StreamBindingConfig | undefined = node.stream || (node.props?.streamId ? {
+                streamId: node.props.streamId,
+                stateKey: node.props.stateKey,
+                mode: node.props.streamMode || 'replace',
+                streamParams: node.props.streamParams || {},
+            } : undefined);
+            if (node.type === 'stream' || binding) {
+                const streamId = binding?.streamId || node.props?.streamId || node.id;
+                const rawStreamParams = binding?.streamParams || {};
 
                 if (streamId) {
                     const resolvedParams = cleanResolvedParams(resolveTemplateInObject(rawStreamParams, data));
@@ -408,7 +522,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                         );
                         const existing = streamSubscriptionsRef.current.get(streamId);
                         existing?.unsubscribe();
-                        subscribeToStream(streamId, resolvedParams, stateKey, streamMode);
+                        subscribeToStream(streamId, resolvedParams, binding);
                         lastStreamParamsRef.current.set(streamId, serialized);
                     } else if (previous === undefined) {
                         lastStreamParamsRef.current.set(streamId, serialized);
@@ -478,7 +592,7 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         return <div>No schema available for {pageId}</div>;
     }
 
-    return <div className="h-full overflow-auto">{renderedContent}</div>;
+    return <div className="h-full min-h-0 overflow-auto">{renderedContent}</div>;
 };
 
 async function copyToClipboard(text: string): Promise<boolean> {

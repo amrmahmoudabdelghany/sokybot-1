@@ -10,11 +10,44 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages cycle interruptions based on priority.
- * Tracks currently executing cycle and checks for interrupting cycles.
+ *
+ * <h3>Interruption evaluation order</h3>
+ * When {@link #checkForInterruption} is called, each registered candidate cycle
+ * is tested in the following order. The first candidate to pass all checks wins:
+ * <ol>
+ *   <li><b>Self-skip:</b> a cycle cannot interrupt itself.</li>
+ *   <li><b>Priority gate:</b> candidate {@code interruptionPriority} must exceed
+ *       the currently running cycle's priority.</li>
+ *   <li><b>Entry guard pre-check:</b> the candidate's {@code entryGuard} (if any)
+ *       must pass. A cycle that cannot start on its own cannot interrupt another.</li>
+ *   <li><b>Cooldown:</b> the candidate must not have interrupted the same target
+ *       within {@link #INTERRUPTION_COOLDOWN_MS}.</li>
+ *   <li><b>Interruption guard:</b> the candidate's {@code interruptionGuard}
+ *       must evaluate to {@code true}.</li>
+ * </ol>
+ *
+ * <h3>Threading model</h3>
+ * All cycle execution (including nested interruptions) runs on a single
+ * {@code ParentCycleExecutor} thread per machine. The {@code volatile} fields
+ * exist solely so that {@code stop()} from another thread is visible. No
+ * external synchronization is required.
+ *
+ * <h3>Script requirements</h3>
+ * Any cycle script that sets an {@code interruptionGuard} should also ensure
+ * the guard checks that the game is in an active/in-world state (e.g.
+ * {@code isLoggedIn(ctx)}) to avoid preempting the login cycle before the
+ * character has spawned.
  */
 public class InterruptionManager {
     
     private static final Logger log = LoggerFactory.getLogger(InterruptionManager.class);
+
+    /**
+     * Minimum interval between repeated interruptions of the same target by
+     * the same interruptor. Prevents ping-pong loops where a cycle interrupts,
+     * immediately yields, and interrupts again.
+     */
+    static final long INTERRUPTION_COOLDOWN_MS = 5000L;
     
     private final IWorkflowRegistry registry;
     private final CycleStateSaver stateSaver;
@@ -27,6 +60,9 @@ public class InterruptionManager {
     
     // Interruption tracking
     private final Map<String, Integer> interruptionCounts = new ConcurrentHashMap<>();
+
+    // Anti-ping-pong: interruptorName -> (targetName -> timestamp of last interruption)
+    private final Map<String, Map<String, Long>> interruptionTimestamps = new HashMap<>();
     
     public InterruptionManager(IWorkflowRegistry registry) {
         this.registry = registry;
@@ -35,40 +71,74 @@ public class InterruptionManager {
     
     /**
      * Checks if a higher priority cycle needs to interrupt the current cycle.
+     * See class Javadoc for the full evaluation order.
      * 
      * @param context The workflow context
      * @return The interrupting cycle, or null if no interruption needed
      */
     public ICycleDefinition checkForInterruption(IWorkflowContext context) {
         if (currentCycleName == null || currentCyclePriority == 0) {
-            return null; // No cycle currently executing
+            return null;
         }
         
+        long now = System.currentTimeMillis();
         List<String> registeredCycles = registry.getRegisteredCycles();
         
         for (String cycleName : registeredCycles) {
+            // 1. Self-skip
+            if (cycleName.equals(currentCycleName)) {
+                continue;
+            }
+
             ICycleDefinition cycle = registry.getCycle(cycleName);
-            
             if (cycle == null || !cycle.isEnabled()) {
                 continue;
             }
             
-            // Check if this cycle has higher interruption priority
+            // 2. Priority gate
             int interruptionPriority = cycle.getInterruptionPriority();
-            if (interruptionPriority > currentCyclePriority) {
-                // Check interruption guard
-                IGuard interruptionGuard = cycle.getInterruptionGuard();
-                if (interruptionGuard != null) {
-                    try {
-                        if (interruptionGuard.evaluate(context)) {
-                            log.info("Interruption detected: {} (priority {}) interrupting {} (priority {})",
-                                    cycleName, interruptionPriority, currentCycleName, currentCyclePriority);
-                            return cycle;
-                        }
-                    } catch (Exception e) {
-                        log.error("Error evaluating interruption guard for cycle {}: {}",
-                                cycleName, e.getMessage(), e);
+            if (interruptionPriority <= currentCyclePriority) {
+                continue;
+            }
+
+            // 3. Entry guard pre-check: cycle must be able to start on its own
+            IGuard entryGuard = cycle.getEntryGuard();
+            if (entryGuard != null) {
+                try {
+                    if (!entryGuard.evaluate(context)) {
+                        log.debug("Interruption candidate {} skipped: entry guard failed", cycleName);
+                        continue;
                     }
+                } catch (Exception e) {
+                    log.debug("Interruption candidate {} skipped: entry guard error: {}",
+                            cycleName, e.getMessage());
+                    continue;
+                }
+            }
+
+            // 4. Cooldown: prevent repeated interruptions of the same target
+            Map<String, Long> targetTimestamps = interruptionTimestamps
+                    .getOrDefault(cycleName, Collections.emptyMap());
+            Long lastInterrupt = targetTimestamps.get(currentCycleName);
+            if (lastInterrupt != null && (now - lastInterrupt) < INTERRUPTION_COOLDOWN_MS) {
+                log.debug("Interruption candidate {} in cooldown for target {} ({} ms remaining)",
+                        cycleName, currentCycleName,
+                        INTERRUPTION_COOLDOWN_MS - (now - lastInterrupt));
+                continue;
+            }
+
+            // 5. Interruption guard
+            IGuard interruptionGuard = cycle.getInterruptionGuard();
+            if (interruptionGuard != null) {
+                try {
+                    if (interruptionGuard.evaluate(context)) {
+                        log.info("Interruption detected: {} (priority {}) interrupting {} (priority {})",
+                                cycleName, interruptionPriority, currentCycleName, currentCyclePriority);
+                        return cycle;
+                    }
+                } catch (Exception e) {
+                    log.error("Error evaluating interruption guard for cycle {}: {}",
+                            cycleName, e.getMessage(), e);
                 }
             }
         }
@@ -86,7 +156,7 @@ public class InterruptionManager {
      */
     public SavedState interruptCurrentCycle(ICycleDefinition interruptingCycle, IWorkflowContext context) {
         if (currentCycleName == null || currentCycleState == null) {
-            return null; // Nothing to interrupt
+            return null;
         }
         
         log.info("Interrupting cycle {} (state: {}) with cycle {}",
@@ -106,8 +176,13 @@ public class InterruptionManager {
             }
         }
         
-        // Track interruption
+        // Track interruption count
         interruptionCounts.merge(interruptingCycle.getName(), 1, Integer::sum);
+
+        // Record timestamp for anti-ping-pong cooldown
+        interruptionTimestamps
+                .computeIfAbsent(interruptingCycle.getName(), k -> new HashMap<>())
+                .put(currentCycleName, System.currentTimeMillis());
         
         return savedState;
     }
@@ -144,7 +219,6 @@ public class InterruptionManager {
         // Get the state to resume from
         ICycleState state = cycle.getState(savedState.getStateName());
         if (state == null) {
-            // Entry state not found, use entry state
             state = cycle.getState(cycle.getEntryStateName());
         }
         
@@ -195,9 +269,10 @@ public class InterruptionManager {
     }
     
     /**
-     * Clears interruption statistics.
+     * Clears interruption statistics and cooldown timestamps.
      */
     public void clearStats() {
         interruptionCounts.clear();
+        interruptionTimestamps.clear();
     }
 }

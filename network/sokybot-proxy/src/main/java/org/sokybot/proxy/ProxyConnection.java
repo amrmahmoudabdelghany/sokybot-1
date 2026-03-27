@@ -1,8 +1,11 @@
 package org.sokybot.proxy;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.sokybot.network.NetworkPeer;
 import org.sokybot.network.packet.ImmutablePacket;
@@ -25,12 +28,15 @@ import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implementation of IProxyConnection.
  * Manages bidirectional proxy between game client and game server.
  */
 public class ProxyConnection implements IProxyConnection {
+    private static final Logger log = LoggerFactory.getLogger(ProxyConnection.class);
 
     private final String machineId;
     private volatile IConnectionListener listener;
@@ -90,8 +96,10 @@ public class ProxyConnection implements IProxyConnection {
     @Override
     public void connectToServer(String host, int port) {
         if (serverConnected) {
+            log.info("Proxy [{}] skipping connectToServer to {}:{} because serverConnected=true", machineId, host, port);
             return;
         }
+        emitNetworkLifecycleEvent("Connecting", false, false, "CONNECTING", null, host, port);
 
         System.out.println("Sokybot Proxy [" + machineId + "]: Connecting to game server " + host + ":" + port);
 
@@ -116,12 +124,18 @@ public class ProxyConnection implements IProxyConnection {
             if (listener != null) {
                 listener.onServerConnected();
             }
+            emitNetworkLifecycleEvent("Connected", true, false, "CONNECTED", null, host, port);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            log.error("Proxy [{}] interrupted while connecting to {}:{}", machineId, host, port, e);
+            emitNetworkLifecycleEvent("Disconnected", false, false, "DISCONNECTED", e.getMessage(), host, port);
             throw new RuntimeException("Failed to connect to game server", e);
         } catch (Exception e) {
             System.err
                     .println("Sokybot Proxy [" + machineId + "]: Failed to connect to game server: " + e.getMessage());
+            log.error("Proxy [{}] failed to connect to game server {}:{} (serverConnected={})",
+                    machineId, host, port, serverConnected, e);
+            emitNetworkLifecycleEvent("Disconnected", false, false, "DISCONNECTED", e.getMessage(), host, port);
             // Do not rethrow; let the bot retry connection smoothly on next cycle tick
             // without blowing up the state machine
         }
@@ -143,6 +157,7 @@ public class ProxyConnection implements IProxyConnection {
         if (listener != null) {
             listener.onDisconnected(null);
         }
+        emitNetworkLifecycleEvent("Disconnected", false, false, "DISCONNECTED", null, null, null);
 
         System.out.println("Sokybot Proxy [" + machineId + "]: Disconnected");
     }
@@ -193,6 +208,12 @@ public class ProxyConnection implements IProxyConnection {
         return serverConnected;
     }
 
+    @Override
+    public boolean isGameServerChannelActive() {
+        Channel ch = gameServerChannel;
+        return ch != null && ch.isActive();
+    }
+
     /**
      * Called by ClientChannelInitializer when client connects.
      */
@@ -217,6 +238,14 @@ public class ProxyConnection implements IProxyConnection {
         if (listener != null) {
             listener.onDisconnected(cause);
         }
+        emitNetworkLifecycleEvent(
+                "Disconnected",
+                false,
+                false,
+                "DISCONNECTED",
+                cause != null ? cause.getMessage() : null,
+                null,
+                null);
     }
 
     /**
@@ -293,6 +322,7 @@ public class ProxyConnection implements IProxyConnection {
         if (!redirecting && listener != null) {
             listener.onDisconnected(null);
         }
+        emitNetworkLifecycleEvent("Disconnected", false, false, "DISCONNECTED", null, null, null);
     }
 
     public void onClientDisconnected() {
@@ -300,6 +330,7 @@ public class ProxyConnection implements IProxyConnection {
         if (listener != null) {
             listener.onDisconnected(null);
         }
+        emitNetworkLifecycleEvent("Disconnected", false, false, "DISCONNECTED", null, null, null);
     }
 
     @Override
@@ -353,6 +384,7 @@ public class ProxyConnection implements IProxyConnection {
         if (listener != null) {
             listener.onAuthenticated();
         }
+        emitNetworkLifecycleEvent("Authenticated", true, true, "AUTHENTICATED", null, null, null);
     }
 
     public void onAuthFailed(byte resultCode) {
@@ -360,6 +392,14 @@ public class ProxyConnection implements IProxyConnection {
         if (listener != null) {
             listener.onDisconnected(new RuntimeException("Agent auth failed: code " + resultCode));
         }
+        emitNetworkLifecycleEvent(
+                "Disconnected",
+                false,
+                false,
+                "AUTH_FAILED",
+                "Agent auth failed: code " + resultCode,
+                null,
+                null);
     }
 
     private void disconnectGameServer() {
@@ -370,5 +410,37 @@ public class ProxyConnection implements IProxyConnection {
         }
         networkComponents.reset();
         resetHandshakeHandler();
+    }
+
+    private void emitNetworkLifecycleEvent(
+            String transition,
+            boolean connected,
+            boolean authenticated,
+            String loginPhase,
+            String reason,
+            String host,
+            Integer port) {
+        if (eventAdmin == null) {
+            return;
+        }
+
+        Map<String, Object> props = new HashMap<>();
+        props.put("machineId", machineId);
+        props.put("transition", transition);
+        props.put("connected", connected);
+        props.put("authenticated", authenticated);
+        props.put("loginPhase", loginPhase);
+        props.put("timestamp", System.currentTimeMillis());
+        if (reason != null && !reason.isEmpty()) {
+            props.put("reason", reason);
+        }
+        if (host != null && !host.isEmpty()) {
+            props.put("host", host);
+        }
+        if (port != null) {
+            props.put("port", port);
+        }
+
+        eventAdmin.postEvent(new Event("sokybot/network/" + machineId + "/" + transition, props));
     }
 }

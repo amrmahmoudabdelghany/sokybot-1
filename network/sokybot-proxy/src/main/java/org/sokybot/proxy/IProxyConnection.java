@@ -56,6 +56,15 @@ public interface IProxyConnection {
      * @return true if server connection is active
      */
     boolean isServerConnected();
+
+    /**
+     * True while the outbound TCP channel to the remote game/gateway peer exists and is active.
+     * Can disagree briefly with {@link #isServerConnected()} during redirects or if flags desync.
+     * Default falls back to {@link #isServerConnected()} for implementations that do not track the channel.
+     */
+    default boolean isGameServerChannelActive() {
+        return isServerConnected();
+    }
     
     /**
      * Sets whether the proxy operates in clientless mode (bot without game client).
