@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { UIComponent } from '../ui-types';
 import { getComponentFromLibrary, renderIcon } from '../componentLibrary';
-import { cn } from '@sokybot/frontend-shared';
+import { Button, cn } from '@sokybot/frontend-shared';
 import { getComponent } from '../registry';
 // Force Vite HMR on compiler error
 import { HexViewer } from '../components/HexViewer';
@@ -772,16 +772,24 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                     }
                 }}
             >
-                <table className="min-w-full border-collapse border border-slate-300 dark:border-slate-700">
+                <table className="min-w-full border-collapse border border-border text-sm">
                     <thead>
-                        <tr className="bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100">
+                        <tr className="bg-muted/80 text-foreground sticky top-0 z-[1] shadow-sm">
                             {columns.map((col: any) => (
-                                <th key={col.field || col.key} className={cn('border p-2 text-left', col.className)}>
+                                <th
+                                    key={col.field || col.key}
+                                    className={cn(
+                                        'border-b-2 border-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground',
+                                        col.className
+                                    )}
+                                >
                                     {col.label || col.field}
                                 </th>
                             ))}
                             {Array.isArray(props.rowActions) && props.rowActions.length > 0 && (
-                                <th className="border p-2 text-left">Actions</th>
+                                <th className="border-b-2 border-border px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    Actions
+                                </th>
                             )}
                         </tr>
                     </thead>
@@ -866,7 +874,7 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                         {columns.map((col: any) => (
                                             <td
                                                 key={col.field || col.key}
-                                                className={cn('border p-2', col.className)}
+                                                className={cn('border p-2 text-foreground', col.className)}
                                                 title={!col.truncate && col.title ? String(row[col.title] ?? '') : undefined}
                                                 onDoubleClick={() => {
                                                     if (props.onCellClick && onAction) {
@@ -882,16 +890,24 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                             </td>
                                         ))}
                                         {Array.isArray(props.rowActions) && props.rowActions.length > 0 && (
-                                            <td className="border p-1 whitespace-nowrap">
+                                            <td className="border px-2 py-2 whitespace-nowrap align-middle">
                                                 <div className="flex gap-1 justify-center">
                                                     {props.rowActions.map((actionCfg: any, actionIdx: number) => (
-                                                        <button
+                                                        <Button
                                                             key={`${idx}-${actionIdx}`}
                                                             type="button"
-                                                            className="px-1.5 py-0.5 text-xs border border-border rounded hover:bg-muted/80 transition-colors"
+                                                            variant={
+                                                                typeof actionCfg.variant === 'string'
+                                                                    ? (actionCfg.variant as React.ComponentProps<
+                                                                          typeof Button
+                                                                      >['variant'])
+                                                                    : 'secondary'
+                                                            }
+                                                            size="sm"
+                                                            className="h-7 min-h-0 px-1.5 py-0 text-xs font-medium"
                                                             title={actionCfg.title || actionCfg.label || 'Action'}
                                                             disabled={isSystemMarker}
-                                                            onClick={(e) => {
+                                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                                                                 e.stopPropagation();
                                                                 if (isSystemMarker) return;
                                                                 if (onAction && actionCfg.action) {
@@ -900,14 +916,14 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                                                         console.warn(`Skipping row action ${actionCfg.action}: row key evicted`, rowKeyValue);
                                                                         return;
                                                                     }
-                                                                    onAction(actionCfg.action, { ...row, index: idx, ...(actionCfg.data || {}) })
+                                                                    onAction(actionCfg.action, { ...row, index: rowIndex, ...(actionCfg.data || {}) })
                                                                         .then(handleActionResult)
                                                                         .catch(err => console.error(`Action ${actionCfg.action} failed:`, err));
                                                                 }
                                                             }}
                                                         >
                                                             {actionCfg.label || 'Action'}
-                                                        </button>
+                                                        </Button>
                                                     ))}
                                                 </div>
                                             </td>
@@ -919,19 +935,21 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                                 <div className="p-3 bg-muted/20 space-y-3">
                                                     <div className="flex items-center justify-between">
                                                         <div className="text-xs font-semibold text-muted-foreground uppercase">Packet Details</div>
-                                                        <button
+                                                        <Button
                                                             type="button"
-                                                            className="px-2 py-1 text-xs border border-border rounded hover:bg-muted"
-                                                            onClick={(e) => {
+                                                            variant="secondary"
+                                                            size="sm"
+                                                            className="h-8 text-xs"
+                                                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                                                                 e.stopPropagation();
                                                                 navigator.clipboard.writeText(String(row.payload ?? '')).catch(() => undefined);
                                                             }}
                                                         >
                                                             Copy Hex
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                     <div className="overflow-x-auto border border-border rounded">
-                                                        <table className="min-w-full text-xs font-mono">
+                                                        <table className="min-w-full text-xs font-mono text-foreground">
                                                             <thead>
                                                                 <tr className="bg-muted/40">
                                                                     <th className="p-2 text-left">Offset</th>
@@ -952,7 +970,7 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                                                     </div>
                                                     {decodedFields.length > 0 && (
                                                         <div className="overflow-x-auto border border-border rounded">
-                                                            <table className="min-w-full text-xs">
+                                                            <table className="min-w-full text-xs text-foreground">
                                                                 <thead>
                                                                     <tr className="bg-muted/40">
                                                                         <th className="p-2 text-left">Field</th>
@@ -985,13 +1003,15 @@ const TableRenderer: React.FC<TableRendererProps> = ({
                 </table>
             </div>
             {autoScrollEnabled && showJumpToLatest && (
-                <button
+                <Button
                     type="button"
-                    className="absolute bottom-3 right-3 z-10 rounded border border-border bg-background/95 px-2 py-1 text-xs text-foreground shadow hover:bg-muted"
+                    variant="outline"
+                    size="sm"
+                    className="absolute bottom-3 right-3 z-10 h-8 text-xs shadow-sm bg-background/95"
                     onClick={jumpToLatest}
                 >
                     Jump to latest
-                </button>
+                </Button>
             )}
         </div>
     );

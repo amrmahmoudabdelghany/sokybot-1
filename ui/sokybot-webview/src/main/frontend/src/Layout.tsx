@@ -117,7 +117,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
         if (base === 'environment') return <Globe className="h-3 w-3 mr-2" />;
         if (base === 'log') return <FileText className="h-3 w-3 mr-2" />;
         if (base === 'packetsniffer' || base === 'activity') return <Activity className="h-3 w-3 mr-2" />;
-        return <div className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700 mr-2" />;
+        return <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 mr-2" />;
     };
 
     const hasSystemLog = !!extensionRegistry.pages?.['SystemLog'];
@@ -125,8 +125,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
     return (
         <div className="flex h-screen bg-background text-foreground font-sans transition-colors duration-300 overflow-hidden">
             {/* Sidebar */}
-            <div className="w-64 border-r border-border/40 bg-card/80 backdrop-blur-md flex flex-col transition-all duration-300 z-20">
-                <div className="h-16 px-6 border-b border-border/40 flex items-center justify-between bg-card/50">
+            <div className="w-64 min-h-0 border-r border-border bg-card/80 backdrop-blur-md flex flex-col transition-all duration-300 z-20">
+                <div className="h-16 px-6 border-b border-border flex items-center justify-between bg-card/50">
                     <div className="font-bold text-lg text-primary font-mono flex items-center gap-3 tracking-tight">
                         <div className="p-1.5 rounded-md bg-primary/10">
                             <Monitor className="h-5 w-5" />
@@ -136,7 +136,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                 </div>
 
                 {/* Actions */}
-                <div className="p-4 grid grid-cols-2 gap-3 border-b border-border/40">
+                <div className="p-4 grid grid-cols-2 gap-3 border-b border-border">
                     <Button variant="outline" size="sm" onClick={() => setCreateGroupOpen(true)} className="h-9 shadow-sm hover:shadow transition-all hover:bg-primary/5 hover:text-primary hover:border-primary/20">
                         <Plus className="h-3.5 w-3.5 mr-1.5" /> Group
                     </Button>
@@ -145,7 +145,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                     </Button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-3 space-y-6 scrollbar-thin scrollbar-thumb-border/40 scrollbar-track-transparent">
+                <div className="flex-1 overflow-y-auto p-3 space-y-6 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
                     {groupNames.map(group => {
                         const groupMachines = uniqueMachines.filter(m =>
                             (m.groupName || getMachineGroup(m.machineId)) === group
@@ -154,7 +154,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                         const hasGroupLog = !!extensionRegistry.pages?.[groupLogPageId];
                         return (
                             <div key={group} className="space-y-1">
-                                <div className="px-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest flex items-center justify-between mb-2">
+                                <div className="px-3 text-[10px] font-bold text-muted-foreground/90 uppercase tracking-widest flex items-center justify-between mb-2">
                                     <span>{group}</span>
                                     <div className="flex items-center gap-1">
                                         {hasGroupLog && (
@@ -171,7 +171,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                                 <FileText className="h-3 w-3" />
                                             </Button>
                                         )}
-                                        <span className="text-[9px] bg-secondary/80 px-1.5 py-0.5 rounded-full text-foreground/80 font-mono shadow-sm">{groupMachines.length}</span>
+                                        <span className="text-[9px] bg-secondary px-1.5 py-0.5 rounded-full text-secondary-foreground font-mono shadow-sm border border-border/60">{groupMachines.length}</span>
                                     </div>
                                 </div>
                                 {groupMachines.map(m => (
@@ -191,7 +191,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                             }}
                                         >
                                             <Bot className={cn("h-4 w-4 mr-2.5 transition-colors",
-                                                m.isRunning ? "text-emerald-500" : "text-muted-foreground/60 group-hover:text-muted-foreground"
+                                                m.isRunning ? "text-emerald-500" : "text-muted-foreground/85 group-hover:text-foreground"
                                             )} />
                                             <span className="truncate">{m.name || getSimpleName(m.machineId)}</span>
                                             {selectedMachineId === m.machineId && (
@@ -215,7 +215,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                                                     "w-full justify-start h-8 text-xs font-normal transition-colors",
                                                                     isActive
                                                                         ? "text-primary bg-primary/5 font-medium"
-                                                                        : "text-muted-foreground/80 hover:text-foreground hover:bg-secondary/30"
+                                                                        : "text-muted-foreground/90 hover:text-foreground hover:bg-secondary/30"
                                                                 )}
                                                                 onClick={() => setSelectedPageId(tabId)}
                                                             >
@@ -227,7 +227,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                                         );
                                                     })
                                                 ) : (
-                                                    <div className="text-[10px] text-muted-foreground/50 italic pl-2 py-1.5">
+                                                    <div className="text-[10px] text-muted-foreground/75 italic pl-2 py-1.5">
                                                         No pages registered
                                                     </div>
                                                 )}
@@ -242,7 +242,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                     {/* Orphaned machines or if no groups defined yet (legacy fallback) */}
                     {groupNames.length === 0 && uniqueMachines.length > 0 && (
                         <div className="space-y-1">
-                            <div className="px-3 text-[10px] font-bold text-muted-foreground/70 uppercase tracking-widest mb-2">Default</div>
+                            <div className="px-3 text-[10px] font-bold text-muted-foreground/90 uppercase tracking-widest mb-2">Default</div>
                             {uniqueMachines.map(m => (
                                 <div key={m.machineId} className="space-y-1">
                                     <Button
@@ -256,7 +256,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                         onClick={() => setSelectedMachineId(m.machineId)}
                                     >
                                         <Bot className={cn("h-4 w-4 mr-2.5 transition-colors",
-                                            m.isRunning ? "text-emerald-500" : "text-muted-foreground/60 group-hover:text-muted-foreground"
+                                            m.isRunning ? "text-emerald-500" : "text-muted-foreground/85 group-hover:text-foreground"
                                         )} />
                                         <span className="truncate">{m.name || m.machineId}</span>
                                         {selectedMachineId === m.machineId && (
@@ -266,7 +266,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
 
                                     {/* Nested Pages (Tree View) */}
                                     {selectedMachineId === m.machineId && (
-                                        <div className="ml-5 pl-3 border-l border-border/30 space-y-0.5 my-1 animate-in slide-in-from-top-2 duration-200 fade-in-0">
+                                        <div className="ml-5 pl-3 border-l border-border/70 space-y-0.5 my-1 animate-in slide-in-from-top-2 duration-200 fade-in-0">
                                             {getMachineTabs(m.machineId).length > 0 ? (
                                                 getMachineTabs(m.machineId).map(tabId => {
                                                     const page = extensionRegistry.pages[tabId];
@@ -280,7 +280,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                                                 "w-full justify-start h-8 text-xs font-normal transition-colors",
                                                                 isActive
                                                                     ? "text-primary bg-primary/5 font-medium"
-                                                                    : "text-muted-foreground/80 hover:text-foreground hover:bg-secondary/30"
+                                                                    : "text-muted-foreground/90 hover:text-foreground hover:bg-secondary/30"
                                                             )}
                                                             onClick={() => setSelectedPageId(tabId)}
                                                         >
@@ -292,7 +292,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                                     );
                                                 })
                                             ) : (
-                                                <div className="text-[10px] text-muted-foreground/50 italic pl-2 py-1.5">
+                                                <div className="text-[10px] text-muted-foreground/75 italic pl-2 py-1.5">
                                                     No pages registered
                                                 </div>
                                             )}
@@ -304,12 +304,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                     )}
 
                     {groupNames.length === 0 && uniqueMachines.length === 0 && (
-                        <div className="text-muted-foreground text-xs italic p-8 text-center border-2 border-dashed border-border/30 rounded-lg mx-2 bg-secondary/10">
+                        <div className="text-muted-foreground text-xs italic p-8 text-center border-2 border-dashed border-border rounded-lg mx-2 bg-secondary/30">
                             No groups or bots found.<br />Create a group to start.
                         </div>
                     )}
                 </div>
-                <div className="p-4 border-t border-border/40 text-[10px] font-medium text-muted-foreground/60 flex justify-between items-center bg-card/30">
+                <div className="p-4 border-t border-border text-[10px] font-medium text-muted-foreground flex justify-between items-center bg-muted/50">
                     <span>{uniqueMachines.length} Total Bots</span>
                     <div className="flex items-center gap-2">
                         {hasSystemLog && (
@@ -343,12 +343,11 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
             />
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col min-w-0 bg-background/50 relative">
-                {/* Decorative background gradients */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 via-transparent to-transparent pointer-events-none opacity-50" />
+            <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-background relative">
+                <div className="absolute inset-0 bg-gradient-to-tr from-primary/[0.06] via-transparent to-transparent pointer-events-none opacity-40" />
 
                 {/* Header */}
-                <div className="h-16 px-6 border-b border-border/40 bg-card/80 backdrop-blur-md shadow-sm flex justify-between items-center z-10 transition-colors duration-300">
+                <div className="h-16 px-6 border-b border-border bg-card shadow-sm flex justify-between items-center z-10 transition-colors duration-300">
                     <div className="font-semibold text-lg flex items-center gap-3">
                         {selectedMachineId ? (
                             <div className="flex items-center animate-in fade-in slide-in-from-left-2 duration-300">
@@ -395,8 +394,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-auto transition-colors duration-300 z-0 relative">
-                    <div className="h-full">
+                <div className="flex-1 min-h-0 overflow-hidden transition-colors duration-300 z-0 relative flex flex-col">
+                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden h-full">
                         {children}
                     </div>
                 </div>

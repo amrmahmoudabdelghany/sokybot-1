@@ -4,7 +4,18 @@
  */
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
-import { cn } from '@sokybot/frontend-shared';
+import {
+    Button,
+    cn,
+    Textarea as ShadTextarea,
+    Select as ShadSelectRoot,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+    encodeSelectItemValue,
+    decodeSelectItemValue,
+} from '@sokybot/frontend-shared';
 
 export interface StackProps extends React.HTMLAttributes<HTMLDivElement> {
     gap?: number;
@@ -144,27 +155,6 @@ export const Grid: React.FC<GridProps> = ({
     );
 };
 
-export interface SeparatorProps extends React.HTMLAttributes<HTMLDivElement> {
-    orientation?: 'horizontal' | 'vertical';
-}
-
-/** Horizontal or vertical divider line. */
-export const Separator: React.FC<SeparatorProps> = ({
-    className,
-    orientation = 'horizontal',
-    ...rest
-}) => (
-    <div
-        role="separator"
-        className={cn(
-            'shrink-0 bg-border',
-            orientation === 'horizontal' ? 'h-px w-full' : 'w-px h-full min-h-[1em]',
-            className
-        )}
-        {...rest}
-    />
-);
-
 export interface CenterProps extends React.HTMLAttributes<HTMLDivElement> {
     /** When true, also center vertically (flex items-center justify-center). */
     vertical?: boolean;
@@ -275,9 +265,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             {IconComponent && <IconComponent className="h-10 w-10 text-muted-foreground" size={40} />}
             <p className="text-center text-muted-foreground italic">{message}</p>
             {showButton && (
-                <button type="button" onClick={onActionClick} className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2">
+                <Button type="button" variant="outline" onClick={onActionClick}>
                     {actionLabel}
-                </button>
+                </Button>
             )}
             {children}
         </div>
@@ -310,7 +300,7 @@ export const Text: React.FC<TextProps> = ({
     </As>
 );
 
-// --- Inputs: TextArea, Select (styled native elements) ---
+// --- Inputs: TextArea, Select (shadcn/Radix) ---
 
 const inputLikeClass =
     'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
@@ -319,30 +309,112 @@ export interface TextAreaProps extends React.TextareaHTMLAttributes<HTMLTextArea
     padding?: number;
 }
 
-/** Styled textarea; use value and onChange (action name) in schema; ComponentRenderer binds onChange. */
-export const TextArea: React.FC<TextAreaProps> = ({
-    className,
-    padding,
-    ...rest
-}) => (
-    <textarea
-        className={cn(inputLikeClass, 'min-h-[80px] resize-y', padding != null && `p-${padding}`, className)}
-        {...rest}
-    />
+/** Styled textarea (shadcn); use value and onChange (action name) in schema; ComponentRenderer binds onChange. */
+export const TextArea = React.forwardRef<HTMLTextAreaElement, TextAreaProps>(
+    ({ className, padding, ...rest }, ref) => (
+        <ShadTextarea
+            ref={ref}
+            className={cn('min-h-[80px] resize-y', padding != null && `p-${padding}`, className)}
+            {...rest}
+        />
+    )
 );
+TextArea.displayName = 'TextArea';
 
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps
+    extends Omit<React.ComponentPropsWithoutRef<'select'>, 'onChange' | 'children' | 'size'> {
     padding?: number;
+    children?: React.ReactNode;
+    onChange?: React.ChangeEventHandler<HTMLSelectElement>;
+    placeholder?: string;
 }
 
-/** Styled native select; use value and onChange (action name) in schema; ComponentRenderer binds onChange. */
+function collectOptionsFromChildren(
+    children: React.ReactNode
+): Array<{ radixValue: string; label: React.ReactNode; disabled?: boolean }> {
+    const out: Array<{ radixValue: string; label: React.ReactNode; disabled?: boolean }> = [];
+    React.Children.forEach(children, (child) => {
+        if (!React.isValidElement(child)) return;
+        if (child.type === React.Fragment) {
+            const frag = child.props as { children?: React.ReactNode };
+            out.push(...collectOptionsFromChildren(frag.children));
+            return;
+        }
+        if (child.type === 'option') {
+            const p = child.props as React.OptionHTMLAttributes<HTMLOptionElement> & {
+                children?: React.ReactNode;
+            };
+            const valueStr = p.value == null ? '' : String(p.value);
+            out.push({
+                radixValue: encodeSelectItemValue(valueStr),
+                label: p.children,
+                disabled: Boolean(p.disabled),
+            });
+        }
+    });
+    return out;
+}
+
+/**
+ * Radix/shadcn select. JSON `option` children are mapped to SelectItem.
+ * Empty string values use an internal sentinel so Radix constraints are satisfied.
+ * `onChange` receives a synthetic event with `target.value` (decoded) for ComponentRenderer.
+ */
 export const Select: React.FC<SelectProps> = ({
     className,
     padding,
-    ...rest
-}) => (
-    <select
-        className={cn(inputLikeClass, 'cursor-pointer', padding != null && `p-${padding}`, className)}
-        {...rest}
-    />
-);
+    children,
+    value,
+    defaultValue,
+    onChange,
+    disabled,
+    id,
+    name,
+    placeholder = 'Select…',
+    style,
+}) => {
+    const options = React.useMemo(() => collectOptionsFromChildren(children), [children]);
+    const strValue = value !== undefined && value !== null ? String(value) : undefined;
+    const encodedValue = strValue !== undefined ? encodeSelectItemValue(strValue) : undefined;
+    const strDefault = defaultValue !== undefined && defaultValue !== null ? String(defaultValue) : undefined;
+    const encodedDefault = strDefault !== undefined ? encodeSelectItemValue(strDefault) : undefined;
+
+    const handleValueChange = (radixVal: string) => {
+        const decoded = decodeSelectItemValue(radixVal);
+        const synthetic = {
+            target: { value: decoded, name: name ?? '' },
+            currentTarget: { value: decoded, name: name ?? '' },
+        } as React.ChangeEvent<HTMLSelectElement>;
+        onChange?.(synthetic);
+    };
+
+    return (
+        <ShadSelectRoot
+            value={encodedValue}
+            defaultValue={encodedDefault}
+            onValueChange={handleValueChange}
+            disabled={disabled}
+            name={name}
+        >
+            <SelectTrigger
+                id={id}
+                style={style}
+                className={cn(
+                    inputLikeClass,
+                    'cursor-pointer',
+                    padding != null && `p-${padding}`,
+                    className
+                )}
+            >
+                <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+                {options.map((opt, i) => (
+                    <SelectItem key={`${opt.radixValue}-${i}`} value={opt.radixValue} disabled={opt.disabled}>
+                        {opt.label}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </ShadSelectRoot>
+    );
+};

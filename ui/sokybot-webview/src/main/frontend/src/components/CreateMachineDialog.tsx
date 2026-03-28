@@ -2,8 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { rsocketService } from '../RSocketClient';
 import type { GroupDetails } from '../RSocketClient';
 import { useGroupsQuery } from '../query/sokybotQueries';
-import { Button } from '@sokybot/frontend-shared';
-import { cn } from '@sokybot/frontend-shared';
+import {
+    Button,
+    cn,
+    Select as SelectRoot,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+    encodeSelectItemValue,
+    decodeSelectItemValue,
+} from '@sokybot/frontend-shared';
 import { X, Server, Gamepad2, Settings2, User, ChevronRight, ChevronLeft } from 'lucide-react';
 
 interface Props {
@@ -154,10 +163,10 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
     const step1Blocked = loading || groupsLoading;
 
     const inputClass = "flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50";
-    const labelClass = "text-xs font-medium leading-none text-foreground/80 block mb-1";
+    const labelClass = "text-xs font-medium leading-none text-foreground block mb-1";
 
     return (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-0">
+        <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in-0">
             <div className="w-full max-w-md bg-card border border-border rounded-lg shadow-lg flex flex-col animate-in zoom-in-95 duration-200">
 
                 {/* Header */}
@@ -205,53 +214,82 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                             {/* Group Selection */}
                             <div>
                                 <label className={labelClass}>Group(s)</label>
-                                <select
-                                    value={selectedGroup}
-                                    onChange={(e) => setSelectedGroup(e.target.value)}
-                                    disabled={step1Blocked}
-                                    className={inputClass}
-                                >
-                                    {groups.map(g => (
-                                        <option key={g.name} value={g.name}>{g.name}</option>
-                                    ))}
-                                </select>
+                                {groups.length === 0 ? (
+                                    <div className={cn(inputClass, 'flex items-center text-muted-foreground')}>
+                                        No groups available
+                                    </div>
+                                ) : (
+                                    <SelectRoot
+                                        value={encodeSelectItemValue(selectedGroup)}
+                                        onValueChange={(v) => setSelectedGroup(decodeSelectItemValue(v))}
+                                        disabled={step1Blocked}
+                                    >
+                                        <SelectTrigger className={inputClass}>
+                                            <SelectValue placeholder="Choose a group" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {groups.map((g) => (
+                                                <SelectItem key={g.name} value={encodeSelectItemValue(g.name)}>
+                                                    {g.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </SelectRoot>
+                                )}
                             </div>
 
                             {/* Game Data */}
-                            <fieldset className="border border-border rounded-md p-3 relative bg-card/50">
-                                <legend className="text-xs font-bold px-2 text-foreground/80 flex items-center gap-1">
+                            <fieldset className="border border-border rounded-md p-3 relative bg-muted/25">
+                                <legend className="text-xs font-bold px-2 text-foreground flex items-center gap-1">
                                     <Server className="h-3 w-3" />
                                     Game Data
                                 </legend>
                                 <div className="space-y-3 pt-1">
                                     <div>
                                         <label className={labelClass}>Division(s)</label>
-                                        <select
-                                            value={selectedDivision}
-                                            onChange={(e) => handleDivisionChange(e.target.value)}
+                                        <SelectRoot
+                                            value={encodeSelectItemValue(selectedDivision)}
+                                            onValueChange={(v) => handleDivisionChange(decodeSelectItemValue(v))}
                                             disabled={!gameData || !gameData.hosts}
-                                            className={inputClass}
                                         >
-                                            {gameData && gameData.hosts && Object.keys(gameData.hosts).map(div => (
-                                                <option key={div} value={div}>{div}</option>
-                                            ))}
-                                        </select>
+                                            <SelectTrigger className={inputClass}>
+                                                <SelectValue placeholder="Division" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {gameData?.hosts &&
+                                                    Object.keys(gameData.hosts).map((div) => (
+                                                        <SelectItem key={div} value={encodeSelectItemValue(div)}>
+                                                            {div}
+                                                        </SelectItem>
+                                                    ))}
+                                            </SelectContent>
+                                        </SelectRoot>
                                     </div>
                                     <div>
                                         <label className={labelClass}>Host(s)</label>
-                                        <select
-                                            value={formData.host}
-                                            onChange={(e) => setFormData({ ...formData, host: e.target.value })}
+                                        <SelectRoot
+                                            value={encodeSelectItemValue(formData.host)}
+                                            onValueChange={(v) =>
+                                                setFormData({ ...formData, host: decodeSelectItemValue(v) })
+                                            }
                                             disabled={!selectedDivision}
-                                            className={inputClass}
                                         >
-                                            {gameData && selectedDivision && gameData.hosts[selectedDivision]?.map((host) => (
-                                                <option key={host} value={host}>{host}</option>
-                                            ))}
-                                        </select>
+                                            <SelectTrigger className={inputClass}>
+                                                <SelectValue placeholder="Host" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {gameData &&
+                                                    selectedDivision &&
+                                                    gameData.hosts[selectedDivision]?.map((host) => (
+                                                        <SelectItem key={host} value={encodeSelectItemValue(host)}>
+                                                            {host}
+                                                        </SelectItem>
+                                                    ))}
+                                            </SelectContent>
+                                        </SelectRoot>
                                     </div>
 
-                                    <div className="flex justify-end gap-4 pt-2 border-t border-dashed border-border/50 text-[10px] text-muted-foreground">
+                                    <div className="flex justify-end gap-4 pt-2 border-t border-dashed border-border text-[10px] text-muted-foreground">
                                         <div><span className="font-bold">Version:</span> {gameData?.version !== undefined ? gameData.version : 'N/A'}</div>
                                         <div><span className="font-bold">Port:</span> 15779</div>
                                     </div>
@@ -263,8 +301,8 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                     {/* Step 2: Bot Data */}
                     {currentStep === 2 && (
                         <div className="space-y-4 animate-in fade-in-0 slide-in-from-right-2 duration-200">
-                            <fieldset className="border border-border rounded-md p-3 relative bg-card/50">
-                                <legend className="text-xs font-bold px-2 text-foreground/80 flex items-center gap-1">
+                            <fieldset className="border border-border rounded-md p-3 relative bg-muted/25">
+                                <legend className="text-xs font-bold px-2 text-foreground flex items-center gap-1">
                                     <Gamepad2 className="h-3 w-3" />
                                     Bot Data
                                 </legend>

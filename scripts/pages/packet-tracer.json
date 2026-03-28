@@ -1,71 +1,70 @@
 {
   "type": "Card",
-  "className": "w-full h-full",
+  "className": "w-full h-full min-h-0 flex flex-col border-border bg-card shadow-sm",
   "children": [
     {
       "type": "CardHeader",
+      "className": "shrink-0 space-y-0 border-b border-border/80 pb-4",
       "children": [
         {
-          "type": "CardTitle",
-          "props": {
-            "children": "Packet Tracer"
-          }
+          "type": "Flex",
+          "className": "w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between",
+          "props": { "gap": 3 },
+          "children": [
+            {
+              "type": "CardTitle",
+              "className": "text-lg font-semibold tracking-tight",
+              "props": {
+                "children": "Packet Tracer"
+              }
+            },
+            {
+              "type": "Input",
+              "className": "w-full sm:max-w-md",
+              "props": {
+                "id": "tracerSearch",
+                "placeholder": "Filter by name, opcode, or source…",
+                "onChange": "filterTracer",
+                "value": "${tracerSearchFilter}",
+                "aria-label": "Filter tracers"
+              }
+            }
+          ]
         }
       ]
     },
     {
       "type": "CardContent",
-      "className": "space-y-4",
+      "className": "flex flex-1 min-h-0 flex-col gap-4 pt-4",
       "children": [
         {
-          "type": "Flex",
-          "className": "items-center gap-2",
-          "props": { "gap": 2 },
-          "children": [
-            {
-              "type": "Label",
-              "props": {
-                "htmlFor": "tracerSearch",
-                "children": "Search:"
-              }
-            },
-            {
-              "type": "Input",
-              "props": {
-                "id": "tracerSearch",
-                "placeholder": "Filter by name, opcode, or source...",
-                "onChange": "filterTracer",
-                "value": "${tracerSearchFilter}"
-              },
-              "className": "flex-1"
-            }
-          ]
-        },
-        {
           "type": "Box",
-          "className": "grid grid-cols-1 lg:grid-cols-2 gap-4",
+          "className": "grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(260px,0.75fr)] lg:gap-5",
           "children": [
             {
               "type": "Card",
+              "className": "flex min-h-[min(48vh,320px)] flex-col overflow-hidden border-border bg-muted/20 shadow-none lg:min-h-0 lg:flex-1",
               "children": [
                 {
                   "type": "CardHeader",
+                  "className": "shrink-0 space-y-0 py-3",
                   "children": [
                     {
                       "type": "CardTitle",
+                      "className": "text-base font-medium",
                       "props": {
-                        "children": "Packet Tracers"
+                        "children": "Tracers"
                       }
                     }
                   ]
                 },
                 {
                   "type": "CardContent",
-                  "className": "p-0",
+                  "className": "flex flex-1 min-h-0 flex-col p-0",
                   "children": [
                     {
                       "type": "Box",
-                      "className": "overflow-x-auto",
+                      "className": "min-h-0 flex-1 overflow-auto rounded-md border border-border/80 bg-background/40",
                       "children": [
                         {
                           "type": "table",
@@ -76,27 +75,27 @@
                               {
                                 "field": "name",
                                 "label": "Name",
-                                "className": "text-left p-2 border"
+                                "className": "text-left border-b border-r border-border/70 px-3 py-2 text-foreground last:border-r-0"
                               },
                               {
                                 "field": "source",
                                 "label": "Source",
-                                "className": "text-left p-2 border"
+                                "className": "text-left border-b border-r border-border/70 px-3 py-2 text-foreground last:border-r-0"
                               },
                               {
                                 "field": "opcode",
                                 "label": "Opcode",
-                                "className": "text-left p-2 border font-mono"
+                                "className": "border-b border-r border-border/70 px-3 py-2 text-left font-mono text-xs text-foreground last:border-r-0"
                               },
                               {
                                 "field": "count",
                                 "label": "Count",
-                                "className": "text-right p-2 border"
+                                "className": "border-b border-r border-border/70 px-3 py-2 text-right tabular-nums text-foreground last:border-r-0"
                               },
                               {
                                 "field": "ignored",
                                 "label": "Ignored",
-                                "className": "text-center p-2 border"
+                                "className": "border-b border-r border-border/70 px-3 py-2 text-center text-foreground last:border-r-0"
                               }
                             ],
                             "onRowClick": "selectTracer",
@@ -104,7 +103,7 @@
                               "field": "ignored",
                               "values": {
                                 "true": {
-                                  "opacity": "0.4"
+                                  "opacity": "0.68"
                                 }
                               }
                             },
@@ -112,15 +111,17 @@
                               {
                                 "label": "Focus",
                                 "action": "focusTracer",
-                                "title": "Filter traffic by this opcode"
+                                "title": "Open Traffic Monitor filtered to this opcode",
+                                "variant": "outline"
                               },
                               {
-                                "label": "Toggle Ignore",
+                                "label": "Ignore",
                                 "action": "toggleIgnore",
-                                "title": "Toggle ignore flag"
+                                "title": "Toggle ignore flag",
+                                "variant": "outline"
                               }
                             ],
-                            "rowClassName": "hover:bg-muted/50 cursor-pointer"
+                            "rowClassName": "border-b border-border/50 transition-colors hover:bg-muted/40 cursor-pointer"
                           }
                         }
                       ]
@@ -131,46 +132,57 @@
             },
             {
               "type": "Card",
+              "className": "flex min-h-[220px] flex-col overflow-hidden border-border bg-muted/15 shadow-none lg:min-h-0 lg:flex-1",
               "children": [
                 {
                   "type": "CardHeader",
+                  "className": "shrink-0 space-y-1 py-3",
                   "children": [
                     {
                       "type": "CardTitle",
+                      "className": "text-base font-medium",
                       "props": {
-                        "children": "Description"
+                        "children": "Notes"
+                      }
+                    },
+                    {
+                      "type": "Box",
+                      "className": "text-xs text-muted-foreground leading-snug",
+                      "props": {
+                        "children": "Applies to the tracer you last clicked (one row). Click a row to choose which tracer to edit."
                       }
                     }
                   ]
                 },
                 {
                   "type": "CardContent",
-                  "className": "space-y-2",
+                  "className": "flex flex-1 min-h-0 flex-col gap-2 p-4 pt-0",
                   "children": [
                     {
                       "type": "Label",
+                      "className": "text-xs font-medium text-muted-foreground",
                       "props": {
                         "htmlFor": "tracerDescription",
-                        "children": "Selected Tracer Description"
+                        "children": "Description"
                       }
                     },
                     {
-                      "type": "textarea",
+                      "type": "TextArea",
+                      "className": "min-h-[140px] flex-1 resize-y text-sm",
                       "props": {
                         "id": "tracerDescription",
-                        "placeholder": "Enter description for selected tracer...",
+                        "placeholder": "Notes for the selected tracer…",
                         "onChange": "updateDescription",
                         "onBlur": "saveDescription",
                         "value": "${selectedTracerDescription}",
-                        "rows": 12
-                      },
-                      "className": "w-full p-2 border rounded resize-none"
+                        "rows": 10
+                      }
                     },
                     {
                       "type": "Box",
                       "className": "text-xs text-muted-foreground",
                       "props": {
-                        "children": "Changes are saved automatically when you click outside the textarea."
+                        "children": "Saved when the field loses focus."
                       }
                     }
                   ]

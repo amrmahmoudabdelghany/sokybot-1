@@ -76,13 +76,12 @@ export const MachineView: React.FC<MachineViewProps> = ({ machineId }) => {
             );
         }
 
-        return <div className="text-center py-4 text-slate-500">No page available for: {selectedPageId}</div>;
+        return <div className="text-center py-4 text-muted-foreground">No page available for: {selectedPageId}</div>;
     };
 
     return (
-        <div className="h-full flex flex-col">
-            {/* Tab Content - now full content area */}
-            <div className="flex-1 bg-card overflow-auto">
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col">
+            <div className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden bg-background">
                 {renderTabContent()}
             </div>
         </div>

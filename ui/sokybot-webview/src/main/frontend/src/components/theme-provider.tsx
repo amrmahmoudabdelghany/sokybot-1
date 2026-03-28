@@ -44,6 +44,12 @@ export function ThemeProvider({
             return
         }
 
+        /* Tailwind darkMode: "class" only matches `.dark`; keep variables on `.desktop-dark` (later in CSS wins). */
+        if (theme === "desktop-dark") {
+            root.classList.add("dark", "desktop-dark")
+            return
+        }
+
         root.classList.add(theme)
     }, [theme])
 

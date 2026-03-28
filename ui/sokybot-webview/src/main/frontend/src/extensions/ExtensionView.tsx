@@ -21,12 +21,10 @@ export const ExtensionView: React.FC<ExtensionViewProps> = ({
     const extension = getComponent(componentType);
 
     if (!extension) {
-        // Default to declarative if type not found
         return (
-            <DeclarativeExtensionView
-                pageId={pageId}
-                machineId={machineId}
-            />
+            <div className="flex flex-1 min-h-0 min-w-0 flex-col">
+                <DeclarativeExtensionView pageId={pageId} machineId={machineId} />
+            </div>
         );
     }
 
@@ -34,10 +32,8 @@ export const ExtensionView: React.FC<ExtensionViewProps> = ({
     const mergedProps = { ...extension.defaultProps, ...props };
 
     return (
-        <Component
-            pageId={pageId}
-            machineId={machineId}
-            {...mergedProps}
-        />
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col">
+            <Component pageId={pageId} machineId={machineId} {...mergedProps} />
+        </div>
     );
 };

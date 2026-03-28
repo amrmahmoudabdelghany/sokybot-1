@@ -12,6 +12,7 @@ import {
   useExtensionRegistryQuery,
 } from './query/sokybotQueries'
 import { extensionUiEventDataSchema } from './schemas/extensionEvents'
+import { Button } from '@sokybot/frontend-shared'
 import './App.css'
 
 function App() {
@@ -106,13 +107,9 @@ function App() {
           If using Docker, ensure the backend container is up and Karaf has finished starting (RSocket on port 8182).
           If you open via sokybot.local, ensure api.sokybot.local resolves to the same host and port 8182 is reachable.
         </p>
-        <button
-          type="button"
-          onClick={() => connectToBackend()}
-          className="px-4 py-2 rounded bg-primary text-primary-foreground hover:opacity-90"
-        >
+        <Button type="button" onClick={() => connectToBackend()}>
           Retry connection
-        </button>
+        </Button>
       </div>
     );
   }
@@ -147,7 +144,7 @@ function App() {
     }
 
     return (
-      <div className="flex items-center justify-center h-full text-slate-500">
+      <div className="flex flex-1 min-h-0 items-center justify-center px-4 md:px-6 text-sm text-muted-foreground text-center">
         Select a machine or log page from the sidebar to view details
       </div>
     );
@@ -156,7 +153,9 @@ function App() {
   return (
     <Layout isBackendConnected={isConnected}>
       <ErrorBoundary>
-        {renderMainContent()}
+        <div className="h-full min-h-0 min-w-0 flex flex-col">
+          {renderMainContent()}
+        </div>
       </ErrorBoundary>
     </Layout>
   )

@@ -14,6 +14,14 @@ import { applyStreamBatch, type StreamEnvelope } from './streamState';
 
 type RegistrySystem = { get: (key: never) => AnyActorRef | undefined };
 
+/** Extension actions often return `state` as a JSON object; ignore arrays/primitives so spreads are safe. */
+function asPlainStateRecord(value: unknown): Record<string, any> | null {
+    if (value != null && typeof value === 'object' && !Array.isArray(value)) {
+        return value as Record<string, any>;
+    }
+    return null;
+}
+
 interface DeclarativeExtensionViewProps {
     pageId: string;
     machineId?: string;
@@ -29,6 +37,8 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     schema: providedSchema
 }) => {
     const [data, setData] = useState<Record<string, any>>({});
+    const dataRef = useRef<Record<string, any>>(data);
+    dataRef.current = data;
     const pageDataEpochRef = useRef('');
     const initialQueryStateAppliedRef = useRef(false);
 
@@ -209,6 +219,9 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
         if (action === 'closeAnalyzer') {
             setData(prev => ({ ...prev, analyzerOpen: false }));
         }
+        if (action === 'closeDiff') {
+            setData(prev => ({ ...prev, diffOpen: false, diffPacketsA: [], diffPacketsB: [] }));
+        }
         if (action === 'clearLog') {
             setData(prev => {
                 const currentLog = prev.Log && typeof prev.Log === 'object' ? prev.Log : {};
@@ -267,6 +280,27 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
             const success = await copyToClipboard(json);
             return { success, copied: success };
         }
+        if (action === 'exportMonitorCsv') {
+            const rows = Array.isArray(dataRef.current.trafficPackets) ? dataRef.current.trafficPackets : [];
+            const preferred = ['time', 'source', 'encoding', 'size', 'name', 'opcode', 'count', 'crc', 'payload'];
+            const keys =
+                rows.length > 0
+                    ? preferred.filter((k) => k in rows[0]).concat(
+                          Object.keys(rows[0] as object).filter((k) => !preferred.includes(k) && k !== 'subscriptionGeneration')
+                      )
+                    : preferred;
+            const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+            const lines = [keys.join(','), ...rows.map((r: Record<string, unknown>) => keys.map((k) => esc(r[k])).join(','))];
+            const csv = lines.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `traffic-export-${Date.now()}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            return { success: true };
+        }
 
         try {
             const result = await rsocketService.request<any>('extension.action', {
@@ -286,11 +320,12 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                 result &&
                 typeof result === 'object' &&
                 !Array.isArray(result) &&
-                result.state == null &&
+                asPlainStateRecord(result.state) == null &&
                 Object.keys(result).some(
                     key => !['success', 'error', 'delta', 'invalidateExtensionSchema'].includes(key)
                 );
-            const state = result.state ?? (hasPlainState ? result : null);
+            const state =
+                asPlainStateRecord(result.state) ?? (hasPlainState ? asPlainStateRecord(result) : null);
 
             // Apply full state (for openAnalyzer ensure modal opens even if state shape differs)
             if (result && typeof result === 'object' && result.invalidateExtensionSchema === true) {
@@ -307,6 +342,13 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
                         if (Array.isArray(state?.variables)) merged.variables = state.variables;
                         if (state?.selectedByteCount != null) merged.selectedByteCount = state.selectedByteCount;
                         if (state?.matchCount != null) merged.matchCount = state.matchCount;
+                    }
+                    // Same idea as openAnalyzer: Groovy always sends diff rows in state on success, but ensure the
+                    // dialog opens and payloads are wired even if a spread/serialization quirk drops nested fields.
+                    if (action === 'diffPackets' && result.success === true && state) {
+                        merged.diffOpen = true;
+                        if (Array.isArray(state.diffPacketsA)) merged.diffPacketsA = state.diffPacketsA;
+                        if (Array.isArray(state.diffPacketsB)) merged.diffPacketsB = state.diffPacketsB;
                     }
                     // Preserve trafficPackets if we have more than the action response (e.g. stream appended more)
                     const incoming = state?.trafficPackets;
@@ -601,12 +643,16 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     }, [resolvedSchema, pageId, machineId, data, handleAction]);
 
     if (loading) {
-        return <div className="text-center py-4">Loading...</div>;
+        return (
+            <div className="flex flex-1 min-h-0 min-w-0 flex-col items-center justify-center px-4 md:px-6 text-sm text-muted-foreground">
+                Loading…
+            </div>
+        );
     }
 
     if (schemaIssues.length > 0) {
         return (
-            <div className="p-4 space-y-2">
+            <div className="flex flex-1 min-h-0 min-w-0 flex-col overflow-y-auto px-4 md:px-6 py-3 md:py-4 space-y-2 box-border">
                 <div className="font-semibold text-red-600 dark:text-red-400">Invalid declarative schema</div>
                 <div className="text-sm text-muted-foreground">Fix the issues below (showing up to 20).</div>
                 <ul className="text-xs font-mono whitespace-pre-wrap break-words list-disc pl-6">
@@ -619,10 +665,18 @@ export const DeclarativeExtensionView: React.FC<DeclarativeExtensionViewProps> =
     }
 
     if (!resolvedSchema) {
-        return <div>No schema available for {pageId}</div>;
+        return (
+            <div className="flex flex-1 min-h-0 min-w-0 flex-col px-4 md:px-6 py-3 md:py-4 text-sm text-muted-foreground box-border">
+                No schema available for {pageId}
+            </div>
+        );
     }
 
-    return <div className="h-full min-h-0 overflow-auto">{renderedContent}</div>;
+    return (
+        <div className="flex flex-1 min-h-0 min-w-0 flex-col overflow-y-auto px-4 md:px-6 py-3 md:py-4 box-border">
+            {renderedContent}
+        </div>
+    );
 };
 
 async function copyToClipboard(text: string): Promise<boolean> {

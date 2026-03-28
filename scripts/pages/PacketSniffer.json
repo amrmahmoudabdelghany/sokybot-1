@@ -2,7 +2,7 @@
   "type": "layout",
   "layout": "column",
   "gap": 4,
-  "className": "p-6 h-full",
+  "className": "h-full min-h-0 min-w-0",
   "children": [
     {
       "type": "Flex",
@@ -14,7 +14,7 @@
         {
           "type": "Button",
           "variant": "ghost",
-          "className": "rounded-t-lg data-[active=true]:bg-muted data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r data-[active=true]:border-b-0 border-transparent",
+          "className": "rounded-t-lg text-muted-foreground data-[active=true]:text-foreground data-[active=true]:font-semibold data-[active=true]:bg-muted data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r data-[active=true]:border-b-0 border-transparent",
           "props": {
             "onClick": "switchTab",
             "actionData": {
@@ -27,7 +27,7 @@
         {
           "type": "Button",
           "variant": "ghost",
-          "className": "rounded-t-lg data-[active=true]:bg-muted data-[active=true]:border-t data-[active=true]:border-l data-[active=true]:border-r data-[active=true]:border-b-0 border-transparent",
+          "className": "h-9 rounded-md px-4 text-sm text-muted-foreground data-[active=true]:bg-background data-[active=true]:text-foreground data-[active=true]:shadow-sm data-[active=true]:border data-[active=true]:border-border",
           "props": {
             "onClick": "switchTab",
             "actionData": {
@@ -41,7 +41,7 @@
     },
     {
       "type": "Box",
-      "className": "flex-1 flex flex-col min-h-0",
+      "className": "flex-1 flex flex-col min-h-0 rounded-b-lg border border-t-0 border-border bg-card/30",
       "props": {
         "id": "tabContent"
       },

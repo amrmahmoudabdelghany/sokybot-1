@@ -2,7 +2,16 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '@sokybot/frontend-shared';
+import {
+    Button,
+    Select as SelectRoot,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+    encodeSelectItemValue,
+    decodeSelectItemValue,
+} from '@sokybot/frontend-shared';
 
 const connectSchema = z.object({
     targetGateway: z.string().min(1, 'Gateway is required'),
@@ -164,19 +173,37 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
                             Connection page and retry.
                         </p>
                     )}
-                    <select
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        {...agentForm.register('targetAgent')}
+                    <SelectRoot
+                        value={encodeSelectItemValue(agentForm.watch('targetAgent') ?? '')}
+                        onValueChange={(v) =>
+                            agentForm.setValue('targetAgent', decodeSelectItemValue(v), {
+                                shouldValidate: true,
+                                shouldTouch: true,
+                            })
+                        }
                     >
-                        <option value="">
-                            {currentMachineStatus.agentOptions.length === 0
-                                ? 'Select discovered agent'
-                                : 'Select agent server'}
-                        </option>
-                        {currentMachineStatus.agentOptions.map((option) => (
-                            <option key={option.value} value={option.value}>{option.label}</option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+                            <SelectValue
+                                placeholder={
+                                    currentMachineStatus.agentOptions.length === 0
+                                        ? 'Select discovered agent'
+                                        : 'Select agent server'
+                                }
+                            />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={encodeSelectItemValue('')}>
+                                {currentMachineStatus.agentOptions.length === 0
+                                    ? 'Select discovered agent'
+                                    : 'Select agent server'}
+                            </SelectItem>
+                            {currentMachineStatus.agentOptions.map((option) => (
+                                <SelectItem key={option.value} value={encodeSelectItemValue(option.value)}>
+                                    {option.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </SelectRoot>
                     {agentForm.formState.errors.targetAgent && (
                         <p className="text-[11px] text-destructive">
                             {agentForm.formState.errors.targetAgent.message}
@@ -246,15 +273,27 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
             {currentMachineStatus.loginPhase === 'MISSING_CHARACTER_SELECTION' && (
                 <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
                     <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Character List</div>
-                    <select
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        {...characterForm.register('selectedCharacter')}
+                    <SelectRoot
+                        value={encodeSelectItemValue(characterForm.watch('selectedCharacter') ?? '')}
+                        onValueChange={(v) =>
+                            characterForm.setValue('selectedCharacter', decodeSelectItemValue(v), {
+                                shouldValidate: true,
+                                shouldTouch: true,
+                            })
+                        }
                     >
-                        <option value="">Select character</option>
-                        {currentMachineStatus.availableCharacters.map((name) => (
-                            <option key={name} value={name}>{name}</option>
-                        ))}
-                    </select>
+                        <SelectTrigger className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
+                            <SelectValue placeholder="Select character" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={encodeSelectItemValue('')}>Select character</SelectItem>
+                            {currentMachineStatus.availableCharacters.map((name) => (
+                                <SelectItem key={name} value={encodeSelectItemValue(name)}>
+                                    {name}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </SelectRoot>
                     {characterForm.formState.errors.selectedCharacter && (
                         <p className="text-[11px] text-destructive">
                             {characterForm.formState.errors.selectedCharacter.message}

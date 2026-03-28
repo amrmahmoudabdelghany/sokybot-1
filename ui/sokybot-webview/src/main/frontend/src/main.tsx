@@ -5,15 +5,18 @@ import './index.css'
 import App from './App.tsx'
 import { ThemeProvider } from './components/theme-provider'
 import { createAppQueryClient } from './query/queryClient'
+import { TooltipProvider } from '@sokybot/frontend-shared'
 
 const queryClient = createAppQueryClient()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <TooltipProvider delayDuration={300}>
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </TooltipProvider>
     </ThemeProvider>
   </StrictMode>,
 )

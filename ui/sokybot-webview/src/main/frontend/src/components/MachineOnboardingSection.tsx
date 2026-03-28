@@ -125,16 +125,16 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
     };
 
     return (
-        <div className="w-80 border-l border-border/40 bg-card/80 backdrop-blur-md flex flex-col transition-all duration-300 z-20 shadow-[-4px_0_20px_rgba(0,0,0,0.02)]">
-            <div className="h-20 px-4 py-2 border-b border-border/40 bg-card/60">
-                <div className="w-full h-full flex flex-col justify-between">
+        <div className="w-80 border-l border-border bg-card/80 backdrop-blur-md flex flex-col min-h-0 transition-all duration-300 z-20 shadow-[-4px_0_20px_rgba(0,0,0,0.02)]">
+            <div className="h-16 shrink-0 px-4 border-b border-border bg-card/50 flex flex-col justify-center gap-1">
+                <div className="w-full flex flex-col justify-center gap-1.5">
                     <div className="w-full flex items-center justify-between text-[10px]">
-                        <span className="font-bold uppercase tracking-widest text-muted-foreground">Status</span>
-                        <span className="font-mono text-foreground/90">{ctx.loginPhase}</span>
+                        <span className="font-bold uppercase tracking-widest text-muted-foreground/95">Status</span>
+                        <span className="font-mono text-foreground">{ctx.loginPhase}</span>
                     </div>
-                    <div className="w-full grid grid-cols-2 gap-2">
+                    <div className="w-full grid grid-cols-2 gap-1">
                         <span className={cn(
-                            'inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold border',
+                            'inline-flex items-center justify-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border',
                             ctx.connected
                                 ? 'bg-emerald-600/15 text-emerald-400 border-emerald-500/30'
                                 : 'bg-secondary/70 text-secondary-foreground border-border'
@@ -162,7 +162,7 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
                     </div>
                 </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex-1 min-h-0 overflow-y-auto p-4">
                 <div className="space-y-4">
                     <MachineOnboardingPanel
                         selectedMachineId={machineId}

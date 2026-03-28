@@ -1,6 +1,16 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 // Force Vite cache invalidation
-import { cn } from '@sokybot/frontend-shared';
+import {
+  Button,
+  cn,
+  Input,
+  Textarea,
+  Select as SelectRoot,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sokybot/frontend-shared';
 
 interface HexViewerProps {
   packets: any[];
@@ -406,8 +416,10 @@ export const HexViewer: React.FC<HexViewerProps> = ({
           className="fixed z-50 bg-popover border border-border rounded shadow-lg py-1"
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
-          <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-muted text-popover-foreground"
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-start rounded-none h-9 px-4 font-normal text-popover-foreground"
             onClick={() => {
               if (onDefineVariable) {
                 onDefineVariable(contextMenu.hex, contextMenu.packetName);
@@ -416,9 +428,11 @@ export const HexViewer: React.FC<HexViewerProps> = ({
             }}
           >
             Define Variable...
-          </button>
-          <button
-            className="w-full px-4 py-2 text-left text-sm hover:bg-muted text-popover-foreground"
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full justify-start rounded-none h-9 px-4 font-normal text-popover-foreground"
             onClick={() => {
               const selectionLen = Math.max(1, Math.floor(contextMenu.hex.replace(/\s+/g, '').length / 2));
               setFieldDialog({
@@ -435,7 +449,7 @@ export const HexViewer: React.FC<HexViewerProps> = ({
             }}
           >
             Define Struct Field...
-          </button>
+          </Button>
         </div>
       )}
       {fieldDialog.open && (
@@ -445,50 +459,60 @@ export const HexViewer: React.FC<HexViewerProps> = ({
             <div className="grid grid-cols-2 gap-2">
               <label className="text-xs text-muted-foreground col-span-2">
                 Name
-                <input
-                  className="mt-1 w-full border border-border rounded px-2 py-1 text-sm"
+                <Input
+                  className="mt-1 h-9 text-sm"
                   value={fieldDialog.name}
                   onChange={(e) => setFieldDialog(prev => ({ ...prev, name: e.target.value }))}
                 />
               </label>
               <label className="text-xs text-muted-foreground">
                 Type
-                <select
-                  className="mt-1 w-full border border-border rounded px-2 py-1 text-sm bg-background"
+                <SelectRoot
                   value={fieldDialog.type}
-                  onChange={(e) => setFieldDialog(prev => ({ ...prev, type: e.target.value }))}
+                  onValueChange={(type) => setFieldDialog(prev => ({ ...prev, type }))}
                 >
-                  {['uint8', 'uint16', 'uint32', 'int16', 'int32', 'float', 'string', 'bytes'].map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="mt-1 h-9 w-full text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['uint8', 'uint16', 'uint32', 'int16', 'int32', 'float', 'string', 'bytes'].map((t) => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </SelectRoot>
               </label>
               <label className="text-xs text-muted-foreground">
                 Endian
-                <select
-                  className="mt-1 w-full border border-border rounded px-2 py-1 text-sm bg-background"
+                <SelectRoot
                   value={fieldDialog.endian}
-                  onChange={(e) => setFieldDialog(prev => ({ ...prev, endian: (e.target.value === 'big' ? 'big' : 'little') }))}
+                  onValueChange={(v) =>
+                    setFieldDialog(prev => ({ ...prev, endian: v === 'big' ? 'big' : 'little' }))
+                  }
                 >
-                  <option value="little">little</option>
-                  <option value="big">big</option>
-                </select>
+                  <SelectTrigger className="mt-1 h-9 w-full text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="little">little</SelectItem>
+                    <SelectItem value="big">big</SelectItem>
+                  </SelectContent>
+                </SelectRoot>
               </label>
               <label className="text-xs text-muted-foreground">
                 Offset
-                <input
+                <Input
                   type="number"
-                  className="mt-1 w-full border border-border rounded px-2 py-1 text-sm"
+                  className="mt-1 h-9 text-sm"
                   value={fieldDialog.offset}
                   onChange={(e) => setFieldDialog(prev => ({ ...prev, offset: Number(e.target.value) || 0 }))}
                 />
               </label>
               <label className="text-xs text-muted-foreground">
                 Length
-                <input
+                <Input
                   type="number"
                   min={1}
-                  className="mt-1 w-full border border-border rounded px-2 py-1 text-sm"
+                  className="mt-1 h-9 text-sm"
                   value={fieldDialog.length}
                   onChange={(e) => setFieldDialog(prev => ({ ...prev, length: Math.max(1, Number(e.target.value) || 1) }))}
                 />
@@ -498,14 +522,13 @@ export const HexViewer: React.FC<HexViewerProps> = ({
               Preview: <span className="font-mono text-foreground">{decodePreview || '-'}</span>
             </div>
             <div className="flex justify-end gap-2">
-              <button
-                className="px-3 py-1 text-sm rounded border border-border hover:bg-muted"
-                onClick={() => setFieldDialog(prev => ({ ...prev, open: false }))}
-              >
+              <Button type="button" variant="outline" size="sm" onClick={() => setFieldDialog(prev => ({ ...prev, open: false }))}>
                 Cancel
-              </button>
-              <button
-                className="px-3 py-1 text-sm rounded border border-border hover:bg-muted"
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={() => {
                   if (!fieldDialog.name.trim()) return;
                   onDefineField?.({
@@ -520,32 +543,26 @@ export const HexViewer: React.FC<HexViewerProps> = ({
                 }}
               >
                 Save Field
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
       {editable && (
         <div className="border-t border-border p-2 space-y-2">
-          <textarea
-            className="w-full min-h-[90px] bg-background border border-border rounded p-2 font-mono text-xs"
+          <Textarea
+            className="w-full min-h-[90px] font-mono text-xs"
             value={editableHex || initialEditableHex}
             onChange={(e) => setEditableHex(e.target.value)}
             placeholder="Edit packet hex bytes..."
           />
           <div className="flex gap-2 justify-end">
-            <button
-              className="px-3 py-1 text-sm rounded border border-border hover:bg-muted"
-              onClick={() => onInjectPacket?.({ hexPayload: editableHex || initialEditableHex, direction: defaultDirection })}
-            >
+            <Button type="button" variant="outline" size="sm" onClick={() => onInjectPacket?.({ hexPayload: editableHex || initialEditableHex, direction: defaultDirection })}>
               Send {defaultDirection}
-            </button>
-            <button
-              className="px-3 py-1 text-sm rounded border border-border hover:bg-muted"
-              onClick={() => onInjectPacket?.({ hexPayload: editableHex || initialEditableHex, direction: defaultDirection === 'C2S' ? 'S2C' : 'C2S' })}
-            >
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => onInjectPacket?.({ hexPayload: editableHex || initialEditableHex, direction: defaultDirection === 'C2S' ? 'S2C' : 'C2S' })}>
               Send {defaultDirection === 'C2S' ? 'S2C' : 'C2S'}
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { format, formatDistanceToNow } from 'date-fns';
-import { cn } from '@sokybot/frontend-shared';
+import { Button, cn, Input } from '@sokybot/frontend-shared';
 
 interface LogViewerProps {
     events: any[];
@@ -253,49 +253,37 @@ export const LogViewer: React.FC<LogViewerProps> = ({ events, className, style }
         <div className={cn('h-full min-h-0 flex flex-col gap-2', className)} style={style}>
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
                 <span className="font-medium">Events: {displayedEvents.length}</span>
-                <button type="button" onClick={() => toggleLevel('ERROR')} className={cn('px-1.5 py-0.5 rounded border border-red-500/40 text-red-400', !enabledLevels.has('ERROR') && 'opacity-40')}>
+                <Button type="button" variant="outline" size="sm" onClick={() => toggleLevel('ERROR')} className={cn('h-7 px-1.5 text-[11px] border-red-500/40 text-red-400', !enabledLevels.has('ERROR') && 'opacity-55')}>
                     E {counts.ERROR || 0}
-                </button>
-                <button type="button" onClick={() => toggleLevel('WARN')} className={cn('px-1.5 py-0.5 rounded border border-amber-500/40 text-amber-400', !enabledLevels.has('WARN') && 'opacity-40')}>
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => toggleLevel('WARN')} className={cn('h-7 px-1.5 text-[11px] border-amber-500/40 text-amber-400', !enabledLevels.has('WARN') && 'opacity-55')}>
                     W {counts.WARN || 0}
-                </button>
-                <button type="button" onClick={() => toggleLevel('INFO')} className={cn('px-1.5 py-0.5 rounded border border-emerald-500/40 text-emerald-400', !enabledLevels.has('INFO') && 'opacity-40')}>
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => toggleLevel('INFO')} className={cn('h-7 px-1.5 text-[11px] border-emerald-500/40 text-emerald-400', !enabledLevels.has('INFO') && 'opacity-55')}>
                     I {counts.INFO || 0}
-                </button>
-                <button type="button" onClick={() => toggleLevel('DEBUG')} className={cn('px-1.5 py-0.5 rounded border border-sky-500/40 text-sky-400', !enabledLevels.has('DEBUG') && 'opacity-40')}>
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => toggleLevel('DEBUG')} className={cn('h-7 px-1.5 text-[11px] border-sky-500/40 text-sky-400', !enabledLevels.has('DEBUG') && 'opacity-55')}>
                     D {counts.DEBUG || 0}
-                </button>
-                <button type="button" onClick={() => toggleLevel('TRACE')} className={cn('px-1.5 py-0.5 rounded border border-zinc-500/40 text-zinc-400', !enabledLevels.has('TRACE') && 'opacity-40')}>
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => toggleLevel('TRACE')} className={cn('h-7 px-1.5 text-[11px] border-zinc-500/40 text-zinc-400', !enabledLevels.has('TRACE') && 'opacity-55')}>
                     T {counts.TRACE || 0}
-                </button>
-                <input
+                </Button>
+                <Input
                     type="text"
-                    className="ml-1 h-7 rounded border border-border bg-background px-2 text-[11px] text-foreground min-w-52"
+                    className="ml-1 h-7 min-h-7 py-1 text-[11px] min-w-52"
                     placeholder="Search logs..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />
-                <button
-                    type="button"
-                    onClick={copyFilteredEvents}
-                    className="ml-auto px-2 py-1 rounded border border-border hover:bg-muted/40 text-foreground"
-                >
+                <Button type="button" variant="outline" size="sm" onClick={copyFilteredEvents} className="ml-auto h-7 text-[11px]">
                     Copy Filtered
-                </button>
-                <button
-                    type="button"
-                    onClick={copyFilteredAsJson}
-                    className="px-2 py-1 rounded border border-border hover:bg-muted/40 text-foreground"
-                >
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={copyFilteredAsJson} className="h-7 text-[11px]">
                     Copy JSON
-                </button>
-                <button
-                    type="button"
-                    onClick={togglePause}
-                    className="px-2 py-1 rounded border border-border hover:bg-muted/40 text-foreground"
-                >
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={togglePause} className="h-7 text-[11px]">
                     {paused ? 'Resume' : 'Pause'}
-                </button>
+                </Button>
                 {paused && missedCount > 0 && <span className="text-amber-300">+{missedCount} new</span>}
                 {copyStatus === 'copied' && <span className="text-emerald-400">Copied</span>}
                 {copyStatus === 'error' && <span className="text-red-400">Copy failed</span>}
@@ -374,21 +362,23 @@ export const LogViewer: React.FC<LogViewerProps> = ({ events, className, style }
 
                                     <div className="flex items-center gap-2">
                                         {(stackTrace || source) && (
-                                            <button
+                                            <Button
                                                 type="button"
-                                                className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                                                variant="link"
+                                                className="text-[10px] h-auto p-0 text-muted-foreground"
                                                 onClick={() => setExpanded(prev => ({ ...prev, [entryId]: !isExpanded }))}
                                             >
                                                 {isExpanded ? 'Hide details' : 'Show details'}
-                                            </button>
+                                            </Button>
                                         )}
-                                        <button
+                                        <Button
                                             type="button"
-                                            className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                                            variant="link"
+                                            className="text-[10px] h-auto p-0 text-muted-foreground"
                                             onClick={() => copySingleEntry(item)}
                                         >
                                             Copy entry
-                                        </button>
+                                        </Button>
                                     </div>
 
                                     {isExpanded && (
@@ -435,13 +425,15 @@ export const LogViewer: React.FC<LogViewerProps> = ({ events, className, style }
                     </div>
                 )}
                 {showJumpToTop && (
-                    <button
+                    <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={jumpToLatest}
-                        className="absolute right-3 bottom-3 px-2 py-1 rounded border border-border bg-background/90 hover:bg-muted text-[11px]"
+                        className="absolute right-3 bottom-3 h-8 text-[11px] bg-background/90"
                     >
                         Jump to latest
-                    </button>
+                    </Button>
                 )}
             </div>
         </div>

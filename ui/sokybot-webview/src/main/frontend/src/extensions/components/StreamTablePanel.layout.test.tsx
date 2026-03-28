@@ -19,7 +19,7 @@ describe('StreamTablePanel layout contract', () => {
     const card = root.firstElementChild as HTMLElement | null;
     expect(card).toBeTruthy();
     const cls = card?.className ?? '';
-    expect(cls).toMatch(/flex-shrink-0/);
+    expect(cls).toMatch(/shrink-0|flex-shrink-0/);
     expect(cls).not.toMatch(/\bh-full\b/);
   });
 });

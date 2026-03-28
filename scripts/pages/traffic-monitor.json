@@ -29,7 +29,7 @@
         {
           "field": "time",
           "label": "Time",
-          "className": "text-left p-2 border whitespace-nowrap font-mono text-xs text-muted-foreground"
+          "className": "text-left p-2 border whitespace-nowrap font-mono text-xs text-foreground/90"
         },
         {
           "field": "source",
@@ -77,7 +77,7 @@
       ],
       "rowKey": "index",
       "multiSelectAction": "selectPackets",
-      "autoScroll": true,
+      "autoScroll": "${trafficAutoScroll !== false}",
       "expandable": true,
       "rowConditionalStyle": {
         "field": "source",
@@ -98,6 +98,11 @@
       },
       "rowActions": [
         {
+          "label": "Analyze",
+          "action": "openAnalyzer",
+          "title": "Open packet analyzer for this packet"
+        },
+        {
           "label": "↻",
           "action": "openReplay",
           "title": "Replay Packet"
@@ -105,7 +110,7 @@
         {
           "label": "</>",
           "action": "copyAsCode",
-          "title": "Copy as Groovy"
+          "title": "Copy send snippet (Groovy)"
         },
         {
           "label": "Hex",

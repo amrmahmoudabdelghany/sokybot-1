@@ -318,6 +318,8 @@ class PacketSnifferPage extends BasePage {
     private void setMonitorEnabled(boolean v) { getGlobalStore().put(getMachineKey() + ".monitorEnabled", v) }
     private boolean isSubscribed() { getGlobalStore().get(getMachineKey() + ".subscribed") == true }
     private void setSubscribed(boolean v) { getGlobalStore().put(getMachineKey() + ".subscribed", v) }
+    private boolean isTrafficAutoScroll() { getGlobalStore().get(getMachineKey() + ".trafficAutoScroll") != false }
+    private void setTrafficAutoScroll(boolean v) { getGlobalStore().put(getMachineKey() + ".trafficAutoScroll", v) }
 
 
     private static final DateTimeFormatter PACKET_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
@@ -373,6 +375,8 @@ class PacketSnifferPage extends BasePage {
     private boolean recordingActive = false
     private PacketRecording lastRecording
     private boolean analyzerOpen = false
+    /** When set, hex viewer shows only this monitor list index; null = all filtered packets. */
+    private Integer analyzerFocusListIndex = null
     private List<PacketVar> analyzerVars = []
     private String selectedHex = ""
     private int selectedByteCount = 0
@@ -733,6 +737,11 @@ class PacketSnifferPage extends BasePage {
                     droppedIgnoredCount = 0L
                     lastDropReason = ""
                     lastDropTimestamp = 0L
+                    getSelectedPacketIndices().clear()
+                    response.success = true
+                    break
+                case "toggleTrafficAutoScroll":
+                    setTrafficAutoScroll(!isTrafficAutoScroll())
                     response.success = true
                     break
                 case "togglePause":
@@ -745,14 +754,22 @@ class PacketSnifferPage extends BasePage {
                 case "openAnalyzer":
                     // Ensure analyzer sees the latest packets even if they are still queued.
                     flushQueuedPackets()
+                    analyzerFocusListIndex = null
+                    if (input.containsKey("index")) {
+                        int idx = num(input.index, -1)
+                        if (idx >= 0 && idx < getMonitorPackets().size()) {
+                            analyzerFocusListIndex = idx
+                        }
+                    }
                     analyzerOpen = true
                     response.success = true
-                    if (getFilteredMonitorPackets().isEmpty()) {
+                    if (analyzerPackets().isEmpty()) {
                         response.info = "No packets available yet"
                     }
                     break
                 case "closeAnalyzer":
                     analyzerOpen = false
+                    analyzerFocusListIndex = null
                     response.success = true
                     break
                 case "filterTracer":
@@ -910,6 +927,7 @@ class PacketSnifferPage extends BasePage {
                 case "copyAsCode":
                 case "copyHex":
                 case "copyJson":
+                case "exportMonitorCsv":
                     // Handled client-side in DeclarativeExtensionView.
                     response.success = true
                     break
@@ -1094,6 +1112,7 @@ class PacketSnifferPage extends BasePage {
             topOpcodes               : getTopOpcodes(),
             monitorIcon              : isMonitorEnabled() ? "Pause" : "Play",
             monitorActionText        : isMonitorEnabled() ? "Pause" : "Resume",
+            trafficAutoScroll        : isTrafficAutoScroll(),
             selectedTracer           : selectedTracer ? [source: selectedTracer.source.toString(), opcode: selectedTracer.opcode, description: str(selectedTracer.description)] : [:],
             trafficPackets           : convertPacketsToData(getFilteredMonitorPackets()),
             packetTracers            : convertTracersToData(getTracers()),
@@ -1146,14 +1165,21 @@ class PacketSnifferPage extends BasePage {
     }
 
     private List<Map<String, Object>> analyzerPackets() {
+        List<SnifferPacket> packets
+        if (analyzerFocusListIndex != null) {
+            int i = analyzerFocusListIndex
+            packets = (i >= 0 && i < getMonitorPackets().size()) ? [getMonitorPackets().get(i)] : []
+        } else {
+            packets = getFilteredMonitorPackets()
+        }
         List<Map<String, Object>> rows = []
-        getFilteredMonitorPackets().each { p ->
+        packets.each { p ->
             byte[] buffer = p.packet.toBytes()
             rows << [type: "header", source: p.packet.packetSource.toString(), opcode: String.format("0x%04X", p.packet.opcode & 0xFFFF), name: p.name]
-            int i = 0
-            while (i < buffer.length) {
-                rows << [type: "data", lineNumber: String.format("%06X", i), hex: toHex(buffer, i, analyzerGroupLen), ascii: toAscii(buffer, i, analyzerGroupLen), startOffset: i, endOffset: Math.min(i + analyzerGroupLen, buffer.length)]
-                i += analyzerGroupLen
+            int j = 0
+            while (j < buffer.length) {
+                rows << [type: "data", lineNumber: String.format("%06X", j), hex: toHex(buffer, j, analyzerGroupLen), ascii: toAscii(buffer, j, analyzerGroupLen), startOffset: j, endOffset: Math.min(j + analyzerGroupLen, buffer.length)]
+                j += analyzerGroupLen
             }
             rows << [type: "separator"]
         }
