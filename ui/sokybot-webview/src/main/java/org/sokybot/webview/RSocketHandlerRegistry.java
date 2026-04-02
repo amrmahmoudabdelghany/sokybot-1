@@ -2,6 +2,7 @@ package org.sokybot.webview;
 
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -36,6 +37,13 @@ public class RSocketHandlerRegistry {
     private final Map<String, IRSocketStreamHandler> streamHandlers = new ConcurrentHashMap<>();
     private final Map<String, IRSocketFireAndForgetHandler> fireAndForgetHandlers = new ConcurrentHashMap<>();
     private final Map<String, IRSocketChannelHandler> channelHandlers = new ConcurrentHashMap<>();
+    private final Map<String, List<String>> requiredParamsByMethod = Map.of(
+            "machine.start", List.of("machineId"),
+            "machine.stop", List.of("machineId"),
+            "group.details", List.of("name"),
+            "extension.schema", List.of("pageId"),
+            "extension.action", List.of("pageId", "action"),
+            "extension.toolbar.action", List.of("actionId", "action"));
     
     // ========== Request-Response Handlers ==========
     
@@ -103,6 +111,10 @@ public class RSocketHandlerRegistry {
      * @return response Mono
      */
     public Mono<RSocketResponse> handleRequest(RSocketRequest request) {
+        RSocketResponse envelopeError = validateEnvelope(request);
+        if (envelopeError != null) {
+            return Mono.just(envelopeError);
+        }
         if (request == null || request.getMethod() == null) {
             return Mono.just(RSocketResponse.error(
                 RSocketResponse.ErrorCode.INVALID_REQUEST,
@@ -142,6 +154,10 @@ public class RSocketHandlerRegistry {
      * @return stream Flux
      */
     public Flux<Object> handleStream(RSocketRequest request) {
+        RSocketResponse envelopeError = validateEnvelope(request);
+        if (envelopeError != null) {
+            return Flux.just(envelopeError.toMap());
+        }
         if (request == null || request.getMethod() == null) {
             return Flux.just(RSocketResponse.error(
                 RSocketResponse.ErrorCode.INVALID_REQUEST,
@@ -205,7 +221,7 @@ public class RSocketHandlerRegistry {
     }
 
     public Mono<Void> handleFireAndForget(RSocketRequest request) {
-        if (request == null || request.getMethod() == null) {
+        if (validateEnvelope(request) != null || request == null || request.getMethod() == null) {
             return Mono.empty();
         }
         IRSocketFireAndForgetHandler handler = fireAndForgetHandlers.get(request.getMethod());
@@ -244,6 +260,10 @@ public class RSocketHandlerRegistry {
     }
 
     public Flux<Object> handleChannel(RSocketRequest initialRequest, Flux<RSocketRequest> inbound) {
+        RSocketResponse envelopeError = validateEnvelope(initialRequest);
+        if (envelopeError != null) {
+            return Flux.just(envelopeError.toMap());
+        }
         if (initialRequest == null || initialRequest.getMethod() == null) {
             return Flux.just(RSocketResponse.error(
                 RSocketResponse.ErrorCode.INVALID_REQUEST,
@@ -312,5 +332,30 @@ public class RSocketHandlerRegistry {
             info.put(stream, handler.getDescription())
         );
         return info;
+    }
+
+    private RSocketResponse validateEnvelope(RSocketRequest request) {
+        if (request == null) {
+            return RSocketResponse.invalidParams("request is required");
+        }
+        String method = request.getMethod();
+        if (method == null || method.trim().isEmpty()) {
+            return RSocketResponse.invalidParams("method is required");
+        }
+        List<String> required = requiredParamsByMethod.get(method);
+        if (required == null || required.isEmpty()) {
+            return null;
+        }
+        Map<String, Object> params = request.getParams();
+        if (params == null) {
+            return RSocketResponse.invalidParams("params are required for " + method);
+        }
+        for (String key : required) {
+            Object value = params.get(key);
+            if (!(value instanceof String) || ((String) value).trim().isEmpty()) {
+                return RSocketResponse.invalidParams("Missing required param: " + key);
+            }
+        }
+        return null;
     }
 }

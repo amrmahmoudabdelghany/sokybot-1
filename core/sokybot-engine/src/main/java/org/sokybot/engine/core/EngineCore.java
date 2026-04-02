@@ -1,6 +1,7 @@
 package org.sokybot.engine.core;
 
 import org.sokybot.engine.IEngine;
+import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.core.dispatcher.DispatcherImpl;
@@ -19,6 +20,8 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
@@ -51,11 +54,13 @@ public class EngineCore implements IEngine, IConnectionListener {
     private final AtomicReference<EngineState> state = new AtomicReference<>(EngineState.STOPPED);
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private final AtomicReference<DesiredMode> desiredMode = new AtomicReference<>(DesiredMode.IDLE);
+    private final Object eventLock = new Object();
 
     // Actuator management
     private final ActuatorRegistry actuatorRegistry;
-    private final java.util.List<org.sokybot.engine.api.extension.IActuator> actuators;
-    private final BundleContext bundleContext;
+
+    private static final String KEY_NETWORK_TRANSITIONS = "networkTransitions";
+    private static final int NETWORK_TRANSITIONS_MAX = 5;
 
     private enum DesiredMode {
         IDLE,
@@ -87,14 +92,12 @@ public class EngineCore implements IEngine, IConnectionListener {
         this.machineName = machineName;
         this.proxyConnection = proxyConnection;
         this.gameModel = gameModel;
-        this.actuators = actuators;
-        this.bundleContext = bundleContext;
 
         // Initialize components
         this.dispatcher = new DispatcherImpl(proxyConnection, machineId);
         this.workflowRegistry = new WorkflowRegistryImpl();
         this.workflowContext = new WorkflowContextImpl(
-                gameModel, dispatcher, groupName, machineName);
+                gameModel, dispatcher, groupName, machineName, bundleContext);
         this.actionQueue = new ActionQueueImpl();
         this.queueProcessor = new ActionQueueProcessorImpl(actionQueue);
         this.interruptionManager = new InterruptionManager(workflowRegistry);
@@ -206,24 +209,25 @@ public class EngineCore implements IEngine, IConnectionListener {
     }
 
     @Override
-    public void sendEvent(String eventName) {
+    public void sendEvent(EngineEvent event) {
         if (!isRunning()) {
             throw new IllegalStateException("Engine is not running");
         }
-
-        if (eventName == null || eventName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Event name cannot be null or empty");
+        if (event == null || event.type() == null || event.type().trim().isEmpty()) {
+            throw new IllegalArgumentException("EngineEvent type cannot be null or empty");
         }
-
+        String eventName = event.type().toUpperCase();
         log.info("Received event: {} for machine: {}", eventName, machineId);
 
         // Handle events
-        switch (eventName.toUpperCase()) {
+        synchronized (eventLock) {
+        switch (eventName) {
             case "START_TRAINING":
                 desiredMode.set(DesiredMode.TRAINING);
                 // Enable training cycle
                 enableCycle("training-cycle");
                 state.compareAndSet(EngineState.IDLE, EngineState.ACTIVE);
+                publishStateChanged();
                 break;
 
             case "STOP_TRAINING":
@@ -231,11 +235,13 @@ public class EngineCore implements IEngine, IConnectionListener {
                 // Disable training cycle
                 disableCycle("training-cycle");
                 state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
+                publishStateChanged();
                 break;
 
             case "CONNECT":
                 workflowContext.getPersistentData().put("explicitConnectRequested", true);
                 enableCycle("login-cycle");
+                publishLifecycle("CONNECT");
                 break;
 
             case "DISCONNECT":
@@ -246,10 +252,13 @@ public class EngineCore implements IEngine, IConnectionListener {
                 dispatcher.disconnect();
                 gameModel.getLoginState().reset();
                 state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
+                publishLifecycle("DISCONNECT");
+                publishStateChanged();
                 break;
 
             default:
                 log.warn("Unknown event: {} for machine: {}", eventName, machineId);
+        }
         }
     }
 
@@ -305,6 +314,7 @@ public class EngineCore implements IEngine, IConnectionListener {
     @Override
     public void onClientConnected() {
         log.info("EngineCore: Client connected for machine {}", machineId);
+        appendNetworkTransition("ClientConnected", null, null, null);
     }
 
     @Override
@@ -312,6 +322,7 @@ public class EngineCore implements IEngine, IConnectionListener {
         log.info("EngineCore: Game server connected for machine {}", machineId);
         // Note: The handshake is handled automatically by the Netty pipeline
         // (ClientServerBridge -> HandshakeHandler). No manual action needed here.
+        appendNetworkTransition("ServerConnected", null, null, null);
     }
 
     @Override
@@ -322,21 +333,25 @@ public class EngineCore implements IEngine, IConnectionListener {
     @Override
     public void onHandshakeComplete() {
         log.info("EngineCore: Handshake complete for machine {}", machineId);
+        appendNetworkTransition("HandshakeComplete", null, null, null);
     }
 
     @Override
     public void onHandshakeFailed(String reason) {
         log.error("EngineCore: Handshake failed for machine {}: {}", machineId, reason);
+        appendNetworkTransition("HandshakeFailed", "HANDSHAKE_FAILED", reason, null);
     }
 
     @Override
     public void onRedirectRequired(String host, int port, int loginId) {
         log.info("EngineCore: Redirect requested to {}:{} (Login ID: {})", host, port, loginId);
+        appendNetworkTransition("RedirectRequired", "REDIRECTING", null, host + ":" + port);
     }
 
     @Override
     public void onServerIdentified(String serviceName) {
         log.info("EngineCore: Server identified as {} for machine {}", serviceName, machineId);
+        appendNetworkTransition("ServerIdentified", serviceName, null, null);
         if ("GatewayServer".equalsIgnoreCase(serviceName)) {
             gameModel.getLoginState().setPhase(LoginState.Phase.GATEWAY_CONNECTED);
         } else if ("AgentServer".equalsIgnoreCase(serviceName)) {
@@ -347,6 +362,7 @@ public class EngineCore implements IEngine, IConnectionListener {
     @Override
     public void onAuthenticated() {
         log.info("EngineCore: Agent authentication complete for machine {}", machineId);
+        appendNetworkTransition("Authenticated", "AUTHENTICATED", null, null);
         reconcileDesiredMode();
     }
 
@@ -370,6 +386,44 @@ public class EngineCore implements IEngine, IConnectionListener {
         } else {
             log.info("EngineCore: Disconnected from network");
         }
+        String reason = cause != null ? cause.getMessage() : null;
+        String loginPhase = (reason != null && reason.toLowerCase().contains("agent auth failed")) ? "AUTH_FAILED" : "DISCONNECTED";
+        appendNetworkTransition("Disconnected", loginPhase, reason, null);
+        actuatorRegistry.clearSessionData();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void appendNetworkTransition(String transition, String loginPhase, String reason, String endpoint) {
+        try {
+            var data = workflowContext.getPersistentData();
+            synchronized (data) {
+                Object existing = data.get(KEY_NETWORK_TRANSITIONS);
+                java.util.List<java.util.Map<String, Object>> list;
+                if (existing instanceof java.util.List) {
+                    list = (java.util.List<java.util.Map<String, Object>>) existing;
+                } else {
+                    list = new java.util.ArrayList<>();
+                }
+                java.util.Map<String, Object> ev = new java.util.HashMap<>();
+                ev.put("transition", transition);
+                if (loginPhase != null) {
+                    ev.put("loginPhase", loginPhase);
+                }
+                if (reason != null) {
+                    ev.put("reason", reason);
+                }
+                if (endpoint != null) {
+                    ev.put("endpoint", endpoint);
+                }
+                ev.put("timestamp", System.currentTimeMillis());
+                list.add(ev);
+                while (list.size() > NETWORK_TRANSITIONS_MAX) {
+                    list.remove(0);
+                }
+                data.put(KEY_NETWORK_TRANSITIONS, list);
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     /**
@@ -383,5 +437,26 @@ public class EngineCore implements IEngine, IConnectionListener {
         if (scheduler != null && !scheduler.isShutdown()) {
             scheduler.shutdownNow();
         }
+        workflowContext.getStateData().clear();
+        workflowContext.getPersistentData().entrySet().removeIf(e -> String.valueOf(e.getKey()).startsWith("session."));
+        workflowContext.close();
     }
+
+    @Override
+    public List<String> getActiveActivities() {
+        List<String> activities = new ArrayList<>();
+        if (workflowRegistry.isCycleEnabled("training-cycle")) activities.add("TRAINING");
+        if (workflowRegistry.isCycleEnabled("login-cycle")) activities.add("LOGIN");
+        if (activities.isEmpty()) activities.add("IDLE");
+        return activities;
+    }
+
+    private void publishLifecycle(String eventType) {
+        log.debug("Lifecycle event [{}] for machine {}", eventType, machineId);
+    }
+
+    private void publishStateChanged() {
+        log.debug("State changed for machine {} -> {} ({})", machineId, state.get(), getActiveActivities());
+    }
+
 }

@@ -71,16 +71,51 @@ function generateRequestId(): string {
     return `req-${++requestIdCounter}-${Date.now()}`;
 }
 
+export type ConnectionState = 'connecting' | 'connected' | 'disconnected';
+
+export class TimeoutError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'TimeoutError';
+    }
+}
+
+type QueuedRequest<T = unknown> = {
+    key: string;
+    method: string;
+    params?: Record<string, unknown>;
+    expiresAt: number;
+    resolve: (value: T) => void;
+    reject: (reason?: unknown) => void;
+};
+
 export class RSocketService {
     private client: any;
+    private state: ConnectionState = 'disconnected';
+    private readonly stateListeners = new Set<(state: ConnectionState) => void>();
+    private readonly reconnectListeners = new Set<() => void>();
+    private reconnectTimer: number | undefined;
+    private reconnectAttempts = 0;
+    private connectingPromise: Promise<void> | null = null;
+    private isManualClose = false;
+    private readonly queue: QueuedRequest<unknown>[] = [];
+    private readonly requestTtlMs = 5000;
+    private readonly maxQueueSize = 200;
+    private readonly queueableMethodPrefixes = ['machine.', 'group.', 'extension.', 'fs.', 'system.', 'character.'];
+    private readonly activeStreams = new Map<string, () => void>();
+    private readonly beforeUnloadHandler = () => this.close();
 
     connect(): Promise<void> {
-        return new Promise((resolve, reject) => {
+        if (this.connectingPromise) return this.connectingPromise;
+        this.isManualClose = false;
+        this.setState('connecting');
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+            window.addEventListener('beforeunload', this.beforeUnloadHandler);
+        }
+        this.connectingPromise = new Promise((resolve, reject) => {
             const client = new RSocketClient({
-                serializers: {
-                    data: IdentitySerializer,
-                    metadata: IdentitySerializer,
-                },
+                serializers: { data: IdentitySerializer, metadata: IdentitySerializer },
                 setup: {
                     keepAlive: 60000,
                     lifetime: 180000,
@@ -92,20 +127,27 @@ export class RSocketService {
                     wsCreator: (url: string) => new WebSocket(url),
                 }),
             });
-
             client.connect().subscribe({
                 onComplete: (socket: any) => {
                     this.client = socket;
-                    console.log('Connected to RSocket');
+                    this.reconnectAttempts = 0;
+                    this.setState('connected');
+                    this.connectingPromise = null;
+                    this.notifyReconnected();
+                    this.flushQueue();
                     resolve();
                 },
                 onError: (error: any) => {
-                    console.error('Connection failed', error);
+                    this.connectingPromise = null;
+                    this.client = null;
+                    this.setState('disconnected');
+                    this.scheduleReconnect();
                     reject(error);
                 },
                 onSubscribe: (_cancel: any) => { }
             });
         });
+        return this.connectingPromise;
     }
 
     /**
@@ -116,63 +158,17 @@ export class RSocketService {
      * @returns Promise resolving to the response result
      */
     async request<T = unknown>(method: string, params?: Record<string, unknown>): Promise<T> {
-        if (!this.client) {
-            throw new Error("Client not connected");
-        }
-
-        const request: RSocketRequest = {
-            method,
-            params,
-            id: generateRequestId(),
-        };
-
-        return new Promise((resolve, reject) => {
-            const payload = {
-                data: JSON.stringify(request),
-                metadata: ""
-            };
-
-            this.client.requestResponse(payload).subscribe({
-                onComplete: (response: any) => {
-                    try {
-                        const data: RSocketResponse<T> = typeof response.data === 'string'
-                            ? JSON.parse(response.data)
-                            : response.data;
-
-                        if (data.error) {
-                            reject(new RSocketError(data.error.code, data.error.message, data.error.data));
-                        } else {
-                            resolve(data.result as T);
-                        }
-                    } catch (e) {
-                        reject(e);
-                    }
-                },
-                onError: (error: any) => reject(error)
-            });
-        });
-    }
-
-    /**
-     * Legacy request-response method for backwards compatibility.
-     * @deprecated Use request() instead
-     */
-    requestResponse(message: string): Promise<string> {
-        if (!this.client) {
-            return Promise.reject("Client not connected");
-        }
-        return new Promise((resolve, reject) => {
-            const payload = {
-                data: message,
-                metadata: ""
-            };
-
-            this.client.requestResponse(payload).subscribe({
-                onComplete: (response: any) => {
-                    resolve(response.data);
-                },
-                onError: (error: any) => reject(error)
-            });
+        return new Promise<T>((resolve, reject) => {
+            if (!this.client) {
+                if (!this.shouldQueue(method)) {
+                    reject(new Error('Client not connected'));
+                    return;
+                }
+                this.enqueueRequest({ method, params, resolve: (value) => resolve(value as T), reject });
+                this.ensureConnected();
+                return;
+            }
+            this.dispatchRequest({ method, params, resolve: (value) => resolve(value as T), reject });
         });
     }
 
@@ -191,8 +187,7 @@ export class RSocketService {
         options?: Record<string, unknown> | SubscribeOptions
     ): RSocketSubscription {
         if (!this.client) {
-            console.error("Client not connected");
-            return { unsubscribe: () => { }, request: () => { } };
+            this.ensureConnected();
         }
 
         const normalizedOptions: SubscribeOptions =
@@ -218,7 +213,7 @@ export class RSocketService {
         const requestN = Math.max(1, normalizedOptions.requestN ?? initialRequestN);
         const maxInFlight = Math.max(requestN, normalizedOptions.maxInFlight ?? requestN * 4);
 
-        this.client.requestStream(payload).subscribe({
+        const subscribeNow = () => this.client?.requestStream(payload).subscribe({
             onNext: (payload: any) => {
                 inFlight = Math.max(0, inFlight - 1);
                 try {
@@ -247,6 +242,7 @@ export class RSocketService {
                 }
             },
             onError: (error: any) => {
+                this.handleTransportFailure(error);
                 if (onError) {
                     onError(error);
                 } else {
@@ -260,8 +256,14 @@ export class RSocketService {
             }
         });
 
+        const streamKey = `${method}:${JSON.stringify(params ?? {})}:${generateRequestId()}`;
+        this.activeStreams.set(streamKey, subscribeNow);
+        if (this.client) subscribeNow();
+        else this.ensureConnected();
+
         return {
             unsubscribe: () => {
+                this.activeStreams.delete(streamKey);
                 if (subscription) {
                     subscription.cancel();
                 }
@@ -276,76 +278,15 @@ export class RSocketService {
         };
     }
 
-    /**
-     * Legacy stream events method for backwards compatibility.
-     * @deprecated Use subscribe() instead
-     */
-    streamEvents(onEvent: (event: any) => void, onError: (error: any) => void) {
-        return this.subscribe("game.events", onEvent, onError);
-    }
-
-    /**
-     * Legacy request stream method for backwards compatibility.
-     * @deprecated Use subscribe() instead
-     */
-    requestStream(
-        message: string,
-        onNext: (data: any) => void,
-        onError?: (error: any) => void
-    ): RSocketSubscription {
-        if (!this.client) {
-            console.error("Client not connected");
-            return { unsubscribe: () => { }, request: () => { } };
-        }
-
-        const payload = {
-            data: message,
-            metadata: ""
-        };
-
-        let subscription: any;
-
-        this.client.requestStream(payload).subscribe({
-            onNext: (payload: any) => {
-                try {
-                    const data = typeof payload.data === 'string'
-                        ? JSON.parse(payload.data)
-                        : payload.data;
-                    onNext(data);
-                } catch (e) {
-                    console.error("Failed to parse stream data", e);
-                }
-            },
-            onError: (error: any) => {
-                if (onError) {
-                    onError(error);
-                } else {
-                    console.error("Stream error", error);
-                }
-            },
-            onSubscribe: (sub: any) => {
-                subscription = sub;
-                subscription.request(2147483647);
-            }
-        });
-
-        return {
-            unsubscribe: () => {
-                if (subscription) {
-                    subscription.cancel();
-                }
-            },
-            request: (n: number) => {
-                if (subscription) {
-                    subscription.request(Math.max(1, Math.floor(n || 1)));
-                }
-            }
-        };
-    }
-
     fireAndForget(method: string, params?: Record<string, unknown>): Promise<void> {
         if (!this.client) {
-            return Promise.reject(new Error("Client not connected"));
+            if (!this.shouldQueue(method)) {
+                return Promise.reject(new Error('Client not connected'));
+            }
+            return new Promise<void>((resolve, reject) => {
+                this.enqueueRequest({ method, params, resolve: () => resolve(), reject });
+                this.ensureConnected();
+            });
         }
         const request: RSocketRequest = {
             method,
@@ -356,7 +297,10 @@ export class RSocketService {
             data: JSON.stringify(request),
             metadata: ""
         };
-        return this.client.fireAndForget(payload);
+        return this.client.fireAndForget(payload).catch((e: unknown) => {
+            this.handleTransportFailure(e);
+            throw e;
+        });
     }
 
     requestChannel<TOut = unknown, TIn = unknown>(
@@ -420,23 +364,158 @@ export class RSocketService {
         };
     }
 
-    /**
-     * Legacy request stream with state for backwards compatibility.
-     * @deprecated Use subscribe() instead
-     */
-    requestStreamWithState(
-        message: string,
-        stateKey: string,
-        onStateUpdate: (state: Record<string, any>) => void,
-        onError?: (error: any) => void
-    ): { unsubscribe: () => void } {
-        return this.requestStream(
-            message,
-            (data) => {
-                onStateUpdate({ [stateKey]: data });
+    onConnectionStateChange(listener: (state: ConnectionState) => void): () => void {
+        this.stateListeners.add(listener);
+        listener(this.state);
+        return () => this.stateListeners.delete(listener);
+    }
+
+    onReconnect(listener: () => void): () => void {
+        this.reconnectListeners.add(listener);
+        return () => this.reconnectListeners.delete(listener);
+    }
+
+    getConnectionState(): ConnectionState {
+        return this.state;
+    }
+
+    isClosed(): boolean {
+        return this.state === 'disconnected' && !this.client;
+    }
+
+    close(): void {
+        this.isManualClose = true;
+        if (this.reconnectTimer) {
+            window.clearTimeout(this.reconnectTimer);
+            this.reconnectTimer = undefined;
+        }
+        if (this.client?.close) {
+            try { this.client.close(); } catch { }
+        }
+        this.client = null;
+        this.rejectQueue(new Error('Connection closed'));
+        this.setState('disconnected');
+        if (typeof window !== 'undefined') {
+            window.removeEventListener('beforeunload', this.beforeUnloadHandler);
+        }
+    }
+
+    private dispatchRequest(q: Omit<QueuedRequest<unknown>, 'expiresAt' | 'key'>): void {
+        const request: RSocketRequest = { method: q.method, params: q.params, id: generateRequestId() };
+        const payload = { data: JSON.stringify(request), metadata: '' };
+        this.client.requestResponse(payload).subscribe({
+            onComplete: (response: any) => {
+                try {
+                    const data: RSocketResponse<unknown> = typeof response.data === 'string' ? JSON.parse(response.data) : response.data;
+                    if (data.error) q.reject(new RSocketError(data.error.code, data.error.message, data.error.data));
+                    else q.resolve(data.result);
+                } catch (e) { q.reject(e); }
             },
-            onError
-        );
+            onError: (error: any) => {
+                this.handleTransportFailure(error);
+                q.reject(error);
+            }
+        });
+    }
+
+    private shouldQueue(method: string): boolean {
+        return this.queueableMethodPrefixes.some((prefix) => method.startsWith(prefix));
+    }
+
+    private enqueueRequest(req: Omit<QueuedRequest<unknown>, 'expiresAt' | 'key'>): void {
+        this.dropExpired();
+        if (this.queue.length >= this.maxQueueSize) {
+            req.reject(new TimeoutError('Request queue is full'));
+            return;
+        }
+        const entry: QueuedRequest<unknown> = {
+            ...req,
+            key: '',
+            expiresAt: Date.now() + this.requestTtlMs
+        };
+        this.coalesce(entry);
+        this.queue.push(entry);
+    }
+
+    private coalesce(entry: QueuedRequest): void {
+        const key = this.queueKey(entry.method, entry.params);
+        entry.key = key;
+        if (entry.method === 'machine.start' || entry.method === 'machine.stop') {
+            for (let i = this.queue.length - 1; i >= 0; i--) {
+                if (this.queue[i].key === key) {
+                    const replaced = this.queue.splice(i, 1)[0];
+                    replaced.reject(new TimeoutError('Superseded by newer command'));
+                }
+            }
+        }
+    }
+
+    private queueKey(method: string, params?: Record<string, unknown>): string {
+        const machineId = typeof params?.machineId === 'string' ? params.machineId : '';
+        return `${method}:${machineId}`;
+    }
+
+    private flushQueue(): void {
+        this.dropExpired();
+        if (!this.client) return;
+        const queued = this.queue.splice(0, this.queue.length);
+        queued.forEach((req) => this.dispatchRequest(req));
+    }
+
+    private dropExpired(): void {
+        const now = Date.now();
+        for (let i = this.queue.length - 1; i >= 0; i--) {
+            if (this.queue[i].expiresAt <= now) {
+                const expired = this.queue.splice(i, 1)[0];
+                expired.reject(new TimeoutError('Queued request expired'));
+            }
+        }
+    }
+
+    private rejectQueue(error: Error): void {
+        const queued = this.queue.splice(0, this.queue.length);
+        queued.forEach((item) => item.reject(error));
+    }
+
+    private setState(next: ConnectionState): void {
+        if (this.state === next) return;
+        this.state = next;
+        this.stateListeners.forEach((listener) => listener(next));
+    }
+
+    private ensureConnected(): void {
+        if (!this.connectingPromise && !this.client && !this.isManualClose) {
+            this.connect().catch(() => { /* retried by scheduleReconnect */ });
+        }
+    }
+
+    private scheduleReconnect(): void {
+        if (this.isManualClose || this.reconnectTimer) return;
+        const base = Math.min(30000, 1000 * (2 ** this.reconnectAttempts));
+        const jitter = base * 0.2 * ((Math.random() * 2) - 1);
+        const delay = Math.max(250, Math.floor(base + jitter));
+        this.reconnectAttempts += 1;
+        this.reconnectTimer = window.setTimeout(() => {
+            this.reconnectTimer = undefined;
+            this.ensureConnected();
+        }, delay);
+    }
+
+    private handleTransportFailure(_error: unknown): void {
+        if (this.isManualClose) return;
+        this.client = null;
+        this.setState('disconnected');
+        this.scheduleReconnect();
+    }
+
+    private notifyReconnected(): void {
+        this.reconnectListeners.forEach((listener) => listener());
+        const entries = Array.from(this.activeStreams.entries());
+        this.activeStreams.clear();
+        entries.forEach(([key, resubscribe]) => {
+            this.activeStreams.set(key, resubscribe);
+            resubscribe();
+        });
     }
 
     // ============ Convenience Methods ============
@@ -615,6 +694,18 @@ export class RSocketError extends Error {
 export interface SavedLoginSnapshot {
     targetGateway?: string;
     targetAgent?: string;
+    username?: string;
+    password?: string;
+    passcode?: string;
+    selectedCharacter?: string;
+    selectedCharacterSlot?: number;
+    characterSlotBase?: number;
+    characterSelectionStrictMode?: boolean;
+    agentWaitTimeoutMs?: number;
+    loginResponseTimeoutMs?: number;
+    agentAuthTimeoutMs?: number;
+    passcodeWaitTimeoutMs?: number;
+    passcodeUserInputTimeoutMs?: number;
     usernameSet?: boolean;
     autoLogin?: boolean;
     autoReconnect?: boolean;
@@ -728,6 +819,23 @@ export interface MachineStatusEvent {
     host?: string;
     port?: number;
     topic?: string;
+    /** Retry delay in milliseconds (present when phase is RETRY_DELAY). */
+    retryDelayMs?: number;
+    /** Server-side timestamp when the retry was scheduled. */
+    serverTimestamp?: number;
+    /** Absolute UTC ms when retry will fire (preferred over retryDelayMs+serverTimestamp). */
+    retryAt?: number;
+    /** Backend failure classification (NETWORK, CREDENTIAL, AGENT_TIMEOUT, MANUAL_VERIFICATION). */
+    failureClass?: string;
+    /** True when the failure is non-retryable (credential rejection, manual verification, etc.). */
+    fatal?: boolean;
+    /** Backend UX category hint for onboarding rendering. */
+    uxCategory?: 'CONNECT' | 'AGENT' | 'AUTH' | 'CHARACTER' | 'INGAME' | 'ERROR';
+    /** Backend UX hint indicating user action/challenge is required. */
+    requiresInput?: boolean;
+    /** Latest measured transport latency from heartbeat RTT, in milliseconds. */
+    latencyMs?: number;
 }
 
-export const rsocketService = new RSocketService();
+export const createRSocketService = () => new RSocketService();
+export const rsocketService = createRSocketService();

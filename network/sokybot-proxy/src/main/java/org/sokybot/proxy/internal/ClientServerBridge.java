@@ -27,6 +27,7 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
     private static final int SETUP_OPCODE = 0x5000;
     private static final int CHALLENGE_OPCODE = 0x5001;
     private static final int ID_OPCODE = 0x2001;
+    private static final int HEARTBEAT_OPCODE = 0x2002;
 
     private final ProxyConnection proxyConnection;
 
@@ -56,6 +57,9 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
         int opcode = msg.getOpcode();
 
         // Handle handshake and identification packets from server in clientless mode
+        if (peer == NetworkPeer.SERVER && opcode == HEARTBEAT_OPCODE) {
+            proxyConnection.onHeartbeatObserved();
+        }
         if (peer == NetworkPeer.SERVER && proxyConnection.isClientlessMode()) {
             if (opcode == ServerOpcode.LOGIN_RESPONSE) {
                 handleLoginResponse(msg);

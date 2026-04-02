@@ -1,35 +1,14 @@
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import {
-    Button,
-    Select as SelectRoot,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-    encodeSelectItemValue,
-    decodeSelectItemValue,
-} from '@sokybot/frontend-shared';
-
-const connectSchema = z.object({
-    targetGateway: z.string().min(1, 'Gateway is required'),
-});
-
-const agentSchema = z.object({
-    targetAgent: z.string().min(1, 'Select an agent'),
-});
-
-const credentialsSchema = z.object({
-    username: z.string().min(1, 'Username is required'),
-    password: z.string(),
-    passcode: z.string(),
-});
-
-const characterSchema = z.object({
-    selectedCharacter: z.string().min(1, 'Select a character'),
-});
+import React from 'react';
+import { OnboardingStepper } from './OnboardingStepper';
+import { OnboardingCTA } from './OnboardingCTA';
+import { RetryCountdown } from './RetryCountdown';
+import { GatewayConnectCard } from './GatewayConnectCard';
+import { AgentServerCard } from './AgentServerCard';
+import { CredentialsCard } from './CredentialsCard';
+import { CharacterSelectionCard } from './CharacterSelectionCard';
+import { mapPhaseToUX, deriveStepStates, resolvePhaseToUX } from '../machines/loginPhaseMapping';
+import type { ActionIntent } from '../machines/loginPhaseMapping';
+import type { RetryCountdownState } from '../machines/useRetryCountdown';
 
 export type OnboardingFormValues = {
     targetGateway: string;
@@ -38,6 +17,14 @@ export type OnboardingFormValues = {
     passcode: string;
     targetAgent: string;
     selectedCharacter: string;
+    selectedCharacterSlot?: number;
+    characterSlotBase?: number;
+    characterSelectionStrictMode?: boolean;
+    agentWaitTimeoutMs?: number;
+    loginResponseTimeoutMs?: number;
+    agentAuthTimeoutMs?: number;
+    passcodeWaitTimeoutMs?: number;
+    passcodeUserInputTimeoutMs?: number;
 };
 
 type MachineStatus = {
@@ -48,6 +35,11 @@ type MachineStatus = {
     agentOptions: Array<{ value: string; label: string }>;
     availableCharacters: string[];
     selectedCharacter: string | null;
+    reason?: string | null;
+    failureClass?: string | null;
+    fatal?: boolean;
+    uxCategory?: 'CONNECT' | 'AGENT' | 'AUTH' | 'CHARACTER' | 'INGAME' | 'ERROR' | null;
+    requiresInput?: boolean;
 };
 
 interface MachineOnboardingPanelProps {
@@ -57,11 +49,16 @@ interface MachineOnboardingPanelProps {
     showAgentServerCard: boolean;
     currentOnboardingForm: OnboardingFormValues;
     connectInFlightByMachine: Record<string, boolean>;
+    abortInFlightByMachine: Record<string, boolean>;
+    isOffline: boolean;
     saveLoginPayload: (
         machineId: string,
         payload: Record<string, unknown>,
         startAfterSave?: boolean
     ) => Promise<void>;
+    abortLogin: (machineId: string) => Promise<void>;
+    /** Retry countdown state from useRetryCountdown. */
+    retryCountdown?: RetryCountdownState;
 }
 
 export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
@@ -71,248 +68,158 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
     showAgentServerCard,
     currentOnboardingForm,
     connectInFlightByMachine,
+    abortInFlightByMachine,
+    isOffline,
     saveLoginPayload,
+    abortLogin,
+    retryCountdown,
 }) => {
-    const connectForm = useForm<z.infer<typeof connectSchema>>({
-        resolver: zodResolver(connectSchema),
-        defaultValues: { targetGateway: currentOnboardingForm.targetGateway },
-    });
-
-    const agentForm = useForm<z.infer<typeof agentSchema>>({
-        resolver: zodResolver(agentSchema),
-        defaultValues: { targetAgent: currentOnboardingForm.targetAgent },
-    });
-
-    const credentialsForm = useForm<z.infer<typeof credentialsSchema>>({
-        resolver: zodResolver(credentialsSchema),
-        defaultValues: {
-            username: currentOnboardingForm.username,
-            password: currentOnboardingForm.password,
-            passcode: currentOnboardingForm.passcode,
-        },
-    });
-
-    const characterForm = useForm<z.infer<typeof characterSchema>>({
-        resolver: zodResolver(characterSchema),
-        defaultValues: { selectedCharacter: currentOnboardingForm.selectedCharacter },
-    });
-
-    useEffect(() => {
-        connectForm.reset({ targetGateway: currentOnboardingForm.targetGateway });
-    }, [selectedMachineId, currentOnboardingForm.targetGateway, connectForm]);
-
-    useEffect(() => {
-        agentForm.reset({ targetAgent: currentOnboardingForm.targetAgent });
-    }, [selectedMachineId, currentOnboardingForm.targetAgent, agentForm]);
-
-    useEffect(() => {
-        credentialsForm.reset({
-            username: currentOnboardingForm.username,
-            password: currentOnboardingForm.password,
-            passcode: currentOnboardingForm.passcode,
-        });
-    }, [
-        selectedMachineId,
-        currentOnboardingForm.username,
-        currentOnboardingForm.password,
-        currentOnboardingForm.passcode,
-        credentialsForm,
-    ]);
-
-    useEffect(() => {
-        characterForm.reset({ selectedCharacter: currentOnboardingForm.selectedCharacter });
-    }, [selectedMachineId, currentOnboardingForm.selectedCharacter, characterForm]);
-
     if (!selectedMachineId) {
         return null;
     }
 
     return (
         <div className="space-y-4">
+            {/* 4-step progress tracker */}
+            {(() => {
+                const ux = resolvePhaseToUX({
+                    loginPhase: currentMachineStatus.loginPhase,
+                    uxCategory: currentMachineStatus.uxCategory,
+                    requiresInput: currentMachineStatus.requiresInput,
+                    fatal: currentMachineStatus.fatal,
+                });
+                const stepStates = deriveStepStates(ux, {
+                    hasGateway: !showConnectCard,
+                    hasCredentials: currentMachineStatus.loginPhase !== 'MISSING_CREDENTIALS',
+                    hasAgent: !showAgentServerCard,
+                    hasCharacter: currentMachineStatus.loginPhase !== 'MISSING_CHARACTER_SELECTION',
+                });
+                return (
+                    <>
+                        <OnboardingStepper
+                            currentStep={stepStates.currentStep}
+                            completedSteps={stepStates.completedSteps}
+                            blockedSteps={stepStates.blockedSteps}
+                        />
+
+                        {/* Phase description + failure info */}
+                        <div className="text-[11px] text-muted-foreground leading-snug">
+                            {ux.displayDescription}
+                        </div>
+
+                        {/* Failure reason */}
+                        {currentMachineStatus.reason && (ux.severity === 'error' || ux.severity === 'warn') && (
+                            <div className="text-[11px] text-destructive/90 bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2 leading-snug">
+                                {currentMachineStatus.reason}
+                            </div>
+                        )}
+
+                        {/* Retry countdown */}
+                        {retryCountdown && <RetryCountdown countdown={retryCountdown} />}
+                    </>
+                );
+            })()}
             {showConnectCard && (
-                <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
-                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Connect</div>
-                    <input
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="Target Gateway (IP or host)"
-                        {...connectForm.register('targetGateway')}
-                    />
-                    {connectForm.formState.errors.targetGateway && (
-                        <p className="text-[11px] text-destructive">
-                            {connectForm.formState.errors.targetGateway.message}
-                        </p>
-                    )}
-                    <Button
-                        className="w-full"
-                        disabled={Boolean(connectInFlightByMachine[selectedMachineId])}
-                        onClick={connectForm.handleSubmit(async ({ targetGateway }) => {
-                            await saveLoginPayload(
-                                selectedMachineId,
-                                { targetGateway: targetGateway.trim(), autoLogin: true },
-                                true
-                            );
-                        })}
-                    >
-                        {connectInFlightByMachine[selectedMachineId] ? 'Connecting...' : 'Connect'}
-                    </Button>
-                </div>
+                <GatewayConnectCard
+                    initialGateway={currentOnboardingForm.targetGateway}
+                    inFlight={Boolean(connectInFlightByMachine[selectedMachineId])}
+                    isOffline={isOffline}
+                    onSubmit={async ({ targetGateway }) => {
+                        await saveLoginPayload(
+                            selectedMachineId,
+                            {
+                                targetGateway: targetGateway.trim(),
+                                targetAgent: '',
+                                selectedCharacter: '',
+                                autoLogin: true,
+                            },
+                            true
+                        );
+                    }}
+                />
             )}
 
             {showAgentServerCard && (
-                <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
-                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Agent Server</div>
-                    {currentMachineStatus.loginPhase === 'WAITING_FOR_AGENTS'
-                        && currentMachineStatus.agentOptions.length === 0 && (
-                        <p className="text-[11px] text-muted-foreground leading-snug">
-                            Waiting for the gateway to return the agent list…
-                        </p>
-                    )}
-                    {currentMachineStatus.loginPhase === 'WAITING_FOR_AGENTS_TIMEOUT' && (
-                        <p className="text-[11px] text-amber-600/90 dark:text-amber-400/90 leading-snug">
-                            Agent list timed out. Pick an agent if the list appears, or set a manual agent on the
-                            Connection page and retry.
-                        </p>
-                    )}
-                    <SelectRoot
-                        value={encodeSelectItemValue(agentForm.watch('targetAgent') ?? '')}
-                        onValueChange={(v) =>
-                            agentForm.setValue('targetAgent', decodeSelectItemValue(v), {
-                                shouldValidate: true,
-                                shouldTouch: true,
-                            })
-                        }
-                    >
-                        <SelectTrigger className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
-                            <SelectValue
-                                placeholder={
-                                    currentMachineStatus.agentOptions.length === 0
-                                        ? 'Select discovered agent'
-                                        : 'Select agent server'
-                                }
-                            />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value={encodeSelectItemValue('')}>
-                                {currentMachineStatus.agentOptions.length === 0
-                                    ? 'Select discovered agent'
-                                    : 'Select agent server'}
-                            </SelectItem>
-                            {currentMachineStatus.agentOptions.map((option) => (
-                                <SelectItem key={option.value} value={encodeSelectItemValue(option.value)}>
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </SelectRoot>
-                    {agentForm.formState.errors.targetAgent && (
-                        <p className="text-[11px] text-destructive">
-                            {agentForm.formState.errors.targetAgent.message}
-                        </p>
-                    )}
-                    <Button
-                        className="w-full"
-                        disabled={
-                            !agentForm.watch('targetAgent')
-                            || (currentMachineStatus.loginPhase === 'WAITING_FOR_AGENTS'
-                                && currentMachineStatus.agentOptions.length === 0)
-                        }
-                        onClick={agentForm.handleSubmit(async ({ targetAgent }) => {
-                            await saveLoginPayload(selectedMachineId, { targetAgent }, false);
-                        })}
-                    >
-                        Save Agent Server
-                    </Button>
-                </div>
+                <AgentServerCard
+                    initialAgent={currentOnboardingForm.targetAgent}
+                    loginPhase={currentMachineStatus.loginPhase}
+                    agentOptions={currentMachineStatus.agentOptions}
+                    isOffline={isOffline}
+                    onSubmit={async ({ targetAgent }) => {
+                        await saveLoginPayload(selectedMachineId, { targetAgent }, true);
+                    }}
+                />
             )}
 
             {currentMachineStatus.loginPhase === 'MISSING_CREDENTIALS' && (
-                <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
-                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Authentication</div>
-                    <input
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="Username"
-                        {...credentialsForm.register('username')}
-                    />
-                    <input
-                        type="password"
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="Password"
-                        {...credentialsForm.register('password')}
-                    />
-                    <input
-                        type="password"
-                        className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                        placeholder="Passcode"
-                        {...credentialsForm.register('passcode')}
-                    />
-                    {(credentialsForm.formState.errors.username
-                        || credentialsForm.formState.errors.password
-                        || credentialsForm.formState.errors.passcode) && (
-                        <p className="text-[11px] text-destructive">
-                            {credentialsForm.formState.errors.username?.message
-                                || credentialsForm.formState.errors.password?.message
-                                || credentialsForm.formState.errors.passcode?.message}
-                        </p>
-                    )}
-                    <Button
-                        className="w-full"
-                        onClick={credentialsForm.handleSubmit(async (vals) => {
-                            await saveLoginPayload(selectedMachineId, {
-                                username: vals.username,
-                                password: vals.password,
-                                passcode: vals.passcode,
-                                autoLogin: true,
-                            }, false);
-                        })}
-                    >
-                        Save Credentials
-                    </Button>
-                </div>
+                <CredentialsCard
+                    initialValues={{
+                        username: currentOnboardingForm.username,
+                        password: currentOnboardingForm.password,
+                        passcode: currentOnboardingForm.passcode,
+                    }}
+                    isOffline={isOffline}
+                    onSubmit={async (vals) => {
+                        await saveLoginPayload(selectedMachineId, {
+                            username: vals.username,
+                            password: vals.password,
+                            passcode: vals.passcode,
+                            autoLogin: true,
+                        }, true);
+                    }}
+                />
             )}
 
             {currentMachineStatus.loginPhase === 'MISSING_CHARACTER_SELECTION' && (
-                <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3">
-                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Character List</div>
-                    <SelectRoot
-                        value={encodeSelectItemValue(characterForm.watch('selectedCharacter') ?? '')}
-                        onValueChange={(v) =>
-                            characterForm.setValue('selectedCharacter', decodeSelectItemValue(v), {
-                                shouldValidate: true,
-                                shouldTouch: true,
-                            })
-                        }
-                    >
-                        <SelectTrigger className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm">
-                            <SelectValue placeholder="Select character" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value={encodeSelectItemValue('')}>Select character</SelectItem>
-                            {currentMachineStatus.availableCharacters.map((name) => (
-                                <SelectItem key={name} value={encodeSelectItemValue(name)}>
-                                    {name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </SelectRoot>
-                    {characterForm.formState.errors.selectedCharacter && (
-                        <p className="text-[11px] text-destructive">
-                            {characterForm.formState.errors.selectedCharacter.message}
-                        </p>
-                    )}
-                    <Button
-                        className="w-full"
-                        onClick={characterForm.handleSubmit(async ({ selectedCharacter }) => {
-                            await saveLoginPayload(
-                                selectedMachineId,
-                                { selectedCharacter },
-                                false
-                            );
-                        })}
-                    >
-                        Save Character
-                    </Button>
-                </div>
+                <CharacterSelectionCard
+                    initialCharacter={currentOnboardingForm.selectedCharacter}
+                    availableCharacters={currentMachineStatus.availableCharacters}
+                    isOffline={isOffline}
+                    onSubmit={async ({ selectedCharacter }) => {
+                        await saveLoginPayload(selectedMachineId, { selectedCharacter }, false);
+                    }}
+                />
             )}
+
+            {/* Contextual CTAs (shown when no specific form card is active) */}
+            {!showConnectCard
+                && !showAgentServerCard
+                && currentMachineStatus.loginPhase !== 'MISSING_CREDENTIALS'
+                && currentMachineStatus.loginPhase !== 'MISSING_CHARACTER_SELECTION'
+                && (() => {
+                    const ux = resolvePhaseToUX({
+                        loginPhase: currentMachineStatus.loginPhase,
+                        uxCategory: currentMachineStatus.uxCategory,
+                        requiresInput: currentMachineStatus.requiresInput,
+                        fatal: currentMachineStatus.fatal,
+                    });
+                    const handleAction = (intent: ActionIntent) => {
+                        if (!selectedMachineId || !intent) return;
+                        switch (intent) {
+                            case 'retry_now':
+                            case 'check_settings':
+                                // Re-trigger login with current saved payload
+                                void saveLoginPayload(selectedMachineId, { autoLogin: true }, true);
+                                break;
+                            case 'cancel':
+                                void abortLogin(selectedMachineId);
+                                break;
+                            case 'acknowledge':
+                                // Acknowledged – no further action
+                                break;
+                            default:
+                                break;
+                        }
+                    };
+                    return (
+                        <OnboardingCTA
+                            ux={ux}
+                            onAction={handleAction}
+                            inFlight={Boolean(connectInFlightByMachine[selectedMachineId ?? '']) || isOffline}
+                            aborting={Boolean(abortInFlightByMachine[selectedMachineId ?? ''])}
+                        />
+                    );
+                })()}
         </div>
     );
 };

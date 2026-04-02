@@ -5,11 +5,9 @@ import org.osgi.framework.BundleContext;
 import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.IActuatorContext;
 import org.sokybot.engine.api.extension.BundleException;
-import java.util.concurrent.CopyOnWriteArrayList;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.engine.IEngine;
-import org.sokybot.gamemodel.IGameModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.Collection;
 
 /**
  * Registry for actuator bundles.
@@ -34,7 +31,7 @@ public class ActuatorRegistry {
     private final BundleContext bundleContext;
 
     private final Map<String, IActuator> actuators = new ConcurrentHashMap<>();
-    private final List<IActuatorContext> actuatorContexts = new CopyOnWriteArrayList<>();
+    private final Map<String, IActuatorContext> actuatorContexts = new ConcurrentHashMap<>();
 
     public ActuatorRegistry(IWorkflowRegistry workflowRegistry,
             IWorkflowContext workflowContext,
@@ -88,7 +85,7 @@ public class ActuatorRegistry {
         }
 
         if (actuators.containsKey(actuatorName)) {
-            log.warn("Actuator '{}' already registered, replacing", actuatorName);
+            throw new IllegalStateException("Actuator '" + actuatorName + "' already registered for machine " + engine.getMachineId());
         }
 
         log.info("Registering actuator: {}", actuatorName);
@@ -100,7 +97,7 @@ public class ActuatorRegistry {
                 engine.getGroupName(), engine.getMachineName(),
                 bundleContext);
 
-        actuatorContexts.add(context);
+        actuatorContexts.put(actuatorName, context);
 
         // Initialize actuator
         try {
@@ -127,17 +124,12 @@ public class ActuatorRegistry {
             log.info("Unregistering actuator: {}", actuatorName);
 
             // Find context and shutdown
-            for (IActuatorContext context : actuatorContexts) {
-                if (context instanceof ActuatorContextImpl) {
-                    ActuatorContextImpl ctx = (ActuatorContextImpl) context;
-                    if (ctx.getMachineId().equals(engine.getMachineId())) {
-                        try {
-                            actuator.shutdown(context);
-                        } catch (Exception e) {
-                            log.error("Error shutting down actuator '{}': {}", actuatorName, e.getMessage(), e);
-                        }
-                        break;
-                    }
+            IActuatorContext context = actuatorContexts.remove(actuatorName);
+            if (context != null) {
+                try {
+                    actuator.shutdown(context);
+                } catch (Exception e) {
+                    log.error("Error shutting down actuator '{}': {}", actuatorName, e.getMessage(), e);
                 }
             }
 
@@ -157,15 +149,9 @@ public class ActuatorRegistry {
             IActuator actuator = entry.getValue();
 
             try {
-                // Find matching context
-                for (IActuatorContext context : actuatorContexts) {
-                    if (context instanceof ActuatorContextImpl) {
-                        ActuatorContextImpl ctx = (ActuatorContextImpl) context;
-                        if (ctx.getMachineId().equals(engine.getMachineId())) {
-                            actuator.shutdown(context);
-                            break;
-                        }
-                    }
+                IActuatorContext context = actuatorContexts.get(actuatorName);
+                if (context != null) {
+                    actuator.shutdown(context);
                 }
                 log.debug("Actuator '{}' shut down successfully", actuatorName);
             } catch (Exception e) {
@@ -174,6 +160,11 @@ public class ActuatorRegistry {
         }
 
         actuators.clear();
+        actuatorContexts.values().forEach(ctx -> {
+            if (ctx instanceof ActuatorContextImpl) {
+                ((ActuatorContextImpl) ctx).clearSessionData();
+            }
+        });
         actuatorContexts.clear();
         log.info("All actuators shut down for machine: {}", engine.getMachineId());
     }
@@ -195,5 +186,13 @@ public class ActuatorRegistry {
      */
     public List<String> getActuatorNames() {
         return new ArrayList<>(actuators.keySet());
+    }
+
+    public void clearSessionData() {
+        actuatorContexts.values().forEach(ctx -> {
+            if (ctx instanceof ActuatorContextImpl) {
+                ((ActuatorContextImpl) ctx).clearSessionData();
+            }
+        });
     }
 }

@@ -52,7 +52,8 @@ public abstract class WorkflowTestBase {
             gameModel,
             dispatcher,
             groupName,
-            machineName);
+            machineName,
+            Mockito.mock(org.osgi.framework.BundleContext.class));
     }
     
     /**

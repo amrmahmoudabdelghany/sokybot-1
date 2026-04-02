@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { rsocketService } from './RSocketClient'
+import { useRSocketService } from './RSocketProvider'
 import { useSokybotStore } from './store'
 import { Layout } from './Layout'
 import { MachineView } from './MachineView'
@@ -16,6 +16,7 @@ import { Button } from '@sokybot/frontend-shared'
 import './App.css'
 
 function App() {
+  const rsocketService = useRSocketService();
   const {
     selectedMachineId,
     selectedPageId,
@@ -46,7 +47,6 @@ function App() {
     setError(null);
     try {
       await rsocketService.connect();
-      setIsConnected(true);
     } catch (err: unknown) {
       console.error("Failed to connect to RSocket", err);
       const msg = err instanceof Error ? err.message : "Connection closed";
@@ -55,7 +55,14 @@ function App() {
   };
 
   useEffect(() => {
+    const unsubscribe = rsocketService.onConnectionStateChange((state) => {
+      setIsConnected(state === 'connected');
+      if (state === 'connecting') {
+        setError(null);
+      }
+    });
     connectToBackend();
+    return unsubscribe;
   }, []);
 
   useEffect(() => {

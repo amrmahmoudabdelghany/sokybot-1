@@ -6,6 +6,7 @@ import App from './App.tsx'
 import { ThemeProvider } from './components/theme-provider'
 import { createAppQueryClient } from './query/queryClient'
 import { TooltipProvider } from '@sokybot/frontend-shared'
+import { RSocketProvider } from './RSocketProvider'
 
 const queryClient = createAppQueryClient()
 
@@ -14,7 +15,9 @@ createRoot(document.getElementById('root')!).render(
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <TooltipProvider delayDuration={300}>
         <QueryClientProvider client={queryClient}>
-          <App />
+          <RSocketProvider>
+            <App />
+          </RSocketProvider>
         </QueryClientProvider>
       </TooltipProvider>
     </ThemeProvider>

@@ -7,6 +7,7 @@ import CreateMachineDialog from './components/CreateMachineDialog';
 import { ToolbarExtensions } from './components/ToolbarExtensions';
 import { MachineOnboardingSection } from './components/MachineOnboardingSection';
 import { useMachinesQuery, useGroupsQuery, useInvalidateSokybotQueries } from './query/sokybotQueries';
+import { useMachineSeverityStore } from './machines/useMachineSeverityStore';
 import { Plus, Bot, Monitor, Moon, Sun, Maximize, Minimize, Settings, Target, Package, Zap, Globe, FileText, Activity } from 'lucide-react';
 import { Button } from '@sokybot/frontend-shared';
 import { cn } from '@sokybot/frontend-shared';
@@ -15,6 +16,27 @@ interface LayoutProps {
     children: React.ReactNode;
     isBackendConnected: boolean;
 }
+
+/** Inline severity indicator for machine list items in the sidebar. */
+const SEVERITY_DOT_CLASSES: Record<string, string> = {
+    error: 'bg-red-500',
+    warn: 'bg-amber-500',
+    info: 'bg-blue-400',
+    success: 'bg-emerald-500',
+};
+
+const SeverityDot: React.FC<{ machineId: string }> = ({ machineId }) => {
+    const severity = useMachineSeverityStore((s) => s.severityByMachine[machineId]);
+    if (!severity || severity === 'neutral') return null;
+    const dotClass = SEVERITY_DOT_CLASSES[severity] ?? '';
+    if (!dotClass) return null;
+    return (
+        <span
+            className={cn('ml-auto h-2 w-2 rounded-full flex-shrink-0', dotClass)}
+            title={`Severity: ${severity}`}
+        />
+    );
+};
 
 export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) => {
     const {
@@ -194,6 +216,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                                 m.isRunning ? "text-emerald-500" : "text-muted-foreground/85 group-hover:text-foreground"
                                             )} />
                                             <span className="truncate">{m.name || getSimpleName(m.machineId)}</span>
+                                            <SeverityDot machineId={m.machineId} />
                                             {selectedMachineId === m.machineId && (
                                                 <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary animate-in fade-in slide-in-from-left-1 duration-300" />
                                             )}
@@ -259,6 +282,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                             m.isRunning ? "text-emerald-500" : "text-muted-foreground/85 group-hover:text-foreground"
                                         )} />
                                         <span className="truncate">{m.name || m.machineId}</span>
+                                        <SeverityDot machineId={m.machineId} />
                                         {selectedMachineId === m.machineId && (
                                             <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-r-full" />
                                         )}

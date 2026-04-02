@@ -15,8 +15,6 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +22,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.sokybot.http.server.api.IWebSocketRegistry;
-import org.sokybot.webview.api.IWebviewConfigurator;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
 
@@ -69,8 +66,6 @@ public class RSocketServerService {
     private IWebSocketRegistry wsRegistry;
     private RSocketHandlerRegistry handlerRegistry;
 
-    private volatile IWebviewConfigurator extensionConfigurator;
-
     // Event sink for extension events
     private final Sinks.Many<Map<String, Object>> extensionEventSink = Sinks.many().multicast()
             .onBackpressureBuffer(100);
@@ -87,15 +82,6 @@ public class RSocketServerService {
     @Reference
     protected void setHandlerRegistry(RSocketHandlerRegistry handlerRegistry) {
         this.handlerRegistry = handlerRegistry;
-    }
-
-    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
-    protected void setExtensionConfigurator(IWebviewConfigurator configurator) {
-        this.extensionConfigurator = configurator;
-    }
-
-    protected void unsetExtensionConfigurator(IWebviewConfigurator configurator) {
-        this.extensionConfigurator = null;
     }
 
     /**
@@ -357,140 +343,30 @@ public class RSocketServerService {
     }
 
     /**
-     * Parse request data. Supports both new JSON format and legacy string format
-     * for backwards compatibility.
+     * Parse request data from structured JSON envelope only.
      */
     @SuppressWarnings("unchecked")
     private RSocketRequest parseRequest(String requestData) {
         if (requestData == null || requestData.isEmpty()) {
             return null;
         }
-
-        // Try to parse as JSON first (new format)
-        if (requestData.startsWith("{")) {
-            try {
-                Map<String, Object> json = mapper.readValue(requestData, Map.class);
-                RSocketRequest request = new RSocketRequest();
-                request.setMethod((String) json.get("method"));
-                request.setId((String) json.get("id"));
-
-                Object params = json.get("params");
-                if (params instanceof Map) {
-                    request.setParams((Map<String, Object>) params);
-                }
-
-                return request;
-            } catch (Exception e) {
-                logger.debug("Failed to parse as JSON, trying legacy format: {}", e.getMessage());
-            }
+        if (!requestData.startsWith("{")) {
+            return null;
         }
-
-        // Legacy format support: "method:param" or "method"
-        return parseLegacyRequest(requestData);
-    }
-
-    /**
-     * Parse legacy string-based request format for backwards compatibility.
-     */
-    private RSocketRequest parseLegacyRequest(String requestData) {
-        RSocketRequest request = new RSocketRequest();
-        Map<String, Object> params = new HashMap<>();
-
-        // Map legacy methods to new methods
-        if (requestData.startsWith("getCharacterState")) {
-            request.setMethod("character.state");
-            if (requestData.contains(":")) {
-                params.put("machineId", requestData.substring(requestData.indexOf(":") + 1));
+        try {
+            Map<String, Object> json = mapper.readValue(requestData, Map.class);
+            RSocketRequest request = new RSocketRequest();
+            request.setMethod((String) json.get("method"));
+            request.setId((String) json.get("id"));
+            Object params = json.get("params");
+            if (params instanceof Map) {
+                request.setParams((Map<String, Object>) params);
             }
-        } else if (requestData.startsWith("startBot:")) {
-            request.setMethod("machine.start");
-            params.put("machineId", requestData.substring(9));
-        } else if (requestData.startsWith("stopBot:")) {
-            request.setMethod("machine.stop");
-            params.put("machineId", requestData.substring(8));
-        } else if (requestData.equals("getMachines")) {
-            request.setMethod("machine.list");
-        } else if (requestData.equals("getGroups")) {
-            request.setMethod("group.list");
-        } else if (requestData.startsWith("getGroupDetails:")) {
-            request.setMethod("group.details");
-            params.put("name", requestData.substring(16));
-        } else if (requestData.startsWith("createGroup:")) {
-            request.setMethod("group.create");
-            try {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> parsed = mapper.readValue(requestData.substring(12), Map.class);
-                params.putAll(parsed);
-            } catch (Exception e) {
-                logger.warn("Failed to parse createGroup params", e);
-            }
-        } else if (requestData.startsWith("createMachine:")) {
-            request.setMethod("machine.create");
-            try {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> parsed = mapper.readValue(requestData.substring(14), Map.class);
-                params.putAll(parsed);
-            } catch (Exception e) {
-                logger.warn("Failed to parse createMachine params", e);
-            }
-        } else if (requestData.startsWith("fs.list")) {
-            request.setMethod("fs.list");
-            if (requestData.contains(":")) {
-                params.put("path", requestData.substring(requestData.indexOf(":") + 1));
-            }
-        } else if (requestData.equals("fs.roots")) {
-            request.setMethod("fs.roots");
-        } else if (requestData.startsWith("extension.schema:")) {
-            request.setMethod("extension.schema");
-            String[] parts = requestData.split(":", 3);
-            if (parts.length > 1)
-                params.put("pageId", parts[1]);
-            if (parts.length > 2)
-                params.put("machineId", parts[2]);
-        } else if (requestData.startsWith("extension.action:")) {
-            request.setMethod("extension.action");
-            String[] parts = requestData.split(":", 4);
-            if (parts.length > 1)
-                params.put("pageId", parts[1]);
-            if (parts.length > 2)
-                params.put("action", parts[2]);
-            if (parts.length > 3) {
-                try {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> data = mapper.readValue(parts[3], Map.class);
-                    params.put("data", data);
-                } catch (Exception e) {
-                    logger.debug("Failed to parse action data", e);
-                }
-            }
-        } else if (requestData.equals("extension.registry")) {
-            request.setMethod("extension.registry");
-        } else if (requestData.startsWith("extension.toolbar.action:")) {
-            request.setMethod("extension.toolbar.action");
-            String[] parts = requestData.split(":", 4);
-            if (parts.length > 1)
-                params.put("actionId", parts[1]);
-            if (parts.length > 2)
-                params.put("action", parts[2]);
-            if (parts.length > 3) {
-                try {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> data = mapper.readValue(parts[3], Map.class);
-                    params.put("data", data);
-                } catch (Exception e) {
-                    logger.debug("Failed to parse toolbar action data", e);
-                }
-            }
-        } else if (requestData.equals("stream.events") || requestData.equals("extension.events")) {
-            // Legacy stream requests
-            request.setMethod(requestData.equals("stream.events") ? "game.events" : "extension.events");
-        } else {
-            // Unknown legacy method - pass through
-            request.setMethod(requestData);
+            return request;
+        } catch (Exception e) {
+            logger.debug("Failed to parse request JSON: {}", e.getMessage());
+            return null;
         }
-
-        request.setParams(params);
-        return request;
     }
 
     private Payload toPayload(RSocketResponse response) {

@@ -20,4 +20,7 @@ public @interface HttpServerConfig {
 
     @AttributeDefinition(name = "DevTools Dev URL", description = "URL of the DevTools Vite server")
     String devtoolsDevUrl() default "http://localhost:3000";
+
+    @AttributeDefinition(name = "Static Root", description = "Classpath root for bundled production web assets")
+    String staticRoot() default "webapp";
 }

@@ -3,10 +3,10 @@ package org.sokybot.engine.scripting;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -63,7 +63,14 @@ public class GroovyScriptEngine implements IScriptEngine {
     private ExecutorService executor;
     private CompilerConfiguration config;
     private GroovyClassLoader sharedClassLoader;
-    private final ConcurrentHashMap<String, Class<?>> classCache = new ConcurrentHashMap<>();
+    private final Map<String, Class<?>> classCache = java.util.Collections.synchronizedMap(
+            new LinkedHashMap<String, Class<?>>(64, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Class<?>> eldest) {
+                    return size() > cacheMaxEntries;
+                }
+            });
+    private volatile int cacheMaxEntries = Integer.getInteger("sokybot.groovy.cache.maxEntries", 64);
 
     @Activate
     protected void activate() {
@@ -123,8 +130,11 @@ public class GroovyScriptEngine implements IScriptEngine {
             }
 
             String hash = sha256(script);
-            Class<?> scriptClass = classCache.computeIfAbsent(hash,
-                    h -> sharedClassLoader.parseClass(script));
+            Class<?> scriptClass = classCache.get(hash);
+            if (scriptClass == null) {
+                scriptClass = sharedClassLoader.parseClass(script);
+                classCache.put(hash, scriptClass);
+            }
 
             Script instance = (Script) scriptClass.getDeclaredConstructor().newInstance();
             instance.setBinding(binding);

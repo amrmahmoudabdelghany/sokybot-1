@@ -4,13 +4,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import java.util.List;
+import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.workflow.ICycleDefinition;
 import org.sokybot.engine.api.workflow.ICycleState;
 import org.sokybot.engine.test.EngineTestBase;
-import org.sokybot.engine.test.util.OSGiTestUtils;
-import org.osgi.framework.BundleContext;
-import org.sokybot.gamemodel.IGameModel;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -171,7 +169,7 @@ class EngineCoreTest extends EngineTestBase {
 
         // Should not throw exception
         assertDoesNotThrow(() -> {
-            engine.sendEvent("START_TRAINING");
+            engine.sendEvent(EngineEvent.START_TRAINING);
         });
 
         engine.stop();
@@ -184,7 +182,7 @@ class EngineCoreTest extends EngineTestBase {
 
         // Engine is stopped by default
         assertThrows(IllegalStateException.class, () -> {
-            engine.sendEvent("START_TRAINING");
+            engine.sendEvent(EngineEvent.START_TRAINING);
         });
     }
 

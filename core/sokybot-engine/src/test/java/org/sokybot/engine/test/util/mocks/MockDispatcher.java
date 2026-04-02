@@ -1,8 +1,8 @@
 package org.sokybot.engine.test.util.mocks;
 
-import org.mockito.Mockito;
 import org.sokybot.engine.api.IDispatcher;
 import org.sokybot.engine.api.DispatchException;
+import org.sokybot.network.packet.MutablePacket;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -67,7 +67,7 @@ public class MockDispatcher implements IDispatcher {
     }
 
     @Override
-    public void sendToServer(Object packet) throws DispatchException {
+    public void sendToServer(MutablePacket packet) throws DispatchException {
         if (throwExceptionOnSend != null) {
             throw throwExceptionOnSend;
         }
@@ -75,7 +75,7 @@ public class MockDispatcher implements IDispatcher {
     }
 
     @Override
-    public void sendToClient(Object packet) throws DispatchException {
+    public void sendToClient(MutablePacket packet) throws DispatchException {
         if (throwExceptionOnSend != null) {
             throw throwExceptionOnSend;
         }
@@ -157,5 +157,21 @@ public class MockDispatcher implements IDispatcher {
     @Override
     public boolean isClientlessMode() {
         return clientlessMode;
+    }
+
+    @Override
+    public void sendLoginRequest(byte locale, String username, String password, int agentId, String charsetName) {
+        sentToServer.add("LOGIN_REQUEST:" + username + ":" + agentId + ":" + charsetName);
+    }
+
+    @Override
+    public boolean sendAgentRequest(boolean allowColdStartBypass) {
+        sentToServer.add("AGENT_REQUEST");
+        return true;
+    }
+
+    @Override
+    public void sendLogoutRequest() {
+        sentToServer.add("LOGOUT_REQUEST");
     }
 }

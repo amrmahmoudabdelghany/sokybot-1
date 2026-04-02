@@ -3,6 +3,7 @@ package org.sokybot.engine.api.extension;
 import org.sokybot.engine.api.IDispatcher;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.gamemodel.IGameModel;
+import java.util.Map;
 
 /**
  * Context provided to actuators during initialization.
@@ -61,4 +62,20 @@ public interface IActuatorContext {
      * @param <T> The service type
      */
     <T> T getService(Class<T> serviceClass);
+
+    /**
+     * Gets actuator-private session data.
+     * Cleared on disconnect/shutdown boundaries.
+     */
+    Map<String, Object> getSessionData();
+
+    /**
+     * Gets typed durable settings facade.
+     */
+    ISettings getSettings();
+
+    /**
+     * Gets raw durable settings map (advanced use only).
+     */
+    Map<String, Object> getSettingsData();
 }

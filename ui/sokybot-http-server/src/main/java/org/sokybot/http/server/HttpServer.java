@@ -12,7 +12,9 @@ import org.sokybot.http.server.api.IWebSocketRegistry;
 
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
+import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
+import io.netty.buffer.Unpooled;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.netty.DisposableServer;
@@ -20,6 +22,8 @@ import reactor.netty.http.client.HttpClient;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
 import reactor.netty.http.server.HttpServerRoutes;
+import java.io.InputStream;
+import java.util.Locale;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -39,6 +43,7 @@ public class HttpServer implements IWebSocketRegistry {
     private boolean devMode;
     private String webviewDevUrl;
     private String devtoolsDevUrl;
+    private String staticRoot;
 
     /** Registered WebSocket handlers by path */
     private final ConcurrentMap<String, IWebSocketHandler> wsHandlers = new ConcurrentHashMap<>();
@@ -55,6 +60,7 @@ public class HttpServer implements IWebSocketRegistry {
         this.devMode = config.devMode();
         this.webviewDevUrl = config.webviewDevUrl();
         this.devtoolsDevUrl = config.devtoolsDevUrl();
+        this.staticRoot = trimRoot(config.staticRoot());
 
         logger.info("Starting Sokybot HTTP Server on port {} (DevMode: {})", port, devMode);
 
@@ -90,7 +96,77 @@ public class HttpServer implements IWebSocketRegistry {
         }
 
         // 3. Static File Serving (Prod Mode)
-        return res.sendString(Mono.just("Production Static Content Placeholder")).then();
+        return serveStaticRequest(req, res, path);
+    }
+
+    private Mono<Void> serveStaticRequest(HttpServerRequest req, HttpServerResponse res, String rawPath) {
+        String path = stripQuery(rawPath);
+        String normalizedPath = normalizePath(path);
+        String resourcePath = staticRoot + normalizedPath;
+        byte[] bytes = readResourceBytes(resourcePath);
+        if (bytes != null) {
+            res.header("Content-Type", contentTypeFor(normalizedPath));
+            return res.send(Mono.just(Unpooled.wrappedBuffer(bytes))).then();
+        }
+        if (isSpaFallbackRequest(req, normalizedPath)) {
+            byte[] index = readResourceBytes(staticRoot + "/index.html");
+            if (index != null) {
+                res.header("Content-Type", "text/html; charset=utf-8");
+                return res.send(Mono.just(Unpooled.wrappedBuffer(index))).then();
+            }
+        }
+        return res.status(404).sendString(Mono.just("Not Found")).then();
+    }
+
+    private boolean isSpaFallbackRequest(HttpServerRequest req, String normalizedPath) {
+        if (!HttpMethod.GET.name().equalsIgnoreCase(req.method().name())) return false;
+        if (normalizedPath.startsWith("/rsocket") || normalizedPath.startsWith("/api/")) return false;
+        String accept = req.requestHeaders().get(HttpHeaderNames.ACCEPT);
+        return accept != null && accept.toLowerCase(Locale.ROOT).contains("text/html");
+    }
+
+    private byte[] readResourceBytes(String resourcePath) {
+        try (InputStream in = getClass().getClassLoader().getResourceAsStream(resourcePath)) {
+            if (in == null) return null;
+            return in.readAllBytes();
+        } catch (Exception e) {
+            logger.debug("Failed to read static resource {}", resourcePath, e);
+            return null;
+        }
+    }
+
+    private static String stripQuery(String path) {
+        int q = path.indexOf('?');
+        return q >= 0 ? path.substring(0, q) : path;
+    }
+
+    private static String normalizePath(String path) {
+        if (path == null || path.isEmpty() || "/".equals(path)) return "/index.html";
+        if (!path.startsWith("/")) return "/" + path;
+        return path;
+    }
+
+    private static String trimRoot(String root) {
+        if (root == null || root.isEmpty()) return "webapp";
+        String value = root.startsWith("/") ? root.substring(1) : root;
+        while (value.endsWith("/")) value = value.substring(0, value.length() - 1);
+        return value.isEmpty() ? "webapp" : value;
+    }
+
+    private static String contentTypeFor(String path) {
+        String lower = path.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".html")) return "text/html; charset=utf-8";
+        if (lower.endsWith(".js") || lower.endsWith(".mjs")) return "application/javascript; charset=utf-8";
+        if (lower.endsWith(".css")) return "text/css; charset=utf-8";
+        if (lower.endsWith(".json")) return "application/json; charset=utf-8";
+        if (lower.endsWith(".svg")) return "image/svg+xml";
+        if (lower.endsWith(".png")) return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        if (lower.endsWith(".webp")) return "image/webp";
+        if (lower.endsWith(".woff2")) return "font/woff2";
+        if (lower.endsWith(".woff")) return "font/woff";
+        if (lower.endsWith(".ttf")) return "font/ttf";
+        return "application/octet-stream";
     }
 
     private Mono<Void> handleWebSocket(HttpServerRequest req, HttpServerResponse res, String path) {

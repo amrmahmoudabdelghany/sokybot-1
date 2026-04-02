@@ -1,16 +1,18 @@
 package org.sokybot.webview.handler;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 import org.sokybot.runtime.ISokybotContext;
+import org.sokybot.webview.api.dto.MachineActionResultDto;
+import org.sokybot.webview.api.dto.MachineInfoDto;
 import org.sokybot.webview.api.IRSocketHandler;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
@@ -110,14 +112,15 @@ public class MachineControlHandler implements IRSocketHandler {
 
         try {
             boolean alreadyRunning = ctx.isRunning();
+            boolean alreadyConnecting = alreadyRunning && ctx.getEngine().getActiveActivities().contains("LOGIN");
+            if (alreadyConnecting) {
+                return Mono.just(RSocketResponse.success(new MachineActionResultDto("already_connecting", machineId)));
+            }
             if (!alreadyRunning) {
                 ctx.getEngine().start();
             }
-            ctx.getEngine().sendEvent("CONNECT");
-            Map<String, Object> result = new HashMap<>();
-            result.put("status", alreadyRunning ? "already_running" : "started");
-            result.put("machineId", machineId);
-            return Mono.just(RSocketResponse.success(result));
+            ctx.getEngine().sendEvent(EngineEvent.CONNECT);
+            return Mono.just(RSocketResponse.success(new MachineActionResultDto(alreadyRunning ? "already_running" : "started", machineId)));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));
         }
@@ -137,10 +140,7 @@ public class MachineControlHandler implements IRSocketHandler {
 
         try {
             ctx.getEngine().stop();
-            Map<String, Object> result = new HashMap<>();
-            result.put("status", "stopped");
-            result.put("machineId", machineId);
-            return Mono.just(RSocketResponse.success(result));
+            return Mono.just(RSocketResponse.success(new MachineActionResultDto("stopped", machineId)));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));
         }
@@ -179,30 +179,23 @@ public class MachineControlHandler implements IRSocketHandler {
     }
 
     private Mono<RSocketResponse> handleList(RSocketRequest request) {
-        Map<String, Map<String, Object>> machineMap = new java.util.LinkedHashMap<>();
+        Map<String, MachineInfoDto> machineMap = new java.util.LinkedHashMap<>();
 
         if (sokybotContext != null) {
             for (IGroupContext group : sokybotContext.getGroups()) {
                 for (IMachineContext machine : group.getMachines()) {
-                    Map<String, Object> info = new HashMap<>();
-                    info.put("machineId", machine.fullName());
-                    info.put("name", machine.getMachineName());
-                    info.put("groupName", group.name());
-                    info.put("isRunning", machine.isRunning());
+                    MachineInfoDto info = new MachineInfoDto(machine.fullName(), machine.getMachineName(), group.name(), machine.isRunning());
                     machineMap.put(machine.fullName(), info);
                 }
             }
         } else if (groupContext != null) {
             for (IMachineContext machine : groupContext.getMachines()) {
-                Map<String, Object> info = new HashMap<>();
-                info.put("machineId", machine.fullName());
-                info.put("name", machine.getMachineName());
-                info.put("isRunning", machine.isRunning());
+                MachineInfoDto info = new MachineInfoDto(machine.fullName(), machine.getMachineName(), groupContext.name(), machine.isRunning());
                 machineMap.put(machine.fullName(), info);
             }
         }
 
-        List<Map<String, Object>> machines = new ArrayList<>(machineMap.values());
+        List<MachineInfoDto> machines = new ArrayList<>(machineMap.values());
         return Mono.just(RSocketResponse.success(machines));
     }
 
@@ -231,10 +224,7 @@ public class MachineControlHandler implements IRSocketHandler {
         try {
             grpCtx.installMachine(name);
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("status", "created");
-            result.put("machineId", group + "." + name);
-            return Mono.just(RSocketResponse.success(result));
+            return Mono.just(RSocketResponse.success(new MachineActionResultDto("created", group + "." + name)));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));
         }
@@ -260,10 +250,7 @@ public class MachineControlHandler implements IRSocketHandler {
         try {
             settingsRegistry.writeRawSettings(group, name, scope, payload);
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("status", "initialized");
-            result.put("machineId", group + "." + name);
-            return Mono.just(RSocketResponse.success(result));
+            return Mono.just(RSocketResponse.success(new MachineActionResultDto("initialized", group + "." + name)));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));
         }

@@ -31,6 +31,17 @@ describe('machineOnboardingMachine', () => {
             availableCharacters: [],
             selectedCharacter: null,
             connectInFlight: false,
+            retryDelayMs: null,
+            serverTimestamp: null,
+            retryAt: null,
+            failureClass: null,
+            fatal: false,
+            uxCategory: null,
+            requiresInput: false,
+            reason: null,
+            transition: null,
+            topic: null,
+            latencyMs: null,
         };
         expect(showConnectCard(ctx)).toBe(true);
         expect(showConnectCard({ ...ctx, connected: true })).toBe(false);
@@ -47,7 +58,64 @@ describe('machineOnboardingMachine', () => {
             availableCharacters: [],
             selectedCharacter: null,
             connectInFlight: false,
+            retryDelayMs: null,
+            serverTimestamp: null,
+            retryAt: null,
+            failureClass: null,
+            fatal: false,
+            uxCategory: null,
+            requiresInput: false,
+            reason: null,
+            transition: null,
+            topic: null,
+            latencyMs: null,
         };
         expect(showAgentServerCard(ctx)).toBe(true);
+    });
+
+    it('accepts backend jump to any phase bucket', () => {
+        const actor = createActor(machineOnboardingMachine, {
+            input: { machineId: 'Group.bot1' },
+        });
+        actor.start();
+        actor.send({ type: 'STREAM_UPDATE', loginPhase: 'WAITING_FOR_AGENTS' });
+        expect(actor.getSnapshot().value).toBe('agent');
+        actor.send({ type: 'STREAM_UPDATE', loginPhase: 'LOGIN_SENT' });
+        expect(actor.getSnapshot().value).toBe('credentials');
+        actor.send({ type: 'STREAM_UPDATE', loginPhase: 'IN_GAME', inGame: true });
+        expect(actor.getSnapshot().value).toBe('inGame');
+        actor.stop();
+    });
+
+    it('CANCEL transitions back to connect bucket', () => {
+        const actor = createActor(machineOnboardingMachine, {
+            input: { machineId: 'Group.bot1' },
+        });
+        actor.start();
+        actor.send({ type: 'STREAM_UPDATE', loginPhase: 'LOGIN_SENT', connected: true });
+        expect(actor.getSnapshot().value).toBe('credentials');
+        actor.send({ type: 'CANCEL' });
+        expect(actor.getSnapshot().value).toBe('connect');
+        expect(actor.getSnapshot().context.connected).toBe(false);
+        actor.stop();
+    });
+
+    it('preserves ux hint fields from stream payload', () => {
+        const actor = createActor(machineOnboardingMachine, {
+            input: { machineId: 'Group.bot1' },
+        });
+        actor.start();
+        actor.send({
+            type: 'STREAM_UPDATE',
+            loginPhase: 'SERVER_MAINTENANCE',
+            uxCategory: 'AGENT',
+            requiresInput: false,
+            fatal: true,
+        });
+        const snapshot = actor.getSnapshot().context;
+        expect(snapshot.uxCategory).toBe('AGENT');
+        expect(snapshot.requiresInput).toBe(false);
+        expect(snapshot.fatal).toBe(true);
+        actor.stop();
     });
 });

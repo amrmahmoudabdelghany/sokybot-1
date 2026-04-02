@@ -1,12 +1,16 @@
 package org.sokybot.engine.core.workflow;
 
 import org.sokybot.engine.api.IDispatcher;
+import org.sokybot.engine.api.ServiceUnavailableException;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.gamemodel.IGameModel;
+import org.osgi.framework.BundleContext;
+import org.osgi.util.tracker.ServiceTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -22,6 +26,7 @@ public class WorkflowContextImpl implements IWorkflowContext {
     private final String machineId;
     private final String groupName;
     private final String machineName;
+    private final BundleContext bundleContext;
     
     // State-local data (cleared when entering WAITING)
     private final Map<String, Object> stateData = new ConcurrentHashMap<>();
@@ -31,9 +36,10 @@ public class WorkflowContextImpl implements IWorkflowContext {
     
     // Current state tracking
     private volatile String currentStateName;
+    private final Map<Class<?>, ServiceTracker<?, ?>> serviceTrackers = new ConcurrentHashMap<>();
     
     public WorkflowContextImpl(IGameModel gameModel, IDispatcher dispatcher,
-                              String groupName, String machineName) {
+                              String groupName, String machineName, BundleContext bundleContext) {
         if (gameModel == null) {
             throw new IllegalArgumentException("Game model cannot be null");
         }
@@ -52,6 +58,7 @@ public class WorkflowContextImpl implements IWorkflowContext {
         this.groupName = groupName;
         this.machineName = machineName;
         this.machineId = groupName + "." + machineName;
+        this.bundleContext = bundleContext;
     }
     
     @Override
@@ -128,5 +135,45 @@ public class WorkflowContextImpl implements IWorkflowContext {
     @Override
     public String getMachineName() {
         return machineName;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T getService(Class<T> serviceClass) {
+        if (serviceClass == null) {
+            throw new IllegalArgumentException("serviceClass cannot be null");
+        }
+        if (bundleContext == null) {
+            throw new ServiceUnavailableException("BundleContext unavailable for service " + serviceClass.getName());
+        }
+        ServiceTracker<T, T> tracker = (ServiceTracker<T, T>) serviceTrackers.computeIfAbsent(serviceClass, cls -> {
+            ServiceTracker<T, T> created = new ServiceTracker<>(bundleContext, serviceClass, null);
+            created.open();
+            return created;
+        });
+        T service = tracker.getService();
+        if (service == null) {
+            throw new ServiceUnavailableException("Service unavailable: " + serviceClass.getName());
+        }
+        return service;
+    }
+
+    @Override
+    public <T> Optional<T> getServiceOptional(Class<T> serviceClass) {
+        try {
+            return Optional.ofNullable(getService(serviceClass));
+        } catch (ServiceUnavailableException e) {
+            return Optional.empty();
+        }
+    }
+
+    public void close() {
+        serviceTrackers.values().forEach(tracker -> {
+            try {
+                tracker.close();
+            } catch (Exception ignored) {
+            }
+        });
+        serviceTrackers.clear();
     }
 }

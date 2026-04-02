@@ -1,0 +1,12 @@
+{
+  "allowedUnmappedPhases": [
+    "GATEWAY_CONNECTED",
+    "AGENTS_RECEIVED",
+    "LOGIN_SUCCESS",
+    "REDIRECTING",
+    "AGENT_CONNECTED",
+    "AUTH_SENT",
+    "WAIT_FOR_CAPTCHA",
+    "PASSCODE_SUBMITTED"
+  ]
+}

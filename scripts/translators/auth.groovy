@@ -47,6 +47,7 @@ def parseAgentListEvent = { machine, packet ->
     // Prefer Unicode agent names first (typical vSRO/private gateway); then ANSI (older iSRO-style).
     def farmOpts = [false, true]
     def agentOpts = [true, false]
+    def best = null
     for (def skipDiv : skipOpts) {
         for (def uniFarm : farmOpts) {
             for (def uniAgent : agentOpts) {
@@ -55,10 +56,16 @@ def parseAgentListEvent = { machine, packet ->
                     if (parsed.agents != null && !parsed.agents.isEmpty()) {
                         return new AgentListEvent(machine, (byte) parsed.count, parsed.farmName, parsed.agents)
                     }
+                    if (parsed != null && best == null) {
+                        best = parsed
+                    }
                 } catch (Exception ignored) {
                 }
             }
         }
+    }
+    if (best != null) {
+        return new AgentListEvent(machine, (byte) (best.count ?: 0), String.valueOf(best.farmName ?: ""), best.agents ?: [])
     }
     return null
 }
@@ -89,16 +96,26 @@ translator(0xA101) { machine, packet ->
 translator(0xA102) { machine, packet ->
     try {
         def r = packet.streamReader
-        byte resultCode = r.getByte()
-        boolean success = (resultCode == 0x01)
+        byte status = r.getByte()
+        boolean success = (status == 0x01)
         if (success) {
             int loginId = r.getInt()
             String agentHost = r.getString()
             int agentPort = r.getShort() & 0xFFFF
-            return singleEvent(new LoginResponseEvent(machine, success, resultCode, loginId, agentHost, agentPort))
+            return singleEvent(new LoginResponseEvent(machine, true, status, loginId, agentHost, agentPort))
         }
-        return singleEvent(new LoginResponseEvent(machine, success, resultCode))
-    } catch (Exception e) { return noEvents() }
+        byte errorCode = status
+        try {
+            // Failure payloads vary across server builds; consume optional error byte only when present.
+            errorCode = r.getByte()
+        } catch (Exception ignored) {
+            // Keep fallback to status byte (0x02) for malformed/short payloads.
+        }
+        return singleEvent(new LoginResponseEvent(machine, false, errorCode))
+    } catch (Exception e) {
+        // Never swallow failed login responses due to parser shape mismatch.
+        return singleEvent(new LoginResponseEvent(machine, false, (byte) 0x00))
+    }
 }
 
 // Gateway auth response (0xA103) — ServerOpcode.AUTH_RESPONSE
@@ -109,4 +126,35 @@ translator(0xA103) { machine, packet ->
         boolean success = (resultCode != 0x02)
         return singleEvent(new AuthResponseEvent(machine, success, resultCode))
     } catch (Exception e) { return noEvents() }
+}
+
+// Passcode request (0x6105) - some SRO variants request second-factor/passcode.
+translator(0x6105) { machine, packet ->
+    return singleEvent(new PasscodeRequiredEvent(machine))
+}
+
+// Captcha challenge (0x610C): optional [captchaId:int][size:short][bytes]
+translator(0x610C) { machine, packet ->
+    try {
+        def r = packet.streamReader
+        int captchaId = 0
+        int size = 0
+        byte[] payload = null
+        try {
+            captchaId = r.getInt()
+        } catch (Exception ignored) {
+            captchaId = 0
+        }
+        try {
+            size = r.getShort() & 0xFFFF
+        } catch (Exception ignored) {
+            size = 0
+        }
+        if (size > 0 && size <= 262144) {
+            payload = r.getBytes(size)
+        }
+        return singleEvent(new CaptchaChallengeEvent(machine, captchaId, payload))
+    } catch (Exception e) {
+        return noEvents()
+    }
 }

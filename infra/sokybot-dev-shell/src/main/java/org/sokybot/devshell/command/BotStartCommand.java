@@ -3,6 +3,7 @@ package org.sokybot.devshell.command;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.sokybot.engine.api.EngineEvent;
 
 @Service
 @Command(scope = "dev", name = "bot-start", description = "Start a bot engine")
@@ -24,7 +25,7 @@ public class BotStartCommand extends DevCommand {
                     println("Starting bot '%s'...", botName);
                     try {
                         bot.getEngine().start();
-                        bot.getEngine().sendEvent("CONNECT");
+                        bot.getEngine().sendEvent(EngineEvent.CONNECT);
                         println("Bot started.");
                     } catch (Exception e) {
                         error("Failed to start bot: %s", e.getMessage());

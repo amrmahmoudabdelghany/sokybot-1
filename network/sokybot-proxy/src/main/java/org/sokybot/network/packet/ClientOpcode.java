@@ -5,6 +5,7 @@ public class ClientOpcode {
 	public static final int AGENT_REQUEST = 0x6101;
 	public static final int LOGIN_REQUEST = 0x6102;
 	public static final int AUTH_REQUEST = 0x6103;
+	public static final int LOGOUT_REQUEST = 0x6104;
 	public static final int JOIN_REQUEST = 0x7001 ; 
 	public static final int CHAT_REQUEST = 0x7025;
 	public static final int CHAR_MOVEMENT = 0x7021 ; 

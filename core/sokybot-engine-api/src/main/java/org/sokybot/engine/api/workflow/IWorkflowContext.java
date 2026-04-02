@@ -80,4 +80,16 @@ public interface IWorkflowContext {
      * @return The machine name
      */
     String getMachineName();
+
+    /**
+     * Resolves an OSGi service for workflow guards/actions.
+     *
+     * @throws org.sokybot.engine.api.ServiceUnavailableException if unavailable
+     */
+    <T> T getService(Class<T> serviceClass);
+
+    /**
+     * Optional service lookup convenience for scripts.
+     */
+    <T> java.util.Optional<T> getServiceOptional(Class<T> serviceClass);
 }

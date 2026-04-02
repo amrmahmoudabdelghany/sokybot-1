@@ -89,7 +89,8 @@ class ConnectionPage extends BasePage implements EventHandler {
                     }
                     applyFrom(loginSettings, data, [
                             "username", "password", "targetGateway", "autoLogin", "targetAgent", "passcode", "selectedCharacter",
-                            "autoReconnect", "retryBaseDelayMs", "retryMaxDelayMs", "maxRetryAttempts", "infiniteRetryMode"
+                            "autoReconnect", "retryBaseDelayMs", "retryMaxDelayMs", "maxRetryAttempts", "infiniteRetryMode",
+                            "loginCharset"
                     ])
                     break
                 case "unlock":

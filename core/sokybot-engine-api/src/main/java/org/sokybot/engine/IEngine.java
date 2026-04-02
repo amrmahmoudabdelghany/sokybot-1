@@ -1,6 +1,7 @@
 package org.sokybot.engine;
 
 import org.sokybot.engine.api.EngineState;
+import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.api.IDispatcher;
 
@@ -67,7 +68,7 @@ public interface IEngine {
      * @throws IllegalArgumentException if event name is invalid
      * @throws IllegalStateException    if engine is not running
      */
-    void sendEvent(String eventName);
+    void sendEvent(EngineEvent event);
 
     /**
      * Gets the workflow registry for this engine.
@@ -97,4 +98,9 @@ public interface IEngine {
      * @return The machine name
      */
     String getMachineName();
+
+    /**
+     * UI-friendly primary/ordered activity projection.
+     */
+    java.util.List<String> getActiveActivities();
 }

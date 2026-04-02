@@ -77,52 +77,37 @@ class DispatcherImplTest {
     @DisplayName("Should successfully send packet to server")
     void testSendToServerSuccess() {
         when(mockProxyConnection.isServerConnected()).thenReturn(true);
-        
-        MutablePacket packet = mock(MutablePacket.class);
+        MutablePacket packet = MutablePacket.wrap(new byte[] {1,2,3,4,5,6});
         
         assertDoesNotThrow(() -> {
             dispatcher.sendToServer(packet);
         });
         
-        verify(mockProxyConnection).sendToServer(packet);
+        verify(mockProxyConnection).sendToServer(any(MutablePacket.class));
     }
     
     @Test
     @DisplayName("Should successfully send packet to client")
     void testSendToClientSuccess() {
         when(mockProxyConnection.isClientConnected()).thenReturn(true);
-        
-        MutablePacket packet = mock(MutablePacket.class);
+        MutablePacket packet = MutablePacket.wrap(new byte[] {1,2,3,4,5,6});
         
         assertDoesNotThrow(() -> {
             dispatcher.sendToClient(packet);
         });
         
-        verify(mockProxyConnection).sendToClient(packet);
+        verify(mockProxyConnection).sendToClient(any(MutablePacket.class));
     }
-    
+
     @Test
-    @DisplayName("Should throw DispatchException for unsupported packet type")
-    void testSendToServerUnsupportedType() {
+    @DisplayName("Should snapshot packet before server send")
+    void testSendToServerSnapshotsPacket() {
         when(mockProxyConnection.isServerConnected()).thenReturn(true);
-        
-        Object unsupportedPacket = new Object(); // Not a MutablePacket
-        
-        assertThrows(DispatchException.class, () -> {
-            dispatcher.sendToServer(unsupportedPacket);
-        });
-    }
-    
-    @Test
-    @DisplayName("Should throw DispatchException for byte array packet")
-    void testSendToServerByteArrayPacket() {
-        when(mockProxyConnection.isServerConnected()).thenReturn(true);
-        
-        byte[] bytePacket = new byte[]{0x01, 0x02, 0x03};
-        
-        assertThrows(DispatchException.class, () -> {
-            dispatcher.sendToServer(bytePacket);
-        });
+        byte[] payload = new byte[] {1,2,3,4,5,6,7,8};
+        MutablePacket packet = MutablePacket.wrap(payload);
+        dispatcher.sendToServer(packet);
+        payload[0] = 99;
+        verify(mockProxyConnection).sendToServer(argThat(sent -> sent.unwrap()[0] != 99));
     }
     
     @Test

@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Executes the parent cycle (orchestrates all orthogonal cycles).
@@ -20,13 +22,15 @@ public class ParentCycleExecutor {
     private static final Logger log = LoggerFactory.getLogger(ParentCycleExecutor.class);
 
     private final IWorkflowRegistry registry;
-    private final InterruptionManager interruptionManager;
     private final ActionQueueProcessorImpl queueProcessor;
     private WaitingStateManager waitingManager;
     private final IWorkflowContext context;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
     private volatile Thread executorThread;
+    private final ReentrantLock waitLock = new ReentrantLock();
+    private final Condition waitCondition = waitLock.newCondition();
+    private final CycleExecutor cycleExecutor;
 
     public ParentCycleExecutor(IWorkflowRegistry registry,
             InterruptionManager interruptionManager,
@@ -34,10 +38,10 @@ public class ParentCycleExecutor {
             WaitingStateManager waitingManager,
             IWorkflowContext context) {
         this.registry = registry;
-        this.interruptionManager = interruptionManager;
         this.queueProcessor = queueProcessor;
         this.waitingManager = waitingManager;
         this.context = context;
+        this.cycleExecutor = new CycleExecutor(interruptionManager, queueProcessor, context);
     }
 
     /**
@@ -81,6 +85,12 @@ public class ParentCycleExecutor {
 
         // Stop waiting manager
         waitingManager.shutdown();
+        waitLock.lock();
+        try {
+            waitCondition.signalAll();
+        } finally {
+            waitLock.unlock();
+        }
 
         // Interrupt executor thread
         if (executorThread != null && executorThread.isAlive()) {
@@ -109,8 +119,13 @@ public class ParentCycleExecutor {
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     // Wait for timer or explicit transition
-                    while (waitingManager.isWaiting() && running.get() && !Thread.currentThread().isInterrupted()) {
-                        Thread.sleep(100); // Check every 100ms
+                    waitLock.lock();
+                    try {
+                        while (waitingManager.isWaiting() && running.get() && !Thread.currentThread().isInterrupted()) {
+                            waitCondition.await();
+                        }
+                    } finally {
+                        waitLock.unlock();
                     }
 
                     if (!running.get() || Thread.currentThread().isInterrupted()) {
@@ -268,10 +283,6 @@ public class ParentCycleExecutor {
         log.debug("Executing cycle: {}", cycle.getName());
 
         try {
-            // Create cycle executor
-            CycleExecutor cycleExecutor = new CycleExecutor(
-                    interruptionManager, queueProcessor, context);
-
             // Execute cycle
             boolean completed = cycleExecutor.executeCycle(cycle);
 
@@ -299,8 +310,11 @@ public class ParentCycleExecutor {
      * Called by WaitingStateManager when timer expires.
      */
     public void triggerTransition() {
-        // This will cause the executor loop to continue
-        // The loop checks waitingManager.isWaiting() which will return false
-        // when the timer expires
+        waitLock.lock();
+        try {
+            waitCondition.signalAll();
+        } finally {
+            waitLock.unlock();
+        }
     }
 }

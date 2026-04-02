@@ -59,6 +59,8 @@ public class ProxyConnection implements IProxyConnection {
     private HandshakeHandler handshakeHandler;
     private volatile boolean redirecting = false;
     private volatile int pendingLoginId = -1;
+    private volatile long lastPingSentTs = 0L;
+    private volatile long latencyMs = -1L;
 
     public ProxyConnection(String machineId, IConnectionListener listener,
             EventLoopGroup bossGroup, EventLoopGroup workerGroup,
@@ -318,6 +320,8 @@ public class ProxyConnection implements IProxyConnection {
 
     public void onServerDisconnected() {
         this.serverConnected = false;
+        this.lastPingSentTs = 0L;
+        this.latencyMs = -1L;
         resetHandshakeHandler();
         if (!redirecting && listener != null) {
             listener.onDisconnected(null);
@@ -410,6 +414,48 @@ public class ProxyConnection implements IProxyConnection {
         }
         networkComponents.reset();
         resetHandshakeHandler();
+        this.lastPingSentTs = 0L;
+        this.latencyMs = -1L;
+    }
+
+    public boolean shouldInjectHeartbeat() {
+        // Avoid duplicate 0x2002 flood when physical client is attached.
+        return clientlessMode;
+    }
+
+    public void onHeartbeatSent() {
+        lastPingSentTs = System.currentTimeMillis();
+    }
+
+    public void onHeartbeatObserved() {
+        long sent = lastPingSentTs;
+        if (sent <= 0L) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        long delta = now - sent;
+        // Filter implausible values to keep UI latency stable and avoid server-initiated ping noise.
+        if (delta < 2L || delta > 60000L) {
+            return;
+        }
+        latencyMs = delta;
+        emitHeartbeatEvent(delta);
+    }
+
+    private void emitHeartbeatEvent(long latency) {
+        if (eventAdmin == null) {
+            return;
+        }
+        Map<String, Object> props = new HashMap<>();
+        props.put("machineId", machineId);
+        props.put("transition", "Heartbeat");
+        props.put("connected", serverConnected);
+        props.put("authenticated", !hasPendingAuth());
+        props.put("timestamp", System.currentTimeMillis());
+        props.put("latencyMs", latency);
+        eventAdmin.postEvent(new Event(
+                org.sokybot.commons.osgi.OsgiEventTopics.networkTopic(machineId, "Heartbeat"),
+                props));
     }
 
     private void emitNetworkLifecycleEvent(
@@ -429,8 +475,13 @@ public class ProxyConnection implements IProxyConnection {
         props.put("transition", transition);
         props.put("connected", connected);
         props.put("authenticated", authenticated);
-        props.put("loginPhase", loginPhase);
+        if (loginPhase != null && !loginPhase.isEmpty()) {
+            props.put("loginPhase", loginPhase);
+        }
         props.put("timestamp", System.currentTimeMillis());
+        if (latencyMs >= 0L) {
+            props.put("latencyMs", latencyMs);
+        }
         if (reason != null && !reason.isEmpty()) {
             props.put("reason", reason);
         }

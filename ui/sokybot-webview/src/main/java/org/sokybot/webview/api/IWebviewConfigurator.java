@@ -4,6 +4,9 @@ import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import reactor.core.publisher.Flux;
+import org.sokybot.webview.api.dto.ActionRequestDto;
+import org.sokybot.webview.api.dto.ActionResponseDto;
+import org.sokybot.webview.api.dto.PageSchemaDto;
 
 /**
  * Extension API for bundles to register declarative UI pages with the webview.
@@ -26,6 +29,10 @@ public interface IWebviewConfigurator {
      */
     void addDeclarativePage(String pageId, String title, String iconPath, Map<String, Object> schema);
 
+    default void addDeclarativePage(String pageId, String title, String iconPath, PageSchemaDto schema) {
+        addDeclarativePage(pageId, title, iconPath, schema == null ? Map.of() : schema.value());
+    }
+
     /**
      * Register a handler that provides schema and data for a page.
      * Called when frontend requests page data.
@@ -43,6 +50,23 @@ public interface IWebviewConfigurator {
      *                with state updates
      */
     void registerActionHandler(String pageId, BiFunction<String, Map<String, Object>, Map<String, Object>> handler);
+
+    default void registerActionHandlerTyped(String pageId,
+            Function<ActionRequestDto, ActionResponseDto> handler) {
+        registerActionHandler(pageId, (action, data) -> {
+            ActionResponseDto response = handler.apply(new ActionRequestDto(action, data));
+            if (response == null) {
+                return Map.of("success", false, "message", "No response");
+            }
+            Map<String, Object> mapped = new java.util.HashMap<>();
+            mapped.put("success", response.success());
+            mapped.put("message", response.message());
+            if (response.data() != null) {
+                mapped.putAll(response.data());
+            }
+            return mapped;
+        });
+    }
 
     /**
      * Register a stream handler for continuous data updates.

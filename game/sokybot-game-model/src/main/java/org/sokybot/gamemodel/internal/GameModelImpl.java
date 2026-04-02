@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,9 +30,13 @@ import org.sokybot.gameevents.events.entity.EntityHPMPUpdateEvent;
 import org.sokybot.gameevents.events.entity.EntityMovementEvent;
 import org.sokybot.gameevents.events.entity.EntitySpeedUpdateEvent;
 import org.sokybot.gameevents.events.entity.EntityStoppedEvent;
+import org.sokybot.gameevents.events.entity.GroupSpawnBeginEvent;
+import org.sokybot.gameevents.events.entity.GroupSpawnEndEvent;
 import org.sokybot.gameevents.events.spawn.MonsterSpawnEvent;
 import org.sokybot.gameevents.events.session.AuthResponseEvent;
+import org.sokybot.gameevents.events.session.CaptchaChallengeEvent;
 import org.sokybot.gameevents.events.session.LoginResponseEvent;
+import org.sokybot.gameevents.events.session.PasscodeRequiredEvent;
 import org.sokybot.gameevents.events.skill.SkillCastEvent;
 import org.sokybot.gameevents.events.skill.SkillCastErrorEvent;
 import org.sokybot.gamemodel.IGameModel;
@@ -60,6 +65,9 @@ public class GameModelImpl implements IGameModel {
     private final Map<Integer, ScheduledFuture<?>> tasks = new ConcurrentHashMap<>();
 
     private final Sinks.Many<ModelUpdate<ISpawn>> modelSink = Sinks.many().multicast().onBackpressureBuffer();
+    private volatile ScheduledFuture<?> spawnQuietWindowTask;
+    private final AtomicLong lastSpawnSignalAt = new AtomicLong(0L);
+    private static final long SPAWN_SYNC_QUIET_WINDOW_MS = 700L;
 
     private int selectedId = -1;
 
@@ -85,6 +93,8 @@ public class GameModelImpl implements IGameModel {
         subscriptions.add(eventBus.on(EntityAngleUpdateEvent.class).subscribe(this::handleAngle));
         subscriptions.add(eventBus.on(SkillCastEvent.class).subscribe(this::handleSkillCast));
         subscriptions.add(eventBus.on(SkillCastErrorEvent.class).subscribe(this::handleSkillCastError));
+        subscriptions.add(eventBus.on(GroupSpawnBeginEvent.class).subscribe(this::handleGroupSpawnBegin));
+        subscriptions.add(eventBus.on(GroupSpawnEndEvent.class).subscribe(this::handleGroupSpawnEnd));
     }
 
     @Override
@@ -98,16 +108,29 @@ public class GameModelImpl implements IGameModel {
             handleLoginResponse((LoginResponseEvent) event);
         } else if (event instanceof AuthResponseEvent) {
             handleAuthResponse((AuthResponseEvent) event);
+        } else if (event instanceof PasscodeRequiredEvent) {
+            handlePasscodeRequired((PasscodeRequiredEvent) event);
+        } else if (event instanceof CaptchaChallengeEvent) {
+            handleCaptchaChallenge((CaptchaChallengeEvent) event);
         } else if (event instanceof CharacterSelectionActionEvent) {
             handleCharacterSelection((CharacterSelectionActionEvent) event);
         } else if (event instanceof CharacterLoadedEvent) {
             handleCharacterLoaded((CharacterLoadedEvent) event);
+        } else if (event instanceof GroupSpawnBeginEvent) {
+            handleGroupSpawnBegin((GroupSpawnBeginEvent) event);
+        } else if (event instanceof GroupSpawnEndEvent) {
+            handleGroupSpawnEnd((GroupSpawnEndEvent) event);
         }
     }
 
     public void stop() {
         subscriptions.forEach(Disposable::dispose);
         subscriptions.clear();
+        ScheduledFuture<?> task = spawnQuietWindowTask;
+        if (task != null) {
+            task.cancel(true);
+            spawnQuietWindowTask = null;
+        }
         scheduler.shutdownNow();
     }
 
@@ -207,6 +230,7 @@ public class GameModelImpl implements IGameModel {
         m.setY(y);
         spawns.put(m.getUniqueId(), m);
         emitUpdate(m, ModelUpdateType.ADDED);
+        onSpawnSignal();
     }
 
     private void handleDespawn(EntityDespawnEvent event) {
@@ -216,6 +240,7 @@ public class GameModelImpl implements IGameModel {
             emitUpdate(s, ModelUpdateType.REMOVED);
         }
         stopMovement(id);
+        onSpawnSignal();
     }
 
     private void handleHPMP(EntityHPMPUpdateEvent event) {
@@ -306,13 +331,21 @@ public class GameModelImpl implements IGameModel {
         if (!isForThisMachine(event)) {
             return;
         }
+        // Ignore late packets only once a new attempt has clearly started (e.g. reconnecting).
+        // This avoids dropping legitimate credential failures that arrive right after an actuator timeout.
+        LoginState.Phase phase = loginState.getPhase();
+        if (phase == LoginState.Phase.CONNECTING_GATEWAY || phase == LoginState.Phase.DISCONNECTED) {
+            return;
+        }
         if (event.isSuccess()) {
             loginState.setLoginId(event.getLoginId());
             loginState.setAgentHost(event.getAgentHost());
             loginState.setAgentPort(event.getAgentPort());
             loginState.setFailureReason(null);
+            loginState.setGatewayResultCode(null);
             loginState.setPhase(LoginState.Phase.LOGIN_SUCCESS);
         } else {
+            loginState.setGatewayResultCode((int) event.getResultCode());
             loginState.setFailureReason("Gateway login failed: code " + event.getResultCode());
             loginState.setPhase(LoginState.Phase.FAILED);
         }
@@ -322,14 +355,36 @@ public class GameModelImpl implements IGameModel {
         if (!isForThisMachine(event)) {
             return;
         }
+        LoginState.Phase phase = loginState.getPhase();
+        if (phase == LoginState.Phase.CONNECTING_GATEWAY || phase == LoginState.Phase.DISCONNECTED) {
+            return;
+        }
         loginState.setAuthSuccess(event.isSuccess());
         if (event.isSuccess()) {
             loginState.setFailureReason(null);
+            loginState.setAgentAuthResultCode(null);
             loginState.setPhase(LoginState.Phase.AUTHENTICATED);
         } else {
+            loginState.setAgentAuthResultCode((int) event.getResultCode());
             loginState.setFailureReason("Agent auth failed: code " + event.getResultCode());
             loginState.setPhase(LoginState.Phase.FAILED);
         }
+    }
+
+    private void handlePasscodeRequired(PasscodeRequiredEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
+        loginState.setFailureReason("Passcode required");
+        loginState.setPhase(LoginState.Phase.WAITING_FOR_PASSCODE);
+    }
+
+    private void handleCaptchaChallenge(CaptchaChallengeEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
+        loginState.setFailureReason("Captcha challenge required");
+        loginState.setPhase(LoginState.Phase.WAIT_FOR_CAPTCHA);
     }
 
     private void handleCharacterSelection(CharacterSelectionActionEvent event) {
@@ -348,6 +403,63 @@ public class GameModelImpl implements IGameModel {
         if (event.getCharacterName() != null && !event.getCharacterName().isBlank()) {
             loginState.setSelectedCharacterName(event.getCharacterName());
         }
+        if (loginState.getPhase() == LoginState.Phase.AUTHENTICATED || loginState.getPhase() == LoginState.Phase.AGENT_CONNECTED) {
+            loginState.setPhase(LoginState.Phase.LOADING_ENVIRONMENT);
+        }
+        tryCompleteWorldReady();
+    }
+
+    private void handleGroupSpawnBegin(GroupSpawnBeginEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
+        loginState.setSpawnSyncActive(true);
+        loginState.setWorldReady(false);
+        if (loginState.getPhase() == LoginState.Phase.AUTHENTICATED || loginState.getPhase() == LoginState.Phase.AGENT_CONNECTED) {
+            loginState.setPhase(LoginState.Phase.LOADING_ENVIRONMENT);
+        }
+        onSpawnSignal();
+    }
+
+    private void handleGroupSpawnEnd(GroupSpawnEndEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
+        loginState.setSpawnSyncActive(false);
+        tryCompleteWorldReady();
+    }
+
+    private void onSpawnSignal() {
+        if (!loginState.isSpawnSyncActive()) {
+            return;
+        }
+        lastSpawnSignalAt.set(System.currentTimeMillis());
+        ScheduledFuture<?> existing = spawnQuietWindowTask;
+        if (existing != null) {
+            existing.cancel(false);
+        }
+        spawnQuietWindowTask = scheduler.schedule(() -> {
+            if (!loginState.isSpawnSyncActive()) {
+                return;
+            }
+            long elapsed = System.currentTimeMillis() - lastSpawnSignalAt.get();
+            if (elapsed >= SPAWN_SYNC_QUIET_WINDOW_MS) {
+                loginState.setSpawnSyncActive(false);
+                tryCompleteWorldReady();
+            }
+        }, SPAWN_SYNC_QUIET_WINDOW_MS, TimeUnit.MILLISECONDS);
+    }
+
+    private void tryCompleteWorldReady() {
+        if (loginState.isSpawnSyncActive()) {
+            return;
+        }
+        if (trainer == null || trainer.getUniqueId() <= 0) {
+            return;
+        }
+        loginState.setWorldReady(true);
+        loginState.setFailureReason(null);
+        loginState.setPhase(LoginState.Phase.IN_GAME);
     }
 
     private Fighter resolveFighter(int id) {

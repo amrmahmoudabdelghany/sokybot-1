@@ -3,6 +3,7 @@ package org.sokybot.gamemodel;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import org.sokybot.gameevents.dto.AgentInfo;
@@ -21,9 +22,15 @@ public class LoginState {
         LOGIN_SUCCESS,
         REDIRECTING,
         AGENT_CONNECTED,
+        IN_QUEUE,
         AUTH_SENT,
         AUTHENTICATED,
+        LOADING_ENVIRONMENT,
+        IN_GAME,
         MANUAL_VERIFICATION_REQUIRED,
+        WAITING_FOR_PASSCODE,
+        WAIT_FOR_CAPTCHA,
+        PASSCODE_SUBMITTED,
         RETRY_DELAY,
         RETRY_DISABLED,
         RETRY_LIMIT_REACHED,
@@ -43,6 +50,11 @@ public class LoginState {
     private volatile List<CharacterSelectionActionEvent.CharSelectionEntry> availableCharacters = Collections.emptyList();
     private volatile String selectedCharacterName;
     private volatile String failureReason;
+    private volatile Integer queuePosition;
+    private volatile boolean worldReady;
+    private volatile boolean spawnSyncActive;
+    private final AtomicReference<Integer> gatewayResultCode = new AtomicReference<>();
+    private final AtomicReference<Integer> agentAuthResultCode = new AtomicReference<>();
 
     public synchronized void reset() {
         this.phase = Phase.DISCONNECTED;
@@ -54,6 +66,11 @@ public class LoginState {
         this.availableCharacters = Collections.emptyList();
         this.selectedCharacterName = null;
         this.failureReason = null;
+        this.queuePosition = null;
+        this.worldReady = false;
+        this.spawnSyncActive = false;
+        this.gatewayResultCode.set(null);
+        this.agentAuthResultCode.set(null);
     }
 
     public Phase getPhase() {
@@ -134,5 +151,50 @@ public class LoginState {
 
     public void setFailureReason(String failureReason) {
         this.failureReason = failureReason;
+    }
+
+    public Integer getGatewayResultCode() {
+        return gatewayResultCode.get();
+    }
+
+    public void setGatewayResultCode(Integer code) {
+        gatewayResultCode.set(code);
+    }
+
+    public Integer getAgentAuthResultCode() {
+        return agentAuthResultCode.get();
+    }
+
+    public void setAgentAuthResultCode(Integer code) {
+        agentAuthResultCode.set(code);
+    }
+
+    public void clearLoginResultCodes() {
+        gatewayResultCode.set(null);
+        agentAuthResultCode.set(null);
+    }
+
+    public Integer getQueuePosition() {
+        return queuePosition;
+    }
+
+    public void setQueuePosition(Integer queuePosition) {
+        this.queuePosition = queuePosition;
+    }
+
+    public boolean isWorldReady() {
+        return worldReady;
+    }
+
+    public void setWorldReady(boolean worldReady) {
+        this.worldReady = worldReady;
+    }
+
+    public boolean isSpawnSyncActive() {
+        return spawnSyncActive;
+    }
+
+    public void setSpawnSyncActive(boolean spawnSyncActive) {
+        this.spawnSyncActive = spawnSyncActive;
     }
 }
