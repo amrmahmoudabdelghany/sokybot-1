@@ -153,6 +153,8 @@ class Login extends BaseActuator {
                 })
                 .entryGuard({ ctx ->
                     boolean explicitConnect = Boolean.TRUE.equals(ctx.getPersistentData().get("explicitConnectRequested"))
+                    def settings = resolveRuntimeSettings(ctx, settingsProvider, explicitConnect)
+                    boolean haltedByCredential = Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_LOGIN_HALTED_CREDENTIAL))
                     boolean waitingForExplicitResume = Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_USER_RESUME_REQUIRED))
                     if (waitingForExplicitResume && !explicitConnect) {
                         return false
