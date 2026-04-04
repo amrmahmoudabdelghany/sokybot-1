@@ -12,6 +12,7 @@ services:
       # UID 1000 does not use /root; soky passes -Dmaven.repo.local=/var/maven/.m2/repository when present
       - ~/.m2:/var/maven/.m2
       - "../Cyper Online Official Client:/app/game-client"
+      - "../VSRO_Client:/app/game-client-vsro"
     ports:
       - "8182:8182"
       - "5005:5005"

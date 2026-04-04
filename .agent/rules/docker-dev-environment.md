@@ -66,6 +66,9 @@ The `./infra/scripts/soky` CLI on the host is aware of the running containers:
 
 ## Operational Rules
 1. **JDK Version**: Always use JDK 21 (Temurin) for compatibility.
-2. **Game Client**: The game client is mounted at `/app/game-client`. Use this path in the app.
+2. **Game clients** (bind-mounted next to the repo, same as compose):
+   - **Cyper Online Official Client** → `/app/game-client`
+   - **VSRO_Client** → `/app/game-client-vsro`  
+   Use the path that matches the client you register for a group.
 3. **Restart Policy**: Containers are set to `unless-stopped`.
 4. **External Network**: Connects to `proxy_net` for Nginx Proxy Manager integration.

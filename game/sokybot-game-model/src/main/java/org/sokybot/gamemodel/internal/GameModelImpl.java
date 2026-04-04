@@ -50,7 +50,10 @@ public class GameModelImpl implements IGameModel {
 
     private static final Logger log = LoggerFactory.getLogger(GameModelImpl.class);
 
-    /** Full machine id ({@code group.machineName}); must match {@link IGameEvent#getFullName()}. */
+    /**
+     * Full machine id ({@code group.machineName}); must match
+     * {@link IGameEvent#getFullName()}.
+     */
     private final String machineName;
     private final IReactiveEventBus eventBus;
     private final java.util.List<Disposable> subscriptions = new java.util.concurrent.CopyOnWriteArrayList<>();
@@ -82,8 +85,10 @@ public class GameModelImpl implements IGameModel {
     }
 
     public void start() {
-        // World/combat events via reactive bus (may originate from other publishers). Login/session events
-        // are applied via {@link #dispatchGameEvent(IGameEvent)} from the packet translator bridge only.
+        // World/combat events via reactive bus (may originate from other publishers).
+        // Login/session events
+        // are applied via {@link #dispatchGameEvent(IGameEvent)} from the packet
+        // translator bridge only.
         subscriptions.add(eventBus.on(MonsterSpawnEvent.class).subscribe(this::handleMonsterSpawn));
         subscriptions.add(eventBus.on(EntityDespawnEvent.class).subscribe(this::handleDespawn));
         subscriptions.add(eventBus.on(EntityMovementEvent.class).subscribe(this::handleMovement));
@@ -331,13 +336,13 @@ public class GameModelImpl implements IGameModel {
         if (!isForThisMachine(event)) {
             return;
         }
-        // Ignore late packets only once a new attempt has clearly started (e.g. reconnecting).
-        // This avoids dropping legitimate credential failures that arrive right after an actuator timeout.
         LoginState.Phase phase = loginState.getPhase();
-        if (phase == LoginState.Phase.CONNECTING_GATEWAY || phase == LoginState.Phase.DISCONNECTED) {
-            return;
-        }
         if (event.isSuccess()) {
+            // Ignore late success only while not past gateway handshake (e.g. reconnect
+            // race).
+            if (phase == LoginState.Phase.CONNECTING_GATEWAY || phase == LoginState.Phase.DISCONNECTED) {
+                return;
+            }
             loginState.setLoginId(event.getLoginId());
             loginState.setAgentHost(event.getAgentHost());
             loginState.setAgentPort(event.getAgentPort());
@@ -345,8 +350,12 @@ public class GameModelImpl implements IGameModel {
             loginState.setGatewayResultCode(null);
             loginState.setPhase(LoginState.Phase.LOGIN_SUCCESS);
         } else {
+            // Always apply gateway failure so login cycle does not sit in LOGIN_SENT until
+            // timeout.
+            // (Removed check for DISCONNECTED phase here to prevent hiding login failures
+            // during rapid disconnects)
             loginState.setGatewayResultCode((int) event.getResultCode());
-            loginState.setFailureReason("Gateway login failed: code " + event.getResultCode());
+            loginState.setFailureReason("Gateway login failed: code " + (event.getResultCode() & 0xFF));
             loginState.setPhase(LoginState.Phase.FAILED);
         }
     }
@@ -403,7 +412,8 @@ public class GameModelImpl implements IGameModel {
         if (event.getCharacterName() != null && !event.getCharacterName().isBlank()) {
             loginState.setSelectedCharacterName(event.getCharacterName());
         }
-        if (loginState.getPhase() == LoginState.Phase.AUTHENTICATED || loginState.getPhase() == LoginState.Phase.AGENT_CONNECTED) {
+        if (loginState.getPhase() == LoginState.Phase.AUTHENTICATED
+                || loginState.getPhase() == LoginState.Phase.AGENT_CONNECTED) {
             loginState.setPhase(LoginState.Phase.LOADING_ENVIRONMENT);
         }
         tryCompleteWorldReady();
@@ -415,7 +425,8 @@ public class GameModelImpl implements IGameModel {
         }
         loginState.setSpawnSyncActive(true);
         loginState.setWorldReady(false);
-        if (loginState.getPhase() == LoginState.Phase.AUTHENTICATED || loginState.getPhase() == LoginState.Phase.AGENT_CONNECTED) {
+        if (loginState.getPhase() == LoginState.Phase.AUTHENTICATED
+                || loginState.getPhase() == LoginState.Phase.AGENT_CONNECTED) {
             loginState.setPhase(LoginState.Phase.LOADING_ENVIRONMENT);
         }
         onSpawnSignal();

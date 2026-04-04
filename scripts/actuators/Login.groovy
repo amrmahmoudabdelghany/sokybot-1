@@ -506,7 +506,7 @@ class Login extends BaseActuator {
                 .state(STATE_CHECK_LOGIN_FAILED_IMMEDIATE, { builder -> builder
                         .guard({ ctx ->
                             def loginState = ctx.getGameModel()?.getLoginState()
-                            return loginState?.getPhase() == LoginState.Phase.FAILED
+                            return loginState?.getPhase() == LoginState.Phase.FAILED || loginState?.getGatewayResultCode() != null
                         })
                         .action({ ctx ->
                             def loginState = ctx.getGameModel()?.getLoginState()

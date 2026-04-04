@@ -3,6 +3,7 @@ package org.sokybot.runtime.internal;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.sokybot.gameevents.GatewayAgentListTranslator;
+import org.sokybot.gameevents.GatewayLoginResponseTranslator;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 
@@ -119,7 +120,7 @@ public class MachineContextImpl implements IMachineContext {
                                 translatorsToWire.size(), machineId);
                     } else {
                         log.warn(
-                                "No shared packet translators for machine {} — only built-in 0xA101 bridge is active (other opcodes not bridged)",
+                                "No shared packet translators for machine {} — built-in 0xA101/0xA102 bridges still apply where wired",
                                 machineId);
                     }
                     // Second subscriber for 0xA101 when the shared map uses another translator (e.g. script):
@@ -129,6 +130,11 @@ public class MachineContextImpl implements IMachineContext {
                         wireTranslatorBridge(publisher, 0xA101, GatewayAgentListTranslator.INSTANCE, machineId,
                                 eventAdmin, reactiveBus);
                         log.info("Wired built-in gateway agent-list translator (0xA101) for machine {}", machineId);
+                    }
+                    if (translatorsToWire == null || translatorsToWire.get(0xA102) != GatewayLoginResponseTranslator.INSTANCE) {
+                        wireTranslatorBridge(publisher, 0xA102, GatewayLoginResponseTranslator.INSTANCE, machineId,
+                                eventAdmin, reactiveBus);
+                        log.info("Wired built-in gateway login response translator (0xA102) for machine {}", machineId);
                     }
                 }
             }
