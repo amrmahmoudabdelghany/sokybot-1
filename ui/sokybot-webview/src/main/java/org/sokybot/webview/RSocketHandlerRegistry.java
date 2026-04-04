@@ -226,7 +226,9 @@ public class RSocketHandlerRegistry {
         }
         IRSocketFireAndForgetHandler handler = fireAndForgetHandlers.get(request.getMethod());
         if (handler == null) {
-            logger.debug("No fire-and-forget handler found for method: {}", request.getMethod());
+            if (logger.isDebugEnabled()) {
+                logger.debug("No fire-and-forget handler for method: {} (ignored)", request.getMethod());
+            }
             return Mono.empty();
         }
         return handler.handleFireAndForget(request)

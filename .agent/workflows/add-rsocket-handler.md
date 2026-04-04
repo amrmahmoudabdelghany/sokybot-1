@@ -8,10 +8,14 @@ RSocket handlers provide the backend API for the React frontend. They are automa
 
 ## 1. Choose Handler Type
 
-| Type | Interface | Use Case |
-|------|-----------|----------|
-| Request-Response | `IRSocketHandler` | Single request → single response |
-| Request-Stream | `IRSocketStreamHandler` | Single request → stream of responses |
+| Type | Interface | OSGi property | Use Case |
+|------|-----------|---------------|----------|
+| Request-Response | `IRSocketHandler` | `rsocket.method` | Single request → single response |
+| Request-Stream | `IRSocketStreamHandler` | `rsocket.stream` | Single request → stream of responses |
+| Fire-and-forget | `IRSocketFireAndForgetHandler` | `rsocket.fireAndForget` | Best-effort; no response payload |
+| Request-channel | `IRSocketChannelHandler` | `rsocket.channel` | Bidirectional stream (initial frame + inbound flux) |
+
+Reference channel: [`DiagnosticsChannelHandler`](../../ui/sokybot-webview/src/main/java/org/sokybot/webview/handler/DiagnosticsChannelHandler.java) (`diagnostics.stream`).
 
 ## 2. Create Handler Class
 
@@ -143,6 +147,29 @@ RSocketResponse.internalError(exception)         // -32603
 RSocketResponse.notFound(message)                // -32604
 ```
 
+## 3b. Fire-and-forget handler
+
+```java
+@Component(service = IRSocketFireAndForgetHandler.class, property = {
+    IRSocketFireAndForgetHandler.METHOD_PROPERTY + "=myfeature.signal"
+})
+public class MyFeatureFnfHandler implements IRSocketFireAndForgetHandler {
+    @Override
+    public String[] getMethods() {
+        return new String[] { "myfeature.signal" };
+    }
+
+    @Override
+    public Mono<Void> handleFireAndForget(RSocketRequest request) {
+        return Mono.empty();
+    }
+}
+```
+
+## 3c. Request-channel handler
+
+Initial JSON frame `method` must equal `getChannelName()`. Further inbound frames use the same `method` (see `RSocketServerService` channel parsing).
+
 ## 4. Add Frontend Support
 
 Update `ui/sokybot-webview/src/main/frontend/src/RSocketClient.ts`:
@@ -180,11 +207,9 @@ soky deploy sokybot-webview
 soky backend logs | grep "Registered RSocket handler"
 ```
 
-You should see:
-```
-Registered RSocket handler: myfeature.action1 -> MyFeatureHandler
-Registered RSocket handler: myfeature.action2 -> MyFeatureHandler
-```
+You should see log lines such as `Registered RSocket handler: …`, `Registered RSocket stream handler: …`, `Registered fire-and-forget handler: …`, or `Registered channel handler: …`.
+
+Also see [docs/RSOCKET_WEBVIEW.md](../../docs/RSOCKET_WEBVIEW.md) for metadata routing and stream contracts.
 
 ## Common Mistakes
 

@@ -8,6 +8,8 @@ import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.sokybot.webview.api.IRSocketChannelHandler;
+import org.sokybot.webview.api.IRSocketFireAndForgetHandler;
 import org.sokybot.webview.api.IRSocketHandler;
 import org.sokybot.webview.api.IRSocketStreamHandler;
 import org.sokybot.webview.handler.WorkspaceSummaryHandler;
@@ -260,6 +262,61 @@ class RSocketHandlerRegistryTest {
 
         StepVerifier.create(registry.handleRequest(request))
                 .assertNext(r -> assertTrue(r.isSuccess()))
+                .verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should register and invoke fire-and-forget handler")
+    void testFireAndForgetHandler() {
+        IRSocketFireAndForgetHandler handler = new IRSocketFireAndForgetHandler() {
+            @Override
+            public String[] getMethods() {
+                return new String[] { "test.fnf" };
+            }
+
+            @Override
+            public reactor.core.publisher.Mono<Void> handleFireAndForget(RSocketRequest request) {
+                return reactor.core.publisher.Mono.empty();
+            }
+        };
+        registry.bindFireAndForgetHandler(handler);
+
+        RSocketRequest request = new RSocketRequest();
+        request.setMethod("test.fnf");
+        StepVerifier.create(registry.handleFireAndForget(request)).verifyComplete();
+    }
+
+    @Test
+    @DisplayName("Should register and invoke channel handler")
+    void testChannelHandler() {
+        IRSocketChannelHandler handler = new IRSocketChannelHandler() {
+            @Override
+            public String getChannelName() {
+                return "test.channel";
+            }
+
+            @Override
+            public Flux<Object> handleChannel(RSocketRequest initialRequest, Flux<RSocketRequest> inbound) {
+                return Flux.merge(
+                        Flux.just((Object) Map.of("type", "hello")),
+                        inbound.map(r -> (Object) Map.of(
+                                "type", "cmd",
+                                "id", r.getId() != null ? r.getId() : "")));
+            }
+        };
+        registry.bindChannelHandler(handler);
+
+        RSocketRequest initial = new RSocketRequest();
+        initial.setMethod("test.channel");
+        initial.setParams(Map.of("pattern", "**"));
+
+        RSocketRequest follow = new RSocketRequest();
+        follow.setMethod("test.channel");
+        follow.setId("c1");
+        follow.setParams(Map.of("action", "ping"));
+
+        StepVerifier.create(registry.handleChannel(initial, Flux.just(follow)))
+                .expectNextCount(2)
                 .verifyComplete();
     }
 }

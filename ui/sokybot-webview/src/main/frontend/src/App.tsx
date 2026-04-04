@@ -97,6 +97,22 @@ function App() {
     return () => subscription?.unsubscribe();
   }, [isConnected, addExtensionPage, removeExtensionPage]);
 
+  useEffect(() => {
+    if (!isConnected) return;
+    void rsocketService.notifyClientConnected().catch(() => {});
+  }, [isConnected, rsocketService]);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (rsocketService.getConnectionState() !== 'connected') return;
+      void rsocketService
+        .fireAndForget('webview.client.visibility', { visibility: document.visibilityState })
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [rsocketService]);
+
   const bootstrapFailed =
     isConnected && (machinesQuery.isError || groupsQuery.isError);
   const bootstrapErr = machinesQuery.error ?? groupsQuery.error;

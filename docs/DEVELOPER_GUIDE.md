@@ -27,6 +27,10 @@ mvnw.cmd compile
 
 If you prefer using your system Maven installation, you can use `mvn` instead of `./mvnw`.
 
+## RSocket webview protocol
+
+For UI ↔ backend framing (streams, fire-and-forget, request-channel, metadata routing, and stream backpressure notes), see [RSOCKET_WEBVIEW.md](./RSOCKET_WEBVIEW.md).
+
 ## Common Maven Commands
 
 ### Building the Project

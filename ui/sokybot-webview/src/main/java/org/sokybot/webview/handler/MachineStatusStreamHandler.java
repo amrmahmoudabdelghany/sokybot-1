@@ -67,12 +67,15 @@ public class MachineStatusStreamHandler implements IRSocketStreamHandler, EventH
                     .map(t -> Map.<String, Object>of(
                             "type", "heartbeat",
                             "timestamp", System.currentTimeMillis()));
-            return Flux.merge(registry.wildcardStatusFlux(), heartbeats)
+            return Flux.merge(
+                    registry.wildcardStatusFlux().onBackpressureLatest(),
+                    heartbeats)
                     .map(m -> (Object) m)
                     .doOnError(e -> log.warn("Wildcard machine status stream error", e));
         }
 
         return registry.machineStatusFlux(requestedMachineId)
+                .onBackpressureLatest()
                 .switchIfEmpty(Flux.just(Map.of(
                         "type", "SYNC_REQUIRED",
                         "reason", "machine_not_found",

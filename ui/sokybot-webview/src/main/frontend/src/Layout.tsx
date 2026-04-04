@@ -6,6 +6,7 @@ import { CreateGroupDialog } from './components/CreateGroupDialog';
 import CreateMachineDialog from './components/CreateMachineDialog';
 import { ToolbarExtensions } from './components/ToolbarExtensions';
 import { MachineOnboardingSection } from './components/MachineOnboardingSection';
+import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { useMachinesQuery, useGroupsQuery, useInvalidateSokybotQueries } from './query/sokybotQueries';
 import { useMachineSeverityStore } from './machines/useMachineSeverityStore';
 import { Plus, Bot, Monitor, Moon, Sun, Maximize, Minimize, Settings, Target, Package, Zap, Globe, FileText, Activity } from 'lucide-react';
@@ -333,6 +334,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                         </div>
                     )}
                 </div>
+                <DiagnosticsPanel isBackendConnected={isBackendConnected} />
                 <div className="p-4 border-t border-border text-[10px] font-medium text-muted-foreground flex justify-between items-center bg-muted/50">
                     <span>{uniqueMachines.length} Total Bots</span>
                     <div className="flex items-center gap-2">

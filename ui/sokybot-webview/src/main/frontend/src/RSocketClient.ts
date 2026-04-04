@@ -113,7 +113,9 @@ export class RSocketService {
     private readonly queue: QueuedRequest<unknown>[] = [];
     private readonly requestTtlMs = 5000;
     private readonly maxQueueSize = 200;
-    private readonly queueableMethodPrefixes = ['machine.', 'group.', 'workspace.', 'extension.', 'fs.', 'system.', 'character.'];
+    private readonly queueableMethodPrefixes = [
+        'machine.', 'group.', 'workspace.', 'extension.', 'fs.', 'system.', 'character.',
+    ];
     private readonly activeStreams = new Map<string, () => void>();
     private readonly beforeUnloadHandler = () => this.close();
     private workspaceBootstrapMode: 'summary' | 'legacy' = 'summary';
@@ -216,16 +218,9 @@ export class RSocketService {
                 : (options as SubscribeOptions || {});
         const params = normalizedOptions.params;
 
-        const request: RSocketRequest = {
-            method,
-            params,
-            id: generateRequestId(),
-        };
-
-        const payload = {
-            data: JSON.stringify(request),
-            metadata: ""
-        };
+        const id = generateRequestId();
+        const request: RSocketRequest = { method, params, id };
+        const payload = this.makePayloadEnvelope(method, request);
 
         let subscription: any;
         let inFlight = 0;
@@ -308,21 +303,31 @@ export class RSocketService {
                 this.ensureConnected();
             });
         }
-        const request: RSocketRequest = {
-            method,
-            params,
-            id: generateRequestId(),
-        };
-        const payload = {
-            data: JSON.stringify(request),
-            metadata: ""
-        };
-        return this.client.fireAndForget(payload).catch((e: unknown) => {
+        const request: RSocketRequest = { method, params, id: generateRequestId() };
+        const payload = this.makePayloadEnvelope(method, request);
+        // rsocket-core RSocketClient.fireAndForget() returns void, not a Promise — do not chain .catch().
+        try {
+            this.client.fireAndForget(payload);
+            return Promise.resolve();
+        } catch (e: unknown) {
             this.handleTransportFailure(e);
-            throw e;
-        });
+            return Promise.reject(e);
+        }
     }
 
+    /**
+     * UTF-8 route in metadata (dual-read with JSON {@code method} on the server).
+     */
+    private makePayloadEnvelope(method: string, body: RSocketRequest): { data: string; metadata: string } {
+        return {
+            data: JSON.stringify(body),
+            metadata: method,
+        };
+    }
+
+    /**
+     * Legacy one-shot channel: emits a fixed list of outbound frames then completes.
+     */
     requestChannel<TOut = unknown, TIn = unknown>(
         method: string,
         sourceItems: TOut[],
@@ -335,22 +340,20 @@ export class RSocketService {
             return { unsubscribe: () => { }, request: () => { } };
         }
 
+        const frames = sourceItems.map((item) =>
+            this.makePayloadEnvelope(method, {
+                method,
+                params: { ...params, item },
+                id: generateRequestId(),
+            })
+        );
+
         const source = {
             subscribe: (subscriber: any) => {
                 if (subscriber.onSubscribe) {
                     subscriber.onSubscribe({
                         request: (_n: number) => {
-                            // Eagerly emits buffered items when requested.
-                            sourceItems.forEach((item) => {
-                                subscriber.onNext({
-                                    data: JSON.stringify({
-                                        method,
-                                        params: { ...params, item },
-                                        id: generateRequestId(),
-                                    }),
-                                    metadata: ""
-                                });
-                            });
+                            frames.forEach((pl) => subscriber.onNext(pl));
                             subscriber.onComplete?.();
                         },
                         cancel: () => { }
@@ -381,6 +384,114 @@ export class RSocketService {
         return {
             unsubscribe: () => subscription?.cancel?.(),
             request: (n: number) => subscription?.request?.(Math.max(1, Math.floor(n || 1)))
+        };
+    }
+
+    /**
+     * Bidirectional channel: outbound frames are queued and delivered under RSocket demand.
+     * Initial params are sent as the first frame after subscribe.
+     */
+    openInteractiveChannel(options: {
+        method: string;
+        initialParams?: Record<string, unknown>;
+        initialRequestN?: number;
+        onMessage: (data: unknown) => void;
+        onError?: (error: unknown) => void;
+    }): {
+        send: (params: Record<string, unknown>) => void;
+        close: () => void;
+        request: (n: number) => void;
+    } {
+        const method = options.method;
+        const queue: Array<{ data: string; metadata: string }> = [];
+        let requested = 0;
+        let cancelled = false;
+        let outboundSubscriber: any = null;
+        let downstreamSubscription: any = null;
+
+        const push = (params: Record<string, unknown>) => {
+            if (cancelled) return;
+            queue.push(
+                this.makePayloadEnvelope(method, {
+                    method,
+                    params,
+                    id: generateRequestId(),
+                })
+            );
+            drain();
+        };
+
+        const drain = () => {
+            while (!cancelled && outboundSubscriber && requested > 0 && queue.length > 0) {
+                const item = queue.shift()!;
+                outboundSubscriber.onNext(item);
+                requested--;
+            }
+        };
+
+        const source = {
+            subscribe: (subscriber: any) => {
+                outboundSubscriber = subscriber;
+                subscriber.onSubscribe({
+                    request: (n: number) => {
+                        requested += Math.max(1, Math.floor(n || 1));
+                        drain();
+                    },
+                    cancel: () => {
+                        cancelled = true;
+                        queue.length = 0;
+                        outboundSubscriber = null;
+                    },
+                });
+                push(options.initialParams ?? {});
+            },
+        };
+
+        const start = () => {
+            if (!this.client) return;
+            this.client.requestChannel(source).subscribe({
+                onNext: (payload: any) => {
+                    try {
+                        const data = typeof payload.data === 'string'
+                            ? JSON.parse(payload.data)
+                            : payload.data;
+                        if (data && data.error) {
+                            options.onError?.(new RSocketError(data.error.code, data.error.message, data.error.data));
+                        } else {
+                            options.onMessage(data);
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse interactive channel data', e);
+                    }
+                },
+                onError: (error: any) => {
+                    this.handleTransportFailure(error);
+                    options.onError?.(error);
+                },
+                onSubscribe: (sub: any) => {
+                    downstreamSubscription = sub;
+                    sub.request(Math.max(1, options.initialRequestN ?? 64));
+                },
+            });
+        };
+
+        if (!this.client) {
+            void this.connect()
+                .then(start)
+                .catch((e) => options.onError?.(e));
+        } else {
+            start();
+        }
+
+        return {
+            send: (params) => push(params),
+            close: () => {
+                cancelled = true;
+                queue.length = 0;
+                downstreamSubscription?.cancel?.();
+            },
+            request: (n: number) =>
+                downstreamSubscription?.request?.(Math.max(1, Math.floor(n || 1))),
         };
     }
 
@@ -421,8 +532,9 @@ export class RSocketService {
     }
 
     private dispatchRequest(q: Omit<QueuedRequest<unknown>, 'expiresAt' | 'key'>): void {
-        const request: RSocketRequest = { method: q.method, params: q.params, id: generateRequestId() };
-        const payload = { data: JSON.stringify(request), metadata: '' };
+        const id = generateRequestId();
+        const request: RSocketRequest = { method: q.method, params: q.params, id };
+        const payload = this.makePayloadEnvelope(q.method, request);
         this.client.requestResponse(payload).subscribe({
             onComplete: (response: any) => {
                 try {
@@ -737,6 +849,35 @@ export class RSocketService {
             onError,
             { machineId }
         );
+    }
+
+    /**
+     * Best-effort: notifies backend that the web UI session is active (RSocket fire-and-forget).
+     */
+    notifyClientConnected(): Promise<void> {
+        return this.fireAndForget('webview.client.connected', { uiBuildId: getUiBuildId() });
+    }
+
+    /**
+     * Open the diagnostics request-channel (filtered {@code IEventBridge} stream + commands).
+     */
+    openDiagnosticsChannel(options: {
+        pattern?: string;
+        machineId?: string;
+        initialRequestN?: number;
+        onMessage: (data: unknown) => void;
+        onError?: (error: unknown) => void;
+    }) {
+        return this.openInteractiveChannel({
+            method: 'diagnostics.stream',
+            initialParams: {
+                pattern: options.pattern ?? 'sokybot/**',
+                ...(options.machineId ? { machineId: options.machineId } : {}),
+            },
+            initialRequestN: options.initialRequestN,
+            onMessage: options.onMessage,
+            onError: options.onError,
+        });
     }
 }
 

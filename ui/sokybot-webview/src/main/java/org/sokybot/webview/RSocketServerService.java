@@ -25,6 +25,7 @@ import org.sokybot.http.server.api.IWebSocketRegistry;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
 
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
@@ -178,23 +179,20 @@ public class RSocketServerService {
                 return Mono.just(new RSocket() {
                     @Override
                     public Mono<Payload> requestResponse(Payload payload) {
-                        String requestData = payload.getDataUtf8();
-                        logger.debug("Received request: {}", requestData);
-                        return handleRequestResponse(requestData);
+                        logger.debug("Received request");
+                        return handleRequestResponse(payload);
                     }
 
                     @Override
                     public Flux<Payload> requestStream(Payload payload) {
-                        String requestData = payload.getDataUtf8();
-                        logger.debug("Received stream request: {}", requestData);
-                        return handleRequestStream(requestData);
+                        logger.debug("Received stream request");
+                        return handleRequestStream(payload);
                     }
 
                     @Override
                     public Mono<Void> fireAndForget(Payload payload) {
-                        String requestData = payload.getDataUtf8();
-                        logger.debug("Received fire-and-forget request: {}", requestData);
-                        return handleFireAndForget(requestData);
+                        logger.debug("Received fire-and-forget request");
+                        return handleFireAndForget(payload);
                     }
 
                     @Override
@@ -241,9 +239,9 @@ public class RSocketServerService {
         }
     }
 
-    private Mono<Void> handleFireAndForget(String requestData) {
+    private Mono<Void> handleFireAndForget(Payload payload) {
         try {
-            RSocketRequest request = parseRequest(requestData);
+            RSocketRequest request = parseRequest(payload);
             if (request == null || request.getMethod() == null) {
                 return Mono.empty();
             }
@@ -256,7 +254,7 @@ public class RSocketServerService {
 
     private Flux<Payload> handleRequestChannel(Publisher<Payload> payloads) {
         Flux<RSocketRequest> requests = Flux.from(payloads)
-                .map(payload -> parseRequest(payload.getDataUtf8()))
+                .map(this::parseRequest)
                 .filter(request -> request != null && request.getMethod() != null);
 
         return requests.switchOnFirst((signal, flux) -> {
@@ -283,10 +281,9 @@ public class RSocketServerService {
         });
     }
 
-    private Mono<Payload> handleRequestResponse(String requestData) {
+    private Mono<Payload> handleRequestResponse(Payload payload) {
         try {
-            // Parse the request
-            RSocketRequest request = parseRequest(requestData);
+            RSocketRequest request = parseRequest(payload);
 
             if (request == null || request.getMethod() == null) {
                 return errorPayload(RSocketResponse.error(
@@ -294,7 +291,6 @@ public class RSocketServerService {
                         "Failed to parse request"));
             }
 
-            // Delegate to handler registry
             return handlerRegistry.handleRequest(request)
                     .map(this::toPayload)
                     .onErrorResume(error -> {
@@ -308,9 +304,9 @@ public class RSocketServerService {
         }
     }
 
-    private Flux<Payload> handleRequestStream(String requestData) {
+    private Flux<Payload> handleRequestStream(Payload payload) {
         try {
-            RSocketRequest request = parseRequest(requestData);
+            RSocketRequest request = parseRequest(payload);
 
             if (request == null || request.getMethod() == null) {
                 return Flux.just(toPayload(RSocketResponse.error(
@@ -386,10 +382,48 @@ public class RSocketServerService {
     }
 
     /**
-     * Parse request data from structured JSON envelope only.
+     * Parse request from payload: JSON body plus optional UTF-8 route in metadata (dual-read).
+     * When {@code method} is missing in JSON, metadata (if non-empty) supplies the route / method name.
+     */
+    private RSocketRequest parseRequest(Payload payload) {
+        if (payload == null) {
+            return null;
+        }
+        String requestData = payload.getDataUtf8();
+        RSocketRequest request = parseRequestJson(requestData);
+        if (request == null) {
+            request = new RSocketRequest();
+        }
+        String route = extractMetadataRoute(payload);
+        if (route != null && !route.isEmpty()) {
+            if (request.getMethod() == null || request.getMethod().isEmpty()) {
+                request.setMethod(route);
+            }
+        }
+        return request;
+    }
+
+    private static String extractMetadataRoute(Payload payload) {
+        try {
+            if (!payload.hasMetadata()) {
+                return null;
+            }
+            var meta = payload.metadata();
+            if (meta == null || !meta.isReadable()) {
+                return null;
+            }
+            String s = meta.toString(StandardCharsets.UTF_8).trim();
+            return s.isEmpty() ? null : s;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Parse JSON body only (no metadata).
      */
     @SuppressWarnings("unchecked")
-    private RSocketRequest parseRequest(String requestData) {
+    RSocketRequest parseRequestJson(String requestData) {
         if (requestData == null || requestData.isEmpty()) {
             return null;
         }

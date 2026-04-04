@@ -5,6 +5,9 @@ package org.sokybot.webview;
  * <p>
  * Bump when introducing breaking SETUP or bootstrap contract changes; keep in sync with frontend
  * {@code SOKYBOT_PROTOCOL_API_VERSION}.
+ * <p>
+ * Payload framing: JSON {@code method}/params in data; optional UTF-8 route in metadata matching
+ * {@code method} (server dual-read if JSON omits {@code method}).
  */
 public final class WebviewProtocolConstants {
 
