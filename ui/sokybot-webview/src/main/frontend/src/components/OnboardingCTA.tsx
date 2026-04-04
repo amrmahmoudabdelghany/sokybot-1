@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '@sokybot/frontend-shared';
+import { Button, cn } from '@sokybot/frontend-shared';
 import type { ActionIntent, UXPhaseModel } from '../machines/loginPhaseMapping';
 
 /**
@@ -50,6 +50,9 @@ export const OnboardingCTA: React.FC<OnboardingCTAProps> = ({
 
     if (!primaryAction && !secondaryAction) return null;
 
+    const emphasizeConnect =
+        ux.rawPhase === 'PENDING_MANUAL_CONNECT' && primaryAction === 'connect_bot';
+
     const renderButton = (intent: NonNullable<ActionIntent>, isPrimary: boolean) => {
         const disabled = inFlight || (aborting && intent !== 'cancel');
         const variant = isPrimary
@@ -61,7 +64,11 @@ export const OnboardingCTA: React.FC<OnboardingCTAProps> = ({
                 key={intent}
                 variant={variant}
                 size="sm"
-                className={isPrimary ? 'flex-1' : 'flex-shrink-0'}
+                className={cn(
+                    isPrimary ? 'flex-1' : 'flex-shrink-0',
+                    emphasizeConnect && isPrimary && intent === 'connect_bot'
+                        && 'min-h-9 text-sm font-semibold shadow-md ring-2 ring-primary/35',
+                )}
                 disabled={disabled}
                 onClick={() => onAction(intent)}
             >

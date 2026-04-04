@@ -9,11 +9,11 @@
  *
  * | progressStep | Label              | Phases mapped here                                                              |
  * |--------------|--------------------|---------------------------------------------------------------------------------|
- * | 1            | Connect gateway    | DISCONNECTED, MISSING_GATEWAY, CONNECTING_GATEWAY                               |
- * | 2            | Discover servers   | WAITING_FOR_AGENTS, WAITING_FOR_AGENTS_TIMEOUT, MISSING_AGENT_SERVER            |
- * | 3            | Sign in            | MISSING_CREDENTIALS, LOGIN_SENT, FAILED, MANUAL_VERIFICATION_REQUIRED,          |
- * |              |                    | RETRY_DELAY, RETRY_DISABLED, RETRY_LIMIT_REACHED                               |
- * | 4            | Enter game         | AUTHENTICATED, MISSING_CHARACTER_SELECTION                                      |
+ * | 1            | Connect gateway    | DISCONNECTED, MISSING_GATEWAY, CONNECTING_GATEWAY, GATEWAY_CONNECTED, PENDING_MANUAL_CONNECT |
+ * | 2            | Discover servers   | WAITING_FOR_AGENTS, WAITING_FOR_AGENTS_TIMEOUT, MISSING_AGENT_SERVER, AGENTS_RECEIVED, REDIRECTING, SERVER_INSPECTION |
+ * | 3            | Sign in            | MISSING_CREDENTIALS, LOGIN_SENT, LOGIN_SUCCESS, AGENT_CONNECTED, AUTH_SENT, IN_QUEUE, … |
+ * |              |                    | WAIT_FOR_CAPTCHA, PASSCODE_SUBMITTED, FAILED, RETRY_*, MANUAL_VERIFICATION_REQUIRED |
+ * | 4            | Enter game         | AUTHENTICATED, LOADING_ENVIRONMENT, MISSING_CHARACTER_SELECTION, IN_GAME        |
  */
 
 // ---------------------------------------------------------------------------
@@ -104,8 +104,8 @@ const PHASE_MAP: Record<string, PhaseEntry> = {
         isFatal: false,
     },
     PENDING_MANUAL_CONNECT: {
-        displayTitle: 'Ready to Connect',
-        displayDescription: 'Settings validated. Click Connect to begin.',
+        displayTitle: 'Ready to connect',
+        displayDescription: 'Settings look good. Use the Connect button below to start the bot.',
         authState: 'not_started',
         progressStep: 1,
         severity: 'info',
@@ -116,6 +116,16 @@ const PHASE_MAP: Record<string, PhaseEntry> = {
     CONNECTING_GATEWAY: {
         displayTitle: 'Connecting…',
         displayDescription: 'Establishing connection to the gateway server.',
+        authState: 'not_started',
+        progressStep: 1,
+        severity: 'info',
+        primaryAction: 'cancel',
+        secondaryAction: null,
+        isFatal: false,
+    },
+    GATEWAY_CONNECTED: {
+        displayTitle: 'Gateway connected',
+        displayDescription: 'Handshake complete. Waiting for the server list from the gateway.',
         authState: 'not_started',
         progressStep: 1,
         severity: 'info',
@@ -153,6 +163,36 @@ const PHASE_MAP: Record<string, PhaseEntry> = {
         secondaryAction: null,
         isFatal: false,
     },
+    AGENTS_RECEIVED: {
+        displayTitle: 'Server list received',
+        displayDescription: 'Processing the shard list from the gateway. Select a server if prompted.',
+        authState: 'not_started',
+        progressStep: 2,
+        severity: 'info',
+        primaryAction: 'cancel',
+        secondaryAction: 'select_agent',
+        isFatal: false,
+    },
+    REDIRECTING: {
+        displayTitle: 'Redirecting…',
+        displayDescription: 'Following the gateway redirect toward the game agent.',
+        authState: 'not_started',
+        progressStep: 2,
+        severity: 'info',
+        primaryAction: 'cancel',
+        secondaryAction: null,
+        isFatal: false,
+    },
+    AGENT_CONNECTED: {
+        displayTitle: 'Game agent connected',
+        displayDescription: 'TCP session to the shard is up. Authentication will follow.',
+        authState: 'in_progress',
+        progressStep: 3,
+        severity: 'info',
+        primaryAction: 'cancel',
+        secondaryAction: null,
+        isFatal: false,
+    },
     MISSING_CREDENTIALS: {
         displayTitle: 'Ready to sign in',
         displayDescription: 'Ready to sign in. Please enter your account credentials to continue.',
@@ -166,6 +206,26 @@ const PHASE_MAP: Record<string, PhaseEntry> = {
     LOGIN_SENT: {
         displayTitle: 'Signing in…',
         displayDescription: 'Login request sent. Waiting for server response.',
+        authState: 'in_progress',
+        progressStep: 3,
+        severity: 'info',
+        primaryAction: 'cancel',
+        secondaryAction: null,
+        isFatal: false,
+    },
+    LOGIN_SUCCESS: {
+        displayTitle: 'Gateway login accepted',
+        displayDescription: 'Credentials accepted by the gateway. Connecting to the game agent…',
+        authState: 'in_progress',
+        progressStep: 3,
+        severity: 'info',
+        primaryAction: 'cancel',
+        secondaryAction: null,
+        isFatal: false,
+    },
+    AUTH_SENT: {
+        displayTitle: 'Authenticating with agent…',
+        displayDescription: 'Sending authentication to the game server.',
         authState: 'in_progress',
         progressStep: 3,
         severity: 'info',
@@ -211,6 +271,26 @@ const PHASE_MAP: Record<string, PhaseEntry> = {
         severity: 'warn',
         primaryAction: 'focus_credentials',
         secondaryAction: 'cancel',
+        isFatal: false,
+    },
+    WAIT_FOR_CAPTCHA: {
+        displayTitle: 'Captcha required',
+        displayDescription: 'Complete the captcha or verification step in the client, then continue here if needed.',
+        authState: 'in_progress',
+        progressStep: 3,
+        severity: 'warn',
+        primaryAction: 'acknowledge',
+        secondaryAction: 'cancel',
+        isFatal: false,
+    },
+    PASSCODE_SUBMITTED: {
+        displayTitle: 'Passcode submitted',
+        displayDescription: 'Waiting for the server to accept your passcode.',
+        authState: 'in_progress',
+        progressStep: 3,
+        severity: 'info',
+        primaryAction: 'cancel',
+        secondaryAction: null,
         isFatal: false,
     },
     IN_QUEUE: {

@@ -29,6 +29,23 @@ The Electron/Vite UI talks to Karaf through a single WebSocket carrying RSocket 
 - **Inbound commands** (`params`): `action` = `setPattern` \| `setMachine` \| `pause` \| `resume` \| `ping` (plus `pattern` / `machineId` where relevant).
 - **Outbound**: `type: bridge.event` for filtered `IEventBridge` events; `type: diagnostics.command` for command acknowledgements.
 
+## `character.state` snapshot (login onboarding)
+
+The `character.state` response includes machine login fields alongside trainer stats (when present). Important flags:
+
+| Field | Meaning |
+|-------|---------|
+| `loginPhase` | Current `LoginState.Phase` name (same vocabulary as `machine.status.stream` `loginPhase`). |
+| `authenticated` | **Strict:** `true` only when phase is `AUTHENTICATED` — matches `Login.groovy` `isAuthenticated` / stream `authenticated`. Not set for `IN_GAME` or queue phases. |
+| `signInComplete` | `LoginState.isAuthSuccess()` — agent authentication succeeded on the model (can be `true` while phase is `MISSING_CHARACTER_SELECTION`). |
+| `awaitingCharacterSelection` | `true` when phase is `MISSING_CHARACTER_SELECTION`. |
+| `gatewayResultCode` / `agentAuthResultCode` | Last Silkroad result bytes from gateway / agent auth (when set). |
+| `failureReason` | Raw engine message from `LoginState`. |
+| `loginDetailMessage` | Short user-facing line derived from codes + `failureReason` for failed phases. |
+| `queuePosition` | Server queue index when in `IN_QUEUE` (nullable). |
+
+The onboarding stepper uses `loginPhase` via [`loginPhaseMapping.ts`](../ui/sokybot-webview/src/main/frontend/src/machines/loginPhaseMapping.ts); `authState` there is **UX-only** and can read “success” on step 4 while `authenticated` above stays false until phase is exactly `AUTHENTICATED`.
+
 ## Reference code
 
 - Server entry: [`RSocketServerService.java`](../ui/sokybot-webview/src/main/java/org/sokybot/webview/RSocketServerService.java)

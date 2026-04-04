@@ -22,6 +22,7 @@ import org.sokybot.runtime.ISokybotContext;
 import org.sokybot.webview.api.IRSocketHandler;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
+import org.sokybot.webview.login.GatewayLoginMessages;
 import org.sokybot.webview.util.MachineResolver;
 
 import reactor.core.publisher.Mono;
@@ -144,6 +145,13 @@ public class CharacterStateHandler implements IRSocketHandler {
         LoginState.Phase phaseEnum = LoginState.Phase.DISCONNECTED;
         int agentsDiscovered = 0;
         boolean authenticated = false;
+        boolean signInComplete = false;
+        boolean awaitingCharacterSelection = false;
+        Integer gatewayResultCode = null;
+        Integer agentAuthResultCode = null;
+        String failureReasonSnap = null;
+        String loginDetailMessage = null;
+        Integer queuePosition = null;
         List<Map<String, Object>> agentOptions = java.util.Collections.emptyList();
         List<String> availableCharacters = java.util.Collections.emptyList();
         String selectedCharacter = null;
@@ -167,7 +175,16 @@ public class CharacterStateHandler implements IRSocketHandler {
                             .map(this::toAgentOption)
                             .collect(Collectors.toList());
                 }
-                authenticated = ls.getPhase() == LoginState.Phase.AUTHENTICATED || ls.isAuthSuccess();
+                // Matches Login.groovy isAuthenticated: only AUTHENTICATED phase (not IN_GAME / queue).
+                authenticated = ls.getPhase() == LoginState.Phase.AUTHENTICATED;
+                signInComplete = ls.isAuthSuccess();
+                awaitingCharacterSelection = phaseEnum == LoginState.Phase.MISSING_CHARACTER_SELECTION;
+                gatewayResultCode = ls.getGatewayResultCode();
+                agentAuthResultCode = ls.getAgentAuthResultCode();
+                failureReasonSnap = ls.getFailureReason();
+                loginDetailMessage = GatewayLoginMessages.deriveLoginDetailMessage(
+                        phaseEnum, gatewayResultCode, agentAuthResultCode, failureReasonSnap);
+                queuePosition = ls.getQueuePosition();
                 availableCharacters = ls.getAvailableCharacterNames();
                 selectedCharacter = ls.getSelectedCharacterName();
             }
@@ -199,6 +216,13 @@ public class CharacterStateHandler implements IRSocketHandler {
         state.put("loginPhase", loginPhase);
         state.put("agentsDiscovered", agentsDiscovered);
         state.put("authenticated", authenticated);
+        state.put("signInComplete", Boolean.valueOf(signInComplete));
+        state.put("awaitingCharacterSelection", Boolean.valueOf(awaitingCharacterSelection));
+        state.put("gatewayResultCode", gatewayResultCode);
+        state.put("agentAuthResultCode", agentAuthResultCode);
+        state.put("failureReason", failureReasonSnap);
+        state.put("loginDetailMessage", loginDetailMessage);
+        state.put("queuePosition", queuePosition);
         state.put("agentOptions", agentOptions);
         state.put("availableCharacters", availableCharacters);
         state.put("selectedCharacter", selectedCharacter);

@@ -936,11 +936,20 @@ export interface CharacterState {
     loginPhase?: string;
     agentsDiscovered?: number;
     authenticated?: boolean;
+    /** True after agent auth success on the model (may be true during character selection). */
+    signInComplete?: boolean;
+    /** True when the engine is waiting for character pick (step 4). */
+    awaitingCharacterSelection?: boolean;
     inGame?: boolean;
     agentOptions?: Array<{ value: string; label: string }>;
     availableCharacters?: string[];
     selectedCharacter?: string | null;
     savedLogin?: SavedLoginSnapshot;
+    gatewayResultCode?: number | null;
+    agentAuthResultCode?: number | null;
+    failureReason?: string | null;
+    loginDetailMessage?: string | null;
+    queuePosition?: number | null;
 }
 
 export interface MachineInfo {
@@ -1054,6 +1063,13 @@ export interface MachineStatusEvent {
     requiresInput?: boolean;
     /** Latest measured transport latency from heartbeat RTT, in milliseconds. */
     latencyMs?: number;
+    loginDetailMessage?: string | null;
+    gatewayResultCode?: number | null;
+    agentAuthResultCode?: number | null;
+    failureReason?: string | null;
+    queuePosition?: number | null;
+    signInComplete?: boolean;
+    awaitingCharacterSelection?: boolean;
 }
 
 export const createRSocketService = () => new RSocketService();

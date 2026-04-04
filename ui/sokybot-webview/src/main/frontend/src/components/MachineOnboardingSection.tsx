@@ -26,6 +26,9 @@ const AGENT_WAIT_LOGIN_PHASES = new Set([
     'WAITING_FOR_AGENTS',
     'WAITING_FOR_AGENTS_TIMEOUT',
     'MISSING_AGENT_SERVER',
+    'AGENTS_RECEIVED',
+    'REDIRECTING',
+    'SERVER_INSPECTION',
 ]);
 
 export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> = ({ machineId }) => {
@@ -472,6 +475,11 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
         uxCategory: ctx.uxCategory,
         requiresInput: ctx.requiresInput,
         latencyMs: ctx.latencyMs,
+        loginDetailMessage: ctx.loginDetailMessage,
+        gatewayResultCode: ctx.gatewayResultCode,
+        agentAuthResultCode: ctx.agentAuthResultCode,
+        failureReason: ctx.failureReason,
+        queuePosition: ctx.queuePosition,
     };
 
     return (

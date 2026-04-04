@@ -24,7 +24,7 @@
                                             "type": "Text",
                                             "props": {
                                                 "variant": "small",
-                                                "children": "Configure login target and credentials, then start the bot from Machine Status."
+                                                "children": "Configure gateway, shard, and account here. Starting or stopping the bot is only in Machine Status (sidebar)."
                                             }
                                         }
                                     ]

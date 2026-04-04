@@ -40,6 +40,11 @@ type MachineStatus = {
     fatal?: boolean;
     uxCategory?: 'CONNECT' | 'AGENT' | 'AUTH' | 'CHARACTER' | 'INGAME' | 'ERROR' | null;
     requiresInput?: boolean;
+    loginDetailMessage?: string | null;
+    gatewayResultCode?: number | null;
+    agentAuthResultCode?: number | null;
+    failureReason?: string | null;
+    queuePosition?: number | null;
 };
 
 interface MachineOnboardingPanelProps {
@@ -110,11 +115,58 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
                             {ux.displayDescription}
                         </div>
 
-                        {/* Failure reason */}
-                        {currentMachineStatus.reason && (ux.severity === 'error' || ux.severity === 'warn') && (
-                            <div className="text-[11px] text-destructive/90 bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2 leading-snug">
-                                {currentMachineStatus.reason}
+                        {currentMachineStatus.loginPhase === 'IN_QUEUE'
+                            && typeof currentMachineStatus.queuePosition === 'number' && (
+                            <div className="text-[11px] text-muted-foreground">
+                                Queue position:
+                                {' '}
+                                <span className="font-medium text-foreground tabular-nums">
+                                    {currentMachineStatus.queuePosition}
+                                </span>
                             </div>
+                        )}
+
+                        {/* Derived / stream failure line */}
+                        {(currentMachineStatus.loginDetailMessage || currentMachineStatus.reason)
+                            && (ux.severity === 'error'
+                                || ux.severity === 'warn'
+                                || currentMachineStatus.loginPhase === 'FAILED'
+                                || currentMachineStatus.loginPhase === 'MANUAL_VERIFICATION_REQUIRED') && (
+                            <div className="text-[11px] text-destructive/90 bg-destructive/5 border border-destructive/20 rounded-md px-3 py-2 leading-snug">
+                                {currentMachineStatus.loginDetailMessage || currentMachineStatus.reason}
+                            </div>
+                        )}
+
+                        {(currentMachineStatus.gatewayResultCode != null
+                            || currentMachineStatus.agentAuthResultCode != null
+                            || (currentMachineStatus.failureReason
+                                && String(currentMachineStatus.failureReason).trim().length > 0)) && (
+                            <details className="text-[10px] text-muted-foreground border border-border/60 rounded-md px-2 py-1.5">
+                                <summary className="cursor-pointer select-none text-foreground/80">
+                                    Raw login diagnostics
+                                </summary>
+                                <dl className="mt-1.5 space-y-0.5 font-mono">
+                                    {currentMachineStatus.gatewayResultCode != null && (
+                                        <>
+                                            <dt className="inline text-muted-foreground">gateway</dt>
+                                            <dd className="inline ml-1">{currentMachineStatus.gatewayResultCode}</dd>
+                                        </>
+                                    )}
+                                    {currentMachineStatus.agentAuthResultCode != null && (
+                                        <>
+                                            <dt className="inline text-muted-foreground">agent</dt>
+                                            <dd className="inline ml-1">{currentMachineStatus.agentAuthResultCode}</dd>
+                                        </>
+                                    )}
+                                    {currentMachineStatus.failureReason
+                                        && String(currentMachineStatus.failureReason).trim().length > 0 && (
+                                        <>
+                                            <dt className="block text-muted-foreground mt-1">failureReason</dt>
+                                            <dd className="break-words">{currentMachineStatus.failureReason}</dd>
+                                        </>
+                                    )}
+                                </dl>
+                            </details>
                         )}
 
                         {/* Retry countdown */}

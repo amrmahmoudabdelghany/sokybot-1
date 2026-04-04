@@ -27,6 +27,13 @@ export type OnboardingMachineContext = {
     transition: string | null;
     topic: string | null;
     latencyMs: number | null;
+    loginDetailMessage: string | null;
+    gatewayResultCode: number | null;
+    agentAuthResultCode: number | null;
+    failureReason: string | null;
+    queuePosition: number | null;
+    signInComplete: boolean;
+    awaitingCharacterSelection: boolean;
 };
 
 export type OnboardingMachineEvent =
@@ -51,6 +58,13 @@ export type OnboardingMachineEvent =
         transition?: string;
         topic?: string;
         latencyMs?: number;
+        loginDetailMessage?: string | null;
+        gatewayResultCode?: number | null;
+        agentAuthResultCode?: number | null;
+        failureReason?: string | null;
+        queuePosition?: number | null;
+        signInComplete?: boolean;
+        awaitingCharacterSelection?: boolean;
     }
     | { type: 'CONNECT_BEGIN' }
     | { type: 'CONNECT_END' }
@@ -86,6 +100,37 @@ function mergeFromCharacterState(
             ? data.availableCharacters
             : context.availableCharacters,
         selectedCharacter: data.selectedCharacter ?? context.selectedCharacter ?? null,
+        loginDetailMessage:
+            data.loginDetailMessage !== undefined
+                ? (data.loginDetailMessage === null ? null : String(data.loginDetailMessage))
+                : context.loginDetailMessage,
+        gatewayResultCode:
+            data.gatewayResultCode === undefined
+                ? context.gatewayResultCode
+                : typeof data.gatewayResultCode === 'number'
+                    ? data.gatewayResultCode
+                    : null,
+        agentAuthResultCode:
+            data.agentAuthResultCode === undefined
+                ? context.agentAuthResultCode
+                : typeof data.agentAuthResultCode === 'number'
+                    ? data.agentAuthResultCode
+                    : null,
+        failureReason:
+            data.failureReason !== undefined
+                ? (data.failureReason === null ? null : String(data.failureReason))
+                : context.failureReason,
+        queuePosition:
+            data.queuePosition === undefined
+                ? context.queuePosition
+                : typeof data.queuePosition === 'number'
+                    ? data.queuePosition
+                    : null,
+        signInComplete: data.signInComplete !== undefined ? Boolean(data.signInComplete) : context.signInComplete,
+        awaitingCharacterSelection:
+            data.awaitingCharacterSelection !== undefined
+                ? Boolean(data.awaitingCharacterSelection)
+                : context.awaitingCharacterSelection,
     };
 }
 
@@ -137,6 +182,21 @@ export const machineOnboardingMachine = setup({
                 transition: e.transition !== undefined ? (e.transition ?? null) : context.transition,
                 topic: e.topic !== undefined ? (e.topic ?? null) : context.topic,
                 latencyMs: e.latencyMs !== undefined ? e.latencyMs : context.latencyMs,
+                loginDetailMessage:
+                    e.loginDetailMessage !== undefined ? (e.loginDetailMessage ?? null) : context.loginDetailMessage,
+                gatewayResultCode:
+                    e.gatewayResultCode !== undefined ? e.gatewayResultCode : context.gatewayResultCode,
+                agentAuthResultCode:
+                    e.agentAuthResultCode !== undefined ? e.agentAuthResultCode : context.agentAuthResultCode,
+                failureReason:
+                    e.failureReason !== undefined ? (e.failureReason ?? null) : context.failureReason,
+                queuePosition: e.queuePosition !== undefined ? e.queuePosition : context.queuePosition,
+                signInComplete:
+                    e.signInComplete !== undefined ? Boolean(e.signInComplete) : context.signInComplete,
+                awaitingCharacterSelection:
+                    e.awaitingCharacterSelection !== undefined
+                        ? Boolean(e.awaitingCharacterSelection)
+                        : context.awaitingCharacterSelection,
             };
         }),
         setConnectInFlightOn: assign({ connectInFlight: true }),
@@ -147,22 +207,37 @@ export const machineOnboardingMachine = setup({
             authenticated: false,
             inGame: false,
             connectInFlight: false,
+            loginDetailMessage: null,
+            gatewayResultCode: null,
+            agentAuthResultCode: null,
+            failureReason: null,
+            queuePosition: null,
+            signInComplete: false,
+            awaitingCharacterSelection: false,
         }),
     },
     guards: {
         isConnectPhase: ({ context }) =>
             context.loginPhase === 'DISCONNECTED'
             || context.loginPhase === 'MISSING_GATEWAY'
-            || context.loginPhase === 'CONNECTING_GATEWAY',
+            || context.loginPhase === 'CONNECTING_GATEWAY'
+            || context.loginPhase === 'GATEWAY_CONNECTED',
         isAgentPhase: ({ context }) =>
             context.loginPhase === 'WAITING_FOR_AGENTS'
             || context.loginPhase === 'WAITING_FOR_AGENTS_TIMEOUT'
             || context.loginPhase === 'MISSING_AGENT_SERVER'
-            || context.loginPhase === 'SERVER_INSPECTION',
+            || context.loginPhase === 'SERVER_INSPECTION'
+            || context.loginPhase === 'AGENTS_RECEIVED'
+            || context.loginPhase === 'REDIRECTING',
         isCredentialsPhase: ({ context }) =>
             context.loginPhase === 'MISSING_CREDENTIALS'
             || context.loginPhase === 'LOGIN_SENT'
+            || context.loginPhase === 'LOGIN_SUCCESS'
+            || context.loginPhase === 'AUTH_SENT'
+            || context.loginPhase === 'AGENT_CONNECTED'
             || context.loginPhase === 'WAITING_FOR_PASSCODE'
+            || context.loginPhase === 'WAIT_FOR_CAPTCHA'
+            || context.loginPhase === 'PASSCODE_SUBMITTED'
             || context.loginPhase === 'IN_QUEUE'
             || context.loginPhase === 'RETRY_DELAY'
             || context.loginPhase === 'RETRY_DISABLED'
@@ -199,6 +274,13 @@ export const machineOnboardingMachine = setup({
         transition: null,
         topic: null,
         latencyMs: null,
+        loginDetailMessage: null,
+        gatewayResultCode: null,
+        agentAuthResultCode: null,
+        failureReason: null,
+        queuePosition: null,
+        signInComplete: false,
+        awaitingCharacterSelection: false,
     }),
     states: {
         connect: {},
@@ -246,5 +328,12 @@ export function streamEventToMachineEvent(ev: MachineStatusEvent): OnboardingMac
         transition: ev.transition,
         topic: ev.topic,
         latencyMs: ev.latencyMs,
+        loginDetailMessage: ev.loginDetailMessage,
+        gatewayResultCode: ev.gatewayResultCode,
+        agentAuthResultCode: ev.agentAuthResultCode,
+        failureReason: ev.failureReason,
+        queuePosition: ev.queuePosition,
+        signInComplete: ev.signInComplete,
+        awaitingCharacterSelection: ev.awaitingCharacterSelection,
     };
 }

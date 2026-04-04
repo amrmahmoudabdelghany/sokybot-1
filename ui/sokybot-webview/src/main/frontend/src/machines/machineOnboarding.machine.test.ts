@@ -42,6 +42,13 @@ describe('machineOnboardingMachine', () => {
             transition: null,
             topic: null,
             latencyMs: null,
+            loginDetailMessage: null,
+            gatewayResultCode: null,
+            agentAuthResultCode: null,
+            failureReason: null,
+            queuePosition: null,
+            signInComplete: false,
+            awaitingCharacterSelection: false,
         };
         expect(showConnectCard(ctx)).toBe(true);
         expect(showConnectCard({ ...ctx, connected: true })).toBe(false);
@@ -69,6 +76,13 @@ describe('machineOnboardingMachine', () => {
             transition: null,
             topic: null,
             latencyMs: null,
+            loginDetailMessage: null,
+            gatewayResultCode: null,
+            agentAuthResultCode: null,
+            failureReason: null,
+            queuePosition: null,
+            signInComplete: false,
+            awaitingCharacterSelection: false,
         };
         expect(showAgentServerCard(ctx)).toBe(true);
     });
