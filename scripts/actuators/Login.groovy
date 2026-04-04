@@ -1326,6 +1326,37 @@ class Login extends BaseActuator {
         return PASSCODE_USER_INPUT_TIMEOUT_MS
     }
 
+    private static final String DISPATCHER_IMPL_CLASS_NAME = 'org.sokybot.engine.core.dispatcher.DispatcherImpl'
+
+    /**
+     * Resolves {@code IProxyConnection} for server sends when {@code IDispatcher} / {@code IWorkflowContext}
+     * interface dispatch is broken (e.g. OSGi {@code AbstractMethodError}). Uses the concrete dispatcher field last.
+     */
+    private Object resolveWorkflowProxyConnection(def ctx, def disp) {
+        try {
+            def p = ctx?.getProxyConnection()
+            if (p != null) {
+                return p
+            }
+        } catch (Throwable ignored) {
+            // Skewed IWorkflowContext vs runtime class
+        }
+        if (disp == null) {
+            return null
+        }
+        try {
+            def cls = disp.getClass()
+            if (DISPATCHER_IMPL_CLASS_NAME == cls.getName()) {
+                def f = cls.getDeclaredField('proxyConnection')
+                f.setAccessible(true)
+                return f.get(disp)
+            }
+        } catch (Throwable e) {
+            log.debug("Could not read proxyConnection from dispatcher: {}", e.getMessage())
+        }
+        return null
+    }
+
     /**
      * Sends a server-bound workflow packet. When {@code DISPATCHER_DYNAMIC_PACKET_API_OK} is false (e.g. OSGi
      * {@code AbstractMethodError} on {@code IDispatcher}), uses only {@code IProxyConnection} — never the broken dispatcher.
@@ -1342,18 +1373,27 @@ class Login extends BaseActuator {
         }
         if (DISPATCHER_DYNAMIC_PACKET_API_OK.get() == Boolean.FALSE) {
             try {
-                def proxy = ctx?.getProxyConnection()
+                def proxy = resolveWorkflowProxyConnection(ctx, disp)
                 if (proxy != null) {
                     proxy.sendToServer(pkt)
                     return true
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 log.warn("Proxy sendToServer failed while dispatcher API disabled: {}", e.getMessage())
             }
             log.error("SEVERE: Dispatcher packet API disabled and no proxy; cannot send server packet")
             return false
         }
         if (disp == null) {
+            try {
+                def proxy = resolveWorkflowProxyConnection(ctx, null)
+                if (proxy != null) {
+                    proxy.sendToServer(pkt)
+                    return true
+                }
+            } catch (Throwable e) {
+                log.warn("Proxy sendToServer failed (no dispatcher): {}", e.getMessage())
+            }
             log.error("SEVERE: No dispatcher and no proxy; cannot send server packet")
             return false
         }
@@ -1365,12 +1405,12 @@ class Login extends BaseActuator {
                 DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
                 logDispatcherPacketApiFirstFailure(disp, t)
                 try {
-                    def proxy = ctx?.getProxyConnection()
+                    def proxy = resolveWorkflowProxyConnection(ctx, disp)
                     if (proxy != null) {
                         proxy.sendToServer(pkt)
                         return true
                     }
-                } catch (Exception e) {
+                } catch (Throwable e) {
                     log.warn("Proxy fallback after dispatcher failure: {}", e.getMessage())
                 }
                 log.error("SEVERE: Dispatcher failed and proxy unavailable; cannot send server packet")
@@ -1465,7 +1505,7 @@ class Login extends BaseActuator {
                         .packetSource(NetworkPeer.BOT)
                         .build()
                 try {
-                    def proxy = ctx?.getProxyConnection()
+                    def proxy = resolveWorkflowProxyConnection(ctx, null)
                     if (proxy != null) {
                         proxy.sendToServer(agentPkt)
                     } else {

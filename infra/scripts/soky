@@ -126,12 +126,112 @@ is_in_docker() {
     [ -f /.dockerenv ]
 }
 
-# Extra args for mvn/mvnw when host ~/.m2 is mounted at /var/maven/.m2 (see docker-compose.yml).
-maven_repo_local_args() {
+# Effective local Maven repository path (same rules as -Dmaven.repo.local for this project).
+get_maven_local_repo() {
     if [ -n "${SOKY_MAVEN_REPO_LOCAL:-}" ]; then
-        echo "-Dmaven.repo.local=${SOKY_MAVEN_REPO_LOCAL}"
+        printf '%s' "${SOKY_MAVEN_REPO_LOCAL}"
     elif [ -d "/var/maven/.m2/repository" ]; then
-        echo "-Dmaven.repo.local=/var/maven/.m2/repository"
+        printf '%s' "/var/maven/.m2/repository"
+    else
+        printf '%s' "${HOME}/.m2/repository"
+    fi
+}
+
+# Extra args for mvn/mvnw — must match get_maven_local_repo() for writable checks.
+maven_repo_local_args() {
+    local repo
+    repo=$(get_maven_local_repo)
+    if [ -n "$repo" ]; then
+        echo "-Dmaven.repo.local=${repo}"
+    fi
+}
+
+# True if $KARAF_DIST/system/org/sokybot exists and is non-empty.
+validate_karaf_system_sokybot_non_empty() {
+    local d="$KARAF_DIST/system/org/sokybot"
+    [ -d "$d" ] && [ -n "$(ls -A "$d" 2>/dev/null)" ]
+}
+
+# Docker-only Karaf boot pipeline (Option C): validate paths, deprecate unsafe FRESH_OSGI,
+# optional Maven rebuild (fail-fast), validate system/org/sokybot, optional chown, clear cache, pre-Karaf guard.
+apply_docker_karaf_boot_pipeline() {
+    if ! is_in_docker; then
+        return 0
+    fi
+
+    : "${KARAF_DIST:?KARAF_DIST is not set}"
+    : "${KARAF_DATA:?KARAF_DATA is not set}"
+
+    if [ ! -d "$KARAF_DIST" ]; then
+        log_error "KARAF_DIST directory missing: $KARAF_DIST"
+        exit 1
+    fi
+    mkdir -p "$KARAF_DATA"
+    if [ ! -d "$KARAF_DATA" ]; then
+        log_error "KARAF_DATA directory missing after mkdir: $KARAF_DATA"
+        exit 1
+    fi
+
+    local rebuild_ran=0
+
+    if [ "${SOKY_KARAF_FRESH_OSGI_ON_START:-}" = "1" ] && [ "${SOKY_KARAF_REBUILD_ASSEMBLY_ON_START:-}" != "1" ]; then
+        log_error "SOKY_KARAF_FRESH_OSGI_ON_START=1 is deprecated and unsafe: it used to remove system bundles without repopulating the assembly."
+        log_error "Use SOKY_KARAF_CLEAR_CACHE_ON_START=1 for data/cache only, or SOKY_KARAF_REBUILD_ASSEMBLY_ON_START=1 to run Maven and repopulate infra/sokybot-dist (slow, exits on failure)."
+        exit 2
+    fi
+
+    if [ "${SOKY_KARAF_REBUILD_ASSEMBLY_ON_START:-}" = "1" ]; then
+        rebuild_ran=1
+        local m2
+        m2=$(get_maven_local_repo)
+        mkdir -p "$m2" || true
+        if ! touch "$m2/.soky_m2_write_test" 2>/dev/null; then
+            log_error "Maven local repository is not writable: $m2 (check Docker ~/.m2 -> /var/maven/.m2 mount and permissions)."
+            exit 1
+        fi
+        rm -f "$m2/.soky_m2_write_test"
+
+        if [ ! -d "$m2/org/apache/karaf" ]; then
+            log_warn "Maven local repo looks cold (no org/apache/karaf under $m2). This rebuild may download many dependencies."
+        fi
+
+        if [ ! -f "$ROOT_DIR/mvnw" ]; then
+            log_error "Maven wrapper not found: $ROOT_DIR/mvnw"
+            exit 1
+        fi
+
+        log_info "SOKY_KARAF_REBUILD_ASSEMBLY_ON_START=1: running Maven (install infra/sokybot-dist -am) from $ROOT_DIR ..."
+        local _mra
+        _mra=$(maven_repo_local_args)
+        if ! (
+            cd "$ROOT_DIR" && ./mvnw -B install -pl infra/sokybot-dist -am -P fast -DskipTests $_mra
+        ); then
+            log_error "Maven assembly rebuild failed; halting boot (Karaf will not start)."
+            exit 1
+        fi
+
+        if ! validate_karaf_system_sokybot_non_empty; then
+            log_error "Maven succeeded but $KARAF_DIST/system/org/sokybot is empty or missing. Assembly may be misconfigured."
+            exit 1
+        fi
+
+        if [ "$(id -u)" = "0" ] && [ -n "${KARAF_USER:-}" ]; then
+            log_info "Applying chown -R $KARAF_USER to system/org/sokybot and KARAF_DATA (KARAF_USER set, running as root)."
+            chown -R "$KARAF_USER" "$KARAF_DIST/system/org/sokybot" "$KARAF_DATA" 2>/dev/null || \
+                log_warn "chown failed; if Karaf runs as a different user, fix ownership manually."
+        fi
+    fi
+
+    if [ "${SOKY_KARAF_CLEAR_CACHE_ON_START:-}" = "1" ]; then
+        log_info "SOKY_KARAF_CLEAR_CACHE_ON_START=1 (Docker): clearing $KARAF_DATA/cache"
+        rm -rf "$KARAF_DATA/cache"
+    fi
+
+    if [ "$rebuild_ran" != "1" ]; then
+        if ! validate_karaf_system_sokybot_non_empty; then
+            log_error "Karaf assembly system/org/sokybot is missing or empty. Set SOKY_KARAF_REBUILD_ASSEMBLY_ON_START=1 once to repopulate, or run on the host: soky build backend --fast"
+            exit 1
+        fi
     fi
 }
 
@@ -208,8 +308,12 @@ check_docker_transparency() {
 
 cmd_backend_start() {
     check_karaf_dist_or_build
-    check_and_clear_stale_cache
-    
+    if is_in_docker; then
+        apply_docker_karaf_boot_pipeline
+    else
+        check_and_clear_stale_cache
+    fi
+
     local FOREGROUND=false
     local WATCH=false
     for arg in "$@"; do

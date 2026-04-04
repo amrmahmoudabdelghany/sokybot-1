@@ -21,6 +21,14 @@ services:
       - SOKY_WEBVIEW_URL=http://sokybot.local
       - KARAF_DEBUG=true
       - SOKYBOT_DB_PATH=/app/data/db
+      # Clear Karaf data/cache on every container start (cheap; avoids ghost SNAPSHOT / OSGi skew after Portainer restart).
+      - SOKY_KARAF_CLEAR_CACHE_ON_START=${SOKY_KARAF_CLEAR_CACHE_ON_START:-1}
+      # Optional: run Maven to repopulate target/assembly (slow; fail-fast; use temporarily after a broken/empty system/org/sokybot).
+      - SOKY_KARAF_REBUILD_ASSEMBLY_ON_START=${SOKY_KARAF_REBUILD_ASSEMBLY_ON_START:-1}
+      # Deprecated: if 1 without REBUILD_ASSEMBLY, backend start exits 2. Prefer CLEAR_CACHE + REBUILD_ASSEMBLY.
+      - SOKY_KARAF_FRESH_OSGI_ON_START=${SOKY_KARAF_FRESH_OSGI_ON_START:-}
+      # Optional: when rebuild runs as root and Karaf runs as another user (chown system/org/sokybot and KARAF_DATA).
+      - KARAF_USER=${KARAF_USER:-}
       # In-container inotify on bind mounts is unreliable; host: `soky backend watch-host`. Set to 1 to enable `backend start --watch` inside Docker.
       - SOKY_JAR_WATCH_IN_CONTAINER=${SOKY_JAR_WATCH_IN_CONTAINER:-}
     command: ./infra/scripts/soky backend start --foreground
