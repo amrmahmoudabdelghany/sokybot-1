@@ -6,7 +6,7 @@ import { GatewayConnectCard } from './GatewayConnectCard';
 import { AgentServerCard } from './AgentServerCard';
 import { CredentialsCard } from './CredentialsCard';
 import { CharacterSelectionCard } from './CharacterSelectionCard';
-import { mapPhaseToUX, deriveStepStates, resolvePhaseToUX } from '../machines/loginPhaseMapping';
+import { deriveStepStates, resolvePhaseToUX } from '../machines/loginPhaseMapping';
 import type { ActionIntent } from '../machines/loginPhaseMapping';
 import type { RetryCountdownState } from '../machines/useRetryCountdown';
 
@@ -56,6 +56,8 @@ interface MachineOnboardingPanelProps {
         payload: Record<string, unknown>,
         startAfterSave?: boolean
     ) => Promise<void>;
+    /** Start/resume bot (machine.start) without mutating saved login payload. */
+    startMachine?: (machineId: string) => Promise<void>;
     abortLogin: (machineId: string) => Promise<void>;
     /** Retry countdown state from useRetryCountdown. */
     retryCountdown?: RetryCountdownState;
@@ -71,6 +73,7 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
     abortInFlightByMachine,
     isOffline,
     saveLoginPayload,
+    startMachine,
     abortLogin,
     retryCountdown,
 }) => {
@@ -196,6 +199,11 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
                     const handleAction = (intent: ActionIntent) => {
                         if (!selectedMachineId || !intent) return;
                         switch (intent) {
+                            case 'connect_bot':
+                                if (startMachine) {
+                                    void startMachine(selectedMachineId);
+                                }
+                                break;
                             case 'retry_now':
                             case 'check_settings':
                                 // Re-trigger login with current saved payload

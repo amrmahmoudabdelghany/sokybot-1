@@ -29,6 +29,7 @@ export type ActionIntent =
     | 'select_agent'
     | 'choose_character'
     | 'retry_now'
+    | 'connect_bot'
     | 'cancel'
     | 'check_settings'
     | 'acknowledge'
@@ -99,6 +100,16 @@ const PHASE_MAP: Record<string, PhaseEntry> = {
         progressStep: 1,
         severity: 'warn',
         primaryAction: 'open_gateway',
+        secondaryAction: null,
+        isFatal: false,
+    },
+    PENDING_MANUAL_CONNECT: {
+        displayTitle: 'Ready to Connect',
+        displayDescription: 'Settings validated. Click Connect to begin.',
+        authState: 'not_started',
+        progressStep: 1,
+        severity: 'info',
+        primaryAction: 'connect_bot',
         secondaryAction: null,
         isFatal: false,
     },

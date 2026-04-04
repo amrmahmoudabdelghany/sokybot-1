@@ -50,6 +50,18 @@ export const ErrorCode = {
     SERVICE_UNAVAILABLE: 503,
 } as const;
 
+/** Keep aligned with {@link org.sokybot.webview.WebviewProtocolConstants#PROTOCOL_API_VERSION}. */
+export const SOKYBOT_PROTOCOL_API_VERSION = 1;
+
+function getUiBuildId(): string {
+    const id = import.meta.env.VITE_UI_BUILD_ID;
+    return typeof id === 'string' && id.length > 0 ? id : 'dev';
+}
+
+function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 const getRSocketUrl = () => {
     // Check for environment variable override
     const envUrl = (import.meta as any).env.VITE_BACKEND_URL;
@@ -101,9 +113,10 @@ export class RSocketService {
     private readonly queue: QueuedRequest<unknown>[] = [];
     private readonly requestTtlMs = 5000;
     private readonly maxQueueSize = 200;
-    private readonly queueableMethodPrefixes = ['machine.', 'group.', 'extension.', 'fs.', 'system.', 'character.'];
+    private readonly queueableMethodPrefixes = ['machine.', 'group.', 'workspace.', 'extension.', 'fs.', 'system.', 'character.'];
     private readonly activeStreams = new Map<string, () => void>();
     private readonly beforeUnloadHandler = () => this.close();
+    private workspaceBootstrapMode: 'summary' | 'legacy' = 'summary';
 
     connect(): Promise<void> {
         if (this.connectingPromise) return this.connectingPromise;
@@ -121,6 +134,13 @@ export class RSocketService {
                     lifetime: 180000,
                     dataMimeType: 'application/json',
                     metadataMimeType: 'text/plain',
+                    payload: {
+                        data: JSON.stringify({
+                            minProtocolApi: SOKYBOT_PROTOCOL_API_VERSION,
+                            uiBuildId: getUiBuildId(),
+                        }),
+                        metadata: '',
+                    },
                 },
                 transport: new RSocketWebSocketClient({
                     url: getRSocketUrl(),
@@ -509,6 +529,7 @@ export class RSocketService {
     }
 
     private notifyReconnected(): void {
+        this.workspaceBootstrapMode = 'summary';
         this.reconnectListeners.forEach((listener) => listener());
         const entries = Array.from(this.activeStreams.entries());
         this.activeStreams.clear();
@@ -546,6 +567,52 @@ export class RSocketService {
      */
     async getMachines() {
         return this.request<MachineInfo[]>('machine.list');
+    }
+
+    /**
+     * How the last successful workspace bootstrap was loaded (for UX / diagnostics).
+     */
+    getWorkspaceBootstrapMode(): 'summary' | 'legacy' {
+        return this.workspaceBootstrapMode;
+    }
+
+    /**
+     * Single-call bootstrap: groups + machines (preferred over separate list calls).
+     * Retries {@code METHOD_NOT_FOUND} during the startup window (Karaf SCR wiring), then falls back
+     * to {@code group.list} + {@code machine.list} on older backends.
+     */
+    async getWorkspaceSummary(): Promise<WorkspaceSummary> {
+        const deadline = Date.now() + 5000;
+        let lastMethodNotFound: RSocketError | null = null;
+        let attempt = 0;
+        while (Date.now() < deadline) {
+            try {
+                const r = await this.request<WorkspaceSummary>('workspace.summary');
+                this.workspaceBootstrapMode = 'summary';
+                return r;
+            } catch (e) {
+                if (e instanceof RSocketError && e.code === ErrorCode.METHOD_NOT_FOUND) {
+                    lastMethodNotFound = e;
+                    attempt += 1;
+                    await delay(Math.min(600, 80 + attempt * 120));
+                    continue;
+                }
+                throw e;
+            }
+        }
+        try {
+            const [groups, machines] = await Promise.all([this.getGroups(), this.getMachines()]);
+            this.workspaceBootstrapMode = 'legacy';
+            console.debug(
+                'workspace.summary unavailable after startup window; using group.list + machine.list'
+            );
+            return { groups, machines };
+        } catch (e) {
+            if (lastMethodNotFound) {
+                throw lastMethodNotFound;
+            }
+            throw e;
+        }
     }
 
     /**
@@ -747,6 +814,11 @@ export interface GroupInfo {
     machineCount?: number;
 }
 
+export interface WorkspaceSummary {
+    groups: GroupInfo[];
+    machines: MachineInfo[];
+}
+
 export interface GroupDetails {
     name: string;
     version: string;
@@ -784,6 +856,10 @@ export interface SystemInfo {
     version: string;
     protocol: string;
     protocolVersion: string;
+    /** Integer API level; aligns with {@link SOKYBOT_PROTOCOL_API_VERSION}. */
+    protocolApi?: number;
+    /** OSGi bundle version for sokybot-webview (diagnostics). */
+    webviewBundleVersion?: string;
     memory: {
         free: number;
         total: number;
@@ -805,6 +881,8 @@ export interface ExtensionEvent {
 }
 
 export interface MachineStatusEvent {
+    /** e.g. heartbeat, MACHINE_REMOVED */
+    type?: string;
     machineId: string;
     transition?: string;
     connected?: boolean;

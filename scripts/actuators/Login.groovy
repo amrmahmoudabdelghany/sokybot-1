@@ -4,7 +4,14 @@ import org.osgi.service.event.Event
 import org.osgi.service.event.EventAdmin
 import java.nio.charset.Charset
 import org.sokybot.engine.api.RateLimitException
+import org.sokybot.network.NetworkPeer
+import org.sokybot.network.packet.ClientOpcode
+import org.sokybot.network.packet.Encoding
+import org.sokybot.network.packet.MutablePacket
+import groovy.lang.MissingMethodException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 class Login extends BaseActuator {
     private def loginSettingsProvider
@@ -62,7 +69,13 @@ class Login extends BaseActuator {
     private static final String STATE_WAIT_RETRY_DELAY_RECHECK = "WAIT_RETRY_DELAY_RECHECK"
     // Added in later steps; constant reserved up-front.
     private static final String STATE_WAIT_FOR_AGENT_SERVER_CONNECTION = "WAIT_FOR_AGENT_SERVER_CONNECTION"
+    private static final String STATE_CHECK_CONNECTION_ROUTE = "CHECK_CONNECTION_ROUTE"
+    private static final String STATE_PARK_MISSING_PREREQS = "PARK_MISSING_PREREQS"
+    private static final String STATE_PARK_MANUAL_CONNECT = "PARK_MANUAL_CONNECT"
+    private static final String KEY_RUNTIME_LOGIN_SETTINGS = "runtimeLoginSettings"
+    private static final String KEY_UI_LOGIN_PHASE_EVENT_DEDUP = "uiLoginPhaseEventDedup"
     private static final String PHASE_MISSING_GATEWAY = "MISSING_GATEWAY"
+    private static final String PHASE_PENDING_MANUAL_CONNECT = "PENDING_MANUAL_CONNECT"
     private static final String PHASE_MISSING_CREDENTIALS = "MISSING_CREDENTIALS"
     private static final String PHASE_MISSING_AGENT_SERVER = "MISSING_AGENT_SERVER"
     private static final String PHASE_MISSING_CHARACTER_SELECTION = "MISSING_CHARACTER_SELECTION"
@@ -104,6 +117,20 @@ class Login extends BaseActuator {
     private static final String KEY_ERROR_THROTTLE = "loginErrorThrottle"
     private static final long DNS_STICKY_TTL_MS = 60000L
 
+    /** Matches DispatcherImpl agent-request min interval; used only for Groovy 0x6101 fallback. */
+    private static final long AGENT_REQUEST_MIN_INTERVAL_MS = 10_000L
+    /** Workflow persistent keys: per machine (IWorkflowContext), not script statics. */
+    private static final String KEY_FALLBACK_AGENT_REQUEST_LAST_MS = "loginFallbackAgentRequestLastMs"
+    private static final String KEY_FALLBACK_AGENT_COLD_BYPASS_USED = "loginFallbackAgentColdBypassUsed"
+
+    /**
+     * Resilience for OSGi/API skew: null = unknown, true = use {@code disp.send*} dynamic calls,
+     * false = use script packet fallbacks until JVM restart or script reload (new script class).
+     * Ops: refresh {@code sokybot-engine} and {@code sokybot-engine-api} together; script fallback masks stale bundles.
+     */
+    private static final AtomicReference<Boolean> DISPATCHER_DYNAMIC_PACKET_API_OK = new AtomicReference<>(null)
+    private static final AtomicBoolean LOGGED_DISPATCHER_PACKET_API_FAILURE = new AtomicBoolean(false)
+
     /** OSGi Event topics reject {@code '.'} in segments (machine ids are {@code Group.Machine}). */
     private static String osgiEventTopicSeg(String s) {
         if (s == null || s.isEmpty()) return '_'
@@ -123,37 +150,46 @@ class Login extends BaseActuator {
             return
         }
 
+        try {
+            settingsProvider.subscribe({ __ ->
+                try {
+                    if (context?.getPersistentData() != null) {
+                        context.getPersistentData().remove(KEY_RUNTIME_LOGIN_SETTINGS)
+                    }
+                } catch (Exception ignored) {
+                }
+            })
+        } catch (Exception e) {
+            log.warn("Login: could not subscribe to login settings changes: {}", e.getMessage())
+        }
+
         def cycle = new CycleDefinitionBuilder()
                 .name("login-cycle")
                 .priority(200)
                 .entryState(STATE_CHECK_CONNECTION)
                 .entryGuard({ ctx ->
                     boolean explicitConnect = Boolean.TRUE.equals(ctx.getPersistentData().get("explicitConnectRequested"))
-                    def settings = resolveRuntimeSettings(ctx, settingsProvider, explicitConnect)
+                    if (explicitConnect) {
+                        resolveRuntimeSettings(ctx, settingsProvider, true)
+                    }
+                    def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
                     def loginState = ctx.getGameModel()?.getLoginState()
-                    
-                    log.info("Login-cycle entryGuard: machine={}, explicitConnect={}, hasSettings={}, targetGateway='{}'", 
+
+                    log.info("Login-cycle entryGuard: machine={}, explicitConnect={}, hasSettings={}, targetGateway='{}'",
                         ctx.getMachineName(), explicitConnect, settings != null, settings?.targetGateway)
 
-                    if (settings == null || parseGateway(String.valueOf(settings?.targetGateway ?: "")) == null) {
-                        def gw = String.valueOf(settings?.targetGateway ?: "")
-                        log.warn("Login-cycle entryGuard FAILED: Missing or invalid gateway '{}' for machine {}", gw, ctx.getMachineName())
-                        emitEnginePhase(ctx, PHASE_MISSING_GATEWAY, "MissingRequirement", null)
+                    if (isHalted(ctx, loginState) && !explicitConnect) {
+                        log.info("Login-cycle entryGuard: halted until explicit connect machine={}", ctx.getMachineName())
                         return false
                     }
-                    
-                    boolean result = settings != null &&
-                            (toBool(settings?.autoLogin, false) || explicitConnect) &&
-                            !isHalted(ctx, loginState)
-                            
-                    log.info("Login-cycle entryGuard result: {} (autoLogin={}, explicitConnect={}, isHalted={})", 
-                        result, toBool(settings?.autoLogin, false), explicitConnect, isHalted(ctx, loginState))
-                        
-                    return result
+                    return true
                 })
                 .entryGuard({ ctx ->
                     boolean explicitConnect = Boolean.TRUE.equals(ctx.getPersistentData().get("explicitConnectRequested"))
-                    def settings = resolveRuntimeSettings(ctx, settingsProvider, explicitConnect)
+                    if (explicitConnect) {
+                        resolveRuntimeSettings(ctx, settingsProvider, true)
+                    }
+                    def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
                     boolean haltedByCredential = Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_LOGIN_HALTED_CREDENTIAL))
                     boolean waitingForExplicitResume = Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_USER_RESUME_REQUIRED))
                     if (waitingForExplicitResume && !explicitConnect) {
@@ -166,12 +202,13 @@ class Login extends BaseActuator {
                                 [interactive: true, waitUntil: readInteractiveWaitUntil(ctx)])
                         return false
                     }
+                    if (haltedByCredential && !explicitConnect) {
+                        return false
+                    }
                     boolean result = settings != null &&
-                            (toBool(settings?.autoLogin, false) || explicitConnect) &&
                             !requiresManualVerification(loginState) &&
                             !isAuthenticated(loginState) &&
-                            !isLoggedIn(ctx) &&
-                            !haltedByCredential
+                            !isLoggedIn(ctx)
                     if (!result) {
                         logInfoCtx(ctx, "Login entry guard FAILED: settings={} autoLogin={} explicitConnect={} requiresVerification={} isAuthenticated={} isLoggedIn={} haltedByCredential={}",
                                 settings != null, toBool(settings?.autoLogin, false), explicitConnect,
@@ -195,8 +232,6 @@ class Login extends BaseActuator {
                             def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
                             def gateway = resolveGatewayForAttempt(ctx, String.valueOf(settings?.targetGateway ?: ""))
                             if (gateway != null) {
-                                beginAttemptSnapshot(ctx, settings)
-                                emitEnginePhase(ctx, "CONNECTING_GATEWAY", "Connecting", null)
                                 ctx.getPersistentData().put("gatewayHost", gateway.host)
                                 ctx.getPersistentData().put("gatewayPort", gateway.port)
                                 ctx.getPersistentData().put("loginLastGatewayRaw", String.valueOf(settings?.targetGateway ?: ""))
@@ -209,8 +244,30 @@ class Login extends BaseActuator {
                                         String.valueOf(settings?.targetGateway ?: ""))
                             }
                         })
-                        .nextState(STATE_CONNECT_TO_GATEWAY)
+                        .nextState(STATE_CHECK_CONNECTION_ROUTE)
                         .targetState(STATE_POST_CHECK_CONNECTION)
+                })
+                .conditionalState(STATE_CHECK_CONNECTION_ROUTE, { cb ->
+                    cb.when({ ctx ->
+                        def h = ctx.getPersistentData().get("gatewayHost")
+                        h == null || String.valueOf(h).trim().isEmpty()
+                    }, STATE_PARK_MISSING_PREREQS)
+                            .when({ ctx ->
+                        def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
+                        boolean explicitConnect = Boolean.TRUE.equals(ctx.getPersistentData().get("explicitConnectRequested"))
+                        settings != null && !toBool(settings?.autoLogin, false) && !explicitConnect
+                    }, STATE_PARK_MANUAL_CONNECT)
+                            .defaultTo(STATE_CONNECT_TO_GATEWAY)
+                })
+                .exitState(STATE_PARK_MISSING_PREREQS, { eb ->
+                    eb.beforeExit({ ctx ->
+                        emitEnginePhase(ctx, PHASE_MISSING_GATEWAY, "MissingRequirement", null)
+                    })
+                })
+                .exitState(STATE_PARK_MANUAL_CONNECT, { eb ->
+                    eb.beforeExit({ ctx ->
+                        emitEnginePhase(ctx, PHASE_PENDING_MANUAL_CONNECT, "ReadyToConnect", null)
+                    })
                 })
                 .conditionalState(STATE_POST_CHECK_CONNECTION, { cb ->
                     cb.when({ ctx ->
@@ -272,6 +329,10 @@ class Login extends BaseActuator {
                 .state(STATE_CONNECT_TO_GATEWAY, { builder -> builder
                         .guard({ ctx -> ctx.getPersistentData().get("gatewayHost") != null })
                         .action({ ctx ->
+                            def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
+                            if (settings instanceof Map) {
+                                beginAttemptSnapshot(ctx, settings)
+                            }
                             String host = normalizeHostForSocket((String) ctx.getPersistentData().get("gatewayHost"))
                             int port = (int) ctx.getPersistentData().get("gatewayPort")
                             emitEnginePhase(ctx, "CONNECTING_GATEWAY", "Connecting", null)
@@ -307,6 +368,7 @@ class Login extends BaseActuator {
                         .action({ ctx ->
                             ctx.getPersistentData().put(KEY_AGENT_WAIT_TIMED_OUT, false)
                             ctx.getPersistentData().put(KEY_AGENT_LIST_CACHE_AT_MS, System.currentTimeMillis())
+                            emitEnginePhase(ctx, LoginState.Phase.AGENTS_RECEIVED.name(), "AgentsReceived", null)
                             logInfoCtx(ctx, "Agent list received, sending login request")
                         })
                         .nextState(STATE_SEND_LOGIN_REQUEST)
@@ -1050,60 +1112,135 @@ class Login extends BaseActuator {
         return attempt < maxAttempts
     }
 
-    private Map resolveRuntimeSettings(def ctx, def settingsProvider, boolean allowInitialize) {
+    /**
+     * @param fetchFromProvider false: return cached runtime map only (may be null).
+     *                          true: use cache if present; otherwise load from provider.
+     *                          Explicit connect always bypasses cache via buildAndStoreRuntimeSettings.
+     */
+    private Map resolveRuntimeSettings(def ctx, def settingsProvider, boolean fetchFromProvider) {
         boolean explicitConnect = Boolean.TRUE.equals(ctx.getPersistentData().get("explicitConnectRequested"))
-        def existing = ctx.getPersistentData().get("runtimeLoginSettings")
-        if (existing instanceof Map && !explicitConnect) {
+        if (explicitConnect) {
+            return buildAndStoreRuntimeSettings(ctx, settingsProvider, true)
+        }
+        if (!fetchFromProvider) {
+            def existing = ctx.getPersistentData().get(KEY_RUNTIME_LOGIN_SETTINGS)
+            return existing instanceof Map ? existing : null
+        }
+        def existing = ctx.getPersistentData().get(KEY_RUNTIME_LOGIN_SETTINGS)
+        if (existing instanceof Map) {
             return existing
         }
-        if (!allowInitialize) {
-            return null
-        }
+        return buildAndStoreRuntimeSettings(ctx, settingsProvider, false)
+    }
 
-        def raw = settingsProvider?.get()
+    private Map buildAndStoreRuntimeSettings(def ctx, def settingsProvider, boolean explicitSideEffects) {
+        def raw = null
+        try {
+            raw = settingsProvider?.get()
+        } catch (Exception e) {
+            log.warn("Login settings get() failed for machine {}: {}", ctx?.getMachineName(), e.getMessage())
+        }
+        Map snapshot
         if (raw == null) {
-            return null
+            snapshot = emptyRuntimeLoginSettingsSnapshot()
+        } else {
+            snapshot = [
+                    targetGateway    : String.valueOf(raw.getTargetGateway() ?: ""),
+                    username         : String.valueOf(raw.getUsername() ?: ""),
+                    password         : String.valueOf(raw.getPassword() ?: ""),
+                    passcode         : String.valueOf(raw.getPasscode() ?: ""),
+                    targetAgent      : String.valueOf(raw.getTargetAgent() ?: ""),
+                    selectedCharacter: String.valueOf(raw.getSelectedCharacter() ?: ""),
+                    locale           : raw.getLocale(),
+                    autoLogin        : raw.isAutoLogin(),
+                    autoReconnect    : raw.isAutoReconnect(),
+                    retryBaseDelayMs : raw.getRetryBaseDelayMs(),
+                    retryMaxDelayMs  : raw.getRetryMaxDelayMs(),
+                    maxRetryAttempts : raw.getMaxRetryAttempts(),
+                    infiniteRetryMode: raw.isInfiniteRetryMode(),
+                    loginCharset     : resolveSettingField(raw, "loginCharset", "windows-1252"),
+                    agentWaitTimeoutMs: normalizeTimeout("agentWaitTimeoutMs", resolveSettingField(raw, "agentWaitTimeoutMs", String.valueOf(AGENT_WAIT_TIMEOUT_MS)), AGENT_WAIT_TIMEOUT_MS, 5000L, 30000L),
+                    loginResponseTimeoutMs: normalizeTimeout("loginResponseTimeoutMs", resolveSettingField(raw, "loginResponseTimeoutMs", String.valueOf(LOGIN_RESPONSE_TIMEOUT_MS)), LOGIN_RESPONSE_TIMEOUT_MS, 15000L, 30000L),
+                    agentAuthTimeoutMs: normalizeTimeout("agentAuthTimeoutMs", resolveSettingField(raw, "agentAuthTimeoutMs", String.valueOf(AGENT_AUTH_TIMEOUT_MS)), AGENT_AUTH_TIMEOUT_MS, 10000L, 30000L),
+                    passcodeWaitTimeoutMs: normalizeTimeout("passcodeWaitTimeoutMs", resolveSettingField(raw, "passcodeWaitTimeoutMs", String.valueOf(PASSCODE_WAIT_TIMEOUT_MS)), PASSCODE_WAIT_TIMEOUT_MS, 5000L, 120000L),
+                    passcodeUserInputTimeoutMs: normalizeTimeout("passcodeUserInputTimeoutMs", resolveSettingField(raw, "passcodeUserInputTimeoutMs", String.valueOf(PASSCODE_USER_INPUT_TIMEOUT_MS)), PASSCODE_USER_INPUT_TIMEOUT_MS, 5000L, 180000L),
+                    agentRequestMaxRetries: Math.max(0, toInt(resolveSettingField(raw, "agentRequestMaxRetries", "2"), 2)),
+                    agentRequestRetryBackoffMs: normalizeTimeout("agentRequestRetryBackoffMs", resolveSettingField(raw, "agentRequestRetryBackoffMs", "2000"), 2000L, 500L, 60000L),
+                    agentBanBlockDurationMs: normalizeTimeout("agentBanBlockDurationMs", resolveSettingField(raw, "agentBanBlockDurationMs", "300000"), 300000L, 10000L, 3600000L),
+                    selectedCharacterSlot: toInt(resolveSettingField(raw, "selectedCharacterSlot", "-1"), -1),
+                    characterSlotBase: toInt(resolveSettingField(raw, "characterSlotBase", "0"), 0),
+                    characterSelectionStrictMode: toBool(resolveSettingField(raw, "characterSelectionStrictMode", "false"), false),
+                    passcodeStringDetectionEnabled: toBool(resolveSettingField(raw, "passcodeStringDetectionEnabled", "true"), true),
+                    logoutAckTimeoutMs: normalizeTimeout("logoutAckTimeoutMs", resolveSettingField(raw, "logoutAckTimeoutMs", String.valueOf(LOGOUT_ACK_TIMEOUT_MS)), LOGOUT_ACK_TIMEOUT_MS, 500L, 10000L)
+            ]
+            enforceTimeoutHierarchy(snapshot)
         }
-
-        def snapshot = [
-                targetGateway    : String.valueOf(raw.getTargetGateway() ?: ""),
-                username         : String.valueOf(raw.getUsername() ?: ""),
-                password         : String.valueOf(raw.getPassword() ?: ""),
-                passcode         : String.valueOf(raw.getPasscode() ?: ""),
-                targetAgent      : String.valueOf(raw.getTargetAgent() ?: ""),
-                selectedCharacter: String.valueOf(raw.getSelectedCharacter() ?: ""),
-                locale           : raw.getLocale(),
-                autoLogin        : raw.isAutoLogin(),
-                autoReconnect    : raw.isAutoReconnect(),
-                retryBaseDelayMs : raw.getRetryBaseDelayMs(),
-                retryMaxDelayMs  : raw.getRetryMaxDelayMs(),
-                maxRetryAttempts : raw.getMaxRetryAttempts(),
-                infiniteRetryMode: raw.isInfiniteRetryMode(),
-                loginCharset     : resolveSettingField(raw, "loginCharset", "windows-1252"),
-                agentWaitTimeoutMs: normalizeTimeout("agentWaitTimeoutMs", resolveSettingField(raw, "agentWaitTimeoutMs", String.valueOf(AGENT_WAIT_TIMEOUT_MS)), AGENT_WAIT_TIMEOUT_MS, 5000L, 30000L),
-                loginResponseTimeoutMs: normalizeTimeout("loginResponseTimeoutMs", resolveSettingField(raw, "loginResponseTimeoutMs", String.valueOf(LOGIN_RESPONSE_TIMEOUT_MS)), LOGIN_RESPONSE_TIMEOUT_MS, 15000L, 30000L),
-                agentAuthTimeoutMs: normalizeTimeout("agentAuthTimeoutMs", resolveSettingField(raw, "agentAuthTimeoutMs", String.valueOf(AGENT_AUTH_TIMEOUT_MS)), AGENT_AUTH_TIMEOUT_MS, 10000L, 30000L),
-                passcodeWaitTimeoutMs: normalizeTimeout("passcodeWaitTimeoutMs", resolveSettingField(raw, "passcodeWaitTimeoutMs", String.valueOf(PASSCODE_WAIT_TIMEOUT_MS)), PASSCODE_WAIT_TIMEOUT_MS, 5000L, 120000L),
-                passcodeUserInputTimeoutMs: normalizeTimeout("passcodeUserInputTimeoutMs", resolveSettingField(raw, "passcodeUserInputTimeoutMs", String.valueOf(PASSCODE_USER_INPUT_TIMEOUT_MS)), PASSCODE_USER_INPUT_TIMEOUT_MS, 5000L, 180000L),
-                agentRequestMaxRetries: Math.max(0, toInt(resolveSettingField(raw, "agentRequestMaxRetries", "2"), 2)),
-                agentRequestRetryBackoffMs: normalizeTimeout("agentRequestRetryBackoffMs", resolveSettingField(raw, "agentRequestRetryBackoffMs", "2000"), 2000L, 500L, 60000L),
-                agentBanBlockDurationMs: normalizeTimeout("agentBanBlockDurationMs", resolveSettingField(raw, "agentBanBlockDurationMs", "300000"), 300000L, 10000L, 3600000L),
-                selectedCharacterSlot: toInt(resolveSettingField(raw, "selectedCharacterSlot", "-1"), -1),
-                characterSlotBase: toInt(resolveSettingField(raw, "characterSlotBase", "0"), 0),
-                characterSelectionStrictMode: toBool(resolveSettingField(raw, "characterSelectionStrictMode", "false"), false),
-                passcodeStringDetectionEnabled: toBool(resolveSettingField(raw, "passcodeStringDetectionEnabled", "true"), true),
-                logoutAckTimeoutMs: normalizeTimeout("logoutAckTimeoutMs", resolveSettingField(raw, "logoutAckTimeoutMs", String.valueOf(LOGOUT_ACK_TIMEOUT_MS)), LOGOUT_ACK_TIMEOUT_MS, 500L, 10000L)
-        ]
-        enforceTimeoutHierarchy(snapshot)
-        ctx.getPersistentData().put("runtimeLoginSettings", snapshot)
-        if (explicitConnect) {
-            // Force re-emission of the current missing/transition phase after an explicit Connect click.
+        ctx.getPersistentData().put(KEY_RUNTIME_LOGIN_SETTINGS, snapshot)
+        if (explicitSideEffects) {
             ctx.getPersistentData().remove("uiLoginPhase")
+            ctx.getPersistentData().remove(KEY_UI_LOGIN_PHASE_EVENT_DEDUP)
             ctx.getPersistentData().remove(KEY_LOGIN_LAST_HALT_SIGNATURE)
             ctx.getPersistentData().remove(KEY_USER_RESUME_REQUIRED)
+            ctx.getPersistentData().remove(KEY_LOGIN_HALTED_CREDENTIAL)
+            try {
+                def ls = ctx?.getGameModel()?.getLoginState()
+                if (ls != null && ls.getPhase() == LoginState.Phase.FAILED) {
+                    ls.setPhase(LoginState.Phase.DISCONNECTED)
+                    ls.setFailureReason(null)
+                }
+            } catch (Exception ignored) {
+            }
             log.info("Refreshed runtime login settings for explicit connect on machine {}", ctx.getMachineName())
         }
         return snapshot
+    }
+
+    private Map emptyRuntimeLoginSettingsSnapshot() {
+        Map snap = [
+                targetGateway    : "",
+                username         : "",
+                password         : "",
+                passcode         : "",
+                targetAgent      : "",
+                selectedCharacter: "",
+                locale           : null,
+                autoLogin        : false,
+                autoReconnect    : false,
+                retryBaseDelayMs : 5000,
+                retryMaxDelayMs  : 60000,
+                maxRetryAttempts : 0,
+                infiniteRetryMode: true,
+                loginCharset     : "windows-1252",
+                agentWaitTimeoutMs: AGENT_WAIT_TIMEOUT_MS,
+                loginResponseTimeoutMs: LOGIN_RESPONSE_TIMEOUT_MS,
+                agentAuthTimeoutMs: AGENT_AUTH_TIMEOUT_MS,
+                passcodeWaitTimeoutMs: PASSCODE_WAIT_TIMEOUT_MS,
+                passcodeUserInputTimeoutMs: PASSCODE_USER_INPUT_TIMEOUT_MS,
+                agentRequestMaxRetries: 2,
+                agentRequestRetryBackoffMs: 2000L,
+                agentBanBlockDurationMs: 300000L,
+                selectedCharacterSlot: -1,
+                characterSlotBase: 0,
+                characterSelectionStrictMode: false,
+                passcodeStringDetectionEnabled: true,
+                logoutAckTimeoutMs: LOGOUT_ACK_TIMEOUT_MS
+        ]
+        enforceTimeoutHierarchy(snap)
+        return snap
+    }
+
+    private boolean isHalted(def ctx, def loginState) {
+        if (Boolean.TRUE.equals(ctx?.getPersistentData()?.get(KEY_LOGIN_HALTED_CREDENTIAL))) {
+            return true
+        }
+        try {
+            def p = loginState?.getPhase()
+            if (p == LoginState.Phase.FAILED) {
+                return true
+            }
+        } catch (Exception ignored) {
+        }
+        return false
     }
 
     private String buildHaltSignature(def ctx, def loginState, String failureClass) {
@@ -1157,7 +1294,11 @@ class Login extends BaseActuator {
         long perAttempt = (snapshot?.agentWaitTimeoutMs instanceof Number) ? ((Number) snapshot.agentWaitTimeoutMs).longValue() : AGENT_WAIT_TIMEOUT_MS
         long totalBudget = perAttempt * (retries + 1L) + (backoff * retries)
         if (totalBudget > parent) {
-            int maxRetries = (int) Math.max(0L, ((parent - perAttempt) / Math.max(1L, perAttempt + backoff)))
+            long divisor = Math.max(1L, perAttempt + backoff)
+            long headroom = parent - perAttempt
+            // Groovy '/' can yield BigDecimal and break Math.max(long, ?); use integer division.
+            long computed = headroom > 0L ? headroom.intdiv(divisor) : 0L
+            int maxRetries = (int) Math.max(0L, computed)
             if (maxRetries < retries) {
                 snapshot.agentRequestMaxRetries = maxRetries
                 log.warn("Adjusted agentRequestMaxRetries from {} to {} to fit loginResponseTimeoutMs budget", retries, maxRetries)
@@ -1185,6 +1326,121 @@ class Login extends BaseActuator {
         return PASSCODE_USER_INPUT_TIMEOUT_MS
     }
 
+    /**
+     * Sends a server-bound workflow packet. When {@code DISPATCHER_DYNAMIC_PACKET_API_OK} is false (e.g. OSGi
+     * {@code AbstractMethodError} on {@code IDispatcher}), uses only {@code IProxyConnection} — never the broken dispatcher.
+     *
+     * @return true if the packet was sent; false if nothing was sent (caller should treat as failure)
+     */
+    private boolean sendWorkflowServerPacket(def ctx, MutablePacket pkt) {
+        def disp = ctx != null ? ctx.getDispatcher() : null
+        if (disp == null) {
+            try {
+                disp = context?.getDispatcher()
+            } catch (Exception ignored) {
+            }
+        }
+        if (DISPATCHER_DYNAMIC_PACKET_API_OK.get() == Boolean.FALSE) {
+            try {
+                def proxy = ctx?.getProxyConnection()
+                if (proxy != null) {
+                    proxy.sendToServer(pkt)
+                    return true
+                }
+            } catch (Exception e) {
+                log.warn("Proxy sendToServer failed while dispatcher API disabled: {}", e.getMessage())
+            }
+            log.error("SEVERE: Dispatcher packet API disabled and no proxy; cannot send server packet")
+            return false
+        }
+        if (disp == null) {
+            log.error("SEVERE: No dispatcher and no proxy; cannot send server packet")
+            return false
+        }
+        try {
+            disp.sendToServer(pkt)
+            return true
+        } catch (Throwable t) {
+            if (isDispatcherPacketApiChainFailure(t)) {
+                DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
+                logDispatcherPacketApiFirstFailure(disp, t)
+                try {
+                    def proxy = ctx?.getProxyConnection()
+                    if (proxy != null) {
+                        proxy.sendToServer(pkt)
+                        return true
+                    }
+                } catch (Exception e) {
+                    log.warn("Proxy fallback after dispatcher failure: {}", e.getMessage())
+                }
+                log.error("SEVERE: Dispatcher failed and proxy unavailable; cannot send server packet")
+                return false
+            }
+            if (t instanceof Error && !(t instanceof Exception)) {
+                throw (Error) t
+            }
+            if (t instanceof Exception) {
+                throw (Exception) t
+            }
+            throw new RuntimeException(t)
+        }
+    }
+
+    private static boolean isDispatcherPacketApiChainFailure(Throwable t) {
+        for (Throwable c = t; c != null; c = c.getCause()) {
+            if (c instanceof MissingMethodException) return true
+            if (c instanceof AbstractMethodError) return true
+            if (c instanceof NoSuchMethodError) return true
+            if (c instanceof IncompatibleClassChangeError) return true
+        }
+        return false
+    }
+
+    private void logDispatcherPacketApiFirstFailure(def disp, Throwable t) {
+        if (LOGGED_DISPATCHER_PACKET_API_FAILURE.compareAndSet(false, true)) {
+            String cls = disp != null ? String.valueOf(disp.getClass().getName()) : "null"
+            String head = "First failure detected; using raw packet fallbacks until JVM restart or script reload (receiver=" + cls + ")"
+            if (t != null) {
+                log.error(head + ": " + t.getMessage(), t)
+            } else {
+                log.error(head)
+            }
+        }
+    }
+
+    /**
+     * 0x6101 via sendToServer with DispatcherImpl-equivalent spacing; state in workflow persistent data (per machine).
+     */
+    private boolean sendAgentRequestFallback(def ctx, def settings, boolean allowBypass) {
+        long now = System.currentTimeMillis()
+        def pd = ctx?.getPersistentData()
+        if (pd == null) {
+            log.error("SEVERE: Cannot enforce agent-request rate limit (no persistent data); skipping 0x6101 fallback send")
+            return false
+        }
+        long last = (pd.get(KEY_FALLBACK_AGENT_REQUEST_LAST_MS) instanceof Number)
+                ? ((Number) pd.get(KEY_FALLBACK_AGENT_REQUEST_LAST_MS)).longValue() : 0L
+        boolean bypass = allowBypass && !Boolean.TRUE.equals(pd.get(KEY_FALLBACK_AGENT_COLD_BYPASS_USED))
+        if (!bypass && last > 0L && (now - last) < AGENT_REQUEST_MIN_INTERVAL_MS) {
+            long left = AGENT_REQUEST_MIN_INTERVAL_MS - (now - last)
+            log.error("SEVERE: Skipping agent list request (fallback rate limit); dispatcher packet API unavailable, {} ms left in interval", left)
+            return false
+        }
+        MutablePacket agentPkt = MutablePacket.getBuilder(0, ClientOpcode.AGENT_REQUEST)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .build()
+        if (!sendWorkflowServerPacket(ctx, agentPkt)) {
+            return false
+        }
+        pd.put(KEY_FALLBACK_AGENT_REQUEST_LAST_MS, now)
+        if (bypass) {
+            pd.put(KEY_FALLBACK_AGENT_COLD_BYPASS_USED, Boolean.TRUE)
+        }
+        return true
+    }
+
     private boolean requestAgentList(def ctx, def settings, boolean allowBypass) {
         long now = System.currentTimeMillis()
         long cacheAt = (ctx.getPersistentData().get(KEY_AGENT_LIST_CACHE_AT_MS) instanceof Number)
@@ -1201,12 +1457,51 @@ class Login extends BaseActuator {
             return false
         }
         try {
-            if (ctx?.getDispatcher() != null && ctx.getDispatcher().metaClass?.respondsTo(ctx.getDispatcher(), "sendAgentRequest", Boolean.TYPE)) {
-                boolean sent = ctx.getDispatcher().sendAgentRequest(allowBypass)
-                return sent
+            def disp = ctx?.getDispatcher()
+            if (disp == null) {
+                MutablePacket agentPkt = MutablePacket.getBuilder(0, ClientOpcode.AGENT_REQUEST)
+                        .packetEncoding(Encoding.ENCRYPTED)
+                        .dataEncoding(Encoding.PLAIN)
+                        .packetSource(NetworkPeer.BOT)
+                        .build()
+                try {
+                    def proxy = ctx?.getProxyConnection()
+                    if (proxy != null) {
+                        proxy.sendToServer(agentPkt)
+                    } else {
+                        sendToServer(0, ClientOpcode.AGENT_REQUEST) { it }
+                    }
+                } catch (Exception e) {
+                    log.warn("Agent request (no dispatcher): {}", e.getMessage())
+                    sendToServer(0, ClientOpcode.AGENT_REQUEST) { it }
+                }
+                return true
             }
-            sendToServer(0, ClientOpcode.AGENT_REQUEST) { it }
-            return true
+            Boolean pathOk = DISPATCHER_DYNAMIC_PACKET_API_OK.get()
+            if (pathOk != Boolean.FALSE) {
+                try {
+                    def r = disp.sendAgentRequest(allowBypass)
+                    DISPATCHER_DYNAMIC_PACKET_API_OK.compareAndSet(null, Boolean.TRUE)
+                    return r as boolean
+                } catch (RateLimitException e) {
+                    log.warn("Agent request rate-limited: {}", e.getMessage())
+                    return false
+                } catch (Throwable t) {
+                    if (isDispatcherPacketApiChainFailure(t)) {
+                        DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
+                        logDispatcherPacketApiFirstFailure(disp, t)
+                        return sendAgentRequestFallback(ctx, settings, allowBypass)
+                    }
+                    if (t instanceof Error && !(t instanceof Exception)) {
+                        throw (Error) t
+                    }
+                    if (t instanceof Exception) {
+                        throw (Exception) t
+                    }
+                    throw new RuntimeException(t)
+                }
+            }
+            return sendAgentRequestFallback(ctx, settings, allowBypass)
         } catch (RateLimitException e) {
             log.warn("Agent request rate-limited: {}", e.getMessage())
             return false
@@ -1220,22 +1515,40 @@ class Login extends BaseActuator {
 
     private void sendLoginRequest(def ctx, byte locale, String username, String password, short agentId, String charsetName) {
         boolean legacy = Boolean.parseBoolean(System.getProperty("sokybot.login.serializer.legacy", "false"))
-        if (!legacy && ctx?.getDispatcher() != null && ctx.getDispatcher().metaClass?.respondsTo(ctx.getDispatcher(),
-                "sendLoginRequest", Byte.TYPE, String, String, Integer.TYPE, String)) {
-            ctx.getDispatcher().sendLoginRequest(locale, username, password, ((int) agentId) & 0xFFFF, charsetName)
-            return
+        def disp = ctx?.getDispatcher()
+        if (!legacy && disp != null && DISPATCHER_DYNAMIC_PACKET_API_OK.get() != Boolean.FALSE) {
+            try {
+                disp.sendLoginRequest(locale, username, password, ((int) agentId) & 0xFFFF, charsetName)
+                DISPATCHER_DYNAMIC_PACKET_API_OK.compareAndSet(null, Boolean.TRUE)
+                return
+            } catch (Throwable t) {
+                if (isDispatcherPacketApiChainFailure(t)) {
+                    DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
+                    logDispatcherPacketApiFirstFailure(disp, t)
+                } else {
+                    if (t instanceof Error && !(t instanceof Exception)) throw (Error) t
+                    if (t instanceof Exception) throw (Exception) t
+                    throw new RuntimeException(t)
+                }
+            }
         }
         Charset charset = resolveLoginCharset([loginCharset: charsetName])
         byte[] usernameBytes = username.getBytes(charset)
         byte[] passwordBytes = password.getBytes(charset)
         int packetLen = 7 + usernameBytes.length + passwordBytes.length
-        sendToServer(packetLen, ClientOpcode.LOGIN_REQUEST) { it
-            .put(locale)
-            .putShort((short) usernameBytes.length)
-            .putBytes(usernameBytes)
-            .putShort((short) passwordBytes.length)
-            .putBytes(passwordBytes)
-            .putShort(agentId)
+        MutablePacket loginPkt = MutablePacket.getBuilder(packetLen, ClientOpcode.LOGIN_REQUEST)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .put(locale)
+                .putShort((short) usernameBytes.length)
+                .putBytes(usernameBytes)
+                .putShort((short) passwordBytes.length)
+                .putBytes(passwordBytes)
+                .putShort(agentId)
+                .build()
+        if (!sendWorkflowServerPacket(ctx, loginPkt)) {
+            throw new IllegalStateException("Failed to send login request packet (dispatcher/proxy unavailable)")
         }
     }
 
@@ -1295,8 +1608,32 @@ class Login extends BaseActuator {
         try {
             if (isAgentSessionEstablished(ctx)) {
                 try {
-                    if (ctx?.getDispatcher() != null && ctx.getDispatcher().metaClass?.respondsTo(ctx.getDispatcher(), "sendLogoutRequest")) {
-                        ctx.getDispatcher().sendLogoutRequest()
+                    def d = ctx?.getDispatcher()
+                    if (d != null && DISPATCHER_DYNAMIC_PACKET_API_OK.get() != Boolean.FALSE) {
+                        try {
+                            d.sendLogoutRequest()
+                            DISPATCHER_DYNAMIC_PACKET_API_OK.compareAndSet(null, Boolean.TRUE)
+                        } catch (Throwable t) {
+                            if (isDispatcherPacketApiChainFailure(t)) {
+                                DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
+                                logDispatcherPacketApiFirstFailure(d, t)
+                                MutablePacket lo = MutablePacket.getBuilder(0, ClientOpcode.LOGOUT_REQUEST)
+                                        .packetEncoding(Encoding.ENCRYPTED)
+                                        .dataEncoding(Encoding.PLAIN)
+                                        .packetSource(NetworkPeer.BOT)
+                                        .build()
+                                sendWorkflowServerPacket(ctx, lo)
+                            } else {
+                                log.warn("Logout packet send failed during shutdown: {}", t.getMessage())
+                            }
+                        }
+                    } else if (d != null) {
+                        MutablePacket lo = MutablePacket.getBuilder(0, ClientOpcode.LOGOUT_REQUEST)
+                                .packetEncoding(Encoding.ENCRYPTED)
+                                .dataEncoding(Encoding.PLAIN)
+                                .packetSource(NetworkPeer.BOT)
+                                .build()
+                        sendWorkflowServerPacket(ctx, lo)
                     }
                 } catch (Exception e) {
                     log.warn("Logout packet send failed during shutdown: {}", e.getMessage())
@@ -1814,7 +2151,10 @@ class Login extends BaseActuator {
             if (state != null && reason != null && !reason.isEmpty()) {
                 state.setFailureReason(reason)
             }
-            setLoginStatePhase(state, phase)
+            LoginState.Phase desired = resolveLoginPhaseEnum(phase)
+            if (desired == null || state == null || state.getPhase() != desired) {
+                setLoginStatePhase(state, phase)
+            }
             boolean legacyEmit = Boolean.parseBoolean(System.getProperty("sokybot.engine.phase.legacy", "true"))
             if (!legacyEmit) {
                 return
@@ -1831,10 +2171,12 @@ class Login extends BaseActuator {
                 return
             }
 
-            String previous = String.valueOf(ctx.getPersistentData().getOrDefault("uiLoginPhase", ""))
-            if (phase == previous) {
+            String eventDedupKey = String.valueOf(phase) + "\u0001" + String.valueOf(transition ?: "") + "\u0001" + String.valueOf(reason ?: "")
+            String previousDedup = String.valueOf(ctx.getPersistentData().getOrDefault(KEY_UI_LOGIN_PHASE_EVENT_DEDUP, ""))
+            if (eventDedupKey == previousDedup) {
                 return
             }
+            ctx.getPersistentData().put(KEY_UI_LOGIN_PHASE_EVENT_DEDUP, eventDedupKey)
             ctx.getPersistentData().put("uiLoginPhase", phase)
 
             def props = [
@@ -1857,6 +2199,16 @@ class Login extends BaseActuator {
         }
     }
 
+    /** Resolves engine phase strings to enum values for idempotent model updates (null if not an enum constant). */
+    private LoginState.Phase resolveLoginPhaseEnum(String phase) {
+        if (phase == null) return null
+        try {
+            return LoginState.Phase.valueOf(phase)
+        } catch (IllegalArgumentException ignored) {
+            return null
+        }
+    }
+
     private void setLoginStatePhase(def loginState, String phase) {
         if (loginState == null || phase == null) return
         try {
@@ -1869,6 +2221,8 @@ class Login extends BaseActuator {
             switch (phase) {
                 case PHASE_MISSING_GATEWAY:
                     loginState.setPhase(LoginState.Phase.MISSING_GATEWAY); return
+                case PHASE_PENDING_MANUAL_CONNECT:
+                    loginState.setPhase(LoginState.Phase.PENDING_MANUAL_CONNECT); return
                 case PHASE_MISSING_CREDENTIALS:
                     loginState.setPhase(LoginState.Phase.MISSING_CREDENTIALS); return
                 case PHASE_MISSING_AGENT_SERVER:

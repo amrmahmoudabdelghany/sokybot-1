@@ -129,6 +129,12 @@ function App() {
     );
   }
 
+  const legacyWorkspaceBootstrap =
+    isConnected &&
+    machinesQuery.isSuccess &&
+    groupsQuery.isSuccess &&
+    rsocketService.getWorkspaceBootstrapMode() === 'legacy';
+
   const renderMainContent = () => {
     if (selectedMachineId) {
       return <MachineView machineId={selectedMachineId} />;
@@ -161,6 +167,15 @@ function App() {
     <Layout isBackendConnected={isConnected}>
       <ErrorBoundary>
         <div className="h-full min-h-0 min-w-0 flex flex-col">
+          {legacyWorkspaceBootstrap ? (
+            <div
+              className="shrink-0 border-b border-amber-500/40 bg-amber-500/10 px-3 py-2 text-center text-xs text-amber-100"
+              role="status"
+            >
+              Workspace loaded via legacy API (group.list + machine.list). Deploy an updated sokybot-webview
+              bundle so workspace.summary is available.
+            </div>
+          ) : null}
           {renderMainContent()}
         </div>
       </ErrorBoundary>

@@ -1,6 +1,5 @@
 package org.sokybot.persistence.internal.extraction;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,22 +41,20 @@ public class GameInfoExtractionHandler extends BasePk2ExtractionHandler<GameInfo
             divInfo.local = dto.getDivisionInfo().getLocal();
             
             if (dto.getDivisionInfo().getDivisions() != null) {
-                // dto.getDivisionInfo().getDivisions() is List<DivisionData>
-                // We map to Division entity
                 List<Division> divisionsList = dto.getDivisionInfo().getDivisions().stream()
                     .map(dDto -> {
                         Division div = new Division();
                         div.setName(dDto.getName());
                         if (dDto.getHosts() != null) {
-                             for(String h : dDto.getHosts()) {
-                                 div.addHost(h);
-                             }
+                            for (String h : dDto.getHosts()) {
+                                div.addHost(h);
+                            }
                         }
                         return div;
                     })
                     .collect(Collectors.toList());
-                
-                for(Division d : divisionsList) {
+
+                for (Division d : divisionsList) {
                     divInfo.addDivision(d);
                 }
             }

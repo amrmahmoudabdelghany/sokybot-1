@@ -12,6 +12,9 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
+# Maven cache mount point (compose binds host ~/.m2 here for non-root user)
+RUN mkdir -p /var/maven/.m2
+
 # Expose ports:
 # 8182: Backend API (RSocket)
 # 5005: Java Debug Port

@@ -97,7 +97,7 @@ public class EngineCore implements IEngine, IConnectionListener {
         this.dispatcher = new DispatcherImpl(proxyConnection, machineId);
         this.workflowRegistry = new WorkflowRegistryImpl();
         this.workflowContext = new WorkflowContextImpl(
-                gameModel, dispatcher, groupName, machineName, bundleContext);
+                gameModel, dispatcher, proxyConnection, groupName, machineName, bundleContext);
         this.actionQueue = new ActionQueueImpl();
         this.queueProcessor = new ActionQueueProcessorImpl(actionQueue);
         this.interruptionManager = new InterruptionManager(workflowRegistry);
@@ -449,6 +449,11 @@ public class EngineCore implements IEngine, IConnectionListener {
         if (workflowRegistry.isCycleEnabled("login-cycle")) activities.add("LOGIN");
         if (activities.isEmpty()) activities.add("IDLE");
         return activities;
+    }
+
+    @Override
+    public void wakeWorkflow() {
+        parentExecutor.triggerTransition();
     }
 
     private void publishLifecycle(String eventType) {

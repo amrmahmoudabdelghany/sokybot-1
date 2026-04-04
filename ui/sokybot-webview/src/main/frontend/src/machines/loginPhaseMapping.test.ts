@@ -13,6 +13,7 @@ describe('mapPhaseToUX', () => {
     it.each([
         ['DISCONNECTED', 1, 'neutral', 'not_started', false],
         ['MISSING_GATEWAY', 1, 'warn', 'not_started', false],
+        ['PENDING_MANUAL_CONNECT', 1, 'info', 'not_started', false],
         ['CONNECTING_GATEWAY', 1, 'info', 'not_started', false],
         ['WAITING_FOR_AGENTS', 2, 'info', 'not_started', false],
         ['WAITING_FOR_AGENTS_TIMEOUT', 2, 'warn', 'not_started', false],
@@ -56,6 +57,11 @@ describe('mapPhaseToUX', () => {
         expect(ux.progressStep).toBeLessThanOrEqual(4);
         expect(ux.rawPhase).toBe('SOME_FUTURE_PHASE');
         expect(ux.primaryAction).toBe('check_settings');
+    });
+
+    it('maps PENDING_MANUAL_CONNECT to connect_bot CTA', () => {
+        const ux = mapPhaseToUX('PENDING_MANUAL_CONNECT');
+        expect(ux.primaryAction).toBe('connect_bot');
     });
 
     it('humanizes unknown phase for displayTitle', () => {

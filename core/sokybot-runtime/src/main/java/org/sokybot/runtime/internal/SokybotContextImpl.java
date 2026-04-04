@@ -19,6 +19,7 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.ISokybotContext;
+import org.sokybot.runtime.RuntimeEntityNames;
 import org.sokybot.runtime.internal.domain.GroupInfo;
 import org.sokybot.runtime.internal.persistence.GroupInfoRepository;
 import org.sokybot.runtime.internal.persistence.FileGroupInfoRepository;
@@ -86,6 +87,11 @@ public class SokybotContextImpl implements ISokybotContext {
         try {
             groupInfoRepo.findAll().forEach((groupInfo) -> {
                 try {
+                    if (!RuntimeEntityNames.isValid(groupInfo.getName())) {
+                        log.warn("Skipping persisted group with invalid name '{}' (expected ^[a-zA-Z0-9_-]+$)",
+                                groupInfo.getName());
+                        return;
+                    }
                     check(groupInfo.getName(), groupInfo.getGamePath());
                     IGroupContext groupCtx = groupContextFactory.createGroupContext(groupInfo, bundleContext);
                     this.groups.put(groupInfo.getName(), groupCtx);
@@ -178,6 +184,7 @@ public class SokybotContextImpl implements ISokybotContext {
     private void check(String groupName, String gamePath) throws InvalidGameReferenceException {
         if (groupName == null || groupName.trim().isEmpty())
             throw new IllegalArgumentException("Group name cannot be null or empty");
+        RuntimeEntityNames.validateGroupOrThrow(groupName);
         if (gamePath == null || gamePath.trim().isEmpty())
             throw new IllegalArgumentException("Game path cannot be null or empty");
         if (!SilkroadUtils.isValidSilkroadDirectory(gamePath))

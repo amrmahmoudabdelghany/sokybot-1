@@ -43,7 +43,7 @@ public abstract class BasePk2ExtractionHandler<T, E> implements IPk2ExtractionHa
                 tx.begin();
                 final EntityManager emRef = em; // For lambda capture
                 
-                extractor.extract(driver, new ExtractionListener<T>() {
+                    extractor.extract(driver, new ExtractionListener<T>() {
                     @Override
                     public void onExtracted(T dto) {
                         try {

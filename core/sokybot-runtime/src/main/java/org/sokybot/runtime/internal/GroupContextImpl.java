@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -13,6 +14,7 @@ import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
+import org.sokybot.runtime.RuntimeEntityNames;
 
 import org.sokybot.runtime.internal.domain.GroupInfo;
 import org.sokybot.runtime.internal.domain.MachineInfo;
@@ -55,7 +57,8 @@ public class GroupContextImpl implements IGroupContext {
     private final Object translatorsLock = new Object();
 
     private final Lock lock = new ReentrantLock();
-    private final Map<String, IMachineContext> machines = new HashMap<>();
+    /** Concurrent reads safe with install/remove; install/remove still use {@link #lock} for case-insensitive checks. */
+    private final Map<String, IMachineContext> machines = new ConcurrentHashMap<>();
 
     private IGameDataLookup gameDataLookup;
 
@@ -89,6 +92,11 @@ public class GroupContextImpl implements IGroupContext {
 
                 String machineName = machine.getMachineName();
                 try {
+                    if (!RuntimeEntityNames.isValid(machineName)) {
+                        log.warn("Skipping machine with invalid name '{}' in group {} (expected ^[a-zA-Z0-9_-]+$)",
+                                machineName, groupInfo.getName());
+                        return;
+                    }
                     String existing = findExistingMachineNameIgnoreCase(machineName);
                     if (existing != null) {
                         log.warn("Skipping machine '{}' because '{}' already exists (case-insensitive collision)",
@@ -116,6 +124,10 @@ public class GroupContextImpl implements IGroupContext {
         return MachineContextFactory.createMachineContext(machineInfo, this, bundleContext);
     }
 
+    /**
+     * Snapshot of machines at call time. The backing map is concurrent; iteration is weakly consistent and may
+     * reflect concurrent installs/removes. Do not assume atomicity across multiple reads without external synchronization.
+     */
     @Override
     public IMachineContext[] getMachines() {
         return machines.values().toArray(new IMachineContext[0]);
@@ -133,8 +145,8 @@ public class GroupContextImpl implements IGroupContext {
 
     @Override
     public void installMachine(String name, String... options) {
+        lock.lock();
         try {
-            lock.lock();
             check(name);
 
             MachineInfo info = new MachineInfo(this.groupInfo.getId(), name);
@@ -142,16 +154,23 @@ public class GroupContextImpl implements IGroupContext {
 
             IMachineContext machineCtx = createMachineContext(info);
 
-            machines.put(name, machineCtx);
+            IMachineContext existing = machines.putIfAbsent(name, machineCtx);
+            if (existing != null) {
+                MachineContextFactory.destroyMachineContext(machineCtx);
+                throw new NameUniquenessConstraintViolationException("Machine name must be unique", name);
+            }
 
-            // Save to database
-            machineInfoRepo.save(info);
-
-            publishMachineCreated(machineCtx);
-            log.info("Machine {} installed successfully in group {}", name, groupInfo.getName());
-        } catch (Exception e) {
-            log.error("Failed to install machine: {} in group: {}", name, groupInfo.getName(), e);
-            throw new RuntimeException("Failed to install machine: " + name, e);
+            try {
+                machineInfoRepo.save(info);
+                publishMachineCreated(machineCtx);
+                log.info("Machine {} installed successfully in group {}", name, groupInfo.getName());
+            } catch (Exception e) {
+                if (machines.remove(name, machineCtx)) {
+                    MachineContextFactory.destroyMachineContext(machineCtx);
+                }
+                log.error("Failed to install machine: {} in group: {}", name, groupInfo.getName(), e);
+                throw new RuntimeException("Failed to install machine: " + name, e);
+            }
         } finally {
             lock.unlock();
         }
@@ -166,8 +185,8 @@ public class GroupContextImpl implements IGroupContext {
     public void removeMachine(String name) {
         lock.lock();
         try {
-            IMachineContext machineCtx = machines.remove(name);
-            if (machineCtx != null) {
+            IMachineContext machineCtx = machines.get(name);
+            if (machineCtx != null && machines.remove(name, machineCtx)) {
                 publishMachineDestroyed(machineCtx);
                 MachineContextFactory.destroyMachineContext(machineCtx);
                 machineInfoRepo.findByMachineName(name).ifPresent(machineInfoRepo::delete);
@@ -316,6 +335,7 @@ public class GroupContextImpl implements IGroupContext {
         if (name.isBlank()) {
             throw new IllegalArgumentException("Invalid machine name");
         }
+        RuntimeEntityNames.validateMachineOrThrow(name);
 
         if (machines.containsKey(name)) {
             throw new NameUniquenessConstraintViolationException("Machine name must be unique", name);

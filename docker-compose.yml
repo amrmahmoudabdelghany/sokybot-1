@@ -9,7 +9,8 @@ services:
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
       - .:/app
-      - ~/.m2:/root/.m2
+      # UID 1000 does not use /root; soky passes -Dmaven.repo.local=/var/maven/.m2/repository when present
+      - ~/.m2:/var/maven/.m2
       - "../Cyper Online Official Client:/app/game-client"
     ports:
       - "8182:8182"
@@ -20,7 +21,9 @@ services:
       - SOKY_WEBVIEW_URL=http://sokybot.local
       - KARAF_DEBUG=true
       - SOKYBOT_DB_PATH=/app/data/db
-    command: ./infra/scripts/soky backend start --foreground --watch
+      # In-container inotify on bind mounts is unreliable; host: `soky backend watch-host`. Set to 1 to enable `backend start --watch` inside Docker.
+      - SOKY_JAR_WATCH_IN_CONTAINER=${SOKY_JAR_WATCH_IN_CONTAINER:-}
+    command: ./infra/scripts/soky backend start --foreground
 
   sokybot-webview-ui:
     image: node:20-alpine

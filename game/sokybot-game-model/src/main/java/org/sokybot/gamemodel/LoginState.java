@@ -35,6 +35,8 @@ public class LoginState {
         RETRY_DISABLED,
         RETRY_LIMIT_REACHED,
         MISSING_GATEWAY,
+        /** Settings validated; waiting for user explicit Connect when auto-login is off. */
+        PENDING_MANUAL_CONNECT,
         MISSING_CREDENTIALS,
         MISSING_AGENT_SERVER,
         MISSING_CHARACTER_SELECTION,

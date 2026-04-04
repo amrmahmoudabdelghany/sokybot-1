@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sokybot.webview.api.IRSocketHandler;
 import org.sokybot.webview.api.IRSocketStreamHandler;
+import org.sokybot.webview.handler.WorkspaceSummaryHandler;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
 
@@ -246,5 +247,19 @@ class RSocketHandlerRegistryTest {
                 return Flux.just("data");
             }
         };
+    }
+
+    @Test
+    @DisplayName("workspace.summary handler is invocable when bound (CI contract smoke)")
+    void workspaceSummaryHandlerInvocable() {
+        WorkspaceSummaryHandler handler = new WorkspaceSummaryHandler();
+        registry.bindHandler(handler);
+
+        RSocketRequest request = new RSocketRequest();
+        request.setMethod("workspace.summary");
+
+        StepVerifier.create(registry.handleRequest(request))
+                .assertNext(r -> assertTrue(r.isSuccess()))
+                .verifyComplete();
     }
 }

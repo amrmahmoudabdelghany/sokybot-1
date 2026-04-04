@@ -34,6 +34,13 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId, onC
     const machineIdRef = useRef<string | undefined>(machineId);
     const agentsDiscoveredRef = useRef<number>(0);
 
+    const streamSessionIdRef = useRef(0);
+    const machineStatusRemovedRef = useRef(false);
+    const lastMachineStatusEventAtRef = useRef<number>(Date.now());
+    const machineStatusReconnectAttemptRef = useRef(0);
+    const machineStatusResubscribePendingRef = useRef(false);
+    const [machineStatusStreamEpoch, setMachineStatusStreamEpoch] = useState(0);
+
     useEffect(() => {
         machineIdRef.current = machineId;
     }, [machineId]);
@@ -222,10 +229,49 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId, onC
     // Dedicated machine status stream driven by backend IConnectionListener callbacks.
     useEffect(() => {
         if (!machineId) return;
+
+        const currentSessionId = ++streamSessionIdRef.current;
+        machineStatusRemovedRef.current = false;
+        lastMachineStatusEventAtRef.current = Date.now();
+        machineStatusReconnectAttemptRef.current = 0;
+        machineStatusResubscribePendingRef.current = false;
+
+        if (machineStatusStreamEpoch > 0) {
+            void fetchState({ silent: true });
+        }
+
         const sub = rsocketService.subscribeToMachineStatus(
             machineId,
             (statusEvent: MachineStatusEvent) => {
+                if (streamSessionIdRef.current !== currentSessionId) return;
                 if (!statusEvent || statusEvent.machineId !== machineId) return;
+
+                if (machineStatusRemovedRef.current) {
+                    return;
+                }
+
+                if (statusEvent.type === 'heartbeat') {
+                    lastMachineStatusEventAtRef.current = Date.now();
+                    machineStatusReconnectAttemptRef.current = 0;
+                    return;
+                }
+                if (statusEvent.type === 'MACHINE_REMOVED') {
+                    machineStatusRemovedRef.current = true;
+                    lastMachineStatusEventAtRef.current = Date.now();
+                    setRuntimeState((prev) => ({ ...prev, connected: false }));
+                    onConnectionStateChange?.({
+                        machineId,
+                        connected: false,
+                        authenticated: false,
+                        loginPhase: 'DISCONNECTED',
+                        agentsDiscovered: agentsDiscoveredRef.current
+                    });
+                    return;
+                }
+
+                lastMachineStatusEventAtRef.current = Date.now();
+                machineStatusReconnectAttemptRef.current = 0;
+
                 const nextConnected = Boolean(statusEvent.connected);
                 const nextAuthenticated = Boolean(statusEvent.authenticated);
                 const nextPhase = statusEvent.loginPhase || (nextConnected ? "CONNECTED" : "DISCONNECTED");
@@ -245,12 +291,46 @@ export const CharacterStatus: React.FC<CharacterStatusProps> = ({ machineId, onC
             },
             (err) => console.error("Machine status stream error", err)
         );
+
+        const stalenessId = window.setInterval(() => {
+            if (machineStatusRemovedRef.current || machineStatusResubscribePendingRef.current) {
+                return;
+            }
+            if (Date.now() - lastMachineStatusEventAtRef.current <= 15_000) {
+                return;
+            }
+            machineStatusResubscribePendingRef.current = true;
+            const nextAttempt = machineStatusReconnectAttemptRef.current + 1;
+            machineStatusReconnectAttemptRef.current = Math.min(nextAttempt, 16);
+            const base = Math.min(30_000, 500 * Math.pow(2, Math.max(0, nextAttempt - 1)));
+            const jitter = Math.random() * 2000;
+            window.setTimeout(() => {
+                machineStatusResubscribePendingRef.current = false;
+                if (machineStatusRemovedRef.current) {
+                    return;
+                }
+                setMachineStatusStreamEpoch((e) => e + 1);
+            }, base + jitter);
+        }, 5000);
+
+        const softSyncId = window.setInterval(() => {
+            if (machineStatusRemovedRef.current) {
+                return;
+            }
+            if (Date.now() - lastMachineStatusEventAtRef.current > 15_000) {
+                return;
+            }
+            void fetchState({ silent: true });
+        }, 60_000);
+
         return () => {
+            window.clearInterval(stalenessId);
+            window.clearInterval(softSyncId);
             if (sub && typeof sub.unsubscribe === 'function') {
                 sub.unsubscribe();
             }
         };
-    }, [machineId, onConnectionStateChange]);
+    }, [machineId, onConnectionStateChange, fetchState, machineStatusStreamEpoch]);
 
     const hasCharacter = Boolean(state?.characterName);
     const hpPercent = hasCharacter ? (state!.currentHP / state!.maxHP) * 100 : 0;

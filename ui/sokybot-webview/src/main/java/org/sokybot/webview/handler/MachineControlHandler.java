@@ -11,9 +11,11 @@ import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 import org.sokybot.runtime.ISokybotContext;
+import org.sokybot.runtime.RuntimeEntityNames;
 import org.sokybot.webview.api.dto.MachineActionResultDto;
 import org.sokybot.webview.api.dto.MachineInfoDto;
 import org.sokybot.webview.api.IRSocketHandler;
+import org.sokybot.webview.util.MachineResolver;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
 
@@ -120,6 +122,7 @@ public class MachineControlHandler implements IRSocketHandler {
                 ctx.getEngine().start();
             }
             ctx.getEngine().sendEvent(EngineEvent.CONNECT);
+            ctx.getEngine().wakeWorkflow();
             return Mono.just(RSocketResponse.success(new MachineActionResultDto(alreadyRunning ? "already_running" : "started", machineId)));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));
@@ -147,35 +150,7 @@ public class MachineControlHandler implements IRSocketHandler {
     }
 
     private java.util.Optional<IMachineContext> findMachine(String machineId) {
-        if (sokybotContext != null) {
-            // Try to look up by Group.Machine format
-            int dotIndex = machineId.indexOf('.');
-            if (dotIndex > 0) {
-                String groupName = machineId.substring(0, dotIndex);
-                String machineName = machineId.substring(dotIndex + 1);
-
-                java.util.Optional<IGroupContext> group = sokybotContext.findGroupCtx(groupName);
-                if (group.isPresent()) {
-                    java.util.Optional<IMachineContext> machine = group.get().findMachineCtx(machineName);
-                    if (machine.isPresent()) {
-                        return machine;
-                    }
-                }
-            }
-
-            // Fallback: Search all groups (e.g. if machineId is just the name)
-            for (IGroupContext group : sokybotContext.getGroups()) {
-                java.util.Optional<IMachineContext> machine = group.findMachineCtx(machineId);
-                if (machine.isPresent()) {
-                    return machine;
-                }
-            }
-        }
-
-        if (groupContext != null) {
-            return groupContext.findMachineCtx(machineId);
-        }
-        return java.util.Optional.empty();
+        return MachineResolver.resolve(sokybotContext, groupContext, machineId);
     }
 
     private Mono<RSocketResponse> handleList(RSocketRequest request) {
@@ -222,9 +197,12 @@ public class MachineControlHandler implements IRSocketHandler {
         }
 
         try {
+            RuntimeEntityNames.validateMachineOrThrow(name);
             grpCtx.installMachine(name);
 
             return Mono.just(RSocketResponse.success(new MachineActionResultDto("created", group + "." + name)));
+        } catch (IllegalArgumentException e) {
+            return Mono.just(RSocketResponse.invalidParams(e.getMessage()));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));
         }

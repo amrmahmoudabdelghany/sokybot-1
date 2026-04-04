@@ -4,6 +4,7 @@ import org.sokybot.engine.api.IDispatcher;
 import org.sokybot.engine.api.ServiceUnavailableException;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.proxy.IProxyConnection;
 import org.osgi.framework.BundleContext;
 import org.osgi.util.tracker.ServiceTracker;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ public class WorkflowContextImpl implements IWorkflowContext {
     
     private final IGameModel gameModel;
     private final IDispatcher dispatcher;
+    private final IProxyConnection proxyConnection;
     private final String machineId;
     private final String groupName;
     private final String machineName;
@@ -38,13 +40,16 @@ public class WorkflowContextImpl implements IWorkflowContext {
     private volatile String currentStateName;
     private final Map<Class<?>, ServiceTracker<?, ?>> serviceTrackers = new ConcurrentHashMap<>();
     
-    public WorkflowContextImpl(IGameModel gameModel, IDispatcher dispatcher,
+    public WorkflowContextImpl(IGameModel gameModel, IDispatcher dispatcher, IProxyConnection proxyConnection,
                               String groupName, String machineName, BundleContext bundleContext) {
         if (gameModel == null) {
             throw new IllegalArgumentException("Game model cannot be null");
         }
         if (dispatcher == null) {
             throw new IllegalArgumentException("Dispatcher cannot be null");
+        }
+        if (proxyConnection == null) {
+            throw new IllegalArgumentException("Proxy connection cannot be null");
         }
         if (groupName == null || groupName.trim().isEmpty()) {
             throw new IllegalArgumentException("Group name cannot be null or empty");
@@ -55,6 +60,7 @@ public class WorkflowContextImpl implements IWorkflowContext {
         
         this.gameModel = gameModel;
         this.dispatcher = dispatcher;
+        this.proxyConnection = proxyConnection;
         this.groupName = groupName;
         this.machineName = machineName;
         this.machineId = groupName + "." + machineName;
@@ -70,7 +76,12 @@ public class WorkflowContextImpl implements IWorkflowContext {
     public IDispatcher getDispatcher() {
         return dispatcher;
     }
-    
+
+    @Override
+    public IProxyConnection getProxyConnection() {
+        return proxyConnection;
+    }
+
     @Override
     public String getCurrentStateName() {
         return currentStateName;

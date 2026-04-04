@@ -75,9 +75,10 @@ public class SettingsProviderImpl<T> implements ISettingsProvider<T> {
             
             savedSettings = cloneSettings(currentSettings);
             dirty = false;
-            
+            notifySubscribers();
+
             log.info("Saved settings to {}", settingsFile);
-            
+
         } catch (Exception e) {
             log.error("Failed to save settings to {}", settingsFile, e);
             throw new RuntimeException("Failed to save settings", e);

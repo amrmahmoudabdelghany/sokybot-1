@@ -336,7 +336,9 @@ public class RSocketHandlerRegistry {
 
     private RSocketResponse validateEnvelope(RSocketRequest request) {
         if (request == null) {
-            return RSocketResponse.invalidParams("request is required");
+            return RSocketResponse.error(
+                    RSocketResponse.ErrorCode.INVALID_REQUEST,
+                    "Request or method is null");
         }
         String method = request.getMethod();
         if (method == null || method.trim().isEmpty()) {

@@ -20,20 +20,28 @@ export async function fetchExtensionSchema(
     });
 }
 
+/**
+ * Machines list (deduped). Shares one network request with {@link useGroupsQuery} via
+ * {@code workspace.summary} (with startup retry and legacy {@code group.list}/{@code machine.list} fallback).
+ */
 export function useMachinesQuery(enabled: boolean) {
     return useQuery({
-        queryKey: queryKeys.sokybot.machines(),
-        queryFn: () => rsocketService.getMachines(),
+        queryKey: queryKeys.sokybot.workspaceSummary(),
+        queryFn: () => rsocketService.getWorkspaceSummary(),
         enabled,
-        select: normalizeMachines,
+        select: (data) => normalizeMachines(data.machines),
     });
 }
 
+/**
+ * Groups list. Shares one network request with {@link useMachinesQuery} via {@code workspace.summary}.
+ */
 export function useGroupsQuery(enabled: boolean) {
     return useQuery({
-        queryKey: queryKeys.sokybot.groups(),
-        queryFn: () => rsocketService.getGroups(),
+        queryKey: queryKeys.sokybot.workspaceSummary(),
+        queryFn: () => rsocketService.getWorkspaceSummary(),
         enabled,
+        select: (data) => data.groups,
     });
 }
 
@@ -62,9 +70,9 @@ export function useInvalidateSokybotQueries() {
     const qc = useQueryClient();
     return {
         invalidateMachines: () =>
-            qc.invalidateQueries({ queryKey: queryKeys.sokybot.machines() }),
+            qc.invalidateQueries({ queryKey: queryKeys.sokybot.workspaceSummary() }),
         invalidateGroups: () =>
-            qc.invalidateQueries({ queryKey: queryKeys.sokybot.groups() }),
+            qc.invalidateQueries({ queryKey: queryKeys.sokybot.workspaceSummary() }),
         invalidateExtensionRegistry: () =>
             qc.invalidateQueries({ queryKey: queryKeys.sokybot.extensionRegistry() }),
         invalidateExtensionSchema: (pageId: string, machineId?: string) =>

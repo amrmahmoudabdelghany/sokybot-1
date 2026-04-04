@@ -33,6 +33,8 @@ jobs:
             ${{ runner.os }}-m2-
       
       - name: Build with Maven
+        env:
+          VITE_UI_BUILD_ID: ${{ github.sha }}
         run: ./mvnw clean install -P ci
       
       - name: Generate test reports

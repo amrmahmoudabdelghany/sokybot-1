@@ -126,6 +126,69 @@ is_in_docker() {
     [ -f /.dockerenv ]
 }
 
+# Extra args for mvn/mvnw when host ~/.m2 is mounted at /var/maven/.m2 (see docker-compose.yml).
+maven_repo_local_args() {
+    if [ -n "${SOKY_MAVEN_REPO_LOCAL:-}" ]; then
+        echo "-Dmaven.repo.local=${SOKY_MAVEN_REPO_LOCAL}"
+    elif [ -d "/var/maven/.m2/repository" ]; then
+        echo "-Dmaven.repo.local=/var/maven/.m2/repository"
+    fi
+}
+
+# $1 = absolute path to built bundle JAR. Uses file:///... bundle:update to reduce SNAPSHOT cache skew.
+hot_reload_jar_at_path() {
+    local FILE="$1"
+    if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then
+        log_warn "hot_reload_jar_at_path: missing or not a file: $FILE"
+        return 1
+    fi
+    if [[ "$FILE" != *"target/"* ]] || [[ "$FILE" != *".jar" ]]; then
+        return 1
+    fi
+    if [[ "$FILE" == *"-sources.jar" ]] || [[ "$FILE" == *"-javadoc.jar" ]] || [[ "$FILE" == *"target/assembly/data/"* ]]; then
+        return 1
+    fi
+
+    if [ ! -d "$KARAF_BIN" ]; then
+        log_warn "Karaf not available; skip hot-reload for $(basename "$FILE")"
+        return 1
+    fi
+
+    local JAR_NAME
+    JAR_NAME=$(basename "$FILE")
+    local BASE_BUNDLE_NAME
+    BASE_BUNDLE_NAME=$(echo "$JAR_NAME" | sed -r 's/-[0-9]+(\.[0-9]+)*(-SNAPSHOT)?\.jar$//')
+    local SYSTEM_DIR="$KARAF_DIST/system/org/sokybot/${BASE_BUNDLE_NAME}/1.0-SNAPSHOT"
+
+    log_info "Hot-reload: $JAR_NAME ($BASE_BUNDLE_NAME)"
+
+    if [ -d "$SYSTEM_DIR" ]; then
+        cp "$FILE" "$SYSTEM_DIR/$JAR_NAME"
+        log_info "Synced JAR to assembly: $SYSTEM_DIR"
+    fi
+
+    local BUNDLE_ID
+    BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $BASE_BUNDLE_NAME" 2>/dev/null | awk '{print $1}' | head -n 1)
+
+    if [ -z "$BUNDLE_ID" ]; then
+        rm -rf "$KARAF_DATA/cache"
+        log_warn "Bundle '$BASE_BUNDLE_NAME' not active; cleared Karaf cache for next restart."
+        return 1
+    fi
+
+    # file:///absolute/path — forces load from workspace JAR instead of stale SNAPSHOT cache
+    local FILE_URI="file://${FILE}"
+    log_info "bundle:update $BUNDLE_ID $FILE_URI"
+    if "$KARAF_BIN/client" "bundle:update $BUNDLE_ID $FILE_URI" 2>/dev/null && \
+            "$KARAF_BIN/client" "bundle:refresh $BUNDLE_ID" 2>/dev/null; then
+        log_success "Hot-reloaded $BASE_BUNDLE_NAME (ID: $BUNDLE_ID)"
+        return 0
+    fi
+    rm -rf "$KARAF_DATA/cache"
+    log_warn "Karaf bundle:update failed; cleared cache — restart backend if needed."
+    return 1
+}
+
 # Docker transparency wrapper
 # If running on host and container is active, execute command inside container
 check_docker_transparency() {
@@ -174,8 +237,13 @@ cmd_backend_start() {
     export KARAF_OPTS="${KARAF_OPTS:+$KARAF_OPTS }-Dsokybot.pages.dir=$ROOT_DIR/scripts/pages -Dsokybot.scripts.dir=$ROOT_DIR/scripts/actuators"
     if [ "$FOREGROUND" = true ]; then
         if [ "$WATCH" = true ]; then
-            log_info "Starting Automated Hot-Reload Watcher..."
-            cmd_watch &
+            if is_in_docker && [ "${SOKY_JAR_WATCH_IN_CONTAINER:-}" != "1" ]; then
+                log_warn "Skipping in-container JAR watch (unreliable on bind mounts). On host run: soky backend watch-host"
+                log_warn "Or set SOKY_JAR_WATCH_IN_CONTAINER=1 and use backend start --watch."
+            else
+                log_info "Starting JAR hot-reload watcher..."
+                cmd_watch &
+            fi
         fi
         log_info "Starting Sokybot Backend in FOREGROUND mode..."
         # In foreground mode, we use karaf server
@@ -188,8 +256,12 @@ cmd_backend_start() {
         log_info "Tail logs with: soky backend logs"
         log_info "Attach shell with: soky backend shell"
         if [ "$WATCH" = true ]; then
-            log_info "Starting Automated Hot-Reload Watcher..."
-            cmd_watch &
+            if is_in_docker && [ "${SOKY_JAR_WATCH_IN_CONTAINER:-}" != "1" ]; then
+                log_warn "Skipping in-container JAR watch. On host run: soky backend watch-host"
+            else
+                log_info "Starting JAR hot-reload watcher..."
+                cmd_watch &
+            fi
         fi
     fi
 }
@@ -308,47 +380,63 @@ cmd_watch() {
         exit 1
     fi
 
-    log_header "Hot-Reload Watcher Active"
-    log_info "Monitoring all 'target/*.jar' files in the workspace..."
+    log_header "Hot-Reload Watcher Active (in-container)"
+    log_info "Monitoring 'target/*.jar' under $ROOT_DIR — prefer 'soky backend watch-host' from the host when using Docker."
 
-    # Use inotifywait to watch for file moves (Maven replaces files) or modifications
     inotifywait -m -r -e close_write --format '%w%f' "$ROOT_DIR" | while read -r FILE; do
         if [[ "$FILE" == *"target/"*".jar" ]]; then
-            # Ignore Karaf's own cache/bundle files and documentation JARs
-            if [[ "$FILE" == *"-sources.jar" ]] || [[ "$FILE" == *"-javadoc.jar" ]] || [[ "$FILE" == *"target/assembly/data/"* ]]; then
-                 continue
-            fi
-
-            JAR_NAME=$(basename "$FILE")
-            BASE_BUNDLE_NAME=$(echo "$JAR_NAME" | sed -r 's/-[0-9]+(\.[0-9]+)*(-SNAPSHOT)?\.jar$//')
-            SYSTEM_DIR="$KARAF_DIST/system/org/sokybot/${BASE_BUNDLE_NAME}/1.0-SNAPSHOT"
-            
-            log_info "Detected change in: $JAR_NAME ($BASE_BUNDLE_NAME)"
-
-            # Keep assembly system repo in sync with the latest build output.
-            if [ -d "$SYSTEM_DIR" ]; then
-                cp "$FILE" "$SYSTEM_DIR/$JAR_NAME"
-                log_info "Synced JAR to assembly: $SYSTEM_DIR"
-            fi
-            
-            # Find bundle ID in Karaf
-            BUNDLE_ID=$("$KARAF_BIN/client" "bundle:list -s | grep $BASE_BUNDLE_NAME" 2>/dev/null | awk '{print $1}' | head -n 1)
-
-            if [ -n "$BUNDLE_ID" ]; then
-                log_info "Updating bundle $BUNDLE_ID ($BASE_BUNDLE_NAME)..."
-                if "$KARAF_BIN/client" "bundle:update $BUNDLE_ID" 2>/dev/null && \
-                        "$KARAF_BIN/client" "bundle:refresh $BUNDLE_ID" 2>/dev/null; then
-                    log_success "Hot-reloaded $BASE_BUNDLE_NAME (ID: $BUNDLE_ID)"
-                else
-                    rm -rf "$KARAF_DATA/cache"
-                    log_warn "Karaf client reload failed; cache cleared so next restart loads fresh bundles."
-                fi
-            else
-                rm -rf "$KARAF_DATA/cache"
-                log_warn "Bundle '$BASE_BUNDLE_NAME' not active/reloadable; cache cleared for next restart."
-            fi
+            hot_reload_jar_at_path "$FILE" || true
         fi
     done
+}
+
+# Host-only: reliable inotify + docker compose exec into Karaf with file:///app/... updates
+cmd_watch_host() {
+    if is_in_docker; then
+        log_error "'backend watch-host' must run on the host, not inside the container."
+        exit 1
+    fi
+    if ! type inotifywait > /dev/null; then
+        log_error "Install 'inotify-tools' on the host (e.g. apt install inotify-tools)."
+        exit 1
+    fi
+    cd "$ROOT_DIR" || exit 1
+    if [ -z "$(docker compose ps -q sokybot-backend 2>/dev/null)" ]; then
+        log_error "sokybot-backend container is not running. Start with: docker compose up -d sokybot-backend"
+        exit 1
+    fi
+
+    log_header "Host Hot-Reload Watcher Active"
+    log_info "Watching $ROOT_DIR for target/*.jar → docker compose exec Karaf (file:///app/...)"
+
+    ( cd "$ROOT_DIR" && inotifywait -m -r -e close_write --format '%w%f' "$ROOT_DIR" ) | while read -r FILE; do
+        if [[ "$FILE" != *"target/"*".jar" ]]; then
+            continue
+        fi
+        if [[ "$FILE" == *"-sources.jar" ]] || [[ "$FILE" == *"-javadoc.jar" ]] || [[ "$FILE" == *"target/assembly/data/"* ]]; then
+            continue
+        fi
+        case "$FILE" in
+            "$ROOT_DIR"/*) ;;
+            *)
+                log_warn "Skipping JAR outside ROOT_DIR: $FILE"
+                continue
+                ;;
+        esac
+        REL="${FILE#"${ROOT_DIR}/"}"
+        CONTAINER_JAR="/app/$REL"
+        docker compose -f "$ROOT_DIR/docker-compose.yml" exec -T sokybot-backend \
+            /app/infra/scripts/soky internal-hot-reload-jar "$CONTAINER_JAR" || true
+    done
+}
+
+cmd_internal_hot_reload_jar() {
+    local FILE="$1"
+    if [ -z "$FILE" ]; then
+        log_error "internal-hot-reload-jar: missing path"
+        exit 1
+    fi
+    hot_reload_jar_at_path "$FILE" || exit 1
 }
 
 cmd_refresh() {
@@ -417,12 +505,14 @@ cmd_build() {
                 log_error "Maven Wrapper (mvnw) not found in $ROOT_DIR"
                 exit 1
             fi
+            local _mra
+            _mra=$(maven_repo_local_args)
             if [ "$FAST_FLAG" = true ]; then
                 log_info "Using fast profile (skipping tests and quality checks)..."
-                ./mvnw clean install -P fast
+                ./mvnw clean install -P fast $_mra
             else
                 log_info "Using dev profile..."
-                ./mvnw clean install -P dev
+                ./mvnw clean install -P dev $_mra
             fi
             ;;
         ui)
@@ -458,7 +548,9 @@ cmd_build() {
             if [ -n "$MODULE_DIR" ] && [ -f "$MODULE_DIR/pom.xml" ]; then
                 log_info "Found module at: $MODULE_DIR"
                 cd "$MODULE_DIR"
-                mvn clean install -DskipTests -Djacoco.skip=true
+                local _mra
+                _mra=$(maven_repo_local_args)
+                mvn clean install -DskipTests -Djacoco.skip=true $_mra
             else
                 log_warn "Module directory not found, trying Maven reactor..."
                 cd "$ROOT_DIR"
@@ -466,7 +558,9 @@ cmd_build() {
                     log_error "Maven Wrapper (mvnw) not found in $ROOT_DIR"
                     exit 1
                 fi
-                ./mvnw clean install -pl "$MODULE_NAME" -am -DskipTests -Djacoco.skip=true
+                local _mra
+                _mra=$(maven_repo_local_args)
+                ./mvnw clean install -pl "$MODULE_NAME" -am -DskipTests -Djacoco.skip=true $_mra
             fi
             ;;
         all)
@@ -498,18 +592,21 @@ cmd_test() {
     if [ "$TARGET" = "all" ]; then
         log_header "Running All Tests"
         cd "$ROOT_DIR"
-        ./mvnw test
+        local _mra
+        _mra=$(maven_repo_local_args)
+        ./mvnw test $_mra
     else
         log_header "Running Tests for: $TARGET"
-        
+        local _mra
+        _mra=$(maven_repo_local_args)
         # Try module first
         if [ -d "$ROOT_DIR/$TARGET" ] || [ -d "$ROOT_DIR/core/$TARGET" ] || [ -d "$ROOT_DIR/game/$TARGET" ] || [ -d "$ROOT_DIR/network/$TARGET" ] || [ -d "$ROOT_DIR/ui/$TARGET" ] || [ -d "$ROOT_DIR/actuators/$TARGET" ] || [ -d "$ROOT_DIR/infra/$TARGET" ]; then
            cd "$ROOT_DIR"
-           ./mvnw test -pl "$TARGET" -am
+           ./mvnw test -pl "$TARGET" -am $_mra
         else
            # Try searching recursively because user might provide partial name or the directory logic is complex
            cd "$ROOT_DIR"
-           ./mvnw test -pl "$TARGET" -am
+           ./mvnw test -pl "$TARGET" -am $_mra
         fi
     fi
 }
@@ -533,7 +630,9 @@ cmd_clean() {
         maven)
             log_header "Cleaning Maven Build"
             cd "$ROOT_DIR"
-            ./mvnw clean
+            local _mra
+            _mra=$(maven_repo_local_args)
+            ./mvnw clean $_mra
             log_success "Maven targets cleaned."
             ;;
         all)
@@ -550,7 +649,9 @@ cmd_clean() {
             # Clean Maven targets
             log_info "Cleaning Maven build targets..."
             cd "$ROOT_DIR"
-            ./mvnw clean
+            local _mra
+            _mra=$(maven_repo_local_args)
+            ./mvnw clean $_mra
             
             log_success "All cleaned."
             ;;
@@ -619,8 +720,10 @@ cmd_deploy() {
     
     log_info "Building module at: $MODULE_DIR"
     cd "$MODULE_DIR"
-    
-    if ! mvn install -DskipTests -Djacoco.skip=true -q; then
+    local _mra
+    _mra=$(maven_repo_local_args)
+
+    if ! mvn install -DskipTests -Djacoco.skip=true -q $_mra; then
         log_error "Build failed!"
         exit 1
     fi
@@ -865,7 +968,8 @@ cmd_help() {
     echo "  backend restart [--fresh] - Restart Karaf backend"
     echo "  backend shell         - Connect to Karaf console"
     echo "  backend logs [filter] - Tail logs"
-    echo "  backend watch         - Start automated hot-reload watcher"
+    echo "  backend watch         - JAR hot-reload watcher (in-container; use watch-host from host with Docker)"
+    echo "  backend watch-host    - Host watcher → docker exec Karaf (file:///app/...); recommended with compose"
     echo "  backend debug         - Start in debug mode (port 5005)"
     echo "  backend clean         - Clean Karaf cache"
     echo "  backend features      - List installed Sokybot features"
@@ -902,6 +1006,10 @@ cmd_help() {
 # =============================================================================
 
 case "$1" in
+    internal-hot-reload-jar)
+        shift
+        cmd_internal_hot_reload_jar "${1:-}"
+        ;;
     backend|ba)
         case "$2" in
             start)    cmd_backend_start "${@:3}" ;;
@@ -912,6 +1020,7 @@ case "$1" in
             logs|l)   check_docker_transparency "$@"; shift 2; cmd_backend_logs "$@" ;;
             shell|sh) check_docker_transparency "$@"; cmd_backend_shell ;;
             features) check_docker_transparency "$@"; cmd_backend_features ;;
+            watch-host|wh) cmd_watch_host ;;
             watch|w)  check_docker_transparency "$@"; cmd_watch ;;
             *)        cmd_help ;;
         esac

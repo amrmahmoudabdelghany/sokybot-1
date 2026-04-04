@@ -25,7 +25,9 @@ public class EventBridgeImpl implements IEventBridge {
 
     private final List<SubscriptionImpl> subscriptions = new CopyOnWriteArrayList<>();
     private final AtomicLong eventCount = new AtomicLong(0);
-    private final Sinks.Many<BridgeEvent> relaySink = Sinks.many().multicast().onBackpressureBuffer(8192, false);
+    private final AtomicLong relayDroppedCount = new AtomicLong(0);
+    private final Sinks.Many<BridgeEvent> relaySink = Sinks.many().multicast()
+            .onBackpressureBuffer(8192, false);
     private Disposable relaySubscription;
 
     @Activate
@@ -52,6 +54,7 @@ public class EventBridgeImpl implements IEventBridge {
         BridgeEvent bridgeEvent = new BridgeEvent(topic, machineId, event);
         Sinks.EmitResult result = relaySink.tryEmitNext(bridgeEvent);
         if (result.isFailure() && result != Sinks.EmitResult.FAIL_ZERO_SUBSCRIBER) {
+            relayDroppedCount.incrementAndGet();
             log.debug("Dropping bridge event {} due to {}", bridgeEvent.getTopic(), result);
         }
     }
@@ -77,6 +80,11 @@ public class EventBridgeImpl implements IEventBridge {
     @Override
     public long getEventCount() {
         return eventCount.get();
+    }
+
+    /** Relay buffer drops (overflow / backpressure) since startup. */
+    public long getRelayDroppedCount() {
+        return relayDroppedCount.get();
     }
 
     /**

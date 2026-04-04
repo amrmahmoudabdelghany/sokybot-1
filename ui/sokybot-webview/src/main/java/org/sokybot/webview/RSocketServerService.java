@@ -29,6 +29,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
+import io.rsocket.exceptions.RejectedSetupException;
+
 /**
  * RSocket server service that registers with the shared HTTP server's WebSocket
  * registry.
@@ -166,6 +168,13 @@ public class RSocketServerService {
                 logger.info("RSocket connection accepted - Data MIME: {}, Metadata MIME: {}",
                         setup.dataMimeType(), setup.metadataMimeType());
 
+                try {
+                    validateClientSetup(setup);
+                } catch (RejectedSetupException e) {
+                    logger.warn("RSocket SETUP rejected: {}", e.getMessage());
+                    return Mono.error(e);
+                }
+
                 return Mono.just(new RSocket() {
                     @Override
                     public Mono<Payload> requestResponse(Payload payload) {
@@ -196,6 +205,40 @@ public class RSocketServerService {
                 });
             }
         };
+    }
+
+    /**
+     * Parse optional JSON SETUP payload from the client. Rejects the connection if the client
+     * requires a newer {@link WebviewProtocolConstants#PROTOCOL_API_VERSION} than this server.
+     */
+    private void validateClientSetup(ConnectionSetupPayload setup) {
+        if (!setup.data().isReadable()) {
+            return;
+        }
+        String raw = setup.getDataUtf8();
+        if (raw == null || raw.isBlank()) {
+            return;
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> m = mapper.readValue(raw, Map.class);
+            Object min = m.get(WebviewProtocolConstants.SETUP_KEY_MIN_PROTOCOL_API);
+            if (min instanceof Number) {
+                int required = ((Number) min).intValue();
+                if (required > WebviewProtocolConstants.PROTOCOL_API_VERSION) {
+                    throw new RejectedSetupException("Client requires minProtocolApi=" + required
+                            + " but server supports up to " + WebviewProtocolConstants.PROTOCOL_API_VERSION);
+                }
+            }
+            Object uiId = m.get(WebviewProtocolConstants.SETUP_KEY_UI_BUILD_ID);
+            if (uiId != null) {
+                logger.debug("RSocket client uiBuildId={}", uiId);
+            }
+        } catch (RejectedSetupException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.debug("Ignoring non-JSON or malformed SETUP data: {}", e.toString());
+        }
     }
 
     private Mono<Void> handleFireAndForget(String requestData) {

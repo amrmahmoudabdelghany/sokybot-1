@@ -295,6 +295,9 @@
                         </goals>
                         <configuration>
                             <arguments>run build</arguments>
+                            <environmentVariables>
+                                <VITE_UI_BUILD_ID>${env.VITE_UI_BUILD_ID}</VITE_UI_BUILD_ID>
+                            </environmentVariables>
                         </configuration>
                     </execution>
                 </executions>

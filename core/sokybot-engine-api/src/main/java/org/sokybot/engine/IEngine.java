@@ -103,4 +103,10 @@ public interface IEngine {
      * UI-friendly primary/ordered activity projection.
      */
     java.util.List<String> getActiveActivities();
+
+    /**
+     * Wakes the workflow parent executor (e.g. after CONNECT) so a parked or
+     * waiting cycle is evaluated on the next tick without waiting for a delay state.
+     */
+    void wakeWorkflow();
 }

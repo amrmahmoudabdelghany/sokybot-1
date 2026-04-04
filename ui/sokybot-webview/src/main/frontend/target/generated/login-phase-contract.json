@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-04-02T15:03:32.268Z",
+  "generatedAt": "2026-04-04T11:47:15.875Z",
   "backendPhases": [
     "DISCONNECTED",
     "CONNECTING_GATEWAY",
@@ -32,6 +32,7 @@
   "mappedPhases": [
     "DISCONNECTED",
     "MISSING_GATEWAY",
+    "PENDING_MANUAL_CONNECT",
     "CONNECTING_GATEWAY",
     "WAITING_FOR_AGENTS",
     "WAITING_FOR_AGENTS_TIMEOUT",

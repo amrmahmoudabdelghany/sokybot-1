@@ -136,7 +136,7 @@ class GroupContextImplTest extends RuntimeTestBase {
 
     @Test
     void testInstallMachineWithBlankName() {
-        assertThrows(RuntimeException.class, () -> {
+        assertThrows(IllegalArgumentException.class, () -> {
             groupContext.installMachine("");
         });
     }

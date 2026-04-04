@@ -26,6 +26,7 @@ const ACTION_LABELS: Record<NonNullable<ActionIntent>, string> = {
     select_agent: 'Select Server',
     choose_character: 'Select Character',
     retry_now: 'Retry Now',
+    connect_bot: 'Connect',
     cancel: 'Cancel',
     check_settings: 'Check Settings',
     acknowledge: 'Acknowledge',
@@ -36,6 +37,7 @@ const ACTION_VARIANTS: Partial<Record<NonNullable<ActionIntent>, 'default' | 'de
     check_settings: 'secondary',
     acknowledge: 'secondary',
     retry_now: 'default',
+    connect_bot: 'default',
 };
 
 export const OnboardingCTA: React.FC<OnboardingCTAProps> = ({

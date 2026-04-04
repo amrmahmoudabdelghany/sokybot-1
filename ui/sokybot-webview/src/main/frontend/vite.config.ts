@@ -4,8 +4,13 @@ import react from '@vitejs/plugin-react'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 import path from "path"
 
+const viteUiBuildId = JSON.stringify(process.env.VITE_UI_BUILD_ID || 'dev')
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_UI_BUILD_ID': viteUiBuildId,
+  },
   optimizeDeps: {
     include: ['json-rules-engine'],
   },

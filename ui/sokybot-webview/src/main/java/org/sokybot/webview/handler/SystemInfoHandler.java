@@ -3,9 +3,12 @@ package org.sokybot.webview.handler;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.osgi.framework.BundleContext;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.sokybot.webview.RSocketHandlerRegistry;
+import org.sokybot.webview.WebviewProtocolConstants;
 import org.sokybot.webview.api.IRSocketHandler;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
@@ -29,9 +32,15 @@ import reactor.core.publisher.Mono;
     }
 )
 public class SystemInfoHandler implements IRSocketHandler {
-    
+
     private RSocketHandlerRegistry handlerRegistry;
-    
+    private volatile String webviewBundleVersion = "unknown";
+
+    @Activate
+    protected void activate(BundleContext ctx) {
+        this.webviewBundleVersion = ctx.getBundle().getVersion().toString();
+    }
+
     @Reference
     protected void setHandlerRegistry(RSocketHandlerRegistry handlerRegistry) {
         this.handlerRegistry = handlerRegistry;
@@ -68,6 +77,8 @@ public class SystemInfoHandler implements IRSocketHandler {
         info.put("version", "1.0.0");
         info.put("protocol", "rsocket-json");
         info.put("protocolVersion", "1.0");
+        info.put("protocolApi", WebviewProtocolConstants.PROTOCOL_API_VERSION);
+        info.put("webviewBundleVersion", webviewBundleVersion);
         
         Runtime runtime = Runtime.getRuntime();
         Map<String, Object> memory = new HashMap<>();

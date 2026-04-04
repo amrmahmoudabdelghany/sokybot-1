@@ -2,6 +2,8 @@ package org.sokybot.engine.api.workflow;
 
 import org.sokybot.engine.api.IDispatcher;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.proxy.IProxyConnection;
+
 import java.util.Map;
 
 /**
@@ -24,7 +26,13 @@ public interface IWorkflowContext {
      * @return The dispatcher instance
      */
     IDispatcher getDispatcher();
-    
+
+    /**
+     * Low-level proxy connection (same instance the dispatcher wraps).
+     * For workflows that must bypass {@link IDispatcher} when OSGi skew leaves packet APIs broken.
+     */
+    IProxyConnection getProxyConnection();
+
     /**
      * Gets the current orthogonal state name.
      * 

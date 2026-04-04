@@ -1,6 +1,7 @@
 package org.sokybot.webview.handler;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import org.sokybot.runtime.ISokybotContext;
 import org.sokybot.webview.api.IRSocketHandler;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
+import org.sokybot.webview.util.MachineResolver;
 
 import reactor.core.publisher.Mono;
 
@@ -101,26 +103,13 @@ public class CharacterStateHandler implements IRSocketHandler {
             }
 
             if (groupName != null) {
-                // Lookup by specific group
-                IGroupContext group = sokybotContext.findGroupCtx(groupName).orElse(null);
-                if (group != null) {
-                    ctx = group.findMachineCtx(machineName).orElse(null);
-                }
+                ctx = MachineResolver.resolve(sokybotContext, null, machineId).orElse(null);
             } else {
-                List<IMachineContext> byName = findMachinesBySimpleName(machineName);
+                List<IMachineContext> byName = MachineResolver.findAllBySimpleName(sokybotContext, machineName);
                 if (byName.isEmpty()) {
                     return Mono.just(RSocketResponse.notFound("Machine not found: " + machineId));
                 }
-                if (byName.size() == 1) {
-                    ctx = byName.get(0);
-                } else {
-                    ctx = pickDisambiguatedMachine(byName);
-                    if (ctx == null) {
-                        return Mono.just(RSocketResponse.invalidParams(
-                                "Ambiguous machine name \"" + machineName
-                                        + "\" in multiple groups. Use full id GroupName.MachineName."));
-                    }
-                }
+                ctx = pickDisambiguatedMachine(byName);
             }
 
             if (ctx == null) {
@@ -217,15 +206,10 @@ public class CharacterStateHandler implements IRSocketHandler {
         return Mono.just(RSocketResponse.success(state));
     }
 
-    private List<IMachineContext> findMachinesBySimpleName(String machineName) {
-        List<IMachineContext> matches = new ArrayList<>();
-        for (IGroupContext group : sokybotContext.getGroups()) {
-            group.findMachineCtx(machineName).ifPresent(matches::add);
-        }
-        return matches;
-    }
-
-    /** When multiple groups contain the same machine name, pick the unique "live" one if possible. */
+    /**
+     * When multiple groups contain the same machine name, prefer a unique "live" machine; if several are live or
+     * none are, pick deterministically by {@link IMachineContext#fullName()} lexicographic order.
+     */
     private IMachineContext pickDisambiguatedMachine(List<IMachineContext> matches) {
         List<IMachineContext> live = new ArrayList<>();
         for (IMachineContext m : matches) {
@@ -233,10 +217,12 @@ public class CharacterStateHandler implements IRSocketHandler {
                 live.add(m);
             }
         }
-        if (live.size() == 1) {
-            return live.get(0);
+        List<IMachineContext> pickFrom = live.isEmpty() ? new ArrayList<>(matches) : live;
+        pickFrom.sort(Comparator.comparing(IMachineContext::fullName));
+        if (pickFrom.isEmpty()) {
+            return null;
         }
-        return null;
+        return pickFrom.get(0);
     }
 
     private static boolean isMachinePreferableForDisambiguation(IMachineContext ctx) {

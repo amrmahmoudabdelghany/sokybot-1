@@ -1,6 +1,7 @@
 package org.sokybot.gameevents;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -87,5 +88,19 @@ public class ChunkedPacketManagerRegistry {
      */
     public int size() {
         return managers.size();
+    }
+
+    /**
+     * Removes registry entries whose machine full name is not in {@code validFullNames}. Safe for concurrent use.
+     */
+    public void pruneEntriesNotIn(Set<String> validFullNames) {
+        if (validFullNames == null) {
+            return;
+        }
+        for (String key : managers.keySet()) {
+            if (!validFullNames.contains(key)) {
+                managers.remove(key);
+            }
+        }
     }
 }

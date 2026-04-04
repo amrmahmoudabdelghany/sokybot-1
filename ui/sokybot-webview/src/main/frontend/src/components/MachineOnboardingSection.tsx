@@ -21,6 +21,13 @@ interface MachineOnboardingSectionProps {
     machineId: string;
 }
 
+/** Phases where we still poll character.state so agentOptions stay in sync with the model. */
+const AGENT_WAIT_LOGIN_PHASES = new Set([
+    'WAITING_FOR_AGENTS',
+    'WAITING_FOR_AGENTS_TIMEOUT',
+    'MISSING_AGENT_SERVER',
+]);
+
 export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> = ({ machineId }) => {
     const { invalidateMachines } = useInvalidateSokybotQueries();
     const [state, send] = useMachine(machineOnboardingMachine, { input: { machineId } });
@@ -48,8 +55,17 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
     const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' ? !navigator.onLine : false);
     const streamSessionIdRef = useRef<number>(0);
     const terminalPhaseGateUntilRef = useRef<number>(0);
+    const machineRemovedRef = useRef(false);
+    const lastStreamEventAtRef = useRef<number>(Date.now());
+    const streamReconnectAttemptRef = useRef(0);
+    const streamResubscribePendingRef = useRef(false);
+    const [streamEpoch, setStreamEpoch] = useState(0);
 
     const [stableInGame, setStableInGame] = useState(false);
+
+    const loginPhaseRef = useRef<string>(state.context.loginPhase);
+    const lastHeartbeatSnapshotAtRef = useRef<number>(0);
+    const gameEventsSessionIdRef = useRef(0);
 
     useEffect(() => {
         const handleOnline = () => setIsOffline(false);
@@ -63,6 +79,7 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
     }, []);
 
     const ctx = state.context;
+    loginPhaseRef.current = ctx.loginPhase;
 
     // --- Delay hiding the onboarding panel until inGame has been stable for 2s ---
     useEffect(() => {
@@ -163,14 +180,75 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
         } catch (err) {
             console.error('Failed to refresh machine status snapshot', err);
             if (attempt < 3) {
-                setTimeout(() => refreshMachineStatusSnapshot(id, attempt + 1), Math.pow(2, attempt) * 1000);
+                const base = Math.pow(2, attempt) * 1000;
+                const jitter = Math.floor(Math.random() * 1500);
+                setTimeout(() => refreshMachineStatusSnapshot(id, attempt + 1), base + jitter);
             }
         }
     }, [send]);
 
+    // Refresh onboarding snapshot when agent list arrives (CharacterStatus is not mounted until inGame).
+    useEffect(() => {
+        const sid = ++gameEventsSessionIdRef.current;
+        const minIntervalMs = 400;
+        let debounceId: number | null = null;
+        let lastRefreshAt = 0;
+
+        const scheduleSnapshot = () => {
+            const now = Date.now();
+            const waitMs = now - lastRefreshAt >= minIntervalMs ? 0 : minIntervalMs - (now - lastRefreshAt);
+            if (debounceId != null) {
+                window.clearTimeout(debounceId);
+            }
+            debounceId = window.setTimeout(() => {
+                debounceId = null;
+                if (gameEventsSessionIdRef.current !== sid) {
+                    return;
+                }
+                lastRefreshAt = Date.now();
+                void refreshMachineStatusSnapshot(machineId);
+            }, waitMs);
+        };
+
+        const sub = rsocketService.subscribeToGameEvents(
+            (event) => {
+                if (gameEventsSessionIdRef.current !== sid || !event) {
+                    return;
+                }
+                if (String(event.eventType) !== 'AgentListEvent') {
+                    return;
+                }
+                const eventTopicsRaw = (event as Record<string, unknown>)['event.topics'];
+                const eventTopics = Array.isArray(eventTopicsRaw) ? eventTopicsRaw.map(String) : [];
+                const isForMachine =
+                    eventTopics.some((topic) => topic.includes(machineId))
+                    || (typeof (event as Record<string, unknown>).fullName === 'string'
+                        && String((event as Record<string, unknown>).fullName).includes(machineId));
+                if (!isForMachine) {
+                    return;
+                }
+                scheduleSnapshot();
+            },
+            (err) => console.error('Onboarding game.events stream error', err)
+        );
+
+        return () => {
+            if (debounceId != null) {
+                window.clearTimeout(debounceId);
+            }
+            if (sub && typeof sub.unsubscribe === 'function') {
+                sub.unsubscribe();
+            }
+        };
+    }, [machineId, refreshMachineStatusSnapshot]);
+
     useEffect(() => {
         // Increment session ID on each mount/reconnect to invalidate stale events
         const currentSessionId = ++streamSessionIdRef.current;
+        machineRemovedRef.current = false;
+        lastStreamEventAtRef.current = Date.now();
+        streamReconnectAttemptRef.current = 0;
+        streamResubscribePendingRef.current = false;
 
         void refreshMachineStatusSnapshot(machineId);
         const sub = rsocketService.subscribeToMachineStatus(
@@ -180,6 +258,40 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
                 if (streamSessionIdRef.current !== currentSessionId) return;
 
                 if (!statusEvent || statusEvent.machineId !== machineId) return;
+
+                if (machineRemovedRef.current) {
+                    return;
+                }
+
+                if (statusEvent.type === 'heartbeat') {
+                    lastStreamEventAtRef.current = Date.now();
+                    streamReconnectAttemptRef.current = 0;
+                    const phase = loginPhaseRef.current;
+                    if (phase && AGENT_WAIT_LOGIN_PHASES.has(phase)) {
+                        const now = Date.now();
+                        if (now - lastHeartbeatSnapshotAtRef.current >= 4000) {
+                            lastHeartbeatSnapshotAtRef.current = now;
+                            void refreshMachineStatusSnapshot(machineId);
+                        }
+                    }
+                    return;
+                }
+
+                if (statusEvent.type === 'MACHINE_REMOVED') {
+                    machineRemovedRef.current = true;
+                    lastStreamEventAtRef.current = Date.now();
+                    send(streamEventToMachineEvent({
+                        ...statusEvent,
+                        machineId,
+                        loginPhase: 'DISCONNECTED',
+                        connected: false,
+                        authenticated: false,
+                    }));
+                    return;
+                }
+
+                lastStreamEventAtRef.current = Date.now();
+                streamReconnectAttemptRef.current = 0;
 
                 // Cancellation race condition guard
                 if (
@@ -215,16 +327,45 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
             },
             (err) => console.error('Layout machine status stream error', err)
         );
-        const intervalId = window.setInterval(() => {
+        const stalenessId = window.setInterval(() => {
+            if (machineRemovedRef.current || streamResubscribePendingRef.current) {
+                return;
+            }
+            if (Date.now() - lastStreamEventAtRef.current <= 15_000) {
+                return;
+            }
+            streamResubscribePendingRef.current = true;
+            const nextAttempt = streamReconnectAttemptRef.current + 1;
+            streamReconnectAttemptRef.current = Math.min(nextAttempt, 16);
+            const base = Math.min(30_000, 500 * Math.pow(2, Math.max(0, nextAttempt - 1)));
+            const jitter = Math.random() * 2000;
+            window.setTimeout(() => {
+                streamResubscribePendingRef.current = false;
+                if (machineRemovedRef.current) {
+                    return;
+                }
+                setStreamEpoch((e) => e + 1);
+            }, base + jitter);
+        }, 5000);
+
+        const softSyncId = window.setInterval(() => {
+            if (machineRemovedRef.current) {
+                return;
+            }
+            if (Date.now() - lastStreamEventAtRef.current > 15_000) {
+                return;
+            }
             void refreshMachineStatusSnapshot(machineId);
-        }, 4000);
+        }, 60_000);
+
         return () => {
-            window.clearInterval(intervalId);
+            window.clearInterval(stalenessId);
+            window.clearInterval(softSyncId);
             if (sub && typeof sub.unsubscribe === 'function') {
                 sub.unsubscribe();
             }
         };
-    }, [isHighPriorityPhase, machineId, refreshMachineStatusSnapshot, send, throttleGuard]);
+    }, [isHighPriorityPhase, machineId, refreshMachineStatusSnapshot, send, streamEpoch, throttleGuard]);
 
     const saveLoginPayload = async (id: string, payload: Record<string, unknown>, startAfterSave?: boolean) => {
         const parts = parseMachineParts(id);
@@ -265,6 +406,17 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
             if (startAfterSave) {
                 send({ type: 'CONNECT_END' });
             }
+        }
+    };
+
+    const startMachine = async (id: string) => {
+        send({ type: 'CONNECT_BEGIN' });
+        try {
+            await rsocketService.startBot(id);
+            void invalidateMachines();
+            await refreshMachineStatusSnapshot(id);
+        } finally {
+            send({ type: 'CONNECT_END' });
         }
     };
 
@@ -424,6 +576,7 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
                             abortInFlightByMachine={abortInFlightByMachine}
                             isOffline={isOffline}
                             saveLoginPayload={saveLoginPayload}
+                            startMachine={startMachine}
                             abortLogin={abortLogin}
                             retryCountdown={retryCountdown}
                         />

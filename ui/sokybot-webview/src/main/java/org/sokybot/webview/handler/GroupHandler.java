@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.sokybot.persistence.service.IGameDataLookup;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.ISokybotContext;
+import org.sokybot.runtime.RuntimeEntityNames;
 import org.sokybot.webview.api.IRSocketHandler;
 import org.sokybot.webview.api.RSocketRequest;
 import org.sokybot.webview.api.RSocketResponse;
@@ -82,14 +83,10 @@ public class GroupHandler implements IRSocketHandler {
         }
         
         List<Map<String, Object>> groups = new ArrayList<>();
-        for (String name : sokybotContext.listNames()) {
+        for (IGroupContext grpCtx : sokybotContext.getGroups()) {
             Map<String, Object> groupInfo = new HashMap<>();
-            groupInfo.put("name", name);
-            
-            IGroupContext grpCtx = sokybotContext.findGroupCtx(name).orElse(null);
-            if (grpCtx != null) {
-                groupInfo.put("machineCount", grpCtx.getMachines().length);
-            }
+            groupInfo.put("name", grpCtx.name());
+            groupInfo.put("machineCount", grpCtx.getMachines().length);
             groups.add(groupInfo);
         }
         
@@ -159,12 +156,15 @@ public class GroupHandler implements IRSocketHandler {
         }
         
         try {
+            RuntimeEntityNames.validateGroupOrThrow(name);
             sokybotContext.installGroup(name, path);
-            
+
             Map<String, Object> result = new HashMap<>();
             result.put("status", "created");
             result.put("name", name);
             return Mono.just(RSocketResponse.success(result));
+        } catch (IllegalArgumentException e) {
+            return Mono.just(RSocketResponse.invalidParams(e.getMessage()));
         } catch (Exception e) {
             logger.error("Failed to create group: {}", name, e);
             return Mono.just(RSocketResponse.internalError(e));

@@ -5,6 +5,7 @@ import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.engine.test.util.mocks.MockDispatcher;
 import org.sokybot.engine.test.util.mocks.MockGameModel;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.proxy.IProxyConnection;
 
 /**
  * Base class for workflow tests.
@@ -51,6 +52,7 @@ public abstract class WorkflowTestBase {
         return new WorkflowContextImpl(
             gameModel,
             dispatcher,
+            Mockito.mock(IProxyConnection.class),
             groupName,
             machineName,
             Mockito.mock(org.osgi.framework.BundleContext.class));

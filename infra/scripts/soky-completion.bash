@@ -20,7 +20,7 @@ _soky_completions() {
     # 2nd level commands for 'backend'
     case "${prev}" in
         backend)
-            COMPREPLY=( $(compgen -W "start stop restart debug logs shell clean features" -- ${cur}) )
+            COMPREPLY=( $(compgen -W "start stop restart debug logs shell clean features watch watch-host" -- ${cur}) )
             return 0
             ;;
         ui)

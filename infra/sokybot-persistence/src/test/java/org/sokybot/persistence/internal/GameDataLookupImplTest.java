@@ -1,5 +1,6 @@
 package org.sokybot.persistence.internal;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -9,7 +10,10 @@ import org.sokybot.persistence.service.IGameDataLookup;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,9 +29,17 @@ class GameDataLookupImplTest {
     private GameDataLookupImpl lookup;
     private String gamePath = "/home/amr/sokybot-workspace/Cyper Online Official Client";
 
+    @AfterEach
+    void tearDown() {
+        if (emf != null && emf.isOpen()) {
+            emf.close();
+        }
+    }
+
     @BeforeEach
     void setUp() {
-        String dbUrl = "jdbc:h2:mem:lookuptest;DB_CLOSE_DELAY=-1";
+        // Isolate from other tests / parallel runs; shared name caused duplicate Division rows across EMFs.
+        String dbUrl = "jdbc:h2:mem:lookuptest_" + UUID.randomUUID().toString().replace("-", "") + ";DB_CLOSE_DELAY=-1";
         emf = Persistence.createEntityManagerFactory("sokybot-persistence-unit", 
             java.util.Map.of(
                 "javax.persistence.jdbc.url", dbUrl,
