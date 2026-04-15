@@ -275,7 +275,8 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
                         <OnboardingCTA
                             ux={ux}
                             onAction={handleAction}
-                            inFlight={Boolean(connectInFlightByMachine[selectedMachineId ?? '']) || isOffline}
+                            inFlight={Boolean(connectInFlightByMachine[selectedMachineId ?? ''])}
+                            isOffline={isOffline}
                             aborting={Boolean(abortInFlightByMachine[selectedMachineId ?? ''])}
                         />
                     );

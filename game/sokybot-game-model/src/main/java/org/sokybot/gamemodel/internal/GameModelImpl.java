@@ -35,6 +35,7 @@ import org.sokybot.gameevents.events.entity.GroupSpawnEndEvent;
 import org.sokybot.gameevents.events.spawn.MonsterSpawnEvent;
 import org.sokybot.gameevents.events.session.AuthResponseEvent;
 import org.sokybot.gameevents.events.session.CaptchaChallengeEvent;
+import org.sokybot.gameevents.events.session.ImageCodeResultEvent;
 import org.sokybot.gameevents.events.session.LoginResponseEvent;
 import org.sokybot.gameevents.events.session.PasscodeRequiredEvent;
 import org.sokybot.gameevents.events.skill.SkillCastEvent;
@@ -117,6 +118,8 @@ public class GameModelImpl implements IGameModel {
             handlePasscodeRequired((PasscodeRequiredEvent) event);
         } else if (event instanceof CaptchaChallengeEvent) {
             handleCaptchaChallenge((CaptchaChallengeEvent) event);
+        } else if (event instanceof ImageCodeResultEvent) {
+            handleImageCodeResult((ImageCodeResultEvent) event);
         } else if (event instanceof CharacterSelectionActionEvent) {
             handleCharacterSelection((CharacterSelectionActionEvent) event);
         } else if (event instanceof CharacterLoadedEvent) {
@@ -327,6 +330,7 @@ public class GameModelImpl implements IGameModel {
         }
         loginState.setAgentList(event.getAgents());
         loginState.setPhase(LoginState.Phase.AGENTS_RECEIVED);
+        loginState.setLastGatewayAgentListObservedWallClockMs(System.currentTimeMillis());
         int receivedCount = event.getAgents() != null ? event.getAgents().size() : 0;
         log.debug("Machine {} handleAgentList received {} agents; phase -> {}", machineName, receivedCount,
                 LoginState.Phase.AGENTS_RECEIVED);
@@ -394,6 +398,20 @@ public class GameModelImpl implements IGameModel {
         }
         loginState.setFailureReason("Captcha challenge required");
         loginState.setPhase(LoginState.Phase.WAIT_FOR_CAPTCHA);
+    }
+
+    private void handleImageCodeResult(ImageCodeResultEvent event) {
+        if (!isForThisMachine(event)) {
+            return;
+        }
+        if (event.isSuccess()) {
+            loginState.setFailureReason(null);
+            loginState.clearLoginResultCodes();
+            loginState.setPhase(LoginState.Phase.LOGIN_SENT);
+        } else {
+            loginState.setFailureReason("Image code verification failed: code " + (event.getResultCode() & 0xFF));
+            loginState.setPhase(LoginState.Phase.FAILED);
+        }
     }
 
     private void handleCharacterSelection(CharacterSelectionActionEvent event) {

@@ -3,9 +3,15 @@ package org.sokybot.network.packet;
 public class ClientOpcode {
 
 	public static final int AGENT_REQUEST = 0x6101;
+	/** Gateway session: client build / version (vSRO-style), after server module id. */
+	public static final int GATEWAY_CLIENT_BUILD = 0x6100;
 	public static final int LOGIN_REQUEST = 0x6102;
+	/** Gateway image / CAPTCHA answer (vSRO-style, after server 0x2322). */
+	public static final int GATEWAY_IMAGE_CODE_ANSWER = 0x6323;
 	public static final int AUTH_REQUEST = 0x6103;
 	public static final int LOGOUT_REQUEST = 0x6104;
+	/** Patch / keepalive ping during gateway session (many servers expect this during login). */
+	public static final int GATEWAY_PATCH_PING = 0x2002;
 	public static final int JOIN_REQUEST = 0x7001 ; 
 	public static final int CHAT_REQUEST = 0x7025;
 	public static final int CHAR_MOVEMENT = 0x7021 ; 

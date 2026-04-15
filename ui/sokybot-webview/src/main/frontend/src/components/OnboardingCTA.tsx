@@ -3,6 +3,19 @@ import { Button, cn } from '@sokybot/frontend-shared';
 import type { ActionIntent, UXPhaseModel } from '../machines/loginPhaseMapping';
 
 /**
+ * Pure predicate for unit tests and consistent disable rules.
+ * Cancel stays enabled during connect in-flight; all buttons disabled while offline or aborting.
+ */
+export function isOnboardingCtaButtonDisabled(
+    isOffline: boolean,
+    inFlight: boolean,
+    aborting: boolean,
+    intent: NonNullable<ActionIntent>
+): boolean {
+    return isOffline || (inFlight && intent !== 'cancel') || aborting;
+}
+
+/**
  * Contextual action buttons derived from the UX phase model.
  *
  * Blocker priority (highest first): Gateway > Credentials > Agent > Character.
@@ -14,8 +27,10 @@ interface OnboardingCTAProps {
     ux: UXPhaseModel;
     /** Handler map for each action intent. */
     onAction: (intent: ActionIntent) => void;
-    /** Whether a connect/login operation is in-flight. */
+    /** Connect/login RSocket work in-flight (do not fold isOffline into this). */
     inFlight?: boolean;
+    /** Browser offline — disables all actions until back online. */
+    isOffline?: boolean;
     /** Whether the machine is in an aborting state (cancel-in-progress). */
     aborting?: boolean;
 }
@@ -44,6 +59,7 @@ export const OnboardingCTA: React.FC<OnboardingCTAProps> = ({
     ux,
     onAction,
     inFlight = false,
+    isOffline = false,
     aborting = false,
 }) => {
     const { primaryAction, secondaryAction } = ux;
@@ -54,7 +70,7 @@ export const OnboardingCTA: React.FC<OnboardingCTAProps> = ({
         ux.rawPhase === 'PENDING_MANUAL_CONNECT' && primaryAction === 'connect_bot';
 
     const renderButton = (intent: NonNullable<ActionIntent>, isPrimary: boolean) => {
-        const disabled = inFlight || (aborting && intent !== 'cancel');
+        const disabled = isOnboardingCtaButtonDisabled(isOffline, inFlight, aborting, intent);
         const variant = isPrimary
             ? (ACTION_VARIANTS[intent] ?? 'default')
             : 'outline';

@@ -1,5 +1,6 @@
 package org.sokybot.persistence.internal;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -39,12 +40,12 @@ import org.slf4j.LoggerFactory;
  * Each game instance has its own GameDataLookupImpl backed by its own database.
  */
 public class GameDataLookupImpl implements IGameDataLookup {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(GameDataLookupImpl.class);
 
     private final String gamePath;
     private final EntityManagerFactory emf;
-    
+
     // Per-game repository instances
     private final NPCEntityRepositoryImpl npcRepository;
     private final ItemEntityRepositoryImpl itemRepository;
@@ -57,16 +58,16 @@ public class GameDataLookupImpl implements IGameDataLookup {
     private final LvlEXPRepositoryImpl lvlEXPRepository;
     private final MasteryDataRepositoryImpl masteryRepository;
     private final GameInfoRepositoryImpl gameInfoRepository;
-    
+
     // PK2 extraction handlers with decorators
     private final IPk2ExtractionHandler<NPCData, NPCEntity> npcExtractionHandler;
     private final IPk2ExtractionHandler<ItemData, ItemEntity> itemExtractionHandler;
     private final org.sokybot.persistence.internal.extraction.GameInfoExtractionHandler gameInfoExtractionHandler;
-    
+
     public GameDataLookupImpl(String gamePath, EntityManagerFactory emf) {
         this.gamePath = gamePath;
         this.emf = emf;
-        
+
         // Create per-game repository instances with this game's EMF
         this.npcRepository = new NPCEntityRepositoryImpl(emf);
         this.itemRepository = new ItemEntityRepositoryImpl(emf);
@@ -79,81 +80,82 @@ public class GameDataLookupImpl implements IGameDataLookup {
         this.lvlEXPRepository = new LvlEXPRepositoryImpl(emf);
         this.masteryRepository = new MasteryDataRepositoryImpl(emf);
         this.gameInfoRepository = new GameInfoRepositoryImpl(emf);
-        
+
         // Create extraction handlers with decorators
         // Base handlers
         IPk2ExtractionHandler<NPCData, NPCEntity> baseNpcHandler = new NPCExtractionHandler(emf);
         IPk2ExtractionHandler<ItemData, ItemEntity> baseItemHandler = new ItemExtractionHandler(emf);
-        
+
         // Add retry decorator (3 retries with 1000ms delay)
-        IPk2ExtractionHandler<NPCData, NPCEntity> retryableNpcHandler = 
-            new RetryableExtractionDecorator<>(baseNpcHandler, 3, 1000);
-        IPk2ExtractionHandler<ItemData, ItemEntity> retryableItemHandler = 
-            new RetryableExtractionDecorator<>(baseItemHandler, 3, 1000);
-        
+        IPk2ExtractionHandler<NPCData, NPCEntity> retryableNpcHandler = new RetryableExtractionDecorator<>(
+                baseNpcHandler, 3, 1000);
+        IPk2ExtractionHandler<ItemData, ItemEntity> retryableItemHandler = new RetryableExtractionDecorator<>(
+                baseItemHandler, 3, 1000);
+
         // Add caching decorator (skip if already extracted)
         this.npcExtractionHandler = new CachedExtractionDecorator<>(
-            retryableNpcHandler,
-            () -> npcRepository.count() > 0
-        );
-        
+                retryableNpcHandler,
+                () -> npcRepository.count() > 0);
+
         this.itemExtractionHandler = new CachedExtractionDecorator<>(
-            retryableItemHandler,
-            () -> itemRepository.count() > 0
-        );
-        
-        // GameInfo extraction handler (no decorator needed as we check existence in findGameInfo)
-        this.gameInfoExtractionHandler = new org.sokybot.persistence.internal.extraction.GameInfoExtractionHandler(emf, gamePath);
-        
-        // Eagerly trigger GameInfo extraction in background to ensure server list is available
+                retryableItemHandler,
+                () -> itemRepository.count() > 0);
+
+        // GameInfo extraction handler (no decorator needed as we check existence in
+        // findGameInfo)
+        this.gameInfoExtractionHandler = new org.sokybot.persistence.internal.extraction.GameInfoExtractionHandler(emf,
+                gamePath);
+
+        // Eagerly trigger GameInfo extraction in background to ensure server list is
+        // available
         CompletableFuture.runAsync(this::importGameInfo);
     }
-    
+
     @Override
     public String getGamePath() {
         return gamePath;
     }
-    
+
     @Override
     public Optional<NPCEntity> findNPC(int refId) {
         Optional<NPCEntity> entity = npcRepository.findById(refId);
         if (entity.isPresent()) {
             return entity;
         }
-        
+
         // Lazy load NPCs if not found
-        synchronized(this) {
+        synchronized (this) {
             // Double-check pattern
             entity = npcRepository.findById(refId);
             if (entity.isPresent()) {
                 return entity;
             }
-            
+
             importNPCs();
             return npcRepository.findById(refId);
         }
     }
-    
+
     @Override
     public Optional<ItemEntity> findItem(int refId) {
         Optional<ItemEntity> entity = itemRepository.findById(refId);
         if (entity.isPresent()) {
             return entity;
         }
-        
+
         // Lazy load Items if not found
-        synchronized(this) {
+        synchronized (this) {
             // Double-check pattern
             entity = itemRepository.findById(refId);
             if (entity.isPresent()) {
                 return entity;
             }
-            
+
             importItems();
             return itemRepository.findById(refId);
         }
     }
-    
+
     @Override
     public Optional<SkillEntity> findSkill(int refId) {
         return skillRepository.findById(refId);
@@ -173,7 +175,7 @@ public class GameDataLookupImpl implements IGameDataLookup {
     public Optional<PortalEntity> findPortal(int refId) {
         return portalRepository.findById(refId);
     }
-    
+
     @Override
     public Optional<String> findMasteryName(int masteryId) {
         return masteryRepository.findById(masteryId).map(MasteryData::getName);
@@ -183,12 +185,12 @@ public class GameDataLookupImpl implements IGameDataLookup {
     public Optional<Long> getLvlEXP(int lvl) {
         return lvlEXPRepository.findById(lvl).map(LvlEXP::getExp);
     }
-    
+
     @Override
     public Optional<SectorRef> findSector(short sectorYX) {
         return sectorRepository.findById(sectorYX);
     }
-    
+
     @Override
     public List<SectorRef> findAllSectors() {
         return sectorRepository.findAll();
@@ -219,9 +221,13 @@ public class GameDataLookupImpl implements IGameDataLookup {
         return findDivisionInfo()
                 .map(info -> info.getDivisions().stream()
                         .collect(Collectors.toMap(
-                                div -> div.getName(), 
-                                div -> div.getHosts()
-                        )))
+                                div -> div.getName(),
+                                div -> div.getHosts(),
+                                (existing, replacement) -> {
+                                    List<String> merged = new java.util.ArrayList<>(existing);
+                                    merged.addAll(replacement);
+                                    return merged;
+                                })))
                 .orElse(Collections.emptyMap());
     }
 
@@ -258,25 +264,39 @@ public class GameDataLookupImpl implements IGameDataLookup {
     }
 
     // Helper methods
-    
+
     private Optional<GameInfo> findGameInfo() {
         // GameInfo uses gamePath as ID
         Optional<GameInfo> info = gameInfoRepository.findById(this.gamePath);
+
+        File mediaPk2 = new File(gamePath, "Media.pk2");
+        long mtime = mediaPk2.exists() ? mediaPk2.lastModified() : 0;
+        long size = mediaPk2.exists() ? mediaPk2.length() : 0;
+
         if (info.isPresent()) {
-            return info;
+            GameInfo gi = info.get();
+            if (gi.getLastPk2Modified() == mtime && gi.getLastPk2Size() == size) {
+                return info;
+            }
+            logger.info("Media.pk2 changed for game '{}' (mtime: {} vs {}, size: {} vs {}). Re-extracting...",
+                    gamePath, gi.getLastPk2Modified(), mtime, gi.getLastPk2Size(), size);
         }
-        
-        synchronized(this) {
-             info = gameInfoRepository.findById(this.gamePath);
-             if (info.isPresent()) {
-                 return info;
-             }
-             
-             importGameInfo();
-             return gameInfoRepository.findById(this.gamePath);
+
+        synchronized (this) {
+            // Double-check pattern
+            info = gameInfoRepository.findById(this.gamePath);
+            if (info.isPresent()) {
+                GameInfo gi = info.get();
+                if (gi.getLastPk2Modified() == mtime && gi.getLastPk2Size() == size) {
+                    return info;
+                }
+            }
+
+            importGameInfo();
+            return gameInfoRepository.findById(this.gamePath);
         }
     }
-    
+
     /**
      * Import NPCs from PK2 file using the extraction handler with decorators.
      */
@@ -305,13 +325,31 @@ public class GameDataLookupImpl implements IGameDataLookup {
      * Import GameInfo from PK2 file.
      */
     private void importGameInfo() {
+        File mediaPk2 = new File(gamePath, "Media.pk2");
+        long mtime = mediaPk2.exists() ? mediaPk2.lastModified() : 0;
+        long size = mediaPk2.exists() ? mediaPk2.length() : 0;
+
+        gameInfoExtractionHandler.setPk2Metadata(mtime, size);
+
         try {
-             // GameInfo usually in Media.pk2
+            // Try Media.pk2 first
             gameInfoExtractionHandler.extractAndPersist(gamePath, "Media.pk2");
+
+            // Check if we actually got division info. If not, try Data.pk2
+            Optional<GameInfo> info = gameInfoRepository.findById(this.gamePath);
+            if (info.isPresent() && (info.get().getDivisionInfo() == null
+                    || info.get().getDivisionInfo().getDivisions().isEmpty())) {
+                logger.info("Division info not found in Media.pk2, trying Data.pk2 fallback...");
+                File dataPk2 = new File(gamePath, "Data.pk2");
+                if (dataPk2.exists()) {
+                    gameInfoExtractionHandler.extractAndPersist(gamePath, "Data.pk2");
+                } else {
+                    logger.debug("Data.pk2 not found at {}, skipping fallback.", dataPk2.getAbsolutePath());
+                }
+            }
+
         } catch (PersistenceException e) {
             logger.error("Failed to import GameInfo for game: " + gamePath, e);
-            // Don't throw exception to allow partial startup? 
-            // But without GameInfo we can't show servers.
             throw new RuntimeException("Failed to import GameInfo", e);
         }
     }

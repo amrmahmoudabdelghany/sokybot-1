@@ -13,6 +13,9 @@ public class GroupInfo implements Serializable {
     private int id;
     private String name = "";
     private String gamePath = "";
+    private boolean isManualOverride;
+    private String manualHost = "";
+    private String manualDivision = "";
 
     public GroupInfo() {
     }
@@ -52,8 +55,33 @@ public class GroupInfo implements Serializable {
         this.gamePath = gamePath;
     }
 
+    public boolean isManualOverride() {
+        return isManualOverride;
+    }
+
+    public void setManualOverride(boolean manualOverride) {
+        isManualOverride = manualOverride;
+    }
+
+    public String getManualHost() {
+        return manualHost;
+    }
+
+    public void setManualHost(String manualHost) {
+        this.manualHost = manualHost;
+    }
+
+    public String getManualDivision() {
+        return manualDivision;
+    }
+
+    public void setManualDivision(String manualDivision) {
+        this.manualDivision = manualDivision;
+    }
+
     @Override
     public String toString() {
-        return "GroupInfo{id=" + id + ", name='" + name + "', gamePath='" + gamePath + "'}";
+        return "GroupInfo{id=" + id + ", name='" + name + "', gamePath='" + gamePath + "', isManualOverride="
+                + isManualOverride + ", manualHost='" + manualHost + "', manualDivision='" + manualDivision + "'}";
     }
 }

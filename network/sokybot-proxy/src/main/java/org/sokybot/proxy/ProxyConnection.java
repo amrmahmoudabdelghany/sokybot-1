@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventAdmin;
@@ -62,6 +63,48 @@ public class ProxyConnection implements IProxyConnection {
     private volatile long lastPingSentTs = 0L;
     private volatile long latencyMs = -1L;
 
+    /** Set in {@link SimplePacketPublisher} when 0xA101 is read from the game-server channel (clientless-safe). */
+    private final AtomicLong lastGatewayAgentListFromServerWallClockMs = new AtomicLong(0L);
+
+    /**
+     * When false, {@link HeartbeatHandler} must not inject 0x2002 — avoids pings before the server's
+     * first encrypted 0x2001 (MODULE_ID) during handshake.
+     */
+    private volatile boolean clientlessServerModuleIdentified = false;
+
+    /** Used for clientless 0x6100 after gateway 0x2001 (defaults match common vSRO-style captures). */
+    private volatile byte gatewayHandshakeLocale = 22;
+    private volatile String gatewayClientModuleName = "SR_Client";
+    private volatile int gatewayClientVersion = 188;
+
+    /** Min interval between 0x6102 on the same game-server TCP channel; enforced in {@link org.sokybot.proxy.internal.PacketEncoder#encode}. */
+    /** Called from {@link org.sokybot.proxy.internal.SimplePacketPublisher} when 0xA101 is read from the server. */
+    public void markGatewayAgentListFromServer(long wallClockMs) {
+        lastGatewayAgentListFromServerWallClockMs.set(wallClockMs);
+    }
+
+    @Override
+    public long getLastGatewayAgentListFromServerWallClockMs() {
+        return lastGatewayAgentListFromServerWallClockMs.get();
+    }
+
+    @Override
+    public void clearLastGatewayAgentListFromServerWallClockMs() {
+        lastGatewayAgentListFromServerWallClockMs.set(0L);
+    }
+
+    public static long gatewayLoginMinIntervalMs() {
+        String p = System.getProperty("sokybot.gateway.loginRequest.minIntervalMs");
+        if (p == null || p.isBlank()) {
+            return 2500L;
+        }
+        try {
+            return Math.max(0L, Long.parseLong(p.trim()));
+        } catch (NumberFormatException e) {
+            return 2500L;
+        }
+    }
+
     public ProxyConnection(String machineId, IConnectionListener listener,
             EventLoopGroup bossGroup, EventLoopGroup workerGroup,
             EventAdmin eventAdmin) {
@@ -71,7 +114,7 @@ public class ProxyConnection implements IProxyConnection {
         this.workerGroup = workerGroup;
         this.eventAdmin = eventAdmin;
 
-        this.packetPublisher = new SimplePacketPublisher();
+        this.packetPublisher = new SimplePacketPublisher(this);
 
         this.channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
         this.networkComponents = new NetworkComponents();
@@ -155,6 +198,7 @@ public class ProxyConnection implements IProxyConnection {
 
         clientConnected = false;
         serverConnected = false;
+        lastGatewayAgentListFromServerWallClockMs.set(0L);
 
         if (listener != null) {
             listener.onDisconnected(null);
@@ -166,18 +210,41 @@ public class ProxyConnection implements IProxyConnection {
 
     @Override
     public void sendToServer(MutablePacket packet) {
+        // 0x6102 throttling is enforced in PacketEncoder.encode (same classloader as MutablePacket; OSGi-safe).
         if (gameServerChannel != null && gameServerChannel.isActive()) {
-            gameServerChannel.writeAndFlush(packet);
-            publishOutboundPacket(packet);
+            // Publish only after PacketEncoder runs on the event loop (count/CRC + Blowfish).
+            gameServerChannel.writeAndFlush(packet).addListener((ChannelFuture future) -> {
+                if (future.isSuccess()) {
+                    publishOutboundPacket(packet);
+                }
+            });
         }
     }
 
     @Override
     public void sendToClient(MutablePacket packet) {
         if (clientChannel != null && clientChannel.isActive()) {
-            clientChannel.writeAndFlush(packet);
-            publishOutboundPacket(packet);
+            clientChannel.writeAndFlush(packet).addListener((ChannelFuture future) -> {
+                if (future.isSuccess()) {
+                    publishOutboundPacket(packet);
+                }
+            });
         }
+    }
+
+    /**
+     * Handshake / gateway sends that bypass {@link #sendToServer(MutablePacket)} must still record only
+     * after {@link org.sokybot.proxy.internal.PacketEncoder} runs (count, CRC, Blowfish).
+     */
+    public void writeGameServerAndPublish(MutablePacket packet) {
+        if (packet == null || gameServerChannel == null || !gameServerChannel.isActive()) {
+            return;
+        }
+        gameServerChannel.writeAndFlush(packet).addListener((ChannelFuture future) -> {
+            if (future.isSuccess()) {
+                publishOutboundPacket(packet);
+            }
+        });
     }
 
     public void publishOutboundPacket(MutablePacket packet) {
@@ -275,6 +342,29 @@ public class ProxyConnection implements IProxyConnection {
         this.clientlessMode = clientlessMode;
     }
 
+    @Override
+    public void setGatewayHandshakeHints(byte localeByte, String clientModuleName, int clientVersion) {
+        String mod = clientModuleName == null || clientModuleName.isBlank() ? "SR_Client" : clientModuleName.trim();
+        if (mod.length() > 64) {
+            mod = mod.substring(0, 64);
+        }
+        this.gatewayHandshakeLocale = localeByte;
+        this.gatewayClientModuleName = mod;
+        this.gatewayClientVersion = clientVersion;
+    }
+
+    public byte getGatewayHandshakeLocale() {
+        return gatewayHandshakeLocale;
+    }
+
+    public String getGatewayClientModuleName() {
+        return gatewayClientModuleName;
+    }
+
+    public int getGatewayClientVersion() {
+        return gatewayClientVersion;
+    }
+
     public boolean isClientlessMode() {
         return clientlessMode;
     }
@@ -297,7 +387,7 @@ public class ProxyConnection implements IProxyConnection {
      * Returns the existing handshake handler, or creates a new one if none exists.
      * The handler is kept across the multi-step handshake (Initialize → Finalize)
      * so that cryptographic state (secrets, keys, initialized flag) is preserved.
-     * It is reset on disconnect/reconnect via {@link #resetHandshakeHandler()}.
+     * {@link #resetHandshakeHandler()} clears only handler state; 0x6102 throttle is per game-server {@link Channel}.
      */
     public HandshakeHandler getOrCreateHandshakeHandler() {
         if (handshakeHandler == null) {
@@ -316,6 +406,16 @@ public class ProxyConnection implements IProxyConnection {
      */
     public void resetHandshakeHandler() {
         this.handshakeHandler = null;
+        this.clientlessServerModuleIdentified = false;
+    }
+
+    /** Clientless-only: set after we process the server's first encrypted 0x2001 (service name). */
+    public void markClientlessServerModuleIdentified() {
+        this.clientlessServerModuleIdentified = true;
+    }
+
+    public boolean isClientlessServerModuleIdentified() {
+        return clientlessServerModuleIdentified;
     }
 
     public void onServerDisconnected() {
@@ -419,8 +519,8 @@ public class ProxyConnection implements IProxyConnection {
     }
 
     public boolean shouldInjectHeartbeat() {
-        // Avoid duplicate 0x2002 flood when physical client is attached.
-        return clientlessMode;
+        // Avoid duplicate 0x2002 flood when physical client is attached; never before server 0x2001.
+        return clientlessMode && clientlessServerModuleIdentified;
     }
 
     public void onHeartbeatSent() {

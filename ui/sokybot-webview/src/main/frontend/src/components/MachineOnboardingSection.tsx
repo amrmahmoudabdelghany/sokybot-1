@@ -54,6 +54,8 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
 
     const [abortInFlightByMachine, setAbortInFlightByMachine] = useState<Record<string, boolean>>({});
     const abortInFlightRef = useRef<Record<string, boolean>>({});
+    /** Bumped on each connect attempt and on cancel; stale async work must not apply success side effects. */
+    const connectOperationGenRef = useRef(0);
 
     const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' ? !navigator.onLine : false);
     const streamSessionIdRef = useRef<number>(0);
@@ -395,36 +397,67 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
                 ...payload,
             },
         }));
+        let connectGen: number | undefined;
         if (startAfterSave) {
+            connectGen = ++connectOperationGenRef.current;
             send({ type: 'CONNECT_BEGIN' });
         }
         try {
             await rsocketService.initializeMachine(parts.group, parts.name, 'login', payload);
+            if (
+                startAfterSave
+                && connectGen !== undefined
+                && connectGen !== connectOperationGenRef.current
+            ) {
+                return;
+            }
             if (startAfterSave) {
                 await rsocketService.startBot(id);
+                if (connectGen !== undefined && connectGen !== connectOperationGenRef.current) {
+                    return;
+                }
                 void invalidateMachines();
+            }
+            if (
+                startAfterSave
+                && connectGen !== undefined
+                && connectGen !== connectOperationGenRef.current
+            ) {
+                return;
             }
             await refreshMachineStatusSnapshot(id);
         } finally {
-            if (startAfterSave) {
+            if (
+                startAfterSave
+                && connectGen !== undefined
+                && connectGen === connectOperationGenRef.current
+            ) {
                 send({ type: 'CONNECT_END' });
             }
         }
     };
 
     const startMachine = async (id: string) => {
+        const gen = ++connectOperationGenRef.current;
         send({ type: 'CONNECT_BEGIN' });
         try {
             await rsocketService.startBot(id);
+            if (gen !== connectOperationGenRef.current) {
+                return;
+            }
             void invalidateMachines();
             await refreshMachineStatusSnapshot(id);
         } finally {
-            send({ type: 'CONNECT_END' });
+            if (gen === connectOperationGenRef.current) {
+                send({ type: 'CONNECT_END' });
+            }
         }
     };
 
     const abortLogin = async (id: string) => {
+        connectOperationGenRef.current += 1;
         send({ type: 'CANCEL' });
+        send({ type: 'CONNECT_END' });
         setAbortInFlightByMachine((prev) => {
             const next = { ...prev, [id]: true };
             abortInFlightRef.current = next;

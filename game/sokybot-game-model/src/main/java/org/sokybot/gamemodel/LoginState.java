@@ -57,6 +57,11 @@ public class LoginState {
     private volatile boolean spawnSyncActive;
     private final AtomicReference<Integer> gatewayResultCode = new AtomicReference<>();
     private final AtomicReference<Integer> agentAuthResultCode = new AtomicReference<>();
+    /**
+     * {@link System#currentTimeMillis()} when gateway agent list (0xA101) was last applied to this state.
+     * Used to pace 0x6102 on the wire; cleared after each login send and when requesting a new agent list.
+     */
+    private volatile long lastGatewayAgentListObservedWallClockMs;
 
     public synchronized void reset() {
         this.phase = Phase.DISCONNECTED;
@@ -73,6 +78,15 @@ public class LoginState {
         this.spawnSyncActive = false;
         this.gatewayResultCode.set(null);
         this.agentAuthResultCode.set(null);
+        this.lastGatewayAgentListObservedWallClockMs = 0L;
+    }
+
+    public long getLastGatewayAgentListObservedWallClockMs() {
+        return lastGatewayAgentListObservedWallClockMs;
+    }
+
+    public void setLastGatewayAgentListObservedWallClockMs(long wallClockMs) {
+        this.lastGatewayAgentListObservedWallClockMs = wallClockMs;
     }
 
     public Phase getPhase() {

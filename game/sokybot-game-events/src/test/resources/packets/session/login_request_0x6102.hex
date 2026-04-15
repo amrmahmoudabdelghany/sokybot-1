@@ -1,6 +1,8 @@
 # Login Request
 # Opcode: 0x6102
-# Format: local (byte) + username (string) + password (string)
+# Format: locale (byte) + username (ushort len + utf-8) + password (ushort len + utf-8) + agentId (ushort LE)
+# vSRO locale is typically 22 (0x16), not 0.
+# Example body below omits agent tail; see GatewayLoginRequestPacketTest (sokybot-proxy) for full layout.
 # local: 0x00
 # username: "testuser" (8 bytes)
 # password: "testpass123" (11 bytes)

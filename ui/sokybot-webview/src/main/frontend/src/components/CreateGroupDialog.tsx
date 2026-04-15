@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { rsocketService } from '../RSocketClient';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@sokybot/frontend-shared';
 import { Button } from '@sokybot/frontend-shared';
@@ -19,6 +19,20 @@ export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ isOpen, on
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isPickerOpen, setPickerOpen] = useState(false);
+    const [isManual, setIsManual] = useState(false);
+    const [manualHost, setManualHost] = useState('');
+    const [manualDivision, setManualDivision] = useState('');
+
+    useEffect(() => {
+        if (isOpen) {
+            setError(null);
+            setIsManual(false);
+            setManualDivision("");
+            setManualHost("");
+            setName("");
+            setPath("");
+        }
+    }, [isOpen]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,11 +40,14 @@ export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ isOpen, on
         setError(null);
         try {
             // Use new typed API
-            await rsocketService.createGroup(name, path);
+            await rsocketService.createGroup(name, path, isManual, manualHost, manualDivision);
             onCreated();
             onClose();
             setName('');
             setPath('');
+            setIsManual(false);
+            setManualHost('');
+            setManualDivision('');
         } catch (err) {
             console.error("Failed to create group", err);
             setError("Failed to create group. Ensure name is unique and path is valid.");
@@ -86,6 +103,46 @@ export const CreateGroupDialog: React.FC<CreateGroupDialogProps> = ({ isOpen, on
                             <p className="text-xs text-muted-foreground">
                                 Full path to the directory containing game files (sro_client.exe).
                             </p>
+                        </div>
+
+                        <div className="space-y-4 pt-2 border-t">
+                            <div className="flex items-center space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="manual-override"
+                                    checked={isManual}
+                                    onChange={(e) => setIsManual(e.target.checked)}
+                                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                />
+                                <Label htmlFor="manual-override" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    Manual Connection Settings
+                                </Label>
+                            </div>
+
+                            {isManual && (
+                                <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-1">
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor="manual-division">Division Name</Label>
+                                        <Input
+                                            id="manual-division"
+                                            value={manualDivision}
+                                            onChange={(e) => setManualDivision(e.target.value)}
+                                            placeholder="S_Official"
+                                            required={isManual}
+                                        />
+                                    </div>
+                                    <div className="grid gap-1.5">
+                                        <Label htmlFor="manual-host">Login Host (IP/DNS)</Label>
+                                        <Input
+                                            id="manual-host"
+                                            value={manualHost}
+                                            onChange={(e) => setManualHost(e.target.value)}
+                                            placeholder="127.0.0.1"
+                                            required={isManual}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <DialogFooter>

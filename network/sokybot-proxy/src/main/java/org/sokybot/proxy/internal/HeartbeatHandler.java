@@ -2,6 +2,7 @@ package org.sokybot.proxy.internal;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.proxy.ProxyConnection;
 
@@ -14,7 +15,7 @@ import io.netty.handler.timeout.IdleStateEvent;
 @Sharable
 public class HeartbeatHandler extends ChannelDuplexHandler {
     private static final Logger log = LoggerFactory.getLogger(HeartbeatHandler.class);
-    private static final int HEARTBEAT_OPCODE = 0x2002;
+    private static final int HEARTBEAT_OPCODE = ClientOpcode.GATEWAY_PATCH_PING;
 
     private final ProxyConnection proxyConnection;
 

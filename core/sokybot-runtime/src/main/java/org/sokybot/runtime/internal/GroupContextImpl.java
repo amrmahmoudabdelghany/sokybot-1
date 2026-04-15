@@ -57,7 +57,10 @@ public class GroupContextImpl implements IGroupContext {
     private final Object translatorsLock = new Object();
 
     private final Lock lock = new ReentrantLock();
-    /** Concurrent reads safe with install/remove; install/remove still use {@link #lock} for case-insensitive checks. */
+    /**
+     * Concurrent reads safe with install/remove; install/remove still use
+     * {@link #lock} for case-insensitive checks.
+     */
     private final Map<String, IMachineContext> machines = new ConcurrentHashMap<>();
 
     private IGameDataLookup gameDataLookup;
@@ -125,8 +128,10 @@ public class GroupContextImpl implements IGroupContext {
     }
 
     /**
-     * Snapshot of machines at call time. The backing map is concurrent; iteration is weakly consistent and may
-     * reflect concurrent installs/removes. Do not assume atomicity across multiple reads without external synchronization.
+     * Snapshot of machines at call time. The backing map is concurrent; iteration
+     * is weakly consistent and may
+     * reflect concurrent installs/removes. Do not assume atomicity across multiple
+     * reads without external synchronization.
      */
     @Override
     public IMachineContext[] getMachines() {
@@ -179,6 +184,21 @@ public class GroupContextImpl implements IGroupContext {
     @Override
     public String getGamePath() {
         return groupInfo.getGamePath();
+    }
+
+    @Override
+    public boolean isManualOverride() {
+        return groupInfo.isManualOverride();
+    }
+
+    @Override
+    public String getManualHost() {
+        return groupInfo.getManualHost();
+    }
+
+    @Override
+    public String getManualDivision() {
+        return groupInfo.getManualDivision();
     }
 
     @Override
@@ -294,7 +314,10 @@ public class GroupContextImpl implements IGroupContext {
         }
     }
 
-    /** Clears cached translators so the next {@link #getTranslators()} rebuilds (e.g. after scripts finish loading). */
+    /**
+     * Clears cached translators so the next {@link #getTranslators()} rebuilds
+     * (e.g. after scripts finish loading).
+     */
     void invalidateSharedTranslators() {
         synchronized (translatorsLock) {
             sharedTranslators = null;

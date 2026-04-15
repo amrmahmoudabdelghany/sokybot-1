@@ -30,7 +30,7 @@ public class FixedPacketBuilder implements IPacketBuilder {
 		packet.setOpcode(opcode);
 		packet.setPacketSource(networkPeer);
 		packet.setPacketEncoding(packetEncoding);
-		packet.setDataEncoding(Encoding.PLAIN);
+		packet.setDataEncoding(dataEncoding);
 		
 		return packet ; 
 	}

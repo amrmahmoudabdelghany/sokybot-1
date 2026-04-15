@@ -2,6 +2,8 @@ package org.sokybot.proxy.internal;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 
 import org.sokybot.network.NetworkPeer;
 import org.sokybot.network.packet.ClientOpcode;
@@ -157,8 +159,7 @@ public class HandshakeHandler {
                 .build();
 
         System.out.println("Sokybot Proxy: Sending auth packet " + packet);
-        serverChannel.writeAndFlush(packet);
-        proxyConnection.publishOutboundPacket(packet);
+        proxyConnection.writeGameServerAndPublish(packet);
     }
 
     /**
@@ -203,8 +204,7 @@ public class HandshakeHandler {
             acceptancePacket.setDataEncoding(Encoding.PLAIN);
             acceptancePacket.setPacketSource(NetworkPeer.BOT);
 
-            serverChannel.writeAndFlush(acceptancePacket);
-            proxyConnection.publishOutboundPacket(acceptancePacket);
+            proxyConnection.writeGameServerAndPublish(acceptancePacket);
 
             System.out.println("Sokybot Proxy: Handshake accepted, Final Key: " + ByteBufUtil.hexDump(this.finalKey));
 
@@ -236,8 +236,7 @@ public class HandshakeHandler {
                 .put((byte) 0x00)
                 .build();
 
-        serverChannel.writeAndFlush(moduleIdentification);
-        proxyConnection.publishOutboundPacket(moduleIdentification);
+        proxyConnection.writeGameServerAndPublish(moduleIdentification);
     }
 
     /**
@@ -251,13 +250,63 @@ public class HandshakeHandler {
 
         System.out.println("Sokybot Proxy: Server identified as " + name);
 
+        if (clientlessMode) {
+            proxyConnection.markClientlessServerModuleIdentified();
+        }
+
         if (listener != null) {
             listener.onServerIdentified(name);
+        }
+
+        if (clientlessMode && name != null && name.toLowerCase(Locale.ROOT).contains("gateway")) {
+            sendGatewayPatchPing();
+            sendGatewayClientVersionPacket();
         }
 
         if (proxyConnection.hasPendingAuth()) {
             sendAuthRequest(proxyConnection.consumePendingLoginId());
         }
+    }
+
+    /**
+     * 0x2002 keepalive — many gateways expect this during the login phase, not only on idle timers.
+     */
+    private void sendGatewayPatchPing() {
+        if (serverChannel == null || !serverChannel.isActive()) {
+            return;
+        }
+        MutablePacket ping = MutablePacket.getBuilder(0, ClientOpcode.GATEWAY_PATCH_PING)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .packetSource(NetworkPeer.BOT)
+                .build();
+        proxyConnection.writeGameServerAndPublish(ping);
+    }
+
+    /**
+     * 0x6100 client build (locale + UTF-8 module name + int version), vSRO-style.
+     */
+    private void sendGatewayClientVersionPacket() {
+        if (serverChannel == null || !serverChannel.isActive()) {
+            return;
+        }
+        byte locale = proxyConnection.getGatewayHandshakeLocale();
+        String mod = proxyConnection.getGatewayClientModuleName();
+        int version = proxyConnection.getGatewayClientVersion();
+        byte[] modBytes = mod.getBytes(StandardCharsets.UTF_8);
+        if (modBytes.length > 255) {
+            System.err.println("Sokybot Proxy: gateway client module name too long for 0x6100");
+            return;
+        }
+        int bodyLen = 1 + 2 + modBytes.length + 4;
+        MutablePacket packet = MutablePacket.getBuilder(bodyLen, ClientOpcode.GATEWAY_CLIENT_BUILD)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .packetSource(NetworkPeer.BOT)
+                .put(locale)
+                .putShort((short) modBytes.length)
+                .putBytes(modBytes)
+                .putInt(version)
+                .build();
+        proxyConnection.writeGameServerAndPublish(packet);
     }
 
     private void sendAuthRequest(int loginId) {
@@ -268,8 +317,7 @@ public class HandshakeHandler {
                 .packetSource(NetworkPeer.BOT)
                 .putInt(loginId)
                 .build();
-        serverChannel.writeAndFlush(authPacket);
-        proxyConnection.publishOutboundPacket(authPacket);
+        proxyConnection.writeGameServerAndPublish(authPacket);
     }
 
     private long generateSecrets(long g, int x, long p) {

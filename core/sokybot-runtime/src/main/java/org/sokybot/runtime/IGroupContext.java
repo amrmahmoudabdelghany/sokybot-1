@@ -28,6 +28,12 @@ public interface IGroupContext extends IContextAdapter {
 
 	String getGamePath();
 
+	boolean isManualOverride();
+
+	String getManualHost();
+
+	String getManualDivision();
+
 	void removeMachine(String machineName);
 
 }

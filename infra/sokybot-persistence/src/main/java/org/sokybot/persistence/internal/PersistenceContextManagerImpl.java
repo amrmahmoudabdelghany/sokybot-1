@@ -16,32 +16,32 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Implementation of IPersistenceContextManager.
- * Manages per-game EntityManagerFactory instances, each with its own database file.
+ * Manages per-game EntityManagerFactory instances, each with its own database
+ * file.
  */
 @Component(service = IPersistenceContextManager.class, immediate = true)
 public class PersistenceContextManagerImpl implements IPersistenceContextManager {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(PersistenceContextManagerImpl.class);
     private final Map<String, EntityManagerFactory> emfMap = new ConcurrentHashMap<>();
     private String dbBasePath;
-    
+
     @Activate
     public void activate(Map<String, Object> config) {
         // Use configurable base path (OSGi ConfigAdmin or system property)
         Object pathObj = config != null ? config.get("db.base.path") : null;
-        String rawPath = pathObj != null ? pathObj.toString() : 
-            System.getProperty("sokybot.db.path", "./data/db");
+        String rawPath = pathObj != null ? pathObj.toString() : System.getProperty("sokybot.db.path", "./data/db");
         File dbDir = new File(rawPath);
         this.dbBasePath = dbDir.getAbsolutePath();
-        
+
         if (!dbDir.exists() && !dbDir.mkdirs()) {
-            throw new IllegalStateException("Failed to create database directory: " + dbBasePath + 
-                ". Ensure the path is writable (e.g. set sokybot.db.path or db.base.path).");
+            throw new IllegalStateException("Failed to create database directory: " + dbBasePath +
+                    ". Ensure the path is writable (e.g. set sokybot.db.path or db.base.path).");
         }
-        
+
         logger.info("PersistenceContextManager activated with base path: {}", dbBasePath);
     }
-    
+
     @Deactivate
     public void deactivate() {
         logger.info("Deactivating PersistenceContextManager, closing {} contexts", emfMap.size());
@@ -57,28 +57,28 @@ public class PersistenceContextManagerImpl implements IPersistenceContextManager
         }
         emfMap.clear();
     }
-    
+
     @Override
     public EntityManagerFactory getEntityManagerFactory(String gamePath) {
         if (gamePath == null || gamePath.trim().isEmpty()) {
             throw new IllegalArgumentException("Game path cannot be null or empty");
         }
-        
+
         return emfMap.computeIfAbsent(gamePath, this::createEntityManagerFactory);
     }
-    
+
     private EntityManagerFactory createEntityManagerFactory(String gamePath) {
         logger.info("Creating EntityManagerFactory for game: {}", gamePath);
-        
+
         try {
             // Create game-specific database file name
             String dbFileName = sanitizeGamePath(gamePath) + ".db";
             String dbPath = dbBasePath + File.separator + dbFileName;
-            
+
             Map<String, String> properties = new HashMap<>();
             properties.put("javax.persistence.jdbc.driver", "org.h2.Driver");
-            properties.put("javax.persistence.jdbc.url", 
-                "jdbc:h2:file:" + dbPath + ";AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1");
+            properties.put("javax.persistence.jdbc.url",
+                    "jdbc:h2:file:" + dbPath + ";AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1");
             properties.put("javax.persistence.jdbc.user", "sa");
             properties.put("javax.persistence.jdbc.password", "");
             properties.put("hibernate.dialect", "org.hibernate.dialect.H2Dialect");
@@ -90,46 +90,51 @@ public class PersistenceContextManagerImpl implements IPersistenceContextManager
             properties.put("hibernate.hikari.maximumPoolSize", "5");
             properties.put("hibernate.hikari.connectionTimeout", "30000");
             properties.put("hibernate.hikari.idleTimeout", "600000");
-            
+
             // In OSGi, javax.persistence.Persistence.createEntityManagerFactory uses
             // ServiceLoader which cannot discover providers across bundle boundaries.
             // Instantiate HibernatePersistenceProvider directly.
             ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
             try {
                 Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
-                
+
                 PersistenceProvider provider = new org.hibernate.jpa.HibernatePersistenceProvider();
                 EntityManagerFactory emf = provider.createEntityManagerFactory(
-                    "sokybot-persistence-unit", properties);
-                
+                        "sokybot-persistence-unit", properties);
+
                 if (emf == null) {
                     throw new javax.persistence.PersistenceException(
-                        "HibernatePersistenceProvider returned null for persistence unit 'sokybot-persistence-unit'. " +
-                        "Check that META-INF/persistence.xml is on the classpath.");
+                            "HibernatePersistenceProvider returned null for persistence unit 'sokybot-persistence-unit'. "
+                                    +
+                                    "Check that META-INF/persistence.xml is on the classpath.");
                 }
-                
-                logger.info("Successfully created EntityManagerFactory for game: {} at {}", 
-                    gamePath, dbPath);
+
+                // Manually patch schema for columns that Hibernate's update strategy
+                // may fail to add on H2 2.x (known Hibernate 5.6 + H2 2.x issue)
+                migrateSchema(emf);
+
+                logger.info("Successfully created EntityManagerFactory for game: {} at {}",
+                        gamePath, dbPath);
                 return emf;
             } finally {
                 Thread.currentThread().setContextClassLoader(originalClassLoader);
             }
-            
+
         } catch (Exception e) {
             logger.error("Failed to create EntityManagerFactory for game: {}", gamePath, e);
             String causeMsg = e.getCause() != null ? e.getCause().getMessage() : e.getMessage();
             String message = "Failed to create persistence context for game: " + gamePath +
-                (causeMsg != null && !causeMsg.isEmpty() ? ". " + causeMsg : "");
+                    (causeMsg != null && !causeMsg.isEmpty() ? ". " + causeMsg : "");
             throw new RuntimeException(message, e);
         }
     }
-    
+
     @Override
     public void closeEntityManagerFactory(String gamePath) {
         if (gamePath == null) {
             return;
         }
-        
+
         EntityManagerFactory emf = emfMap.remove(gamePath);
         if (emf != null) {
             try {
@@ -142,17 +147,17 @@ public class PersistenceContextManagerImpl implements IPersistenceContextManager
             }
         }
     }
-    
+
     @Override
     public Map<String, EntityManagerFactory> getActiveContexts() {
         return new HashMap<>(emfMap);
     }
-    
+
     @Override
     public boolean hasContext(String gamePath) {
         return gamePath != null && emfMap.containsKey(gamePath);
     }
-    
+
     /**
      * Convert game path to a valid filename.
      */
@@ -167,5 +172,40 @@ public class PersistenceContextManagerImpl implements IPersistenceContextManager
             sanitized = sanitized.substring(0, 200);
         }
         return sanitized;
+    }
+
+    /**
+     * Manually patch the database schema for columns that Hibernate's
+     * {@code hbm2ddl.auto=update} strategy may fail to add on H2 2.x.
+     * 
+     * This is a known compatibility issue between Hibernate 5.6 and H2 2.x
+     * where ALTER TABLE ADD COLUMN statements are silently skipped during
+     * schema migration, causing SQLGrammarException at query time.
+     */
+    private void migrateSchema(EntityManagerFactory emf) {
+        javax.persistence.EntityManager em = emf.createEntityManager();
+        try {
+            em.getTransaction().begin();
+
+            // GameInfo table - cache invalidation columns added for vSRO support
+            em.createNativeQuery(
+                    "ALTER TABLE GAMEINFO ADD COLUMN IF NOT EXISTS LASTPK2MODIFIED BIGINT DEFAULT 0")
+                    .executeUpdate();
+            em.createNativeQuery(
+                    "ALTER TABLE GAMEINFO ADD COLUMN IF NOT EXISTS LASTPK2SIZE BIGINT DEFAULT 0")
+                    .executeUpdate();
+
+            em.getTransaction().commit();
+            logger.debug("Schema migration check completed successfully");
+        } catch (Exception e) {
+            if (em.getTransaction().isActive()) {
+                em.getTransaction().rollback();
+            }
+            // Non-fatal: log and continue - the columns may already exist
+            logger.warn("Schema migration encountered an issue (may be harmless): {}",
+                    e.getMessage());
+        } finally {
+            em.close();
+        }
     }
 }

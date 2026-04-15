@@ -15,58 +15,76 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class GameInfo {
 
-
 	@Id
-	private String gamePath ; 
-	
-	private int port ; 
-	
-	private int version ; 
-	
+	private String gamePath;
+
+	private int port;
+
+	private int version;
+
 	@OneToOne(cascade = CascadeType.ALL)
-	private DivisionInfo divisionInfo ; 
-	
+	private DivisionInfo divisionInfo;
+
 	@OneToOne(cascade = CascadeType.ALL)
-	private SilkroadType silkroadType ;
-	
+	private SilkroadType silkroadType;
+
+	private long lastPk2Modified;
+	private long lastPk2Size;
+
 	public String getGamePath() {
 		return gamePath;
 	}
-	
+
 	public int getPort() {
 		return port;
 	}
-	
+
 	public int getVersion() {
 		return version;
 	}
-	
+
 	public DivisionInfo getDivisionInfo() {
 		return divisionInfo;
 	}
-	
+
 	public SilkroadType getSilkroadType() {
 		return silkroadType;
 	}
-	
+
 	public void setGamePath(String gamePath) {
 		this.gamePath = gamePath;
 	}
-	
+
 	public void setPort(int port) {
 		this.port = port;
 	}
-	
+
 	public void setVersion(int version) {
 		this.version = version;
 	}
-	
+
 	public void setDivisionInfo(DivisionInfo divisionInfo) {
 		this.divisionInfo = divisionInfo;
 	}
-	
+
 	public void setSilkroadType(SilkroadType silkroadType) {
 		this.silkroadType = silkroadType;
 	}
-	
+
+	public long getLastPk2Modified() {
+		return lastPk2Modified;
+	}
+
+	public void setLastPk2Modified(long lastPk2Modified) {
+		this.lastPk2Modified = lastPk2Modified;
+	}
+
+	public long getLastPk2Size() {
+		return lastPk2Size;
+	}
+
+	public void setLastPk2Size(long lastPk2Size) {
+		this.lastPk2Size = lastPk2Size;
+	}
+
 }

@@ -134,7 +134,7 @@ public class SokybotContextImpl implements ISokybotContext {
     @Override
     public void installGroup(String groupName, String gamePath) {
         try {
-            installGroupInternal(groupName, gamePath);
+            installGroupInternal(groupName, gamePath, false, "", "");
         } catch (Exception e) {
             log.error("Failed to install group: {}", groupName, e);
             throw new RuntimeException(e);
@@ -146,7 +146,19 @@ public class SokybotContextImpl implements ISokybotContext {
         installGroup(groupName, gamePath);
     }
 
-    private IGroupContext installGroupInternal(String groupName, String gamePath) throws InvalidGameReferenceException {
+    @Override
+    public void installGroup(String groupName, String gamePath, boolean manualOverride, String manualDivision,
+            String manualHost) {
+        try {
+            installGroupInternal(groupName, gamePath, manualOverride, manualDivision, manualHost);
+        } catch (Exception e) {
+            log.error("Failed to install group with manual override: {}", groupName, e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    private IGroupContext installGroupInternal(String groupName, String gamePath, boolean manualOverride,
+            String manualDivision, String manualHost) throws InvalidGameReferenceException {
         lock.lock();
         try {
             if (groups.containsKey(groupName)) {
@@ -157,6 +169,10 @@ public class SokybotContextImpl implements ISokybotContext {
             GroupInfo groupInfo = new GroupInfo();
             groupInfo.setName(groupName);
             groupInfo.setGamePath(gamePath);
+            groupInfo.setManualOverride(manualOverride);
+            groupInfo.setManualDivision(manualDivision);
+            groupInfo.setManualHost(manualHost);
+
             IGroupContext groupCtx = groupContextFactory.createGroupContext(groupInfo, bundleContext);
             groups.put(groupName, groupCtx);
             groupInfoRepo.save(groupInfo);

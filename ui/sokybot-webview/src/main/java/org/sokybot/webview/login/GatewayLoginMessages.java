@@ -16,19 +16,27 @@ public final class GatewayLoginMessages {
             return null;
         }
         int c = code & 0xFF;
+        String captchaHint = " Image verification (0x2322) only appears on some gateways after this step succeeds.";
         switch (c) {
             case 1:
             case 2:
             case 0x0B:
             case 0x0C:
+                return "Gateway rejected login (code " + c + "). Check username, password, and agent selection."
+                        + " An immediate 0xA102 failure means the challenge step was never offered."
+                        + captchaHint;
             case 0x0D:
-                return "Invalid username or password.";
+                return "Gateway rejected login (code 13 / 0x0D). Wrong username or password, wrong shard (agent id), or account not allowed on this gateway."
+                        + " If your password uses non-Latin characters, set login charset to match the official client (often windows-1252 or a regional code page)."
+                        + " Ensure gateway client build (0x6100) matches your server."
+                        + " An immediate 0xA102 failure means no image challenge was offered yet."
+                        + captchaHint;
             case 4:
                 return "This account is already connected.";
             case 6:
                 return "Disconnected or blocked by the gateway.";
             default:
-                return null;
+                return "Gateway rejected login (code " + c + ")." + captchaHint;
         }
     }
 

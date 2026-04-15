@@ -325,7 +325,8 @@ const PHASE_MAP: Record<string, PhaseEntry> = {
     },
     FAILED: {
         displayTitle: 'Login failed',
-        displayDescription: 'Authentication was rejected. Check your credentials and try again.',
+        displayDescription:
+            'The gateway or game server rejected this attempt. See the detail below—gateway failures often mean credentials, agent choice, or packet layout before any CAPTCHA step.',
         authState: 'failed',
         progressStep: 3,
         severity: 'error',

@@ -94,10 +94,13 @@ public class EngineCore implements IEngine, IConnectionListener {
         this.gameModel = gameModel;
 
         // Initialize components
-        this.dispatcher = new DispatcherImpl(proxyConnection, machineId);
+        this.dispatcher = new DispatcherImpl(proxyConnection, machineId, gameModel);
         this.workflowRegistry = new WorkflowRegistryImpl();
         this.workflowContext = new WorkflowContextImpl(
                 gameModel, dispatcher, proxyConnection, groupName, machineName, bundleContext);
+        if (this.dispatcher instanceof DispatcherImpl) {
+            ((DispatcherImpl) this.dispatcher).bindWorkflowContext(this.workflowContext);
+        }
         this.actionQueue = new ActionQueueImpl();
         this.queueProcessor = new ActionQueueProcessorImpl(actionQueue);
         this.interruptionManager = new InterruptionManager(workflowRegistry);

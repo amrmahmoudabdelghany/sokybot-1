@@ -3,6 +3,7 @@ import org.sokybot.gamemodel.LoginState
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventAdmin
 import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import org.sokybot.engine.api.RateLimitException
 import org.sokybot.network.NetworkPeer
 import org.sokybot.network.packet.ClientOpcode
@@ -50,10 +51,13 @@ class Login extends BaseActuator {
     private static final String STATE_WAIT_FOR_AGENTS_RECHECK = "WAIT_FOR_AGENTS_RECHECK"
     private static final String STATE_CHECK_AGENT_WAIT_TIMEOUT = "CHECK_AGENT_WAIT_TIMEOUT"
     private static final String STATE_CONNECTED_RESUME = "CONNECTED_RESUME"
+    /** Marks intent to send 0x6102; wire delay is enforced in DispatcherImpl from LoginState agent-list wall clock. */
+    private static final String STATE_PAUSE_BEFORE_GATEWAY_LOGIN = "PAUSE_BEFORE_GATEWAY_LOGIN"
     private static final String STATE_PARK_MISSING_LOGIN = "PARK_MISSING_LOGIN"
     private static final String STATE_SEND_LOGIN_REQUEST = "SEND_LOGIN_REQUEST"
     private static final String STATE_WAIT_FOR_LOGIN_RESPONSE = "WAIT_FOR_LOGIN_RESPONSE"
     private static final String STATE_WAIT_FOR_LOGIN_RECHECK = "WAIT_FOR_LOGIN_RECHECK"
+    private static final String STATE_SUBMIT_GATEWAY_IMAGE_CODE = "SUBMIT_GATEWAY_IMAGE_CODE"
     private static final String STATE_CHECK_LOGIN_FAILED_IMMEDIATE = "CHECK_LOGIN_FAILED_IMMEDIATE"
     private static final String STATE_CHECK_LOGIN_TIMEOUT = "CHECK_LOGIN_TIMEOUT"
     private static final String STATE_CHECK_AGENT_SERVER_CONNECTION_FAILURE = "CHECK_AGENT_SERVER_CONNECTION_FAILURE"
@@ -80,6 +84,7 @@ class Login extends BaseActuator {
     private static final String PHASE_MISSING_AGENT_SERVER = "MISSING_AGENT_SERVER"
     private static final String PHASE_MISSING_CHARACTER_SELECTION = "MISSING_CHARACTER_SELECTION"
     private static final String PHASE_WAITING_FOR_AGENTS = "WAITING_FOR_AGENTS"
+    private static final String PHASE_GATEWAY_LOGIN_PAUSE = "GatewayLoginPause"
     private static final String PHASE_WAITING_FOR_AGENTS_TIMEOUT = "WAITING_FOR_AGENTS_TIMEOUT"
     private static final String PHASE_WAITING_FOR_PASSCODE = "WAITING_FOR_PASSCODE"
     private static final String PHASE_WAIT_FOR_CAPTCHA = "WAIT_FOR_CAPTCHA"
@@ -100,6 +105,8 @@ class Login extends BaseActuator {
     private static final String KEY_LOGIN_IN_PROGRESS = "loginInProgress"
     private static final String KEY_AGENT_BYPASS_COOLDOWN_UNTIL_MS = "agentBypassCooldownUntilMs"
     private static final String KEY_AGENT_LIST_CACHE_AT_MS = "agentListCacheAtMs"
+    /** Last successful outbound 0x6102 (per machine); debounces login storms. */
+    private static final String KEY_LAST_GATEWAY_LOGIN_REQUEST_MS = "loginLastGatewayLoginRequestMs"
     private static final long AGENT_WAIT_TIMEOUT_MS = 15000L
     private static final long LOGIN_RESPONSE_TIMEOUT_MS = 15000L
     private static final long AGENT_AUTH_TIMEOUT_MS = 45000L
@@ -141,6 +148,7 @@ class Login extends BaseActuator {
 
     @Override
     void setup() {
+        // Redeploy/restart sokybot-engine and reload this script together; otherwise 0x6102 may use an older DispatcherImpl (locale 0 on wire).
         registerSettings("login", LoginSettings, { new LoginSettings() })
 
         def settingsProvider = settingsProvider("login", LoginSettings)
@@ -283,8 +291,8 @@ class Login extends BaseActuator {
                     cb.when({ ctx ->
                         def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
                         def ls = ctx.getGameModel()?.getLoginState()
-                        loginPrereqsForGateway(settings, ls)
-                    }, STATE_SEND_LOGIN_REQUEST)
+                        loginPrereqsForGateway(settings, ls, ctx)
+                    }, STATE_PAUSE_BEFORE_GATEWAY_LOGIN)
                             .when({ ctx -> hasAgents(ctx.getGameModel()?.getLoginState()) }, STATE_PARK_MISSING_LOGIN)
                             .defaultTo(STATE_RESEND_AGENT_LIST_REQUEST)
                 })
@@ -338,6 +346,7 @@ class Login extends BaseActuator {
                             emitEnginePhase(ctx, "CONNECTING_GATEWAY", "Connecting", null)
                             logInfoCtx(ctx, "CONNECT_TO_GATEWAY attempting -> {}:{} (alreadyConnected={})",
                                     host, port, ctx.getDispatcher().isServerConnected())
+                            applyGatewayHandshakeHintsToProxy(ctx, settings instanceof Map ? (Map) settings : [:])
                             ctx.getDispatcher().setClientlessMode(true)
                             ctx.getDispatcher().connect(host, port)
                             logInfoCtx(ctx, "CONNECT_TO_GATEWAY result connected={}",
@@ -351,6 +360,7 @@ class Login extends BaseActuator {
                         .action({ ctx ->
                             resetRetry(ctx)
                             markGatewayConnectSuccess(ctx)
+                            ctx.getPersistentData().remove(KEY_LAST_GATEWAY_LOGIN_REQUEST_MS)
                             def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
                             ctx.getPersistentData().put(KEY_AGENT_WAIT_DEADLINE_MS, System.currentTimeMillis() + effectiveAgentWaitTimeoutMs(settings))
                             ctx.getPersistentData().put(KEY_AGENT_WAIT_TIMED_OUT, false)
@@ -364,15 +374,33 @@ class Login extends BaseActuator {
                         .targetState(STATE_RETRY_DELAY)
                 })
                 .state(STATE_WAIT_FOR_AGENTS, { builder -> builder
-                        .guard({ ctx -> hasAgentListReceived(ctx.getGameModel()?.getLoginState()) })
+                        .guard({ ctx ->
+                            if (Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_LOGIN_HALTED_CREDENTIAL))) {
+                                return false
+                            }
+                            hasAgentListReceived(ctx.getGameModel()?.getLoginState())
+                        })
                         .action({ ctx ->
                             ctx.getPersistentData().put(KEY_AGENT_WAIT_TIMED_OUT, false)
                             ctx.getPersistentData().put(KEY_AGENT_LIST_CACHE_AT_MS, System.currentTimeMillis())
                             emitEnginePhase(ctx, LoginState.Phase.AGENTS_RECEIVED.name(), "AgentsReceived", null)
                             logInfoCtx(ctx, "Agent list received, sending login request")
                         })
-                        .nextState(STATE_SEND_LOGIN_REQUEST)
+                        .nextState(STATE_PAUSE_BEFORE_GATEWAY_LOGIN)
                         .targetState(STATE_CHECK_AGENT_WAIT_TIMEOUT)
+                })
+                .delayState(STATE_PAUSE_BEFORE_GATEWAY_LOGIN, { builder -> builder
+                        .delay(0)
+                        .minDelay(0)
+                        .delayAction({ ctx ->
+                            def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
+                            long ms = effectiveGatewayLoginPauseAfterAgentListMs(settings)
+                            if (ms > 0L) {
+                                emitEnginePhase(ctx, PHASE_GATEWAY_LOGIN_PAUSE, "GatewayLoginPause", null,
+                                        [pauseMs: Long.valueOf(ms)])
+                            }
+                        })
+                        .nextState(STATE_SEND_LOGIN_REQUEST)
                 })
                 .state(STATE_CHECK_AGENT_WAIT_TIMEOUT, { builder -> builder
                         .guard({ ctx -> isAgentWaitTimedOut(ctx) })
@@ -398,6 +426,18 @@ class Login extends BaseActuator {
                             def settings = currentAttemptSettings(ctx, settingsProvider)
                             def loginState = ctx.getGameModel()?.getLoginState()
                             if (settings == null) return false
+                            if (Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_LOGIN_HALTED_CREDENTIAL))) {
+                                return false
+                            }
+                            if (Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_LOGIN_IN_PROGRESS))) {
+                                return false
+                            }
+                            try {
+                                if (loginState != null && loginState.getPhase() == LoginState.Phase.LOGIN_SENT) {
+                                    return false
+                                }
+                            } catch (Exception ignored) {
+                            }
                             String preflight = evaluatePreflightStatus(settings, loginState)
                             if ("MISSING_CREDENTIALS".equals(preflight)) {
                                 ctx.getPersistentData().put(KEY_USER_RESUME_REQUIRED, true)
@@ -422,21 +462,43 @@ class Login extends BaseActuator {
                             if (settings == null) return
                             String username = String.valueOf(settings.username ?: "")
                             String password = String.valueOf(settings.password ?: "")
-                            if (Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_LOGIN_IN_PROGRESS))) {
-                                logWarnCtx(ctx, "Login request ignored: already in progress")
-                                return
+                            synchronized (ctx) {
+                                if (Boolean.TRUE.equals(ctx.getPersistentData().get(KEY_LOGIN_IN_PROGRESS))) {
+                                    logWarnCtx(ctx, "Login request ignored: already in progress")
+                                    return
+                                }
+                                long gateNow = System.currentTimeMillis()
+                                if (!allowGatewayLoginRequestNow(ctx, settings, gateNow)) {
+                                    logWarnCtx(ctx, "Gateway 0x6102 deferred: min interval {} ms (machine={}, serverConnected={})",
+                                            effectiveGatewayLoginMinIntervalMs(settings), ctx.getMachineName(), safeIsServerConnected(ctx))
+                                    return
+                                }
+                                ctx.getPersistentData().put(KEY_LOGIN_IN_PROGRESS, true)
+                                ctx.getPersistentData().put(KEY_LAST_GATEWAY_LOGIN_REQUEST_MS, gateNow)
+                                try {
+                                    byte locale = effectiveGatewayLocale(settings)
+                                    short agentId = parseAgentId(String.valueOf(settings.targetAgent ?: ""))
+                                    String charsetName = String.valueOf(settings.loginCharset ?: "windows-1252")
+                                    logInfoCtx(ctx, "Sending gateway 0x6102 for user: {} (locale=0x{}, agentId={}, charset={}, serverConnected={})",
+                                            redactForLog(username), String.format("%02X", locale & 0xFF), (int) agentId & 0xFFFF, charsetName, safeIsServerConnected(ctx))
+                                    ctx.getGameModel()?.getLoginState()?.setPhase(LoginState.Phase.LOGIN_SENT)
+                                    emitEnginePhase(ctx, LoginState.Phase.LOGIN_SENT.name(), "LoginSent", null)
+                                    long now = System.currentTimeMillis()
+                                    ctx.getPersistentData().put(KEY_LOGIN_RESPONSE_DEADLINE_MS, now + effectiveLoginResponseTimeoutMs(settings))
+                                    ctx.getPersistentData().put(KEY_AGENT_AUTH_DEADLINE_MS, now + effectiveAgentAuthTimeoutMs(settings))
+                                    sendLoginRequest(ctx, locale, username, password, agentId, charsetName)
+                                } catch (Throwable t) {
+                                    ctx.getPersistentData().put(KEY_LOGIN_IN_PROGRESS, false)
+                                    ctx.getPersistentData().remove(KEY_LAST_GATEWAY_LOGIN_REQUEST_MS)
+                                    if (t instanceof Error && !(t instanceof Exception)) {
+                                        throw (Error) t
+                                    }
+                                    if (t instanceof Exception) {
+                                        throw (Exception) t
+                                    }
+                                    throw new RuntimeException(t)
+                                }
                             }
-                            logInfoCtx(ctx, "Sending login request for user: {}", redactForLog(username))
-                            ctx.getGameModel()?.getLoginState()?.setPhase(LoginState.Phase.LOGIN_SENT)
-                            emitEnginePhase(ctx, LoginState.Phase.LOGIN_SENT.name(), "LoginSent", null)
-                            long now = System.currentTimeMillis()
-                            ctx.getPersistentData().put(KEY_LOGIN_IN_PROGRESS, true)
-                            ctx.getPersistentData().put(KEY_LOGIN_RESPONSE_DEADLINE_MS, now + effectiveLoginResponseTimeoutMs(settings))
-                            ctx.getPersistentData().put(KEY_AGENT_AUTH_DEADLINE_MS, now + effectiveAgentAuthTimeoutMs(settings))
-
-                            byte locale = (byte) toInt(settings.locale, 22)
-                            short agentId = parseAgentId(String.valueOf(settings.targetAgent ?: ""))
-                            sendLoginRequest(ctx, locale, username, password, agentId, String.valueOf(settings.loginCharset ?: "windows-1252"))
                         })
                         .nextState(STATE_WAIT_FOR_LOGIN_RESPONSE)
                         .targetState(STATE_RETRY_DELAY)
@@ -457,6 +519,31 @@ class Login extends BaseActuator {
                             logInfoCtx(ctx, "Gateway login response received (phase={})", s.phase)
                         })
                         .nextState(STATE_WAIT_FOR_AGENT_SERVER_CONNECTION)
+                        .targetState(STATE_SUBMIT_GATEWAY_IMAGE_CODE)
+                })
+                .state(STATE_SUBMIT_GATEWAY_IMAGE_CODE, { builder -> builder
+                        .guard({ ctx ->
+                            def loginState = ctx.getGameModel()?.getLoginState()
+                            return loginState?.getPhase() == LoginState.Phase.WAIT_FOR_CAPTCHA && safeIsServerConnected(ctx)
+                        })
+                        .action({ ctx ->
+                            def settings = resolveRuntimeSettings(ctx, settingsProvider, false)
+                            String answer = settings != null ? String.valueOf(settings.passcode ?: "").trim() : ""
+                            emitEnginePhase(ctx, PHASE_WAIT_FOR_CAPTCHA, "GatewayImageCode",
+                                    "Gateway image code challenge; answer from login passcode field (UTF-16, may be empty)",
+                                    [interactive: true, gatewayImageCode: true])
+                            sendGatewayImageCodeAnswer(ctx, answer)
+                            def ls = ctx.getGameModel()?.getLoginState()
+                            if (ls != null) {
+                                ls.setPhase(LoginState.Phase.LOGIN_SENT)
+                                ls.setFailureReason(null)
+                            }
+                            long now = System.currentTimeMillis()
+                            def s = resolveRuntimeSettings(ctx, settingsProvider, true)
+                            ctx.getPersistentData().put(KEY_LOGIN_RESPONSE_DEADLINE_MS, now + effectiveLoginResponseTimeoutMs(s))
+                            logInfoCtx(ctx, "Sent gateway 0x6323 image code answer (chars={})", answer.length())
+                        })
+                        .nextState(STATE_WAIT_FOR_LOGIN_RECHECK)
                         .targetState(STATE_CHECK_LOGIN_FAILED_IMMEDIATE)
                 })
                 .state(STATE_WAIT_FOR_AGENT_SERVER_CONNECTION, { builder -> builder
@@ -986,8 +1073,91 @@ class Login extends BaseActuator {
     }
 
     /** True when we can send 0x6102: agent list present plus username, password, and target shard id. */
-    private boolean loginPrereqsForGateway(def settings, def loginState) {
+    private boolean loginPrereqsForGateway(def settings, def loginState, def ctx) {
+        if (Boolean.TRUE.equals(ctx?.getPersistentData()?.get(KEY_LOGIN_HALTED_CREDENTIAL))) {
+            return false
+        }
         return "READY".equals(evaluatePreflightStatus(settings, loginState))
+    }
+
+    private static String normalizeGatewayClientModule(Object v) {
+        String m = String.valueOf(v != null ? v : "SR_Client").trim()
+        m.isEmpty() ? "SR_Client" : m
+    }
+
+    /** Forwards locale / module / build to proxy before TCP connect (clientless 0x6100 + 0x2002 after gateway 0x2001). */
+    private void applyGatewayHandshakeHintsToProxy(def ctx, Map settings) {
+        try {
+            def proxy = ctx?.getProxyConnection()
+            if (proxy == null) return
+            Map s = settings != null ? settings : [:]
+            byte loc = effectiveGatewayLocale(s)
+            String mod = normalizeGatewayClientModule(s.gatewayClientModule)
+            int ver = toInt(s.gatewayClientVersion, 188)
+            proxy.setGatewayHandshakeHints(loc, mod, ver)
+        } catch (Exception e) {
+            log.debug("setGatewayHandshakeHints skipped: {}", e.message)
+        }
+    }
+
+    /**
+     * Gateway locale byte (vSRO commonly 22). {@code 0} is treated as unset and coerced to 22 — explicit 0 breaks many gateways.
+     */
+    private byte effectiveGatewayLocale(def settings) {
+        if (settings == null) return (byte) 22
+        def raw = settings.locale
+        if (raw == null) return (byte) 22
+        int v = (raw instanceof Number) ? ((Number) raw).intValue() : toInt(String.valueOf(raw), 22)
+        if (v == 0) return (byte) 22
+        return (byte) (v & 0xFF)
+    }
+
+    private long effectiveGatewayLoginMinIntervalMs(def settings) {
+        if (settings instanceof Map && settings.gatewayLoginMinIntervalMs instanceof Number) {
+            return Math.max(0L, ((Number) settings.gatewayLoginMinIntervalMs).longValue())
+        }
+        String prop = System.getProperty("sokybot.login.request.minIntervalMs")
+        if (prop != null && !prop.isBlank()) {
+            try {
+                return Math.max(0L, Long.parseLong(prop.trim()))
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 2000L
+    }
+
+    /**
+     * Pause after agent list before 0x6102. Runtime snapshot clamps 0–60s; if absent, system property
+     * {@code sokybot.login.pauseAfterAgentListMs} then default {@code 1500} ms.
+     */
+    private long effectiveGatewayLoginPauseAfterAgentListMs(def settings) {
+        if (settings instanceof Map && settings.gatewayLoginPauseAfterAgentListMs instanceof Number) {
+            return Math.max(0L, Math.min(60000L, ((Number) settings.gatewayLoginPauseAfterAgentListMs).longValue()))
+        }
+        String prop = System.getProperty("sokybot.login.pauseAfterAgentListMs")
+        if (prop != null && !prop.isBlank()) {
+            try {
+                return Math.max(0L, Math.min(60000L, Long.parseLong(prop.trim())))
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        return 1500L
+    }
+
+    private boolean allowGatewayLoginRequestNow(def ctx, def settings, long nowMs) {
+        long minIv = effectiveGatewayLoginMinIntervalMs(settings)
+        if (minIv <= 0L) return true
+        def lastRaw = ctx.getPersistentData().get(KEY_LAST_GATEWAY_LOGIN_REQUEST_MS)
+        if (!(lastRaw instanceof Number)) return true
+        return nowMs - ((Number) lastRaw).longValue() >= minIv
+    }
+
+    private boolean safeIsServerConnected(def ctx) {
+        try {
+            return ctx?.getDispatcher()?.isServerConnected()
+        } catch (Exception ignored) {
+            return false
+        }
     }
 
     private boolean isAuthenticated(def loginState) {
@@ -1167,6 +1337,10 @@ class Login extends BaseActuator {
                     agentRequestMaxRetries: Math.max(0, toInt(resolveSettingField(raw, "agentRequestMaxRetries", "2"), 2)),
                     agentRequestRetryBackoffMs: normalizeTimeout("agentRequestRetryBackoffMs", resolveSettingField(raw, "agentRequestRetryBackoffMs", "2000"), 2000L, 500L, 60000L),
                     agentBanBlockDurationMs: normalizeTimeout("agentBanBlockDurationMs", resolveSettingField(raw, "agentBanBlockDurationMs", "300000"), 300000L, 10000L, 3600000L),
+                    gatewayLoginMinIntervalMs: normalizeTimeout("gatewayLoginMinIntervalMs", resolveSettingField(raw, "gatewayLoginMinIntervalMs", "2000"), 2000L, 0L, 60000L),
+                    gatewayLoginPauseAfterAgentListMs: normalizeTimeout("gatewayLoginPauseAfterAgentListMs", resolveSettingField(raw, "gatewayLoginPauseAfterAgentListMs", "1500"), 1500L, 0L, 60000L),
+                    gatewayClientVersion: toInt(resolveSettingField(raw, "gatewayClientVersion", "188"), 188),
+                    gatewayClientModule: normalizeGatewayClientModule(resolveSettingField(raw, "gatewayClientModule", "SR_Client")),
                     selectedCharacterSlot: toInt(resolveSettingField(raw, "selectedCharacterSlot", "-1"), -1),
                     characterSlotBase: toInt(resolveSettingField(raw, "characterSlotBase", "0"), 0),
                     characterSelectionStrictMode: toBool(resolveSettingField(raw, "characterSelectionStrictMode", "false"), false),
@@ -1182,11 +1356,13 @@ class Login extends BaseActuator {
             ctx.getPersistentData().remove(KEY_LOGIN_LAST_HALT_SIGNATURE)
             ctx.getPersistentData().remove(KEY_USER_RESUME_REQUIRED)
             ctx.getPersistentData().remove(KEY_LOGIN_HALTED_CREDENTIAL)
+            ctx.getPersistentData().remove(KEY_LAST_GATEWAY_LOGIN_REQUEST_MS)
             try {
                 def ls = ctx?.getGameModel()?.getLoginState()
                 if (ls != null && ls.getPhase() == LoginState.Phase.FAILED) {
                     ls.setPhase(LoginState.Phase.DISCONNECTED)
                     ls.setFailureReason(null)
+                    ls.clearLoginResultCodes()
                 }
             } catch (Exception ignored) {
             }
@@ -1219,6 +1395,10 @@ class Login extends BaseActuator {
                 agentRequestMaxRetries: 2,
                 agentRequestRetryBackoffMs: 2000L,
                 agentBanBlockDurationMs: 300000L,
+                gatewayLoginMinIntervalMs: 2000L,
+                gatewayLoginPauseAfterAgentListMs: 1500L,
+                gatewayClientVersion: 188,
+                gatewayClientModule: "SR_Client",
                 selectedCharacterSlot: -1,
                 characterSlotBase: 0,
                 characterSelectionStrictMode: false,
@@ -1554,6 +1734,9 @@ class Login extends BaseActuator {
     }
 
     private void sendLoginRequest(def ctx, byte locale, String username, String password, short agentId, String charsetName) {
+        if ((locale & 0xFF) == 0) {
+            locale = (byte) 22
+        }
         boolean legacy = Boolean.parseBoolean(System.getProperty("sokybot.login.serializer.legacy", "false"))
         def disp = ctx?.getDispatcher()
         if (!legacy && disp != null && DISPATCHER_DYNAMIC_PACKET_API_OK.get() != Boolean.FALSE) {
@@ -1571,6 +1754,10 @@ class Login extends BaseActuator {
                     throw new RuntimeException(t)
                 }
             }
+        }
+        try {
+            disp?.awaitGatewayLoginPauseAfterAgentList()
+        } catch (MissingMethodException ignored) {
         }
         Charset charset = resolveLoginCharset([loginCharset: charsetName])
         byte[] usernameBytes = username.getBytes(charset)
@@ -1591,6 +1778,30 @@ class Login extends BaseActuator {
             throw new IllegalStateException("Failed to send login request packet (dispatcher/proxy unavailable)")
         }
     }
+
+    private void sendGatewayImageCodeAnswer(def ctx, String answer) {
+        String a = answer != null ? answer : ""
+        byte[] utf16 = a.getBytes(StandardCharsets.UTF_16LE)
+        if ((utf16.length & 1) != 0) {
+            throw new IllegalStateException("UTF-16LE byte length must be even")
+        }
+        int wcharCount = utf16.length / 2
+        if (wcharCount > 65535) {
+            throw new IllegalStateException("Image code answer too long")
+        }
+        int packetLen = 2 + utf16.length
+        MutablePacket pkt = MutablePacket.getBuilder(packetLen, ClientOpcode.GATEWAY_IMAGE_CODE_ANSWER)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .putShort((short) wcharCount)
+                .putBytes(utf16)
+                .build()
+        if (!sendWorkflowServerPacket(ctx, pkt)) {
+            throw new IllegalStateException("Failed to send gateway 0x6323")
+        }
+    }
+
 
     private Map currentAttemptSettings(def ctx, def settingsProvider) {
         def existing = ctx.getPersistentData().get(KEY_ATTEMPT_LOGIN_SETTINGS)
@@ -1842,11 +2053,12 @@ class Login extends BaseActuator {
         }
         if (FAILURE_CREDENTIAL.equals(failureClass)) {
             ctx.getPersistentData().put(KEY_LOGIN_HALTED_CREDENTIAL, true)
-            emitEnginePhase(ctx, LoginState.Phase.FAILED.name(), "CredentialFailure", String.valueOf(loginState?.getFailureReason() ?: ""),
+            String credDetail = credentialFailureDetail(loginState)
+            emitEnginePhase(ctx, LoginState.Phase.FAILED.name(), "CredentialFailure", credDetail,
                     [failureClass: failureClass, fatal: true])
             if (!haltAlreadyLogged) {
                 log.warn("Infinite retry disabled for credential failures")
-                log.error("Login halted: credential failure ({})", loginState?.getFailureReason())
+                log.error("Login halted: credential failure ({})", credDetail.isEmpty() ? "unknown" : credDetail)
                 ctx.getPersistentData().put(KEY_LOGIN_LAST_HALT_SIGNATURE, haltSignature)
             }
             return true
@@ -2075,6 +2287,25 @@ class Login extends BaseActuator {
         return parsed >= 0 ? parsed : null
     }
 
+    /** Failure reason text, or gateway byte code when reason was cleared but code remains. */
+    private String credentialFailureDetail(def loginState) {
+        try {
+            String r = loginState?.getFailureReason()
+            if (r != null && !r.trim().isEmpty()) {
+                return r
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            Integer code = readGatewayFailureCode(loginState)
+            if (code != null) {
+                return "gateway code " + (code.intValue() & 0xFF)
+            }
+        } catch (Exception ignored) {
+        }
+        return ""
+    }
+
     private boolean isMissingPrereqPhase(def loginState) {
         try {
             def phase = loginState?.getPhase()
@@ -2271,6 +2502,8 @@ class Login extends BaseActuator {
                     loginState.setPhase(LoginState.Phase.MISSING_CHARACTER_SELECTION); return
                 case PHASE_WAITING_FOR_AGENTS:
                     loginState.setPhase(LoginState.Phase.WAITING_FOR_AGENTS); return
+                case PHASE_GATEWAY_LOGIN_PAUSE:
+                    loginState.setPhase(LoginState.Phase.AGENTS_RECEIVED); return
                 case PHASE_WAITING_FOR_AGENTS_TIMEOUT:
                     loginState.setPhase(LoginState.Phase.WAITING_FOR_AGENTS_TIMEOUT); return
                 case PHASE_WAITING_FOR_PASSCODE:
@@ -2343,6 +2576,14 @@ class LoginSettings {
     int agentRequestMaxRetries = 2
     int agentRequestRetryBackoffMs = 2000
     int agentBanBlockDurationMs = 300000
+    /** Minimum milliseconds between gateway 0x6102 sends (0 = disabled). Default reduces flood / anti-DDoS triggers. */
+    int gatewayLoginMinIntervalMs = 2000
+    /** Milliseconds to wait after agent list before sending 0x6102 (0 = only engine minimum ~10 ms). Default humanizes timing. */
+    int gatewayLoginPauseAfterAgentListMs = 1500
+    /** Gateway 0x6100 client build (e.g. 0xBC = 188 on many vSRO-style gateways). */
+    int gatewayClientVersion = 188
+    /** UTF-8 module name in 0x6100 (default SR_Client). */
+    String gatewayClientModule = "SR_Client"
     int selectedCharacterSlot = -1
     int characterSlotBase = 0
     boolean characterSelectionStrictMode = false

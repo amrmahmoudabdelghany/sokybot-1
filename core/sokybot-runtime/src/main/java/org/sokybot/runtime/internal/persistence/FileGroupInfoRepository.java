@@ -65,7 +65,16 @@ public class FileGroupInfoRepository implements GroupInfoRepository {
             for (int id : ids) {
                 String name = props.getProperty("group." + id + ".name", "");
                 String gamePath = props.getProperty("group." + id + ".gamePath", "");
+                boolean isManual = Boolean
+                        .parseBoolean(props.getProperty("group." + id + ".isManualOverride", "false"));
+                String manualHost = props.getProperty("group." + id + ".manualHost", "");
+                String manualDivision = props.getProperty("group." + id + ".manualDivision", "");
+
                 GroupInfo info = new GroupInfo(id, name, gamePath);
+                info.setManualOverride(isManual);
+                info.setManualHost(manualHost);
+                info.setManualDivision(manualDivision);
+
                 cache.put(id, info);
                 if (id >= nextId.get()) {
                     nextId.set(id + 1);
@@ -85,6 +94,9 @@ public class FileGroupInfoRepository implements GroupInfoRepository {
             String prefix = "group." + info.getId();
             props.setProperty(prefix + ".name", info.getName());
             props.setProperty(prefix + ".gamePath", info.getGamePath());
+            props.setProperty(prefix + ".isManualOverride", String.valueOf(info.isManualOverride()));
+            props.setProperty(prefix + ".manualHost", info.getManualHost());
+            props.setProperty(prefix + ".manualDivision", info.getManualDivision());
         }
 
         try (OutputStream os = Files.newOutputStream(dataFile)) {

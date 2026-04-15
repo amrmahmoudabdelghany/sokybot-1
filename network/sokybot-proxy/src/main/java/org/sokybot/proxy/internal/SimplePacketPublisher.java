@@ -4,10 +4,13 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import org.sokybot.network.NetworkPeer;
 import org.sokybot.network.IPacketObserver;
 import org.sokybot.network.IPacketPublisher;
 import org.sokybot.network.IPacketSubscription;
 import org.sokybot.network.packet.ImmutablePacket;
+import org.sokybot.network.packet.ServerOpcode;
+import org.sokybot.proxy.ProxyConnection;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -17,8 +20,14 @@ import io.netty.channel.ChannelHandler.Sharable;
 @Sharable
 public class SimplePacketPublisher extends SimpleChannelInboundHandler<ImmutablePacket> implements IPacketPublisher {
 
+    private final ProxyConnection proxyConnection;
+
     private final Map<Integer, CopyOnWriteArrayList<IPacketObserver>> observers = new ConcurrentHashMap<>();
     private final CopyOnWriteArrayList<IPacketObserver> globalObservers = new CopyOnWriteArrayList<>();
+
+    public SimplePacketPublisher(ProxyConnection proxyConnection) {
+        this.proxyConnection = proxyConnection;
+    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, ImmutablePacket packet) throws Exception {
@@ -72,6 +81,11 @@ public class SimplePacketPublisher extends SimpleChannelInboundHandler<Immutable
     }
 
     public void publish(ImmutablePacket packet) {
+        if (proxyConnection != null
+                && packet.getPacketSource() == NetworkPeer.SERVER
+                && packet.getOpcode() == ServerOpcode.AGENT_LIST) {
+            proxyConnection.markGatewayAgentListFromServer(System.currentTimeMillis());
+        }
         // Notify global observers (subscribed to all packets)
         if (!globalObservers.isEmpty()) {
             System.out.println("[Java] SimplePacketPublisher: publishing packet 0x"

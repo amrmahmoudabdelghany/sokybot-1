@@ -1,3 +1,5 @@
+import java.util.Arrays
+
 import java.nio.charset.StandardCharsets
 
 import org.sokybot.gameevents.script.PacketReaderUtils
@@ -77,6 +79,10 @@ translator(0x6102) { machine, packet ->
         r.getByte()
         String username = PacketReaderUtils.readString(r)
         String password = PacketReaderUtils.readString(r)
+        try {
+            r.getShort()
+        } catch (Exception ignored) {
+        }
         return singleEvent(new LoginRequestEvent(machine, username, password))
     } catch (Exception e) { return noEvents() }
 }
@@ -158,3 +164,29 @@ translator(0x610C) { machine, packet ->
         return noEvents()
     }
 }
+
+// vSRO gateway image CAPTCHA (0x2322); payload often contains zlib-compressed image (e.g. 78 DA).
+translator(0x2322) { machine, packet ->
+    try {
+        byte[] raw = packet.unwrap()
+        int psz = packet.getPacketSize() & 0xFFFF
+        int from = 6
+        int end = Math.min(raw.length, from + psz)
+        byte[] body = Arrays.copyOfRange(raw, from, end)
+        return singleEvent(new CaptchaChallengeEvent(machine, 0, body))
+    } catch (Exception e) {
+        return noEvents()
+    }
+}
+
+// vSRO image code verification result (0xA323); 0x01 = success.
+translator(0xA323) { machine, packet ->
+    try {
+        byte code = packet.streamReader.getByte()
+        boolean ok = (code == (byte) 0x01)
+        return singleEvent(new ImageCodeResultEvent(machine, ok, code))
+    } catch (Exception e) {
+        return singleEvent(new ImageCodeResultEvent(machine, false, (byte) 0))
+    }
+}
+

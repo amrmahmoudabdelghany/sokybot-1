@@ -73,9 +73,18 @@ public interface IDispatcher {
     void disconnect();
 
     /**
-     * Sends a gateway login request packet (0x6102) using Java-owned protocol serialization.
+     * Sends a gateway login request packet (0x6102) using Java-owned protocol serialization:
+     * locale (1) + username (ushort len + bytes) + password (ushort len + bytes) + agentId as ushort (2 bytes LE).
+     * When {@code charsetName} is null or blank, {@code windows-1252} is used (same default as the login actuator).
      */
     void sendLoginRequest(byte locale, String username, String password, int agentId, String charsetName);
+
+    /**
+     * Blocks until the configured pause after the last gateway agent list (0xA101) has elapsed.
+     * Used by {@link #sendLoginRequest} and by Groovy fallbacks that build 0x6102 without that method.
+     */
+    default void awaitGatewayLoginPauseAfterAgentList() {
+    }
 
     /**
      * Sends agent request packet (0x6101) if permitted by rate limiter/cache policy.

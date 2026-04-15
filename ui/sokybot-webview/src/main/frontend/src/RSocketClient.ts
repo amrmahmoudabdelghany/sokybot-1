@@ -223,14 +223,10 @@ export class RSocketService {
         const payload = this.makePayloadEnvelope(method, request);
 
         let subscription: any;
-        let inFlight = 0;
         const initialRequestN = Math.max(1, normalizedOptions.initialRequestN ?? normalizedOptions.requestN ?? 64);
-        const requestN = Math.max(1, normalizedOptions.requestN ?? initialRequestN);
-        const maxInFlight = Math.max(requestN, normalizedOptions.maxInFlight ?? requestN * 4);
 
         const subscribeNow = () => this.client?.requestStream(payload).subscribe({
             onNext: (payload: any) => {
-                inFlight = Math.max(0, inFlight - 1);
                 try {
                     const data = typeof payload.data === 'string'
                         ? JSON.parse(payload.data)
@@ -244,16 +240,15 @@ export class RSocketService {
                     } else {
                         onNext(data as T);
                     }
-
-                    if (subscription && inFlight < requestN) {
-                        const delta = Math.min(requestN, maxInFlight - inFlight);
-                        if (delta > 0) {
-                            subscription.request(delta);
-                            inFlight += delta;
-                        }
-                    }
                 } catch (e) {
                     console.error("Failed to parse stream data", e);
+                } finally {
+                    // RSocket request-stream: replenish demand per delivered frame. The previous
+                    // inFlight/requestN heuristic could stop calling request() while credits were
+                    // exhausted, stalling high-volume streams (e.g. Traffic Monitor) until reconnect.
+                    if (subscription) {
+                        subscription.request(1);
+                    }
                 }
             },
             onError: (error: any) => {
@@ -267,7 +262,6 @@ export class RSocketService {
             onSubscribe: (sub: any) => {
                 subscription = sub;
                 subscription.request(initialRequestN);
-                inFlight = initialRequestN;
             }
         });
 
@@ -287,7 +281,6 @@ export class RSocketService {
                 const count = Math.max(1, Math.floor(n || 1));
                 if (subscription) {
                     subscription.request(count);
-                    inFlight += count;
                 }
             }
         };
@@ -758,8 +751,14 @@ export class RSocketService {
     /**
      * Create a new group.
      */
-    async createGroup(name: string, path: string) {
-        return this.request<{ status: string; name: string }>('group.create', { name, path });
+    async createGroup(name: string, path: string, isManualOverride?: boolean, manualHost?: string, manualDivision?: string) {
+        return this.request<{ status: string; name: string }>('group.create', {
+            name,
+            path,
+            isManualOverride,
+            manualHost,
+            manualDivision
+        });
     }
 
     /**
@@ -962,6 +961,9 @@ export interface MachineInfo {
 export interface GroupInfo {
     name: string;
     machineCount?: number;
+    isManualOverride?: boolean;
+    manualHost?: string;
+    manualDivision?: string;
 }
 
 export interface WorkspaceSummary {
@@ -972,8 +974,12 @@ export interface WorkspaceSummary {
 export interface GroupDetails {
     name: string;
     version: string;
+    port: number;
     hosts: Record<string, string[]>;
     machineCount: number;
+    isManualOverride?: boolean;
+    manualHost?: string;
+    manualDivision?: string;
 }
 
 export interface FileInfo {

@@ -24,47 +24,44 @@ import reactor.core.publisher.Mono;
  * Handler for group management operations.
  * 
  * Methods:
- *   - group.list: List all groups
- *   - group.details: Get group details
- *   - group.create: Create a new group
+ * - group.list: List all groups
+ * - group.details: Get group details
+ * - group.create: Create a new group
  */
-@Component(
-    service = IRSocketHandler.class,
-    property = {
+@Component(service = IRSocketHandler.class, property = {
         IRSocketHandler.METHOD_PROPERTY + "=group.list",
         IRSocketHandler.METHOD_PROPERTY + "=group.details",
         IRSocketHandler.METHOD_PROPERTY + "=group.create"
-    }
-)
+})
 public class GroupHandler implements IRSocketHandler {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(GroupHandler.class);
-    
+
     private volatile ISokybotContext sokybotContext;
-    
+
     @Reference(cardinality = ReferenceCardinality.OPTIONAL)
     protected void setSokybotContext(ISokybotContext sokybotContext) {
         this.sokybotContext = sokybotContext;
     }
-    
+
     protected void unsetSokybotContext(ISokybotContext sokybotContext) {
         this.sokybotContext = null;
     }
-    
+
     @Override
     public String[] getMethods() {
         return new String[] { "group.list", "group.details", "group.create" };
     }
-    
+
     @Override
     public String getDescription() {
         return "Group management operations (list, details, create)";
     }
-    
+
     @Override
     public Mono<RSocketResponse> handle(RSocketRequest request) {
         String method = request.getMethod();
-        
+
         switch (method) {
             case "group.list":
                 return handleList(request);
@@ -76,88 +73,97 @@ public class GroupHandler implements IRSocketHandler {
                 return Mono.just(RSocketResponse.methodNotFound(method));
         }
     }
-    
+
     private Mono<RSocketResponse> handleList(RSocketRequest request) {
         if (sokybotContext == null) {
             return Mono.just(RSocketResponse.success(new ArrayList<>()));
         }
-        
+
         List<Map<String, Object>> groups = new ArrayList<>();
         for (IGroupContext grpCtx : sokybotContext.getGroups()) {
             Map<String, Object> groupInfo = new HashMap<>();
             groupInfo.put("name", grpCtx.name());
             groupInfo.put("machineCount", grpCtx.getMachines().length);
+            groupInfo.put("isManualOverride", grpCtx.isManualOverride());
+            groupInfo.put("manualHost", grpCtx.getManualHost());
+            groupInfo.put("manualDivision", grpCtx.getManualDivision());
             groups.add(groupInfo);
         }
-        
+
         return Mono.just(RSocketResponse.success(groups));
     }
-    
+
     private Mono<RSocketResponse> handleDetails(RSocketRequest request) {
         String groupName = request.getString("name");
-        
+
         if (groupName == null || groupName.isEmpty()) {
             return Mono.just(RSocketResponse.invalidParams("name is required"));
         }
-        
+
         if (sokybotContext == null) {
             return Mono.just(RSocketResponse.error(
-                RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
-                "Application not ready"
-            ));
+                    RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
+                    "Application not ready"));
         }
-        
+
         IGroupContext grpCtx = sokybotContext.findGroupCtx(groupName).orElse(null);
         if (grpCtx == null) {
             return Mono.just(RSocketResponse.notFound("Group not found: " + groupName));
         }
-        
+
         try {
             IGameDataLookup lookup = grpCtx.getGameDataLookup();
             if (lookup == null) {
-                logger.error("GameDataLookup is null for group: {}. PersistenceFactory may not be available.", groupName);
+                logger.error("GameDataLookup is null for group: {}. PersistenceFactory may not be available.",
+                        groupName);
                 return Mono.just(RSocketResponse.error(
-                    RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
-                    "Game data not loaded. Check that PK2 files exist."
-                ));
+                        RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
+                        "Game data not loaded. Check that PK2 files exist."));
             }
-            
+
             Map<String, Object> details = new HashMap<>();
             details.put("name", groupName);
             details.put("version", lookup.getVersion());
-            
+            details.put("port", lookup.getPort());
+
             Map<String, List<String>> divHosts = lookup.getDivHosts();
             details.put("hosts", divHosts != null ? divHosts : new HashMap<>());
             details.put("machineCount", grpCtx.getMachines().length);
-            
+
+            details.put("isManualOverride", grpCtx.isManualOverride());
+            details.put("manualHost", grpCtx.getManualHost());
+            details.put("manualDivision", grpCtx.getManualDivision());
+
             return Mono.just(RSocketResponse.success(details));
         } catch (Exception e) {
             logger.error("Error loading game details for group: {}", groupName, e);
             return Mono.just(RSocketResponse.internalError(e));
         }
     }
-    
+
     private Mono<RSocketResponse> handleCreate(RSocketRequest request) {
         String name = request.getString("name");
         String path = request.getString("path");
-        
+        boolean isManualOverride = request.getBoolean("isManualOverride", false);
+        String manualHost = request.getString("manualHost", "");
+        String manualDivision = request.getString("manualDivision", "");
+
         if (name == null || name.isEmpty()) {
             return Mono.just(RSocketResponse.invalidParams("name is required"));
         }
         if (path == null || path.isEmpty()) {
             return Mono.just(RSocketResponse.invalidParams("path is required"));
         }
-        
+
         if (sokybotContext == null) {
             return Mono.just(RSocketResponse.error(
-                RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
-                "Sokybot context not available"
-            ));
+                    RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
+                    "Sokybot context not available"));
         }
-        
+
         try {
             RuntimeEntityNames.validateGroupOrThrow(name);
-            sokybotContext.installGroup(name, path);
+            sokybotContext.installGroup(name, path, isManualOverride, manualDivision, manualHost);
 
             Map<String, Object> result = new HashMap<>();
             result.put("status", "created");

@@ -123,13 +123,6 @@
         </dependency>
         
         
-        <!-- Commons (AbstractScriptWatcher) -->
-        <dependency>
-            <groupId>org.sokybot</groupId>
-            <artifactId>sokybot-commons</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- Logging -->
         <dependency>

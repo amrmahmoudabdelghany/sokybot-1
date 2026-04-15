@@ -27,7 +27,7 @@ public class ClientServerBridge extends SimpleChannelInboundHandler<ImmutablePac
     private static final int SETUP_OPCODE = 0x5000;
     private static final int CHALLENGE_OPCODE = 0x5001;
     private static final int ID_OPCODE = 0x2001;
-    private static final int HEARTBEAT_OPCODE = 0x2002;
+    private static final int HEARTBEAT_OPCODE = ClientOpcode.GATEWAY_PATCH_PING;
 
     private final ProxyConnection proxyConnection;
 

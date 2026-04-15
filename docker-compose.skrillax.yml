@@ -36,7 +36,7 @@ services:
       - default
       - proxy_net
     volumes:
-      - "../Cyper Online Official Client:/usr/silkroad"
+      - "../VSRO_Client:/usr/silkroad"
       - "./skrillax/configs:/opt/skrillax/configs:r"
 
   skrillax-gateway:

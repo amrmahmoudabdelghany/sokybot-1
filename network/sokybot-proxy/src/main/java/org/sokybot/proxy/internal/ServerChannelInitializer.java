@@ -34,9 +34,11 @@ public class ServerChannelInitializer extends ChannelInitializer<SocketChannel> 
         ch.attr(NetworkAttributes.TRANSPORT).set(NetworkPeer.SERVER);
 
         ch.pipeline()
-                .addLast(new IdleStateHandler(15, 5, 0))
-                .addLast(new PacketDecoder(networkComponents.getBlowfish()))
-                .addLast(new PacketEncoder(networkComponents))
+                // Writer idle 2s: send 0x2002 during gateway login (not only after long idle).
+                .addLast(new IdleStateHandler(15, 2, 0))
+                .addLast("gwPacketDecoder", new PacketDecoder(networkComponents.getBlowfish()))
+                // Outbound (tail→head): … → Heartbeat → gwPacketEncoder → … — 0x6102 throttle is inside PacketEncoder.encode
+                .addLast("gwPacketEncoder", new PacketEncoder(networkComponents))
                 .addLast(new HeartbeatHandler(proxyConnection))
                 .addLast(new ClientServerBridge(proxyConnection))
                 .addLast(new MassiveHandler())

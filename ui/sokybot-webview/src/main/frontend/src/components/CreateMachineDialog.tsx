@@ -31,6 +31,7 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
 
     // UI Logic State
     const [selectedDivision, setSelectedDivision] = useState<string>('');
+    const [isManual, setIsManual] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -74,13 +75,22 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                 .then((data) => {
                     setGameData(data);
 
-                    // Default Logic for Division/Host
-                    if (data.hosts) {
-                        const divs = Object.keys(data.hosts);
-                        if (divs.length > 0) {
-                            const firstDiv = divs[0];
-                            setSelectedDivision(firstDiv);
-                            const hosts = data.hosts[firstDiv];
+                    // Reset to manual false unless the group explicitly overrides it
+                    let manualMode = data.isManualOverride || false;
+                    setIsManual(manualMode);
+
+                    if (manualMode) {
+                        setFormData(prev => ({
+                            ...prev,
+                            host: data.manualHost || "",
+                            name: prev.name // preserve name
+                        }));
+                        setSelectedDivision(data.manualDivision || "");
+                    } else if (data.hosts) {
+                        const divisions = Object.keys(data.hosts);
+                        if (divisions.length > 0) {
+                            setSelectedDivision(divisions[0]);
+                            const hosts = data.hosts[divisions[0]];
                             if (hosts && hosts.length > 0) {
                                 setFormData(prev => ({ ...prev, host: hosts[0] }));
                             }
@@ -245,53 +255,86 @@ const CreateMachineDialog: React.FC<Props> = ({ isOpen, onClose, onSuccess }) =>
                                     Game Data
                                 </legend>
                                 <div className="space-y-3 pt-1">
+                                    <div className="flex items-center space-x-2 mb-3">
+                                        <input
+                                            type="checkbox"
+                                            id="machine-manual-override"
+                                            checked={isManual}
+                                            onChange={(e) => setIsManual(e.target.checked)}
+                                            className="h-3 w-3 rounded border-gray-300 text-primary focus:ring-primary"
+                                        />
+                                        <label htmlFor="machine-manual-override" className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider cursor-pointer">
+                                            Manual Connection
+                                        </label>
+                                    </div>
+
                                     <div>
-                                        <label className={labelClass}>Division(s)</label>
-                                        <SelectRoot
-                                            value={encodeSelectItemValue(selectedDivision)}
-                                            onValueChange={(v) => handleDivisionChange(decodeSelectItemValue(v))}
-                                            disabled={!gameData || !gameData.hosts}
-                                        >
-                                            <SelectTrigger className={inputClass}>
-                                                <SelectValue placeholder="Division" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {gameData?.hosts &&
-                                                    Object.keys(gameData.hosts).map((div) => (
-                                                        <SelectItem key={div} value={encodeSelectItemValue(div)}>
-                                                            {div}
-                                                        </SelectItem>
-                                                    ))}
-                                            </SelectContent>
-                                        </SelectRoot>
+                                        <label className={labelClass}>Division Name</label>
+                                        {isManual ? (
+                                            <input
+                                                type="text"
+                                                value={selectedDivision}
+                                                onChange={(e) => setSelectedDivision(e.target.value)}
+                                                className={inputClass}
+                                                placeholder="S_Official"
+                                            />
+                                        ) : (
+                                            <SelectRoot
+                                                value={encodeSelectItemValue(selectedDivision)}
+                                                onValueChange={(v) => handleDivisionChange(decodeSelectItemValue(v))}
+                                                disabled={!gameData || !gameData.hosts}
+                                            >
+                                                <SelectTrigger className={inputClass}>
+                                                    <SelectValue placeholder="Division" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {gameData?.hosts &&
+                                                        Object.keys(gameData.hosts).map((div) => (
+                                                            <SelectItem key={div} value={encodeSelectItemValue(div)}>
+                                                                {div}
+                                                            </SelectItem>
+                                                        ))}
+                                                </SelectContent>
+                                            </SelectRoot>
+                                        )}
                                     </div>
                                     <div>
-                                        <label className={labelClass}>Host(s)</label>
-                                        <SelectRoot
-                                            value={encodeSelectItemValue(formData.host)}
-                                            onValueChange={(v) =>
-                                                setFormData({ ...formData, host: decodeSelectItemValue(v) })
-                                            }
-                                            disabled={!selectedDivision}
-                                        >
-                                            <SelectTrigger className={inputClass}>
-                                                <SelectValue placeholder="Host" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {gameData &&
-                                                    selectedDivision &&
-                                                    gameData.hosts[selectedDivision]?.map((host) => (
-                                                        <SelectItem key={host} value={encodeSelectItemValue(host)}>
-                                                            {host}
-                                                        </SelectItem>
-                                                    ))}
-                                            </SelectContent>
-                                        </SelectRoot>
+                                        <label className={labelClass}>Login Host (IP/DNS)</label>
+                                        {isManual ? (
+                                            <input
+                                                type="text"
+                                                value={formData.host}
+                                                onChange={(e) => setFormData({ ...formData, host: e.target.value })}
+                                                className={inputClass}
+                                                placeholder="127.0.0.1"
+                                            />
+                                        ) : (
+                                            <SelectRoot
+                                                value={encodeSelectItemValue(formData.host)}
+                                                onValueChange={(v) =>
+                                                    setFormData({ ...formData, host: decodeSelectItemValue(v) })
+                                                }
+                                                disabled={!selectedDivision}
+                                            >
+                                                <SelectTrigger className={inputClass}>
+                                                    <SelectValue placeholder="Host" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {gameData &&
+                                                        selectedDivision &&
+                                                        gameData.hosts[selectedDivision]?.map((host) => (
+                                                            <SelectItem key={host} value={encodeSelectItemValue(host)}>
+                                                                {host}
+                                                            </SelectItem>
+                                                        ))}
+                                                </SelectContent>
+                                            </SelectRoot>
+                                        )}
                                     </div>
 
                                     <div className="flex justify-end gap-4 pt-2 border-t border-dashed border-border text-[10px] text-muted-foreground">
                                         <div><span className="font-bold">Version:</span> {gameData?.version !== undefined ? gameData.version : 'N/A'}</div>
-                                        <div><span className="font-bold">Port:</span> 15779</div>
+                                        <div><span className="font-bold">Port:</span> {gameData?.port !== undefined && gameData.port > 0 ? gameData.port : 'N/A'}</div>
                                     </div>
                                 </div>
                             </fieldset>

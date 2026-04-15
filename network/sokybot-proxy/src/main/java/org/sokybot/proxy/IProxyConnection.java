@@ -67,6 +67,14 @@ public interface IProxyConnection {
     }
     
     /**
+     * Optional gateway handshake hints for clientless mode: sent as 0x6100 (locale + module + build)
+     * after the gateway identifies itself. Call before {@link #connectToServer(String, int)}.
+     */
+    default void setGatewayHandshakeHints(byte localeByte, String clientModuleName, int clientVersion) {
+        // Default: no-op for bridges that do not implement gateway bot login.
+    }
+
+    /**
      * Sets whether the proxy operates in clientless mode (bot without game client).
      * @param clientlessMode true for clientless operation
      */
@@ -97,4 +105,16 @@ public interface IProxyConnection {
      * @return the machine ID
      */
     String getMachineId();
+
+    /**
+     * Wall-clock ms when gateway agent list (0xA101) was last seen from the game server on this proxy.
+     * Consumers may use this to pace outbound 0x6102. Default 0.
+     */
+    default long getLastGatewayAgentListFromServerWallClockMs() {
+        return 0L;
+    }
+
+    /** Clears {@link #getLastGatewayAgentListFromServerWallClockMs()} (e.g. after 0x6102 or new 0x6101). */
+    default void clearLastGatewayAgentListFromServerWallClockMs() {
+    }
 }
