@@ -1,7 +1,8 @@
-package org.sokybot.gameevents;
+package org.sokybot.translators.builtin.gateway;
 
 import java.util.List;
 
+import org.sokybot.gameevents.ChunkedPacketManager;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.events.core.IPacketTranslator;
 import org.sokybot.gameevents.events.session.LoginResponseEvent;

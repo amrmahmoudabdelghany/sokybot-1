@@ -1,4 +1,4 @@
-package org.sokybot.gameevents;
+package org.sokybot.translators.builtin.gateway;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

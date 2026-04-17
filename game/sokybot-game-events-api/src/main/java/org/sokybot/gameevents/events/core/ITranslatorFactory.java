@@ -1,6 +1,7 @@
 package org.sokybot.gameevents.events.core;
 
 import java.util.Map;
+import java.util.List;
 
 import org.sokybot.persistence.service.IGameDataLookup;
 
@@ -12,12 +13,33 @@ import org.sokybot.persistence.service.IGameDataLookup;
 public interface ITranslatorFactory {
     
     /**
-     * Create all translator instances for a specific game.
-     * Each translator gets the game's lookup service injected.
-     * 
-     * @param lookup The game-specific data lookup service, or {@code null} if not registered yet — script translators
-     *            (e.g. gateway 0xA101) may still be created.
-     * @return Map of opcode to translator instance
+     * Create translator chains for a specific game.
+     * Each chain is ordered by descending provider priority.
+     *
+     * @param lookup The game-specific data lookup service, or {@code null} if not
+     *            registered yet.
+     * @return Map of opcode to ordered translator chain
      */
-    Map<Integer, IPacketTranslator> createTranslators(IGameDataLookup lookup, org.sokybot.network.IPacketPublisher publisher);
+    Map<Integer, List<IPacketTranslator>> createTranslators(IGameDataLookup lookup,
+            org.sokybot.network.IPacketPublisher publisher);
+
+    /**
+     * Legacy single-translator view.
+     *
+     * @deprecated Prefer {@link #createTranslators(IGameDataLookup, org.sokybot.network.IPacketPublisher)}
+     *             and execute full chains.
+     */
+    @Deprecated
+    default Map<Integer, IPacketTranslator> createTranslatorsSingle(IGameDataLookup lookup,
+            org.sokybot.network.IPacketPublisher publisher) {
+        Map<Integer, List<IPacketTranslator>> chains = createTranslators(lookup, publisher);
+        Map<Integer, IPacketTranslator> flattened = new java.util.HashMap<>();
+        for (Map.Entry<Integer, List<IPacketTranslator>> entry : chains.entrySet()) {
+            List<IPacketTranslator> chain = entry.getValue();
+            if (chain != null && !chain.isEmpty()) {
+                flattened.put(entry.getKey(), chain.get(0));
+            }
+        }
+        return flattened;
+    }
 }

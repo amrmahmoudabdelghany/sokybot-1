@@ -3,7 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    
+
     <parent>
         <groupId>org.sokybot</groupId>
         <artifactId>sokybot</artifactId>
@@ -11,36 +11,24 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>sokybot-game-events</artifactId>
+    <artifactId>sokybot-translators-builtin</artifactId>
     <packaging>bundle</packaging>
-    <name>sokybot-game-events</name>
-    <description>Translates network packets to domain game events using OSGi Event Admin</description>
+    <name>sokybot-translators-builtin</name>
+    <description>Built-in fallback packet translators for gateway flow</description>
 
     <dependencies>
-        <!-- Sokybot API for network packet types -->
-
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-game-events-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-commons</artifactId>
+            <artifactId>sokybot-game-events</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
-
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-engine-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Sokybot Persistence for Position and entity types -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-persistence</artifactId>
@@ -49,51 +37,20 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-settings</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-proxy</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- OSGi Event Admin for event publishing -->
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.service.event</artifactId>
-            <version>1.4.1</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- OSGi Declarative Services annotations -->
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.component.annotations</artifactId>
             <version>1.5.1</version>
             <scope>provided</scope>
         </dependency>
-
-        <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <version>1.7.36</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.groovy</groupId>
-            <artifactId>groovy</artifactId>
-            <version>4.0.16</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.30</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -112,16 +69,6 @@
             <version>3.24.2</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-junit-jupiter</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -137,18 +84,14 @@
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Bundle-Description>${project.description}</Bundle-Description>
                         <Export-Package>
-                            org.sokybot.gameevents,
-                            org.sokybot.gameevents.events.*,
-                            org.sokybot.gameevents.dto,
-                            org.sokybot.gameevents.enums,
-                            org.sokybot.gameevents.script
+                            !org.sokybot.translators.builtin.gateway
                         </Export-Package>
                         <Private-Package>
-                            org.sokybot.gameevents.store.internal
+                            org.sokybot.translators.builtin.gateway
                         </Private-Package>
                         <Import-Package>
-                            org.sokybot.commons.*;version="[1.0,2)",
                             org.sokybot.gameevents.*;version="[1.0,2)",
+                            org.sokybot.persistence.service;version="[1.0,2)",
                             org.osgi.*,
                             *;resolution:=optional
                         </Import-Package>

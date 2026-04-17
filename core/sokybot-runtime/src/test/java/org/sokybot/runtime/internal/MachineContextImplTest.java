@@ -117,7 +117,7 @@ class MachineContextImplTest extends RuntimeTestBase {
                 proxyConnection, // Pass mocked connection directly
                 gameModel,
                 gameModelMutator,
-                Collections.singletonMap(1, translator),
+                Collections.singletonMap(1, Collections.singletonList(translator)),
                 chunkManager);
         lenient().when(packetPublisher.subscribe(any(org.sokybot.network.IPacketObserver.class), eq(1)))
                 .thenReturn(packetSubscription);

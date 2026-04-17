@@ -1,18 +1,18 @@
-package org.sokybot.gameevents;
+package org.sokybot.translators.builtin.gateway;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.sokybot.gameevents.dto.AgentInfo;
+import org.sokybot.gameevents.ChunkedPacketManager;
 import org.sokybot.gameevents.events.combat.AgentListEvent;
 import org.sokybot.gameevents.events.core.IGameEvent;
 import org.sokybot.gameevents.events.core.IPacketTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 
 /**
- * Public, bundle-exported translator for gateway AGENT_LIST (0xA101). Used by the runtime packet
- * bridge and as an OSGi {@link org.sokybot.gameevents.events.core.ITranslatorProvider} delegate.
+ * Built-in translator for gateway AGENT_LIST (0xA101).
  * <p>
  * Tries three intro shapes (01+unk+farm, 01+farm, farm-at-offset-0), divider and UTF-8/UTF-16 variants,
  * and prefers parses that consume the entire payload.

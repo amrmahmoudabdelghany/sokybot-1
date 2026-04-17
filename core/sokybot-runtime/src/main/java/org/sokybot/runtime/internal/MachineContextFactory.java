@@ -45,7 +45,7 @@ class MachineContextFactory {
         // Get shared translators from GroupContext (per-game, memory optimized)
         // Access package-private method since MachineContextFactory is in same package
         GroupContextImpl groupContextImpl = (GroupContextImpl) groupContext;
-        java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators = java.util.Map
+        java.util.Map<Integer, java.util.List<org.sokybot.gameevents.events.core.IPacketTranslator>> sharedTranslators = java.util.Map
                 .of();
         for (int tAttempt = 0; tAttempt < 6; tAttempt++) {
             if (tAttempt > 0) {

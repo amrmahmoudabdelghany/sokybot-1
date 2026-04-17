@@ -1,17 +1,14 @@
-package org.sokybot.gameevents.internal.gateway;
+package org.sokybot.translators.builtin.gateway;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
 
 import org.osgi.service.component.annotations.Component;
-import org.sokybot.gameevents.GatewayAgentListTranslator;
 import org.sokybot.gameevents.events.core.IPacketTranslator;
 import org.sokybot.gameevents.events.core.ITranslatorProvider;
 import org.sokybot.persistence.service.IGameDataLookup;
 
 /**
- * Registers {@link GatewayAgentListTranslator} with high priority for opcode 0xA101.
+ * Registers {@link GatewayAgentListTranslator} with fallback priority for opcode 0xA101.
  */
 @Component(service = ITranslatorProvider.class, immediate = true, property = "type=built-in-gateway")
 public class BuiltinAgentListTranslatorProvider implements ITranslatorProvider {
@@ -24,7 +21,7 @@ public class BuiltinAgentListTranslatorProvider implements ITranslatorProvider {
     }
 
     @Override
-    public Set<Integer> getSupportedOpcodes() {
+    public Set<Integer> getSupportedOpcodes(IGameDataLookup lookup) {
         return Set.of(OPCODE);
     }
 
@@ -38,6 +35,6 @@ public class BuiltinAgentListTranslatorProvider implements ITranslatorProvider {
 
     @Override
     public int getPriority() {
-        return 200;
+        return 25;
     }
 }

@@ -40,9 +40,8 @@ public interface ITranslatorProvider {
     IPacketTranslator createTranslator(int opcode, IGameDataLookup lookup);
     
     /**
-     * Get priority for conflict resolution.
-     * Higher priority providers override lower priority ones when multiple
-     * providers support the same opcode.
+     * Get provider priority.
+     * Higher-priority translators run earlier in a per-opcode chain.
      * 
      * <p>Priority guidelines:
      * <ul>
@@ -59,15 +58,26 @@ public interface ITranslatorProvider {
     }
     
     /**
-     * Get list of opcodes this provider supports.
+     * Get list of opcodes this provider supports for a specific game lookup.
      * Used for optimization - factory can pre-filter providers.
      * 
      * <p>If null is returned, factory will call supports() for each opcode
      * in the common range (less efficient but more flexible).
      * 
+     * @param lookup Game-specific lookup service
      * @return Set of supported opcodes, or null if unknown/dynamic
      */
+    default Set<Integer> getSupportedOpcodes(IGameDataLookup lookup) {
+        return getSupportedOpcodes();
+    }
+
+    /**
+     * Legacy no-arg supported opcode list.
+     *
+     * @deprecated Prefer {@link #getSupportedOpcodes(IGameDataLookup)}.
+     */
+    @Deprecated
     default Set<Integer> getSupportedOpcodes() {
-        return null; // Unknown - factory will query per opcode
+        return null;
     }
 }

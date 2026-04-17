@@ -17,6 +17,7 @@
         <module>sokybot-game-asset</module>
         <module>sokybot-game-events</module>
         <module>sokybot-game-events-api</module>
+        <module>sokybot-translators-builtin</module>
         <module>sokybot-game-loader</module>
         <module>sokybot-game-model</module>
         <module>sokybot-game-navigation</module>

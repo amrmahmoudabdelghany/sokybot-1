@@ -53,7 +53,7 @@ public class GroupContextImpl implements IGroupContext {
     private IRouteFinder routeFinder;
 
     // Shared translators per game (lazy initialized)
-    private Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators;
+    private Map<Integer, java.util.List<org.sokybot.gameevents.events.core.IPacketTranslator>> sharedTranslators;
     private final Object translatorsLock = new Object();
 
     private final Lock lock = new ReentrantLock();
@@ -281,7 +281,7 @@ public class GroupContextImpl implements IGroupContext {
     // Package-private method - accessible to MachineContextFactory in same package
     // Not exposed in public IGroupContext interface (internal implementation
     // detail)
-    Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> getTranslators() {
+    Map<Integer, java.util.List<org.sokybot.gameevents.events.core.IPacketTranslator>> getTranslators() {
         synchronized (translatorsLock) {
             if (sharedTranslators == null) {
                 IGameDataLookup lookup = getGameDataLookup();
@@ -295,7 +295,7 @@ public class GroupContextImpl implements IGroupContext {
                                 "GameDataLookup not available for group {} — creating script translators only (gateway 0xA101 etc. still work once scripts are loaded)",
                                 groupInfo.getName());
                     }
-                    java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> created = factory
+                    java.util.Map<Integer, java.util.List<org.sokybot.gameevents.events.core.IPacketTranslator>> created = factory
                             .createTranslators(lookup, null);
                     if (created.isEmpty()) {
                         log.warn(

@@ -3,9 +3,9 @@ package org.sokybot.gameevents;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -44,7 +44,7 @@ class ExtensibleTranslatorFactoryTest {
         MockTranslatorProvider provider = new MockTranslatorProvider(100, Set.of(0x3015, 0x3016, 0xA103));
         factory.bindProvider(provider);
 
-        Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translators = factory.createTranslators(lookup, null);
 
         assertNotNull(translators);
         assertFalse(translators.isEmpty());
@@ -56,27 +56,30 @@ class ExtensibleTranslatorFactoryTest {
     @Test
     @DisplayName("Should return empty map when no providers registered")
     void testCreateTranslatorsNoProviders() {
-        Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translators = factory.createTranslators(lookup, null);
 
         assertNotNull(translators);
         assertTrue(translators.isEmpty());
     }
 
     @Test
-    @DisplayName("Should use highest priority provider for opcodes")
+    @DisplayName("Should chain providers by descending priority for same opcode")
     void testProviderPriority() {
-        // Create a mock high-priority provider
         MockTranslatorProvider highPriorityProvider = new MockTranslatorProvider(200, Set.of(0x3015));
         MockTranslatorProvider lowPriorityProvider = new MockTranslatorProvider(50, Set.of(0x3015));
 
         factory.bindProvider(lowPriorityProvider);
         factory.bindProvider(highPriorityProvider); // Higher priority, should be used
 
-        Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translators = factory.createTranslators(lookup, null);
 
-        assertNotNull(translators.get(0x3015));
+        List<IPacketTranslator> chain = translators.get(0x3015);
+        assertNotNull(chain);
+        assertEquals(2, chain.size());
+        assertEquals(highPriorityProvider.lastCreatedTranslator, chain.get(0));
+        assertEquals(lowPriorityProvider.lastCreatedTranslator, chain.get(1));
         assertEquals(1, highPriorityProvider.createCount);
-        assertEquals(0, lowPriorityProvider.createCount); // Should not be used
+        assertEquals(1, lowPriorityProvider.createCount);
     }
 
     @Test
@@ -88,7 +91,7 @@ class ExtensibleTranslatorFactoryTest {
         factory.bindProvider(provider1);
         factory.bindProvider(provider2);
 
-        Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translators = factory.createTranslators(lookup, null);
 
         assertTrue(translators.containsKey(0x3015));
         assertTrue(translators.containsKey(0x9999));
@@ -100,12 +103,12 @@ class ExtensibleTranslatorFactoryTest {
         MockTranslatorProvider provider = new MockTranslatorProvider(100, Set.of(0x3015));
         factory.bindProvider(provider);
 
-        Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translators = factory.createTranslators(lookup, null);
         assertFalse(translators.isEmpty());
 
         factory.unbindProvider(provider);
 
-        Map<Integer, IPacketTranslator> translatorsAfter = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translatorsAfter = factory.createTranslators(lookup, null);
         assertTrue(translatorsAfter.isEmpty());
     }
 
@@ -115,8 +118,8 @@ class ExtensibleTranslatorFactoryTest {
         MockTranslatorProvider provider = new MockTranslatorProvider(100, Set.of(0x3015, 0x3016));
         factory.bindProvider(provider);
 
-        Map<Integer, IPacketTranslator> translators1 = factory.createTranslators(lookup, null);
-        Map<Integer, IPacketTranslator> translators2 = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translators1 = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translators2 = factory.createTranslators(lookup, null);
 
         assertEquals(translators1.keySet(), translators2.keySet());
     }
@@ -124,14 +127,27 @@ class ExtensibleTranslatorFactoryTest {
     @Test
     @DisplayName("Should handle provider without getSupportedOpcodes")
     void testProviderWithoutSupportedOpcodes() {
-        // Create provider that returns null for getSupportedOpcodes
         MockTranslatorProvider provider = new MockTranslatorProvider(100, null);
         factory.bindProvider(provider);
 
-        Map<Integer, IPacketTranslator> translators = factory.createTranslators(lookup, null);
+        Map<Integer, List<IPacketTranslator>> translators = factory.createTranslators(lookup, null);
 
         // Should handle gracefully (won't create translators since no opcodes known)
         assertTrue(translators.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Should preserve single-translator compatibility shim")
+    void testCreateTranslatorsSingleShim() {
+        MockTranslatorProvider highPriorityProvider = new MockTranslatorProvider(200, Set.of(0x3015));
+        MockTranslatorProvider lowPriorityProvider = new MockTranslatorProvider(50, Set.of(0x3015));
+        factory.bindProvider(lowPriorityProvider);
+        factory.bindProvider(highPriorityProvider);
+
+        Map<Integer, IPacketTranslator> flattened = factory.createTranslatorsSingle(lookup, null);
+
+        assertTrue(flattened.containsKey(0x3015));
+        assertEquals(highPriorityProvider.lastCreatedTranslator, flattened.get(0x3015));
     }
 
     /**
@@ -141,6 +157,7 @@ class ExtensibleTranslatorFactoryTest {
         private final int priority;
         private final Set<Integer> supportedOpcodes;
         int createCount = 0;
+        IPacketTranslator lastCreatedTranslator;
 
         MockTranslatorProvider(int priority, Set<Integer> supportedOpcodes) {
             this.priority = priority;
@@ -155,8 +172,7 @@ class ExtensibleTranslatorFactoryTest {
         @Override
         public IPacketTranslator createTranslator(int opcode, org.sokybot.persistence.service.IGameDataLookup lookup) {
             createCount++;
-            // Return a dummy translator
-            return new org.sokybot.gameevents.events.core.IPacketTranslator() {
+            lastCreatedTranslator = new org.sokybot.gameevents.events.core.IPacketTranslator() {
                 @Override
                 public int getOpcode() {
                     return opcode;
@@ -170,6 +186,7 @@ class ExtensibleTranslatorFactoryTest {
                     return java.util.Collections.emptyList();
                 }
             };
+            return lastCreatedTranslator;
         }
 
         @Override
@@ -178,7 +195,7 @@ class ExtensibleTranslatorFactoryTest {
         }
 
         @Override
-        public Set<Integer> getSupportedOpcodes() {
+        public Set<Integer> getSupportedOpcodes(org.sokybot.persistence.service.IGameDataLookup lookup) {
             return supportedOpcodes;
         }
     }

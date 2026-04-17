@@ -41,11 +41,11 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
             // Sort by priority (higher first)
             providers.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
         }
+        Set<Integer> supportedOpcodes = provider.getSupportedOpcodes(null);
         log.info("Registered translator provider: {} (priority: {}, opcodes: {})", 
                  provider.getClass().getName(), 
                  provider.getPriority(),
-                 provider.getSupportedOpcodes() != null ? 
-                     provider.getSupportedOpcodes().size() : "unknown");
+                 supportedOpcodes != null ? supportedOpcodes.size() : "unknown");
     }
     
     protected void unbindProvider(ITranslatorProvider provider) {
@@ -64,9 +64,9 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
     }
     
     @Override
-    public Map<Integer, IPacketTranslator> createTranslators(IGameDataLookup lookup, 
+    public Map<Integer, List<IPacketTranslator>> createTranslators(IGameDataLookup lookup,
                                                               IPacketPublisher publisher) {
-        Map<Integer, IPacketTranslator> translators = new HashMap<>();
+        Map<Integer, List<IPacketTranslator>> translators = new HashMap<>();
         
         // Collect all unique opcodes from all providers
         Set<Integer> allOpcodes = collectAllOpcodes(lookup);
@@ -75,12 +75,12 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
         log.debug("Creating translators for game: {} (version: {}), discovered {} opcodes", 
                  gamePath, version, allOpcodes.size());
         
-        // Create translator for each opcode using highest priority provider
+        // Build translator chain for each opcode in priority order
         int created = 0;
         for (int opcode : allOpcodes) {
-            IPacketTranslator translator = createTranslatorForOpcode(opcode, lookup);
-            if (translator != null) {
-                translators.put(opcode, translator);
+            List<IPacketTranslator> chain = createChainForOpcode(opcode, lookup);
+            if (!chain.isEmpty()) {
+                translators.put(opcode, chain);
                 created++;
             }
         }
@@ -89,6 +89,13 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
                 created, gamePath, version, providers.size());
         
         return translators;
+    }
+
+    @Override
+    @Deprecated
+    public Map<Integer, IPacketTranslator> createTranslatorsSingle(IGameDataLookup lookup,
+            IPacketPublisher publisher) {
+        return ITranslatorFactory.super.createTranslatorsSingle(lookup, publisher);
     }
     
     /**
@@ -99,7 +106,7 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
         
         // Query each provider for supported opcodes
         for (ITranslatorProvider provider : providers) {
-            Set<Integer> supported = provider.getSupportedOpcodes();
+            Set<Integer> supported = provider.getSupportedOpcodes(lookup);
             if (supported != null) {
                 // Fast path: provider knows its opcodes
                 allOpcodes.addAll(supported);
@@ -119,28 +126,34 @@ public class ExtensibleTranslatorFactory implements ITranslatorFactory {
         return allOpcodes;
     }
     
-    /**
-     * Create translator for a specific opcode using highest priority provider.
-     */
-    private IPacketTranslator createTranslatorForOpcode(int opcode, IGameDataLookup lookup) {
-        // Use providers in priority order (highest first)
+    private List<IPacketTranslator> createChainForOpcode(int opcode, IGameDataLookup lookup) {
+        List<IPacketTranslator> chain = new ArrayList<>();
+        Set<IPacketTranslator> dedupe = Collections.newSetFromMap(new IdentityHashMap<>());
+
         for (ITranslatorProvider provider : providers) {
-            if (provider.supports(opcode, lookup)) {
-                IPacketTranslator translator = provider.createTranslator(opcode, lookup);
-                if (translator != null) {
-                    if (log.isDebugEnabled()) {
-                        log.debug("Created translator for opcode 0x{} using provider {} (priority: {})",
-                                 String.format("%04X", opcode),
-                                 provider.getClass().getSimpleName(),
-                                 provider.getPriority());
-                    }
-                    return translator;
+            if (!provider.supports(opcode, lookup)) {
+                continue;
+            }
+            IPacketTranslator translator = provider.createTranslator(opcode, lookup);
+            if (translator == null) {
+                continue;
+            }
+            if (dedupe.add(translator)) {
+                chain.add(translator);
+                if (log.isDebugEnabled()) {
+                    log.debug("Added translator to chain for opcode 0x{} using provider {} (priority: {})",
+                            String.format("%04X", opcode),
+                            provider.getClass().getSimpleName(),
+                            provider.getPriority());
                 }
             }
         }
-        
-        log.warn("No translator provider found for opcode: 0x{} (game: {})",
-                String.format("%04X", opcode), lookup != null ? lookup.getGamePath() : "(no lookup)");
-        return null;
+
+        if (chain.isEmpty()) {
+            log.warn("No translator provider found for opcode: 0x{} (game: {})",
+                    String.format("%04X", opcode), lookup != null ? lookup.getGamePath() : "(no lookup)");
+            return Collections.emptyList();
+        }
+        return Collections.unmodifiableList(chain);
     }
 }

@@ -138,7 +138,7 @@ public class ScriptTranslatorProvider extends AbstractScriptWatcher implements I
     }
 
     @Override
-    public Set<Integer> getSupportedOpcodes() {
+    public Set<Integer> getSupportedOpcodes(IGameDataLookup lookup) {
         return Collections.unmodifiableSet(new HashSet<>(handlers.keySet()));
     }
 
