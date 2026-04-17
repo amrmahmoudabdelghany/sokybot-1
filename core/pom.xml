@@ -17,5 +17,6 @@
         <module>sokybot-engine</module>
         <module>sokybot-engine-api</module>
         <module>sokybot-runtime</module>
+        <module>sokybot-behaviors-training</module>
     </modules>
 </project>

@@ -173,6 +173,7 @@
                         <Private-Package>
                             org.sokybot.engine.internal,
                             org.sokybot.engine.internal.handler,
+                            org.sokybot.engine.internal.behavior,
                             org.sokybot.machine.*
                         </Private-Package>
                         <Export-Package>
