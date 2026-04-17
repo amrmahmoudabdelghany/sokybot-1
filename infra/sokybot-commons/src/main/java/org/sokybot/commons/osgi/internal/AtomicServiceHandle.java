@@ -1,19 +1,20 @@
-package org.sokybot.commons.osgi;
+package org.sokybot.commons.osgi.internal;
 
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
-/**
- * Atomic implementation for dynamic service bind/unbind.
- */
+import org.sokybot.commons.osgi.ServiceHandle;
+
 public final class AtomicServiceHandle<T> implements ServiceHandle<T> {
     private final AtomicReference<T> reference = new AtomicReference<>();
 
-    public void set(T service) {
+    @Override
+    public void bind(T service) {
         reference.set(service);
     }
 
-    public void clear(T service) {
+    @Override
+    public void unbind(T service) {
         reference.compareAndSet(service, null);
     }
 

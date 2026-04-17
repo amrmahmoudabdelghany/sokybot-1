@@ -10,7 +10,8 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.sokybot.commons.osgi.AtomicServiceHandle;
+import org.sokybot.commons.osgi.ServiceHandle;
+import org.sokybot.commons.topic.Topic;
 import org.sokybot.http.server.events.BridgeEvent;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.webview.api.IRSocketHandler;
@@ -39,15 +40,15 @@ public class EventBridgeHandler implements IRSocketHandler, IRSocketStreamHandle
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
-    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
+    private final ServiceHandle<IEventBridge> eventBridge = ServiceHandle.create();
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setEventBridge(IEventBridge bridge) {
-        this.eventBridge.set(bridge);
+        this.eventBridge.bind(bridge);
     }
 
     protected void unsetEventBridge(IEventBridge bridge) {
-        this.eventBridge.clear(bridge);
+        this.eventBridge.unbind(bridge);
     }
 
     // ===== IRSocketHandler =====
@@ -126,7 +127,7 @@ public class EventBridgeHandler implements IRSocketHandler, IRSocketStreamHandle
         // Subscribe to events
         IEventBridge.Subscription subscription = bridge.subscribe(
                 machineId,
-                finalPattern,
+                Topic.parse(finalPattern),
                 event -> {
                     Map<String, Object> eventMap = eventToMap(event);
                     sink.tryEmitNext(eventMap);
@@ -149,7 +150,7 @@ public class EventBridgeHandler implements IRSocketHandler, IRSocketStreamHandle
                 });
     }
 
-    private Map<String, Object> eventToMap(BridgeEvent event) {
+    private Map<String, Object> eventToMap(BridgeEvent<Object> event) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("topic", event.getTopic());
         map.put("timestamp", TIMESTAMP_FORMATTER.format(event.getTimestamp()));

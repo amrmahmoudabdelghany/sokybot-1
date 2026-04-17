@@ -72,12 +72,23 @@
             <version>1.4.1</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.event</artifactId>
+            <version>1.4.1</version>
+            <scope>provided</scope>
+        </dependency>
         
         <!-- Logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -138,6 +149,7 @@
                             !java.nio.file.spi,
                             <!-- Required -->
                             org.sokybot.commons.lifecycle;version="[1.0,2)",
+                            org.sokybot.commons.topic;version="[1.0,2)",
                             com.fasterxml.jackson.*;version="[2.15,3)",
                             *
                         </Import-Package>

@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
+import org.sokybot.commons.topic.Topic;
+import org.sokybot.commons.topic.TopicMatcher;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -26,7 +28,7 @@ public class EventBridgeImpl implements IEventBridge {
     private final List<SubscriptionImpl> subscriptions = new CopyOnWriteArrayList<>();
     private final AtomicLong eventCount = new AtomicLong(0);
     private final AtomicLong relayDroppedCount = new AtomicLong(0);
-    private final Sinks.Many<BridgeEvent> relaySink = Sinks.many().multicast()
+    private final Sinks.Many<BridgeEvent<Object>> relaySink = Sinks.many().multicast()
             .onBackpressureBuffer(8192, false);
     private Disposable relaySubscription;
 
@@ -44,14 +46,14 @@ public class EventBridgeImpl implements IEventBridge {
     }
 
     @Override
-    public void publish(String topic, Object event) {
+    public <T> void publish(Topic topic, T event) {
         publish(null, topic, event);
     }
 
     @Override
-    public void publish(String machineId, String topic, Object event) {
+    public <T> void publish(String machineId, Topic topic, T event) {
         eventCount.incrementAndGet();
-        BridgeEvent bridgeEvent = new BridgeEvent(topic, machineId, event);
+        BridgeEvent<Object> bridgeEvent = new BridgeEvent<>(topic, machineId, event);
         Sinks.EmitResult result = relaySink.tryEmitNext(bridgeEvent);
         if (result.isFailure() && result != Sinks.EmitResult.FAIL_ZERO_SUBSCRIBER) {
             relayDroppedCount.incrementAndGet();
@@ -60,15 +62,26 @@ public class EventBridgeImpl implements IEventBridge {
     }
 
     @Override
-    public Subscription subscribe(String pattern, Consumer<BridgeEvent> callback) {
-        return subscribe(null, pattern, callback);
+    public <T> Subscription subscribe(Topic pattern, Consumer<BridgeEvent<T>> callback) {
+        return subscribe(null, pattern, null, callback);
     }
 
     @Override
-    public Subscription subscribe(String machineId, String pattern, Consumer<BridgeEvent> callback) {
-        SubscriptionImpl sub = new SubscriptionImpl(machineId, pattern, callback);
+    public <T> Subscription subscribe(Topic pattern, Class<T> payloadType, Consumer<BridgeEvent<T>> callback) {
+        return subscribe(null, pattern, payloadType, callback);
+    }
+
+    @Override
+    public <T> Subscription subscribe(String machineId, Topic pattern, Consumer<BridgeEvent<T>> callback) {
+        return subscribe(machineId, pattern, null, callback);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> Subscription subscribe(String machineId, Topic pattern, Class<T> payloadType, Consumer<BridgeEvent<T>> callback) {
+        SubscriptionImpl sub = new SubscriptionImpl(machineId, pattern, payloadType, (Consumer<BridgeEvent<Object>>) (Consumer<?>) callback);
         subscriptions.add(sub);
-        log.debug("New subscription: pattern={}, machineId={}", pattern, machineId);
+        log.debug("New subscription: pattern={}, machineId={}, payloadType={}", pattern, machineId, payloadType);
         return sub;
     }
 
@@ -92,13 +105,15 @@ public class EventBridgeImpl implements IEventBridge {
      */
     private class SubscriptionImpl implements Subscription {
         final String machineIdFilter;
-        final String pattern;
-        final Consumer<BridgeEvent> callback;
+        final Topic pattern;
+        final Class<?> payloadType;
+        final Consumer<BridgeEvent<Object>> callback;
         final AtomicBoolean active = new AtomicBoolean(true);
 
-        SubscriptionImpl(String machineIdFilter, String pattern, Consumer<BridgeEvent> callback) {
+        SubscriptionImpl(String machineIdFilter, Topic pattern, Class<?> payloadType, Consumer<BridgeEvent<Object>> callback) {
             this.machineIdFilter = machineIdFilter;
             this.pattern = pattern;
+            this.payloadType = payloadType;
             this.callback = callback;
         }
 
@@ -115,12 +130,14 @@ public class EventBridgeImpl implements IEventBridge {
             return active.get();
         }
     }
-    private void deliverToSubscribers(BridgeEvent bridgeEvent) {
+    private void deliverToSubscribers(BridgeEvent<Object> bridgeEvent) {
         for (SubscriptionImpl sub : subscriptions) {
             if (!sub.isActive()) continue;
             if (sub.machineIdFilter != null && bridgeEvent.getMachineId() != null
                     && !sub.machineIdFilter.equals(bridgeEvent.getMachineId())) continue;
-            if (!bridgeEvent.matchesTopic(sub.pattern)) continue;
+            if (sub.machineIdFilter != null && bridgeEvent.getMachineId() == null) continue;
+            if (!TopicMatcher.DEFAULT.matches(sub.pattern, bridgeEvent.getTopicObj())) continue;
+            if (sub.payloadType != null && !sub.payloadType.isInstance(bridgeEvent.getPayload())) continue;
             try {
                 sub.callback.accept(bridgeEvent);
             } catch (Exception e) {

@@ -1,4 +1,5 @@
 import org.sokybot.machinepages.api.BasePage
+import org.sokybot.commons.topic.Topics
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
 
@@ -9,8 +10,8 @@ class EnvironmentPage extends BasePage implements EventHandler {
     @Override
     String[] getEventTopics(String machineFullName) {
         def mid = osgiEventTopicSegment(machineFullName)
-        ["sokybot/game/${mid}/EntitySpawn",
-         "sokybot/game/${mid}/EntityDespawn"] as String[]
+        [Topics.game(mid, "EntitySpawn").toEventAdminString(),
+         Topics.game(mid, "EntityDespawn").toEventAdminString()] as String[]
     }
 
     @Override

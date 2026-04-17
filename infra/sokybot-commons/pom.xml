@@ -59,6 +59,11 @@
             <version>1.4.0</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -82,7 +87,8 @@
                             org.sokybot.commons.event,
                             org.sokybot.commons.osgi,
                             org.sokybot.commons.script,
-                            org.sokybot.commons.lifecycle
+                            org.sokybot.commons.lifecycle,
+                            org.sokybot.commons.topic
                         </Export-Package>
                         <Private-Package>
                             org.sokybot.commons.error.internal,

@@ -1,6 +1,8 @@
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventAdmin
+import org.sokybot.commons.topic.Topics
 import org.sokybot.http.server.events.IEventBridge
+import org.sokybot.http.server.events.IEventMediator
 import org.sokybot.runtime.ISokybotContext
 
 class PartyManager extends BaseActuator {
@@ -79,7 +81,14 @@ class PartyManager extends BaseActuator {
             return
         }
         String groupSeg = topicSegment(context.getGroupName())
-        def sub = bridge.subscribe("sokybot.party.${groupSeg}.**", { bridgeEvent ->
+        def mediator = context.getService(IEventMediator)
+        def sub = (mediator != null
+                ? mediator.subscribe(Topics.party(groupSeg, "**"), { bridgeEvent -> handleBridgeEvent(bridgeEvent) })
+                : bridge.subscribe("sokybot.party.${groupSeg}.**", { bridgeEvent -> handleBridgeEvent(bridgeEvent) }))
+        context.getSessionData().put(SESSION_SUB_KEY, sub)
+    }
+
+    private void handleBridgeEvent(def bridgeEvent) {
             try {
                 def payload = bridgeEvent?.getPayload()
                 if (!(payload instanceof Map)) return
@@ -95,8 +104,6 @@ class PartyManager extends BaseActuator {
                 }
             } catch (Exception ignored) {
             }
-        })
-        context.getSessionData().put(SESSION_SUB_KEY, sub)
     }
 
     private boolean isLoggedIn(def ctx) {
@@ -177,9 +184,8 @@ class PartyManager extends BaseActuator {
     }
 
     private void postPartyCoordinationEvent(def ctx, String groupName, String eventType, Map<String, Object> extras) {
-        def eventAdmin = context?.getService(EventAdmin)
-        if (eventAdmin == null) return
-        String topic = "sokybot/party/${topicSegment(groupName)}/${topicSegment(eventType)}"
+        def mediator = context?.getService(IEventMediator)
+        String topic = Topics.party(topicSegment(groupName), topicSegment(eventType)).toEventAdminString()
         def props = [
                 machineId   : context.getMachineId(),
                 groupName   : groupName,
@@ -187,7 +193,14 @@ class PartyManager extends BaseActuator {
                 timestamp   : System.currentTimeMillis()
         ] as Map<String, Object>
         if (extras != null) props.putAll(extras)
-        eventAdmin.postEvent(new Event(topic, props))
+        if (mediator != null) {
+            mediator.postScoped(context.getMachineId(), topic, props)
+            return
+        }
+        def eventAdmin = context?.getService(EventAdmin)
+        if (eventAdmin != null) {
+            eventAdmin.postEvent(new Event(topic, props))
+        }
     }
 
     private List<String> resolveGroupMachineIds(String groupName) {

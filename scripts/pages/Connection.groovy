@@ -1,4 +1,5 @@
 import org.sokybot.machinepages.api.BasePage
+import org.sokybot.commons.topic.Topics
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
 import org.sokybot.settings.api.IProfileManager
@@ -16,11 +17,11 @@ class ConnectionPage extends BasePage implements EventHandler {
     @Override
     String[] getEventTopics(String machineFullName) {
         def mid = osgiEventTopicSegment(machineFullName)
-        ["sokybot/network/${mid}/Connected",
-         "sokybot/network/${mid}/Disconnected",
-         "sokybot/game/${mid}/AgentListEvent",
-         "sokybot/game/${mid}/LoginResponseEvent",
-         "sokybot/game/${mid}/AuthResponseEvent"] as String[]
+        [Topics.network(mid, "Connected").toEventAdminString(),
+         Topics.network(mid, "Disconnected").toEventAdminString(),
+         Topics.game(mid, "AgentListEvent").toEventAdminString(),
+         Topics.game(mid, "LoginResponseEvent").toEventAdminString(),
+         Topics.game(mid, "AuthResponseEvent").toEventAdminString()] as String[]
     }
 
     @Override

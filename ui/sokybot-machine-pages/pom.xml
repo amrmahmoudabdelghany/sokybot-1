@@ -166,6 +166,7 @@
                             org.sokybot.runtime.*;version="[1,2)",
                             org.sokybot.engine.api.*;version="[1,2)",
                             org.sokybot.commons.script;version="[1,2)",
+                            org.sokybot.commons.topic;version="[1,2)",
                             org.sokybot.proxy.*;version="[1,2)",
                             org.sokybot.settings.api.*;version="[1,2)",
                             org.sokybot.gameevents.*;version="[1,2)",

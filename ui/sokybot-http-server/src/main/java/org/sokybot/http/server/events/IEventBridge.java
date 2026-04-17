@@ -2,11 +2,24 @@ package org.sokybot.http.server.events;
 
 import java.util.function.Consumer;
 
+import org.sokybot.commons.topic.Topic;
+
 /**
  * Interface for publishing events to connected clients.
  * Implements a publish-subscribe pattern for real-time updates.
  */
 public interface IEventBridge {
+    <T> void publish(Topic topic, T event);
+
+    <T> void publish(String machineId, Topic topic, T event);
+
+    <T> Subscription subscribe(Topic pattern, Consumer<BridgeEvent<T>> callback);
+
+    <T> Subscription subscribe(Topic pattern, Class<T> payloadType, Consumer<BridgeEvent<T>> callback);
+
+    <T> Subscription subscribe(String machineId, Topic pattern, Consumer<BridgeEvent<T>> callback);
+
+    <T> Subscription subscribe(String machineId, Topic pattern, Class<T> payloadType, Consumer<BridgeEvent<T>> callback);
 
     /**
      * Publish an event to all subscribers matching the topic.
@@ -14,7 +27,10 @@ public interface IEventBridge {
      * @param topic the event topic (e.g., "machine.started", "character.levelUp")
      * @param event the event payload
      */
-    void publish(String topic, Object event);
+    @Deprecated
+    default void publish(String topic, Object event) {
+        publish(Topic.parse(topic), event);
+    }
 
     /**
      * Publish an event scoped to a specific machine.
@@ -23,7 +39,10 @@ public interface IEventBridge {
      * @param topic     the event topic
      * @param event     the event payload
      */
-    void publish(String machineId, String topic, Object event);
+    @Deprecated
+    default void publish(String machineId, String topic, Object event) {
+        publish(machineId, Topic.parse(topic), event);
+    }
 
     /**
      * Subscribe to events matching a topic pattern.
@@ -34,7 +53,11 @@ public interface IEventBridge {
      * @param callback the callback to invoke when matching events are published
      * @return a subscription that can be cancelled
      */
-    Subscription subscribe(String pattern, Consumer<BridgeEvent> callback);
+    @Deprecated
+    @SuppressWarnings("unchecked")
+    default Subscription subscribe(String pattern, Consumer<BridgeEvent> callback) {
+        return subscribe(Topic.parse(pattern), (Consumer<BridgeEvent<Object>>) (Consumer<?>) callback);
+    }
 
     /**
      * Subscribe to events for a specific machine.
@@ -44,7 +67,11 @@ public interface IEventBridge {
      * @param callback  the callback
      * @return a subscription
      */
-    Subscription subscribe(String machineId, String pattern, Consumer<BridgeEvent> callback);
+    @Deprecated
+    @SuppressWarnings("unchecked")
+    default Subscription subscribe(String machineId, String pattern, Consumer<BridgeEvent> callback) {
+        return subscribe(machineId, Topic.parse(pattern), (Consumer<BridgeEvent<Object>>) (Consumer<?>) callback);
+    }
 
     /**
      * Get the number of active subscribers.

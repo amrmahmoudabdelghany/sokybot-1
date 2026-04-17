@@ -9,7 +9,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
-import org.sokybot.commons.osgi.AtomicServiceHandle;
+import org.sokybot.commons.osgi.ServiceHandle;
+import org.sokybot.commons.topic.Topic;
 import org.sokybot.http.server.events.IEventBridge;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -31,15 +32,15 @@ public class GameEventBridge implements EventHandler {
     
     // Replay the last 50 events to new subscribers to give context
     private final Sinks.Many<Map<String, Object>> eventSink = Sinks.many().replay().limit(50);
-    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
+    private final ServiceHandle<IEventBridge> eventBridge = ServiceHandle.create();
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, unbind = "unsetEventBridge")
     protected void setEventBridge(IEventBridge eventBridge) {
-        this.eventBridge.set(eventBridge);
+        this.eventBridge.bind(eventBridge);
     }
 
     protected void unsetEventBridge(IEventBridge eventBridge) {
-        this.eventBridge.clear(eventBridge);
+        this.eventBridge.unbind(eventBridge);
     }
 
     @Override
@@ -65,7 +66,7 @@ public class GameEventBridge implements EventHandler {
                 Object mid = event.getProperty("machineId");
                 if (mid != null) machineId = String.valueOf(mid);
             }
-            bridge.publish(machineId, event.getTopic().replace('/', '.'), props);
+            bridge.publish(machineId, Topic.parse(event.getTopic()), props);
         });
     }
     

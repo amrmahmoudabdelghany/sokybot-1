@@ -1,4 +1,5 @@
 import org.sokybot.machinepages.api.BasePage
+import org.sokybot.commons.topic.Topics
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
 
@@ -9,7 +10,7 @@ class InventoryPage extends BasePage implements EventHandler {
     @Override
     String[] getEventTopics(String machineFullName) {
         def mid = osgiEventTopicSegment(machineFullName)
-        ["sokybot/game/${mid}/InventoryUpdate"] as String[]
+        [Topics.game(mid, "InventoryUpdate").toEventAdminString()] as String[]
     }
 
     @Override

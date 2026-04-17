@@ -3,42 +3,63 @@ package org.sokybot.http.server.events;
 import java.time.Instant;
 import java.util.Map;
 
+import org.sokybot.commons.topic.Topic;
+import org.sokybot.commons.topic.TopicMatcher;
+
 /**
  * Event payload for the event bridge.
  */
-public class BridgeEvent {
-
-    private final String topic;
+public class BridgeEvent<T> {
+    private final Topic topicObj;
     private final String machineId;
-    private final Object payload;
+    private final T payload;
     private final Instant timestamp;
     private final Map<String, Object> metadata;
 
-    public BridgeEvent(String topic, Object payload) {
+    public BridgeEvent(Topic topic, T payload) {
         this(topic, null, payload, null);
     }
 
-    public BridgeEvent(String topic, String machineId, Object payload) {
+    public BridgeEvent(Topic topic, String machineId, T payload) {
         this(topic, machineId, payload, null);
     }
 
-    public BridgeEvent(String topic, String machineId, Object payload, Map<String, Object> metadata) {
-        this.topic = topic;
+    public BridgeEvent(Topic topic, String machineId, T payload, Map<String, Object> metadata) {
+        this.topicObj = topic == null ? Topic.parse("**") : topic;
         this.machineId = machineId;
         this.payload = payload;
         this.timestamp = Instant.now();
         this.metadata = metadata;
     }
 
+    @Deprecated
+    public BridgeEvent(String topic, T payload) {
+        this(Topic.parse(topic), null, payload, null);
+    }
+
+    @Deprecated
+    public BridgeEvent(String topic, String machineId, T payload) {
+        this(Topic.parse(topic), machineId, payload, null);
+    }
+
+    @Deprecated
+    public BridgeEvent(String topic, String machineId, T payload, Map<String, Object> metadata) {
+        this(Topic.parse(topic), machineId, payload, metadata);
+    }
+
+    public Topic getTopicObj() {
+        return topicObj;
+    }
+
     public String getTopic() {
-        return topic;
+        return topicObj.toBridgeString();
     }
 
     public String getMachineId() {
         return machineId;
     }
 
-    public Object getPayload() {
+    public T getPayload() {
         return payload;
     }
 
@@ -55,30 +76,17 @@ public class BridgeEvent {
      * Patterns support wildcards: "*" matches single level, "**" matches multiple
      * levels.
      */
+    public boolean matchesTopic(Topic pattern) {
+        return TopicMatcher.DEFAULT.matches(pattern, this.topicObj);
+    }
+
+    @Deprecated
     public boolean matchesTopic(String pattern) {
-        if (pattern == null || pattern.isEmpty()) {
-            return true;
-        }
-        if (pattern.equals("**")) {
-            return true;
-        }
-        if (pattern.equals(topic)) {
-            return true;
-        }
-        if (pattern.endsWith(".*")) {
-            String prefix = pattern.substring(0, pattern.length() - 2);
-            return topic.startsWith(prefix + ".") && !topic.substring(prefix.length() + 1).contains(".");
-        }
-        if (pattern.endsWith(".**")) {
-            String prefix = pattern.substring(0, pattern.length() - 3);
-            return topic.startsWith(prefix + ".") || topic.equals(prefix);
-        }
-        return false;
+        return TopicMatcher.DEFAULT.matches(pattern, getTopic());
     }
 
     @Override
     public String toString() {
-        return String.format("BridgeEvent{topic='%s', machineId='%s', timestamp=%s}",
-                topic, machineId, timestamp);
+        return String.format("BridgeEvent{topic='%s', machineId='%s', timestamp=%s}", getTopic(), machineId, timestamp);
     }
 }

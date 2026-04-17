@@ -2,6 +2,7 @@ package org.sokybot.webview.handler;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.sokybot.commons.topic.Topic;
 import org.sokybot.http.server.events.BridgeEvent;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.webview.api.IRSocketStreamHandler;
@@ -45,11 +46,11 @@ public class GameEventsStreamHandler implements IRSocketStreamHandler {
         if (eventBridge == null) {
             return Flux.just(java.util.Map.of("type", "SYNC_REQUIRED", "reason", "event_bridge_unavailable"));
         }
-        IEventBridge.Subscription subscription = eventBridge.subscribe("sokybot.game.**", this::onEvent);
+        IEventBridge.Subscription subscription = eventBridge.subscribe(Topic.parse("sokybot.game.**"), this::onEvent);
         return sink.asFlux().doFinally(signal -> subscription.unsubscribe());
     }
 
-    private void onEvent(BridgeEvent event) {
+    private void onEvent(BridgeEvent<Object> event) {
         Object payload = event.getPayload();
         if (payload != null) {
             sink.tryEmitNext(payload);

@@ -23,7 +23,8 @@ import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sokybot.commons.osgi.AtomicServiceHandle;
+import org.sokybot.commons.osgi.ServiceHandle;
+import org.sokybot.commons.topic.Topic;
 import org.sokybot.http.server.events.BridgeEvent;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.runtime.ContextLifecycleEvents;
@@ -58,19 +59,19 @@ public class MachineStatusHubRegistry implements EventHandler {
     private final Object wildcardLock = new Object();
     private volatile IEventBridge.Subscription wildcardBridgeSubscription;
 
-    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
+    private final ServiceHandle<IEventBridge> eventBridge = ServiceHandle.create();
     private volatile ISokybotContext sokybotContext;
 
     private ScheduledExecutorService scheduler;
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, unbind = "unsetEventBridge")
     protected void setEventBridge(IEventBridge eventBridge) {
-        this.eventBridge.set(eventBridge);
+        this.eventBridge.bind(eventBridge);
         tryBootstrap();
     }
 
     protected void unsetEventBridge(IEventBridge bridge) {
-        this.eventBridge.clear(bridge);
+        this.eventBridge.unbind(bridge);
     }
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL)
@@ -168,7 +169,7 @@ public class MachineStatusHubRegistry implements EventHandler {
                 .onBackpressureBuffer(PER_CONNECTION_BUFFER, false);
         synchronized (wildcardLock) {
             if (wildcardBridgeSubscription == null) {
-                wildcardBridgeSubscription = bridge.subscribe("sokybot.network.**", this::onWildcardBridgeEvent);
+                wildcardBridgeSubscription = bridge.subscribe(Topic.parse("sokybot.network.**"), this::onWildcardBridgeEvent);
             }
         }
         wildcardClients.add(clientSink);
@@ -180,7 +181,7 @@ public class MachineStatusHubRegistry implements EventHandler {
                 });
     }
 
-    private void onWildcardBridgeEvent(BridgeEvent event) {
+    private void onWildcardBridgeEvent(BridgeEvent<Object> event) {
         Map<String, Object> payload = MachineStatusPayloadHelper.fromBridgeEvent(event);
         if (payload.isEmpty()) {
             return;
@@ -256,14 +257,14 @@ public class MachineStatusHubRegistry implements EventHandler {
         }
 
         void start(IEventBridge bridge, ScheduledExecutorService sched) {
-            bridgeSub = bridge.subscribe(fullName, "sokybot.network.**", this::onBridgeEvent);
+            bridgeSub = bridge.subscribe(fullName, Topic.parse("sokybot.network.**"), this::onBridgeEvent);
             if (sched != null && !sched.isShutdown()) {
                 heartbeatFuture = sched.scheduleAtFixedRate(this::emitHeartbeat, HEARTBEAT_SECONDS,
                         HEARTBEAT_SECONDS, TimeUnit.SECONDS);
             }
         }
 
-        private void onBridgeEvent(BridgeEvent event) {
+        private void onBridgeEvent(BridgeEvent<Object> event) {
             if (shutdown.get()) {
                 return;
             }

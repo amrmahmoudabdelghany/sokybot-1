@@ -1,4 +1,5 @@
 import org.sokybot.machinepages.api.BasePage
+import org.sokybot.commons.topic.Topics
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
 
@@ -11,8 +12,8 @@ class HealingPage extends BasePage implements EventHandler {
     @Override
     String[] getEventTopics(String machineFullName) {
         def mid = osgiEventTopicSegment(machineFullName)
-        ["sokybot/game/${mid}/UpdateHP",
-         "sokybot/game/${mid}/UpdateMP"] as String[]
+        [Topics.game(mid, "UpdateHP").toEventAdminString(),
+         Topics.game(mid, "UpdateMP").toEventAdminString()] as String[]
     }
 
     @Override

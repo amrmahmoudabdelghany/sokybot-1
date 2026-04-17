@@ -1,4 +1,7 @@
 import org.sokybot.machinepages.api.BasePage
+import org.sokybot.commons.topic.Topic
+import org.sokybot.commons.topic.TopicMatcher
+import org.sokybot.commons.topic.Topics
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
 import org.sokybot.runtime.ISokybotContext
@@ -14,9 +17,9 @@ class PartyPage extends BasePage implements EventHandler {
     String[] getEventTopics(String machineFullName) {
         def mid = osgiEventTopicSegment(machineFullName)
         [
-                "sokybot/game/${mid}/PartyInviteEvent",
-                "sokybot/game/${mid}/PartyUpdateEvent",
-                "sokybot/party/*"
+                Topics.game(mid, "PartyInviteEvent").toEventAdminString(),
+                Topics.game(mid, "PartyUpdateEvent").toEventAdminString(),
+                Topics.party("*", "*").toEventAdminString()
         ] as String[]
     }
 
@@ -78,7 +81,7 @@ class PartyPage extends BasePage implements EventHandler {
                 emitStateUpdate()
                 return
             }
-            if (topic.startsWith("sokybot/party/")) {
+            if (TopicMatcher.DEFAULT.matches(Topic.parse("sokybot.party.**"), Topic.parse(topic))) {
                 emitStateUpdate()
             }
         } catch (Exception ignored) {

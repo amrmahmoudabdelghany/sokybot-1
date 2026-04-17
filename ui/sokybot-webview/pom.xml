@@ -230,6 +230,7 @@
                             org.sokybot.gameevents.*;version="[1.0,2)",
                             org.sokybot.gamemodel.*;version="[1.0,2)",
                             org.sokybot.persistence.*;version="[1.0,2)",
+                            org.sokybot.commons.topic;version="[1.0,2)",
                             org.sokybot.commons.*;version="[1.0,2)",
                             !io.vertx.*,
                             !javax.annotation.meta,

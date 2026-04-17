@@ -12,7 +12,9 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sokybot.commons.osgi.AtomicServiceHandle;
+import org.sokybot.commons.osgi.ServiceHandle;
+import org.sokybot.commons.topic.Topic;
+import org.sokybot.commons.topic.TopicMatcher;
 import org.sokybot.http.server.events.BridgeEvent;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.webview.api.IRSocketChannelHandler;
@@ -33,15 +35,15 @@ public class DiagnosticsChannelHandler implements IRSocketChannelHandler {
 
     public static final String CHANNEL_NAME = "diagnostics.stream";
 
-    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
+    private final ServiceHandle<IEventBridge> eventBridge = ServiceHandle.create();
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setEventBridge(IEventBridge eventBridge) {
-        this.eventBridge.set(eventBridge);
+        this.eventBridge.bind(eventBridge);
     }
 
     protected void unsetEventBridge(IEventBridge eventBridge) {
-        this.eventBridge.clear(eventBridge);
+        this.eventBridge.unbind(eventBridge);
     }
 
     @Override
@@ -66,7 +68,7 @@ public class DiagnosticsChannelHandler implements IRSocketChannelHandler {
         final AtomicReference<Runnable> reconnectRef = new AtomicReference<>();
 
         Flux<Map<String, Object>> eventFlux = Flux.<Map<String, Object>>create(sink -> {
-            Consumer<BridgeEvent> forward = ev -> {
+            Consumer<BridgeEvent<Object>> forward = ev -> {
                 if (paused.get()) {
                     return;
                 }
@@ -74,7 +76,7 @@ public class DiagnosticsChannelHandler implements IRSocketChannelHandler {
                 if (p == null || p.isEmpty()) {
                     p = "**";
                 }
-                if (!ev.matchesTopic(p)) {
+                if (!TopicMatcher.DEFAULT.matches(Topic.parse(p), ev.getTopicObj())) {
                     return;
                 }
                 String m = machineRef.get();
@@ -101,8 +103,8 @@ public class DiagnosticsChannelHandler implements IRSocketChannelHandler {
                 }
                 String m = machineRef.get();
                 IEventBridge.Subscription s = (m == null || m.isEmpty())
-                        ? bridge.subscribe(p, forward)
-                        : bridge.subscribe(m, p, forward);
+                        ? bridge.subscribe(Topic.parse(p), forward)
+                        : bridge.subscribe(m, Topic.parse(p), forward);
                 subscriptionRef.set(s);
             };
 
@@ -204,7 +206,7 @@ public class DiagnosticsChannelHandler implements IRSocketChannelHandler {
         return m;
     }
 
-    private static Map<String, Object> toEventMap(BridgeEvent ev) {
+    private static Map<String, Object> toEventMap(BridgeEvent<Object> ev) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("type", "bridge.event");
         m.put("topic", ev.getTopic());

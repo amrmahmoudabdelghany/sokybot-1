@@ -13,7 +13,8 @@ import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sokybot.commons.osgi.AtomicServiceHandle;
+import org.sokybot.commons.osgi.ServiceHandle;
+import org.sokybot.commons.topic.Topic;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.webview.api.IRSocketStreamHandler;
 import org.sokybot.webview.api.RSocketRequest;
@@ -29,16 +30,16 @@ public class MachineStatusStreamHandler implements IRSocketStreamHandler, EventH
 
     private static final Logger log = LoggerFactory.getLogger(MachineStatusStreamHandler.class);
 
-    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
+    private final ServiceHandle<IEventBridge> eventBridge = ServiceHandle.create();
     private volatile MachineStatusHubRegistry hubRegistry;
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, unbind = "unsetEventBridge")
     protected void setEventBridge(IEventBridge eventBridge) {
-        this.eventBridge.set(eventBridge);
+        this.eventBridge.bind(eventBridge);
     }
 
     protected void unsetEventBridge(IEventBridge eventBridge) {
-        this.eventBridge.clear(eventBridge);
+        this.eventBridge.unbind(eventBridge);
     }
 
     @Reference
@@ -113,6 +114,6 @@ public class MachineStatusStreamHandler implements IRSocketStreamHandler, EventH
             }
         }
         final String finalMachineId = machineId;
-        eventBridge.ifPresent(bridge -> bridge.publish(finalMachineId, event.getTopic().replace('/', '.'), payload));
+        eventBridge.ifPresent(bridge -> bridge.publish(finalMachineId, Topic.parse(event.getTopic()), payload));
     }
 }

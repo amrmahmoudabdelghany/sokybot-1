@@ -13,7 +13,7 @@ public final class MachineStatusPayloadHelper {
     private MachineStatusPayloadHelper() {
     }
 
-    public static Map<String, Object> fromBridgeEvent(BridgeEvent event) {
+    public static Map<String, Object> fromBridgeEvent(BridgeEvent<Object> event) {
         if (event == null) {
             return Map.of();
         }

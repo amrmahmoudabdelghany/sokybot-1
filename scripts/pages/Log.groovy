@@ -1,4 +1,5 @@
 import org.sokybot.machinepages.api.BasePage
+import org.sokybot.commons.topic.Topics
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventHandler
 
@@ -14,8 +15,8 @@ class LogPage extends BasePage implements EventHandler {
     @Override
     String[] getEventTopics(String machineFullName) {
         def mid = osgiEventTopicSegment(machineFullName)
-        ["sokybot/game/${mid}/*",
-         "sokybot/network/${mid}/*"] as String[]
+        [Topics.game(mid, "*").toEventAdminString(),
+         Topics.network(mid, "*").toEventAdminString()] as String[]
     }
 
     @Override
