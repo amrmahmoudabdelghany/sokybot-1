@@ -18,6 +18,7 @@ import org.sokybot.network.packet.Encoding;
 import org.sokybot.network.packet.MutablePacket;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -48,13 +49,18 @@ class DispatcherImplTest {
         }
 
         @Override
-        public <T extends ISpawn> Map<Integer, T> findAll(Class<T> type) {
-            return Map.of();
+        public <T extends ISpawn> Optional<T> findLive(int id, Class<T> type) {
+            return Optional.empty();
         }
 
         @Override
-        public <T extends ISpawn> Optional<T> find(int id, Class<T> type) {
+        public <T extends ISpawn> Optional<T> snapshot(int id, Class<T> type) {
             return Optional.empty();
+        }
+
+        @Override
+        public <T extends ISpawn> List<T> snapshotAll(Class<T> type) {
+            return List.of();
         }
 
         @Override

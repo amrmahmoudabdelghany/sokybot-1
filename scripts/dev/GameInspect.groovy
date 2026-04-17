@@ -44,37 +44,37 @@ switch (entityType) {
         break
 
     case "monsters":
-        def monsters = model.findAll(IMonster)
+        def monsters = model.snapshotAll(IMonster)
         if (!monsters) {
             out << "No monsters in view.\n"
             break
         }
         out << "=== Monsters (${monsters.size()}) ===\n"
-        monsters.values().each { m ->
+        monsters.each { m ->
             out << "  [${m.getUniqueId()}] alive=${m.isAlive()} type=${m.getMonsterType()} pos=(${m.getX()},${m.getY()}) target=${m.getTargetId()}\n"
         }
         break
 
     case "items":
-        def items = model.findAll(IItem)
+        def items = model.snapshotAll(IItem)
         if (!items) {
             out << "No items tracked.\n"
             break
         }
         out << "=== Items (${items.size()}) ===\n"
-        items.values().each { item ->
+        items.each { item ->
             out << "  [slot ${String.format('%02d', item.getSlot())}] ${item.getName()} x${item.getStackCount()} (ref: ${item.getLongId()})\n"
         }
         break
 
     case "spawns":
-        def spawns = model.findAll(ISpawn)
+        def spawns = model.snapshotAll(ISpawn)
         if (!spawns) {
             out << "No spawns in model.\n"
             break
         }
         out << "=== Spawns (${spawns.size()}) ===\n"
-        spawns.values().each { s ->
+        spawns.each { s ->
             out << "  [${s.getUniqueId()}] ${s.getClass().getSimpleName()} pos=(${s.getX()},${s.getY()})\n"
         }
         break

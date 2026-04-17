@@ -1,6 +1,7 @@
 package org.sokybot.gamemodel.internal;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,8 +42,12 @@ import org.sokybot.gameevents.events.session.PasscodeRequiredEvent;
 import org.sokybot.gameevents.events.skill.SkillCastEvent;
 import org.sokybot.gameevents.events.skill.SkillCastErrorEvent;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.gamemodel.factory.IEntityFactory;
+import org.sokybot.gamemodel.internal.snapshot.SnapshotMapper;
 import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.ITrainer;
+import org.sokybot.gamemodel.spec.MonsterSpec;
+import org.sokybot.gamemodel.spec.TrainerSpec;
 
 import org.sokybot.gameevents.dto.GamePosition;
 import org.sokybot.gameevents.events.core.IGameEvent;
@@ -57,11 +62,12 @@ public class GameModelImpl implements IGameModel {
      */
     private final String machineName;
     private final IReactiveEventBus eventBus;
+    private final IEntityFactory entityFactory;
     private final java.util.List<Disposable> subscriptions = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     // Internal mutable map
     private final Map<Integer, Spawn> spawns = new ConcurrentHashMap<>();
-    private final Trainer trainer = new Trainer();
+    private final Trainer trainer;
     private final LoginState loginState = new LoginState();
 
     // Movement handling
@@ -75,9 +81,11 @@ public class GameModelImpl implements IGameModel {
 
     private int selectedId = -1;
 
-    public GameModelImpl(String machineName, IReactiveEventBus eventBus) {
+    public GameModelImpl(String machineName, IReactiveEventBus eventBus, IEntityFactory entityFactory) {
         this.machineName = machineName;
         this.eventBus = eventBus;
+        this.entityFactory = entityFactory;
+        this.trainer = (Trainer) entityFactory.createTrainer(TrainerSpec.empty());
     }
 
     private boolean isForThisMachine(IGameEvent event) {
@@ -149,8 +157,7 @@ public class GameModelImpl implements IGameModel {
         return Optional.ofNullable(spawns.get(id));
     }
 
-    @Override
-    public <T extends ISpawn> Map<Integer, T> findAll(Class<T> type) {
+    private <T extends ISpawn> Map<Integer, T> findAllLive(Class<T> type) {
         Map<Integer, T> result = new HashMap<>();
         if (type.isInstance(trainer)) {
             result.put(trainer.getUniqueId(), type.cast(trainer));
@@ -162,7 +169,7 @@ public class GameModelImpl implements IGameModel {
     }
 
     @Override
-    public <T extends ISpawn> Optional<T> find(int id, Class<T> type) {
+    public <T extends ISpawn> Optional<T> findLive(int id, Class<T> type) {
         ISpawn s = null;
         if (id == trainer.getUniqueId())
             s = trainer;
@@ -173,6 +180,30 @@ public class GameModelImpl implements IGameModel {
             return Optional.of(type.cast(s));
         }
         return Optional.empty();
+    }
+
+    @Override
+    public <T extends ISpawn> Optional<T> snapshot(int id, Class<T> type) {
+        return find(id)
+                .flatMap(SnapshotMapper::toSnapshot)
+                .filter(type::isInstance)
+                .map(type::cast);
+    }
+
+    @Override
+    public <T extends ISpawn> List<T> snapshotAll(Class<T> type) {
+        java.util.List<T> result = new java.util.ArrayList<>();
+        if (type.isInstance(trainer)) {
+            SnapshotMapper.toSnapshot(trainer)
+                    .filter(type::isInstance)
+                    .map(type::cast)
+                    .ifPresent(result::add);
+        }
+        spawns.values().forEach(spawn -> SnapshotMapper.toSnapshot(spawn)
+                .filter(type::isInstance)
+                .map(type::cast)
+                .ifPresent(result::add));
+        return java.util.Collections.unmodifiableList(result);
     }
 
     @Override
@@ -192,7 +223,7 @@ public class GameModelImpl implements IGameModel {
 
     @Override
     public <T extends ISpawn> Flux<T> observe(int id, Class<T> type) {
-        Optional<T> initial = find(id, type);
+        Optional<T> initial = findLive(id, type);
         Flux<T> updates = modelSink.asFlux()
                 .filter(update -> update.getEntity().getUniqueId() == id && type.isInstance(update.getEntity()))
                 .filter(update -> update.getType() != ModelUpdateType.REMOVED)
@@ -204,7 +235,7 @@ public class GameModelImpl implements IGameModel {
     @Override
     public <T extends ISpawn> Flux<ModelUpdate<T>> observeAll(Class<T> type) {
         return Flux.defer(() -> {
-            Flux<ModelUpdate<T>> initial = Flux.fromIterable(findAll(type).values())
+            Flux<ModelUpdate<T>> initial = Flux.fromIterable(findAllLive(type).values())
                     .map(e -> new ModelUpdate<>(e, ModelUpdateType.ADDED));
 
             Flux<ModelUpdate<T>> updates = modelSink.asFlux()
@@ -227,7 +258,7 @@ public class GameModelImpl implements IGameModel {
             return;
         }
         MonsterData md = event.getMonster();
-        Monster m = new Monster(md);
+        Monster m = (Monster) entityFactory.createMonster(MonsterSpec.fromData(md));
         // Initial pos calculation?
         // md likely has sectors/offsets.
         int x = SilkroadUtils.getXCoord(md.getXOffset(), (short) md.getXSector());

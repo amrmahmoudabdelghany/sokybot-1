@@ -178,8 +178,8 @@ class PotionBehavior {
 
     private def findPotion(IWorkflowContext context, String pattern) {
         try {
-            def items = context.getGameModel().findAll(IItem)
-            return items.values().find { item ->
+            def items = context.getGameModel().snapshotAll(IItem)
+            return items.find { item ->
                 item.getSlot() >= 0 && item.getSlot() < 100 &&
                 item.getLongId() != null && item.getLongId().contains(pattern)
             }
@@ -265,7 +265,7 @@ class CombatBehavior {
 
     private int findTarget(IWorkflowContext context, TrainingSettings settings) {
         try {
-            def monsters = context.getGameModel().findAll(IMonster)
+            def monsters = context.getGameModel().snapshotAll(IMonster)
             if (!monsters) return 0
 
             def trainer = context.getGameModel().getTrainer()
@@ -275,7 +275,7 @@ class CombatBehavior {
             int centerY = settings.areaY != 0 ? settings.areaY : trainerY
             int radius = settings.areaRadius
 
-            return monsters.values().stream()
+            return monsters.stream()
                     .filter { m -> m.isAlive() }
                     .filter { m -> m.getUniqueId() != (targetObstructed ? currentTargetId : -1) }
                     .filter { m -> settings.getMonsterPreference(m.getMonsterType()) != MonsterPreference.AVOID }

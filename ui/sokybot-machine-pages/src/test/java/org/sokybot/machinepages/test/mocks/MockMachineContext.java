@@ -1,6 +1,7 @@
 package org.sokybot.machinepages.test.mocks;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.sokybot.engine.IEngine;
@@ -128,21 +129,28 @@ public class MockMachineContext implements IMachineContext {
 
         @Override
         @SuppressWarnings("unchecked")
-        public <T extends ISpawn> Map<Integer, T> findAll(Class<T> type) {
-            Map<Integer, T> result = new HashMap<>();
-            for (var entry : spawns.entrySet()) {
-                if (type.isInstance(entry.getValue())) {
-                    result.put(entry.getKey(), (T) entry.getValue());
-                }
-            }
-            return result;
+        public <T extends ISpawn> java.util.Optional<T> findLive(int id, Class<T> type) {
+            ISpawn s = spawns.get(id);
+            return (s != null && type.isInstance(s)) ? java.util.Optional.of((T) s) : java.util.Optional.empty();
         }
 
         @Override
         @SuppressWarnings("unchecked")
-        public <T extends ISpawn> java.util.Optional<T> find(int id, Class<T> type) {
+        public <T extends ISpawn> java.util.Optional<T> snapshot(int id, Class<T> type) {
             ISpawn s = spawns.get(id);
             return (s != null && type.isInstance(s)) ? java.util.Optional.of((T) s) : java.util.Optional.empty();
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T extends ISpawn> List<T> snapshotAll(Class<T> type) {
+            java.util.List<T> result = new java.util.ArrayList<>();
+            for (var entry : spawns.entrySet()) {
+                if (type.isInstance(entry.getValue())) {
+                    result.add((T) entry.getValue());
+                }
+            }
+            return result;
         }
 
         @Override

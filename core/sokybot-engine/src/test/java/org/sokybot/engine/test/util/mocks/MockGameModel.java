@@ -7,7 +7,9 @@ import org.sokybot.gamemodel.model.IMonster;
 import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.ITrainer;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -79,24 +81,34 @@ public class MockGameModel implements IGameModel {
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T extends ISpawn> Map<Integer, T> findAll(Class<T> type) {
-        Map<Integer, T> result = new HashMap<>();
-        for (Map.Entry<Integer, ISpawn> entry : spawns.entrySet()) {
-            if (type.isInstance(entry.getValue())) {
-                result.put(entry.getKey(), (T) entry.getValue());
-            }
-        }
-        return result;
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T extends ISpawn> Optional<T> find(int id, Class<T> type) {
+    public <T extends ISpawn> Optional<T> findLive(int id, Class<T> type) {
         ISpawn spawn = spawns.get(id);
         if (spawn != null && type.isInstance(spawn)) {
             return Optional.of((T) spawn);
         }
         return Optional.empty();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends ISpawn> Optional<T> snapshot(int id, Class<T> type) {
+        ISpawn spawn = spawns.get(id);
+        if (spawn != null && type.isInstance(spawn)) {
+            return Optional.of((T) spawn);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T extends ISpawn> List<T> snapshotAll(Class<T> type) {
+        List<T> snapshots = new ArrayList<>();
+        for (ISpawn value : spawns.values()) {
+            if (type.isInstance(value)) {
+                snapshots.add((T) value);
+            }
+        }
+        return snapshots;
     }
 
     @Override

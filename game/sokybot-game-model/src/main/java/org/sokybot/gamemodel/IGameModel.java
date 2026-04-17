@@ -1,6 +1,6 @@
 package org.sokybot.gamemodel;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 import reactor.core.publisher.Flux;
 import org.sokybot.gameevents.events.core.IGameEvent;
@@ -12,9 +12,11 @@ public interface IGameModel {
 
     Optional<ISpawn> find(int id);
 
-    <T extends ISpawn> Map<Integer, T> findAll(Class<T> type);
+    <T extends ISpawn> Optional<T> findLive(int id, Class<T> type);
 
-    <T extends ISpawn> Optional<T> find(int id, Class<T> type);
+    <T extends ISpawn> Optional<T> snapshot(int id, Class<T> type);
+
+    <T extends ISpawn> List<T> snapshotAll(Class<T> type);
 
     Optional<ISpawn> getSelected();
 

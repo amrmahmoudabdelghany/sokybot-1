@@ -8,20 +8,27 @@ import org.osgi.service.component.annotations.Reference;
 import org.sokybot.commons.event.IReactiveEventBus;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.gamemodel.IGameModelFactory;
+import org.sokybot.gamemodel.factory.IEntityFactory;
 
 @Component(service = IGameModelFactory.class)
 public class GameModelFactoryImpl implements IGameModelFactory {
 
     private IReactiveEventBus eventBus;
+    private IEntityFactory entityFactory;
 
     @Reference
     public void setEventBus(IReactiveEventBus eventBus) {
         this.eventBus = eventBus;
     }
 
+    @Reference
+    public void setEntityFactory(IEntityFactory entityFactory) {
+        this.entityFactory = entityFactory;
+    }
+
     @Override
     public IGameModel create(String machineName) {
-        GameModelImpl model = new GameModelImpl(machineName, eventBus);
+        GameModelImpl model = new GameModelImpl(machineName, eventBus, entityFactory);
         model.start(); // Subscribes to bus
         return model;
     }
