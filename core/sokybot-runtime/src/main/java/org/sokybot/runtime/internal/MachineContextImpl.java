@@ -39,6 +39,7 @@ public class MachineContextImpl implements IMachineContext {
     private volatile boolean engineInitialized;
     private IProxyConnection proxyConnection;
     private org.sokybot.gamemodel.IGameModel gameModel;
+    private org.sokybot.gamemodel.spi.IGameModelMutator gameModelMutator;
     private java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators;
     private org.sokybot.gameevents.ChunkedPacketManager chunkManager;
     private final ISubscriptionScope subscriptionScope = new SubscriptionScopeImpl();
@@ -48,6 +49,7 @@ public class MachineContextImpl implements IMachineContext {
             BundleContext bundleContext,
             IProxyConnection proxyConnection,
             org.sokybot.gamemodel.IGameModel gameModel,
+            org.sokybot.gamemodel.spi.IGameModelMutator gameModelMutator,
             java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators,
             org.sokybot.gameevents.ChunkedPacketManager chunkManager) {
         this.machineInfo = machineInfo;
@@ -55,6 +57,7 @@ public class MachineContextImpl implements IMachineContext {
         this.bundleContext = bundleContext;
         this.proxyConnection = proxyConnection;
         this.gameModel = gameModel;
+        this.gameModelMutator = gameModelMutator;
         this.sharedTranslators = sharedTranslators;
         this.chunkManager = chunkManager;
         log.info("Machine context created (engine will initialize lazily): {}", fullName());
@@ -192,7 +195,7 @@ public class MachineContextImpl implements IMachineContext {
                         if (event == null) {
                             continue;
                         }
-                        gameModel.dispatchGameEvent(event);
+                        gameModelMutator.dispatchGameEvent(event);
                         java.util.Map<String, Object> props = new java.util.HashMap<>();
                         props.put("event", event);
                         props.put("machineId", machineId);

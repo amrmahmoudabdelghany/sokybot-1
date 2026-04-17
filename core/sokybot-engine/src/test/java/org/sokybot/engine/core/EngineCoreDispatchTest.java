@@ -8,6 +8,8 @@ import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.event.Connect;
 import org.sokybot.engine.api.event.PartyIntent;
 import org.sokybot.engine.api.event.Wake;
+import org.sokybot.engine.api.handler.IEngineEventMediator;
+import org.sokybot.engine.internal.handler.PartyIntentHandler;
 import org.sokybot.engine.api.workflow.ICycleDefinition;
 import org.sokybot.engine.test.EngineTestBase;
 import org.sokybot.engine.test.util.WorkflowTestBuilders;
@@ -63,12 +65,35 @@ class EngineCoreDispatchTest extends EngineTestBase {
         registerLoginCycle();
         engine.start();
         AtomicReference<PartyIntent> captured = new AtomicReference<>();
-        engine.setPartyIntentMediator(captured::set);
+        TestEventMediator mediator = new TestEventMediator();
+        mediator.subscribe(PartyIntent.class, captured::set);
+        engine.setEventMediator(mediator);
+        engine.bindEventHandler(new PartyIntentHandler());
 
         PartyIntent intent = new PartyIntent("alpha", PartyIntent.IntentType.INVITE, "m2");
         engine.dispatch(intent);
 
         assertSame(intent, captured.get());
+    }
+
+    private static final class TestEventMediator implements IEngineEventMediator {
+        private final java.util.Map<Class<?>, java.util.function.Consumer<?>> consumers = new java.util.concurrent.ConcurrentHashMap<>();
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <E extends org.sokybot.engine.api.EngineEvent> void relay(E event) {
+            java.util.function.Consumer<E> consumer = (java.util.function.Consumer<E>) consumers.get(event.getClass());
+            if (consumer != null) {
+                consumer.accept(event);
+            }
+        }
+
+        @Override
+        public <E extends org.sokybot.engine.api.EngineEvent> Subscription subscribe(Class<E> eventType,
+                java.util.function.Consumer<E> consumer) {
+            consumers.put(eventType, consumer);
+            return () -> consumers.remove(eventType);
+        }
     }
 
     private void registerLoginCycle() {

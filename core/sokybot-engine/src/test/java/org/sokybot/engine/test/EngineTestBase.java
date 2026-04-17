@@ -3,6 +3,7 @@ package org.sokybot.engine.test;
 import org.mockito.Mockito;
 import org.osgi.framework.BundleContext;
 import org.sokybot.engine.core.EngineCore;
+import org.sokybot.engine.api.handler.IEngineEventMediator;
 import org.sokybot.engine.test.util.OSGiTestUtils;
 import org.sokybot.engine.test.util.mocks.MockDispatcher;
 import org.sokybot.engine.test.util.mocks.MockGameModel;
@@ -66,6 +67,19 @@ public abstract class EngineTestBase {
                 mockProxyConnection,
                 gameModel,
                 java.util.Collections.emptyList(),
+                java.util.Collections.emptyList(),
+                new IEngineEventMediator() {
+                    @Override
+                    public <E extends org.sokybot.engine.api.EngineEvent> void relay(E event) {
+                    }
+
+                    @Override
+                    public <E extends org.sokybot.engine.api.EngineEvent> Subscription subscribe(Class<E> eventType,
+                            java.util.function.Consumer<E> consumer) {
+                        return () -> {
+                        };
+                    }
+                },
                 mockBundleContext);
     }
 

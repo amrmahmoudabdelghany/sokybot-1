@@ -9,6 +9,7 @@ import org.sokybot.commons.event.IReactiveEventBus;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.gamemodel.IGameModelFactory;
 import org.sokybot.gamemodel.factory.IEntityFactory;
+import org.sokybot.gamemodel.spi.IGameModelMutator;
 
 @Component(service = IGameModelFactory.class)
 public class GameModelFactoryImpl implements IGameModelFactory {
@@ -31,5 +32,13 @@ public class GameModelFactoryImpl implements IGameModelFactory {
         GameModelImpl model = new GameModelImpl(machineName, eventBus, entityFactory);
         model.start(); // Subscribes to bus
         return model;
+    }
+
+    @Override
+    public IGameModelMutator getMutator(IGameModel gameModel) {
+        if (!(gameModel instanceof IGameModelMutator)) {
+            throw new IllegalArgumentException("Game model does not expose mutator contract: " + gameModel);
+        }
+        return (IGameModelMutator) gameModel;
     }
 }

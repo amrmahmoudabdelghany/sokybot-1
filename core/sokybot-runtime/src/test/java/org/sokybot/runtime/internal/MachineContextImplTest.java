@@ -1,7 +1,6 @@
 package org.sokybot.runtime.internal;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -9,14 +8,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.atLeastOnce;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
-import org.osgi.service.event.EventAdmin;
 import org.sokybot.engine.IEngine;
 import org.sokybot.engine.IEngineFactory;
 import org.sokybot.gameevents.ChunkedPacketManager;
@@ -33,7 +30,6 @@ import org.sokybot.runtime.internal.domain.MachineInfo;
 import org.sokybot.runtime.IGroupContext;
 
 import java.util.Collections;
-import java.util.Map;
 
 class MachineContextImplTest extends RuntimeTestBase {
 
@@ -64,7 +60,14 @@ class MachineContextImplTest extends RuntimeTestBase {
     @Mock
     private IGroupContext groupContext;
 
+    @Mock
+    private org.sokybot.gamemodel.spi.IGameModelMutator gameModelMutator;
+
+    @Mock
+    private org.sokybot.network.IPacketSubscription packetSubscription;
+
     private MachineContextImpl machineContext;
+    private org.sokybot.gamemodel.IGameModel gameModel;
     private ChunkedPacketManager chunkManager;
     private MachineInfo machineInfo;
 
@@ -79,7 +82,7 @@ class MachineContextImplTest extends RuntimeTestBase {
         when(groupContext.name()).thenReturn(TEST_GROUP_NAME);
 
         // Mock Engine Factory
-        when(engineFactory.createEngine(any(), any(), any(), any(), any())).thenReturn(engine);
+        lenient().when(engineFactory.createEngine(any(), any(), any(), any(), any())).thenReturn(engine);
 
         // Mock Proxy Connection
         lenient().when(proxyConnection.getPacketPublisher()).thenReturn(packetPublisher);
@@ -90,15 +93,34 @@ class MachineContextImplTest extends RuntimeTestBase {
         // Register services in MockBundleContext
         mockBundleContext.registerMockService(IEngineFactory.class, engineFactory, null);
         // EventAdmin is already registered in RuntimeTestBase.setUp()
+        gameModel = (org.sokybot.gamemodel.IGameModel) java.lang.reflect.Proxy.newProxyInstance(
+                org.sokybot.gamemodel.IGameModel.class.getClassLoader(),
+                new Class<?>[] { org.sokybot.gamemodel.IGameModel.class },
+                (proxy, method, args) -> {
+                    Class<?> returnType = method.getReturnType();
+                    if (returnType.equals(boolean.class)) {
+                        return Boolean.FALSE;
+                    }
+                    if (returnType.equals(int.class)) {
+                        return Integer.valueOf(0);
+                    }
+                    if (returnType.equals(long.class)) {
+                        return Long.valueOf(0L);
+                    }
+                    return null;
+                });
 
         machineContext = new MachineContextImpl(
                 machineInfo,
                 groupContext,
                 mockBundleContext,
                 proxyConnection, // Pass mocked connection directly
-                mock(org.sokybot.gamemodel.IGameModel.class),
+                gameModel,
+                gameModelMutator,
                 Collections.singletonMap(1, translator),
                 chunkManager);
+        lenient().when(packetPublisher.subscribe(any(org.sokybot.network.IPacketObserver.class), eq(1)))
+                .thenReturn(packetSubscription);
     }
 
     // Helper method removed (not needed with MockBundleContext)
@@ -106,6 +128,7 @@ class MachineContextImplTest extends RuntimeTestBase {
     @Test
     void testInitialization() {
         assertNotNull(machineContext);
+        machineContext.getEngine();
         // Verify engine created with correct args (machineId, proxy, gameModel,
         // groupName, machineName)
         verify(engineFactory).createEngine(
@@ -114,6 +137,32 @@ class MachineContextImplTest extends RuntimeTestBase {
                 any(org.sokybot.gamemodel.IGameModel.class),
                 eq(TEST_GROUP_NAME),
                 eq(TEST_MACHINE_NAME));
+    }
+
+    @Test
+    void packetTranslationShouldDispatchViaMutator() {
+        machineContext.getEngine();
+
+        IGameEvent event = new IGameEvent() {
+            @Override
+            public String getFullName() {
+                return TEST_FULL_NAME;
+            }
+
+            @Override
+            public long getTimestamp() {
+                return System.currentTimeMillis();
+            }
+        };
+        when(translator.translate(any(), any(), any())).thenReturn(Collections.singletonList(event));
+
+        ArgumentCaptor<org.sokybot.network.IPacketObserver> observerCaptor = ArgumentCaptor
+                .forClass(org.sokybot.network.IPacketObserver.class);
+        verify(packetPublisher, atLeastOnce()).subscribe(observerCaptor.capture(), eq(1));
+        org.sokybot.network.IPacketObserver observer = observerCaptor.getValue();
+        observer.onPacket(mock(ImmutablePacket.class));
+
+        verify(gameModelMutator, times(1)).dispatchGameEvent(event);
     }
 
     @Test

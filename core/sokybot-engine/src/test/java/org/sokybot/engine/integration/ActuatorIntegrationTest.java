@@ -7,6 +7,7 @@ import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.BundleException;
 import org.sokybot.engine.core.EngineCore;
 import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
+import org.sokybot.engine.internal.NoopEngineEventMediator;
 import org.sokybot.engine.test.EngineTestBase;
 import org.sokybot.engine.test.util.MockActuator;
 import java.util.Arrays;
@@ -63,6 +64,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
                                 mockProxyConnection,
                                 mockGameModel,
                                 Arrays.asList(actuator1, actuator2),
+                                Collections.emptyList(),
+                                NoopEngineEventMediator.INSTANCE,
                                 mockBundleContext);
                 engine.start();
 
@@ -102,6 +105,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
                                 mockProxyConnection,
                                 mockGameModel,
                                 Arrays.asList(failingActuator, workingActuator),
+                                Collections.emptyList(),
+                                NoopEngineEventMediator.INSTANCE,
                                 mockBundleContext);
 
                 // Start should not throw exception (error is logged)
@@ -131,6 +136,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
                                 mockProxyConnection,
                                 mockGameModel,
                                 Arrays.asList(actuator1, actuator2),
+                                Collections.emptyList(),
+                                NoopEngineEventMediator.INSTANCE,
                                 mockBundleContext);
                 engine.start();
 
@@ -185,6 +192,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
                                 mockProxyConnection,
                                 mockGameModel,
                                 Arrays.asList(actuator1, actuator2, actuator3),
+                                Collections.emptyList(),
+                                NoopEngineEventMediator.INSTANCE,
                                 mockBundleContext);
                 engine.start();
 
@@ -227,6 +236,8 @@ class ActuatorIntegrationTest extends EngineTestBase {
                                 mockProxyConnection,
                                 mockGameModel,
                                 Arrays.asList(failingActuator, workingActuator),
+                                Collections.emptyList(),
+                                NoopEngineEventMediator.INSTANCE,
                                 mockBundleContext);
 
                 // Engine should start successfully

@@ -48,11 +48,12 @@ import org.sokybot.gamemodel.model.ISpawn;
 import org.sokybot.gamemodel.model.ITrainer;
 import org.sokybot.gamemodel.spec.MonsterSpec;
 import org.sokybot.gamemodel.spec.TrainerSpec;
+import org.sokybot.gamemodel.spi.IGameModelMutator;
 
 import org.sokybot.gameevents.dto.GamePosition;
 import org.sokybot.gameevents.events.core.IGameEvent;
 
-public class GameModelImpl implements IGameModel {
+public class GameModelImpl implements IGameModel, IGameModelMutator {
 
     private static final Logger log = LoggerFactory.getLogger(GameModelImpl.class);
 
@@ -75,6 +76,7 @@ public class GameModelImpl implements IGameModel {
     private final Map<Integer, ScheduledFuture<?>> tasks = new ConcurrentHashMap<>();
 
     private final Sinks.Many<ModelUpdate<ISpawn>> modelSink = Sinks.many().multicast().onBackpressureBuffer();
+    private final Map<Class<? extends IGameEvent>, java.util.function.Consumer<IGameEvent>> projectors = new ConcurrentHashMap<>();
     private volatile ScheduledFuture<?> spawnQuietWindowTask;
     private final AtomicLong lastSpawnSignalAt = new AtomicLong(0L);
     private static final long SPAWN_SYNC_QUIET_WINDOW_MS = 700L;
@@ -86,6 +88,16 @@ public class GameModelImpl implements IGameModel {
         this.eventBus = eventBus;
         this.entityFactory = entityFactory;
         this.trainer = (Trainer) entityFactory.createTrainer(TrainerSpec.empty());
+        registerProjector(AgentListEvent.class, this::handleAgentList);
+        registerProjector(LoginResponseEvent.class, this::handleLoginResponse);
+        registerProjector(AuthResponseEvent.class, this::handleAuthResponse);
+        registerProjector(PasscodeRequiredEvent.class, this::handlePasscodeRequired);
+        registerProjector(CaptchaChallengeEvent.class, this::handleCaptchaChallenge);
+        registerProjector(ImageCodeResultEvent.class, this::handleImageCodeResult);
+        registerProjector(CharacterSelectionActionEvent.class, this::handleCharacterSelection);
+        registerProjector(CharacterLoadedEvent.class, this::handleCharacterLoaded);
+        registerProjector(GroupSpawnBeginEvent.class, this::handleGroupSpawnBegin);
+        registerProjector(GroupSpawnEndEvent.class, this::handleGroupSpawnEnd);
     }
 
     private boolean isForThisMachine(IGameEvent event) {
@@ -116,27 +128,14 @@ public class GameModelImpl implements IGameModel {
         if (event == null || !isForThisMachine(event)) {
             return;
         }
-        if (event instanceof AgentListEvent) {
-            handleAgentList((AgentListEvent) event);
-        } else if (event instanceof LoginResponseEvent) {
-            handleLoginResponse((LoginResponseEvent) event);
-        } else if (event instanceof AuthResponseEvent) {
-            handleAuthResponse((AuthResponseEvent) event);
-        } else if (event instanceof PasscodeRequiredEvent) {
-            handlePasscodeRequired((PasscodeRequiredEvent) event);
-        } else if (event instanceof CaptchaChallengeEvent) {
-            handleCaptchaChallenge((CaptchaChallengeEvent) event);
-        } else if (event instanceof ImageCodeResultEvent) {
-            handleImageCodeResult((ImageCodeResultEvent) event);
-        } else if (event instanceof CharacterSelectionActionEvent) {
-            handleCharacterSelection((CharacterSelectionActionEvent) event);
-        } else if (event instanceof CharacterLoadedEvent) {
-            handleCharacterLoaded((CharacterLoadedEvent) event);
-        } else if (event instanceof GroupSpawnBeginEvent) {
-            handleGroupSpawnBegin((GroupSpawnBeginEvent) event);
-        } else if (event instanceof GroupSpawnEndEvent) {
-            handleGroupSpawnEnd((GroupSpawnEndEvent) event);
+        java.util.function.Consumer<IGameEvent> projector = projectors.get(event.getClass());
+        if (projector != null) {
+            projector.accept(event);
         }
+    }
+
+    private <E extends IGameEvent> void registerProjector(Class<E> eventType, java.util.function.Consumer<E> projector) {
+        projectors.put(eventType, event -> projector.accept(eventType.cast(event)));
     }
 
     public void stop() {

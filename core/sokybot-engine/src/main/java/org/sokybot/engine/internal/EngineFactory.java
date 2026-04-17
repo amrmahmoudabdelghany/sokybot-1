@@ -18,7 +18,11 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.sokybot.commons.osgi.ServiceHandle;
+import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.extension.IActuator;
+import org.sokybot.engine.api.handler.IEngineEventHandler;
+import org.sokybot.engine.api.handler.IEngineEventMediator;
 import org.sokybot.engine.core.EngineCore;
 import org.sokybot.gamemodel.IGameModel;
 
@@ -42,6 +46,8 @@ public class EngineFactory implements IEngineFactory {
 
     // Injected actuators via OSGi Declarative Services
     private final List<IActuator> actuators = new CopyOnWriteArrayList<>();
+    private final List<IEngineEventHandler<? extends EngineEvent>> handlers = new CopyOnWriteArrayList<>();
+    private final ServiceHandle<IEngineEventMediator> eventMediator = ServiceHandle.create();
 
     private BundleContext bundleContext;
     private boolean resumeOnBoot;
@@ -91,6 +97,28 @@ public class EngineFactory implements IEngineFactory {
         });
     }
 
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    protected void bindEventHandler(IEngineEventHandler<? extends EngineEvent> handler) {
+        this.handlers.add(handler);
+        engines.values().forEach(engine -> engine.bindEventHandler(handler));
+    }
+
+    protected void unbindEventHandler(IEngineEventHandler<? extends EngineEvent> handler) {
+        this.handlers.remove(handler);
+        engines.values().forEach(engine -> engine.unbindEventHandler(handler));
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, unbind = "unsetEventMediator")
+    protected void setEventMediator(IEngineEventMediator mediator) {
+        this.eventMediator.bind(mediator);
+        engines.values().forEach(engine -> engine.setEventMediator(mediator));
+    }
+
+    protected void unsetEventMediator(IEngineEventMediator mediator) {
+        this.eventMediator.unbind(mediator);
+        engines.values().forEach(engine -> engine.clearEventMediator(mediator));
+    }
+
     @Override
     public IEngine createEngine(String machineId, IProxyConnection proxyConnection,
             IGameModel gameModel, String groupName, String machineName) {
@@ -110,7 +138,7 @@ public class EngineFactory implements IEngineFactory {
                 // Create engine core, passing the injected actuators list
                 EngineCore engine = new EngineCore(
                         machineId, groupName, machineName,
-                        proxyConnection, gameModel, actuators, bundleContext);
+                        proxyConnection, gameModel, actuators, handlers, eventMediator.tryGet().orElse(null), bundleContext);
 
                 engines.put(machineId, engine);
 

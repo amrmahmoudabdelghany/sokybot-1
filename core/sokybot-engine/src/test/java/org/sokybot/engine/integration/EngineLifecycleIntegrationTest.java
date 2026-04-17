@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.core.EngineCore;
+import org.sokybot.engine.internal.NoopEngineEventMediator;
 import org.sokybot.engine.test.EngineTestBase;
 import org.sokybot.engine.test.util.MockActuator;
 import org.sokybot.engine.test.util.OSGiTestUtils;
@@ -48,6 +49,8 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                 mockProxyConnection,
                 mockGameModel,
                 java.util.Collections.singletonList(actuator),
+                java.util.Collections.emptyList(),
+                NoopEngineEventMediator.INSTANCE,
                 mockBundleContext);
 
         // Verify initial state
@@ -89,6 +92,8 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                 mockProxyConnection,
                 mockGameModel,
                 java.util.Collections.singletonList(actuator),
+                java.util.Collections.emptyList(),
+                NoopEngineEventMediator.INSTANCE,
                 mockBundleContext);
         engine.start();
 
@@ -161,6 +166,8 @@ class EngineLifecycleIntegrationTest extends EngineTestBase {
                 mockProxyConnection,
                 mockGameModel,
                 java.util.Collections.singletonList(actuator2),
+                java.util.Collections.emptyList(),
+                NoopEngineEventMediator.INSTANCE,
                 mockBundle2);
 
         // Both engines should be independent

@@ -50,6 +50,10 @@
                         <Export-Package>
                             org.sokybot.engine,
                             org.sokybot.engine.api,
+                            org.sokybot.engine.api.event,
+                            org.sokybot.engine.api.extension,
+                            org.sokybot.engine.api.handler,
+                            org.sokybot.engine.api.workflow,
                             org.sokybot.engine.api.*
                         </Export-Package>
                         <Import-Package>

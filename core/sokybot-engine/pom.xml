@@ -162,6 +162,7 @@
                             org.sokybot.commons.*;version="[1.0,2)",
                             org.sokybot.network;version="[1.0,2)",
                             org.sokybot.network.*;version="[1.0,2)",
+                            !org.sokybot.gamemodel.spi,
                             org.sokybot.gamemodel.*;version="[1.0,2)",
                             org.sokybot.gameevents.*;version="[1.0,2)",
                             !javax.swing.*,
@@ -171,6 +172,7 @@
                         <DynamicImport-Package>*</DynamicImport-Package>
                         <Private-Package>
                             org.sokybot.engine.internal,
+                            org.sokybot.engine.internal.handler,
                             org.sokybot.machine.*
                         </Private-Package>
                         <Export-Package>

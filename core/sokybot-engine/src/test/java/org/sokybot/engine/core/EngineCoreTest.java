@@ -10,6 +10,7 @@ import org.sokybot.engine.api.workflow.CycleId;
 import org.sokybot.engine.api.workflow.ICycleDefinition;
 import org.sokybot.engine.api.workflow.ICycleState;
 import org.sokybot.engine.api.workflow.StateId;
+import org.sokybot.engine.internal.NoopEngineEventMediator;
 import org.sokybot.engine.test.EngineTestBase;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,6 +49,8 @@ class EngineCoreTest extends EngineTestBase {
             new EngineCore(null, TEST_GROUP_NAME, TEST_MACHINE_NAME,
                     mockProxyConnection, mockGameModel,
                     java.util.Collections.emptyList(),
+                    java.util.Collections.emptyList(),
+                    NoopEngineEventMediator.INSTANCE,
                     mockBundleContext);
         });
     }
@@ -59,6 +62,8 @@ class EngineCoreTest extends EngineTestBase {
             new EngineCore(TEST_MACHINE_ID, TEST_GROUP_NAME, TEST_MACHINE_NAME,
                     null, mockGameModel,
                     java.util.Collections.emptyList(),
+                    java.util.Collections.emptyList(),
+                    NoopEngineEventMediator.INSTANCE,
                     mockBundleContext);
         });
     }

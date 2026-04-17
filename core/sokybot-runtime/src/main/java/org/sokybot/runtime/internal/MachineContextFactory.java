@@ -40,6 +40,7 @@ class MachineContextFactory {
 
         // Create Game Model (full id group.machine so events match IGameEvent#getFullName())
         org.sokybot.gamemodel.IGameModel gameModel = gameModelFactory.create(machineId);
+        org.sokybot.gamemodel.spi.IGameModelMutator gameModelMutator = gameModelFactory.getMutator(gameModel);
 
         // Get shared translators from GroupContext (per-game, memory optimized)
         // Access package-private method since MachineContextFactory is in same package
@@ -68,7 +69,7 @@ class MachineContextFactory {
         // Register chunk manager in registry so translators can access it
         org.sokybot.gameevents.ChunkedPacketManagerRegistry.getInstance().register(machineId, chunkManager);
 
-        return new MachineContextImpl(machineInfo, groupContext, bundleContext, connection, gameModel,
+        return new MachineContextImpl(machineInfo, groupContext, bundleContext, connection, gameModel, gameModelMutator,
                 sharedTranslators, chunkManager);
     }
 

@@ -71,6 +71,7 @@
                             org.sokybot.gamemodel.snapshot,
                             org.sokybot.gamemodel.spec,
                             org.sokybot.gamemodel.factory,
+                            org.sokybot.gamemodel.spi,
                             org.sokybot.gamemodel.*
                         </Export-Package>
                         <Private-Package>org.sokybot.gamemodel.internal.*</Private-Package>

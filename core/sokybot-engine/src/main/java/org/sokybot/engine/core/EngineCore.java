@@ -5,10 +5,9 @@ import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.event.Connect;
 import org.sokybot.engine.api.event.Disconnect;
-import org.sokybot.engine.api.event.PartyIntent;
-import org.sokybot.engine.api.event.StartTraining;
-import org.sokybot.engine.api.event.StopTraining;
 import org.sokybot.engine.api.event.Wake;
+import org.sokybot.engine.api.handler.IEngineEventHandler;
+import org.sokybot.engine.api.handler.IEngineEventMediator;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.core.dispatcher.DispatcherImpl;
 import org.sokybot.engine.core.execution.ParentCycleExecutor;
@@ -20,6 +19,7 @@ import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.gamemodel.LoginState;
+import org.sokybot.engine.internal.NoopEngineEventMediator;
 import org.sokybot.proxy.IConnectionListener;
 import org.sokybot.proxy.IProxyConnection;
 import org.osgi.framework.BundleContext;
@@ -28,10 +28,12 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 /**
  * Core engine implementation.
@@ -62,9 +64,10 @@ public class EngineCore implements IEngine, IConnectionListener {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private final AtomicReference<DesiredMode> desiredMode = new AtomicReference<>(DesiredMode.IDLE);
     private final Object eventLock = new Object();
-    private volatile Consumer<PartyIntent> partyIntentMediator = intent -> {
-        // no-op default until a mediator is wired by runtime composition
-    };
+    private final Map<Class<? extends EngineEvent>, IEngineEventHandler<? extends EngineEvent>> eventHandlers = new ConcurrentHashMap<>();
+    private final Map<Class<? extends EngineEvent>, Integer> eventHandlerRankings = new ConcurrentHashMap<>();
+    private final EngineRuntimeAdapter runtimeAdapter = new EngineRuntimeAdapter(this);
+    private volatile IEngineEventMediator eventMediator = NoopEngineEventMediator.INSTANCE;
 
     // Actuator management
     private final ActuatorRegistry actuatorRegistry;
@@ -80,6 +83,8 @@ public class EngineCore implements IEngine, IConnectionListener {
     public EngineCore(String machineId, String groupName, String machineName,
             IProxyConnection proxyConnection, IGameModel gameModel,
             java.util.List<org.sokybot.engine.api.extension.IActuator> actuators,
+            java.util.List<IEngineEventHandler<? extends EngineEvent>> handlers,
+            IEngineEventMediator eventMediator,
             BundleContext bundleContext) {
         if (machineId == null || machineId.trim().isEmpty()) {
             throw new IllegalArgumentException("Machine ID cannot be null or empty");
@@ -137,6 +142,14 @@ public class EngineCore implements IEngine, IConnectionListener {
         // Initialize actuator registry (with BundleContext for OSGi service discovery)
         this.actuatorRegistry = new ActuatorRegistry(
                 workflowRegistry, workflowContext, this, actuators, bundleContext);
+        if (handlers != null) {
+            handlers.stream()
+                    .sorted((a, b) -> Integer.compare(b.getRanking(), a.getRanking()))
+                    .forEach(this::bindEventHandler);
+        }
+        if (eventMediator != null) {
+            this.eventMediator = eventMediator;
+        }
 
         this.proxyConnection.setConnectionListener(this);
 
@@ -232,44 +245,17 @@ public class EngineCore implements IEngine, IConnectionListener {
         String eventName = event.type().toUpperCase();
         log.info("Received event: {} for machine: {}", eventName, machineId);
 
-        // Handle events
         synchronized (eventLock) {
-        if (event instanceof StartTraining || "START_TRAINING".equals(eventName)) {
-                desiredMode.set(DesiredMode.TRAINING);
-                // Enable training cycle
-                enableCycle("training-cycle");
-                state.compareAndSet(EngineState.IDLE, EngineState.ACTIVE);
-                publishStateChanged();
-        } else if (event instanceof StopTraining || "STOP_TRAINING".equals(eventName)) {
-                desiredMode.set(DesiredMode.IDLE);
-                // Disable training cycle
-                disableCycle("training-cycle");
-                state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
-                publishStateChanged();
-        } else if (event instanceof Connect || "CONNECT".equals(eventName)) {
-                workflowContext.getPersistentData().put("explicitConnectRequested", true);
-                enableCycle("login-cycle");
-                publishLifecycle("CONNECT");
-        } else if (event instanceof Disconnect || "DISCONNECT".equals(eventName)) {
-                desiredMode.set(DesiredMode.IDLE);
-                workflowContext.getPersistentData().remove("explicitConnectRequested");
-                disableCycle("login-cycle");
-                disableCycle("training-cycle");
-                dispatcher.disconnect();
-                gameModel.getLoginState().reset();
-                state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
-                publishLifecycle("DISCONNECT");
-                publishStateChanged();
-        } else if (event instanceof Wake || "WAKE".equals(eventName)) {
-                parentExecutor.triggerTransition();
-        } else if (event instanceof PartyIntent || "PARTY_INTENT".equals(eventName)) {
-                if (event instanceof PartyIntent) {
-                    partyIntentMediator.accept((PartyIntent) event);
-                }
-        } else {
+            IEngineEventHandler<? extends EngineEvent> handler = eventHandlers.get(event.getClass());
+            if (handler != null) {
+                @SuppressWarnings("unchecked")
+                IEngineEventHandler<EngineEvent> typed = (IEngineEventHandler<EngineEvent>) handler;
+                typed.handle(event, runtimeAdapter);
+                return;
+            }
+
             log.warn("Unknown event: {} for machine: {}", eventName, machineId);
         }
-        } 
     }
 
     @Override
@@ -282,14 +268,14 @@ public class EngineCore implements IEngine, IConnectionListener {
         dispatch(Wake.INSTANCE);
     }
 
-    private void enableCycle(String cycleName) {
+    void enableCycleInternal(String cycleName) {
         if (workflowRegistry != null) {
             workflowRegistry.setCycleEnabled(cycleName, true);
             log.info("Enabled cycle: {}", cycleName);
         }
     }
 
-    private void disableCycle(String cycleName) {
+    void disableCycleInternal(String cycleName) {
         if (workflowRegistry != null) {
             workflowRegistry.setCycleEnabled(cycleName, false);
             log.info("Disabled cycle: {}", cycleName);
@@ -389,11 +375,11 @@ public class EngineCore implements IEngine, IConnectionListener {
     private void reconcileDesiredMode() {
         DesiredMode mode = desiredMode.get();
         if (mode == DesiredMode.TRAINING) {
-            enableCycle("training-cycle");
+            enableCycleInternal("training-cycle");
             state.compareAndSet(EngineState.IDLE, EngineState.ACTIVE);
             log.info("Reconciled desired mode after authentication: TRAINING");
         } else {
-            disableCycle("training-cycle");
+            disableCycleInternal("training-cycle");
             state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
             log.info("Reconciled desired mode after authentication: IDLE");
         }
@@ -471,18 +457,74 @@ public class EngineCore implements IEngine, IConnectionListener {
         return activities;
     }
 
-    private void publishLifecycle(String eventType) {
+    void publishLifecycleInternal(String eventType) {
         log.debug("Lifecycle event [{}] for machine {}", eventType, machineId);
     }
 
-    private void publishStateChanged() {
+    void publishStateChangedInternal() {
         log.debug("State changed for machine {} -> {} ({})", machineId, state.get(), getActiveActivities());
     }
 
-    void setPartyIntentMediator(Consumer<PartyIntent> partyIntentMediator) {
-        this.partyIntentMediator = partyIntentMediator != null ? partyIntentMediator : intent -> {
-            // no-op
-        };
+    public void bindEventHandler(IEngineEventHandler<? extends EngineEvent> handler) {
+        if (handler == null || handler.eventType() == null) {
+            return;
+        }
+        Class<? extends EngineEvent> eventType = handler.eventType();
+        Integer existingRanking = eventHandlerRankings.get(eventType);
+        if (existingRanking == null || handler.getRanking() >= existingRanking.intValue()) {
+            eventHandlers.put(eventType, handler);
+            eventHandlerRankings.put(eventType, Integer.valueOf(handler.getRanking()));
+        }
+    }
+
+    public void unbindEventHandler(IEngineEventHandler<? extends EngineEvent> handler) {
+        if (handler == null || handler.eventType() == null) {
+            return;
+        }
+        Class<? extends EngineEvent> eventType = handler.eventType();
+        IEngineEventHandler<? extends EngineEvent> current = eventHandlers.get(eventType);
+        if (current == handler) {
+            eventHandlers.remove(eventType);
+            eventHandlerRankings.remove(eventType);
+        }
+    }
+
+    public void setEventMediator(IEngineEventMediator mediator) {
+        this.eventMediator = mediator != null ? mediator : NoopEngineEventMediator.INSTANCE;
+    }
+
+    public void clearEventMediator(IEngineEventMediator mediator) {
+        if (this.eventMediator == mediator) {
+            this.eventMediator = NoopEngineEventMediator.INSTANCE;
+        }
+    }
+
+    void triggerTransitionInternal() {
+        parentExecutor.triggerTransition();
+    }
+
+    boolean compareAndSetState(EngineState expected, EngineState updated) {
+        return state.compareAndSet(expected, updated);
+    }
+
+    IGameModel gameModel() {
+        return gameModel;
+    }
+
+    WorkflowContextImpl workflowContext() {
+        return workflowContext;
+    }
+
+    IEngineEventMediator eventMediator() {
+        return eventMediator;
+    }
+
+    void setDesiredModeTraining() {
+        desiredMode.set(DesiredMode.TRAINING);
+    }
+
+    void setDesiredModeIdle() {
+        desiredMode.set(DesiredMode.IDLE);
     }
 
 }
