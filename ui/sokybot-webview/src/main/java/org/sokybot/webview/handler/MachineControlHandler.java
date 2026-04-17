@@ -8,7 +8,8 @@ import java.util.Map;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.sokybot.engine.api.EngineEvent;
+import org.sokybot.engine.api.event.Connect;
+import org.sokybot.engine.api.event.Wake;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 import org.sokybot.runtime.ISokybotContext;
@@ -125,12 +126,12 @@ public class MachineControlHandler implements IRSocketHandler {
                 return Mono.just(RSocketResponse.success(new MachineActionResultDto("already_connecting", machineId)));
             }
             if (alreadyRunning) {
-                ctx.getEngine().wakeWorkflow();
+                ctx.getEngine().dispatch(Wake.INSTANCE);
                 return Mono.just(RSocketResponse.success(new MachineActionResultDto("already_running", machineId)));
             }
             ctx.getEngine().start();
-            ctx.getEngine().sendEvent(EngineEvent.CONNECT);
-            ctx.getEngine().wakeWorkflow();
+            ctx.getEngine().dispatch(Connect.INSTANCE);
+            ctx.getEngine().dispatch(Wake.INSTANCE);
             return Mono.just(RSocketResponse.success(new MachineActionResultDto("started", machineId)));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));

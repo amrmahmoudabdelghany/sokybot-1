@@ -37,9 +37,17 @@ public class ExitStateBuilder {
         this.nextState = stateName;
         return this;
     }
+    public ExitStateBuilder nextState(StateId stateId) {
+        this.nextState = stateId != null ? stateId.asString() : null;
+        return this;
+    }
     
     public ExitStateBuilder targetState(String stateName) {
         this.targetState = stateName;
+        return this;
+    }
+    public ExitStateBuilder targetState(StateId stateId) {
+        this.targetState = stateId != null ? stateId.asString() : null;
         return this;
     }
     
@@ -65,6 +73,10 @@ public class ExitStateBuilder {
     
     public ExitStateBuilder orContinueTo(String stateName) {
         this.continueState = stateName;
+        return this;
+    }
+    public ExitStateBuilder orContinueTo(StateId stateId) {
+        this.continueState = stateId != null ? stateId.asString() : null;
         return this;
     }
     

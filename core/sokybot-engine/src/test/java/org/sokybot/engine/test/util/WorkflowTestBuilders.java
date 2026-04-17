@@ -1,6 +1,5 @@
 package org.sokybot.engine.test.util;
 
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.sokybot.engine.api.workflow.*;
 
@@ -9,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Builders for creating test workflow components (guards, actions, cycles, states).
@@ -183,7 +181,7 @@ public class WorkflowTestBuilders {
      * Simple test state implementation.
      */
     private static class SimpleTestState implements IWorkflowState {
-        private final String name;
+        private final StateId name;
         private final IGuard guard;
         private final IAction action;
         private final String nextState;
@@ -194,7 +192,7 @@ public class WorkflowTestBuilders {
         }
         
         SimpleTestState(String name, IGuard guard, IAction action, String nextState, String targetState) {
-            this.name = name;
+            this.name = StateId.of(name);
             this.guard = guard;
             this.action = action;
             this.nextState = nextState;
@@ -202,7 +200,7 @@ public class WorkflowTestBuilders {
         }
         
         @Override
-        public String getName() {
+        public StateId getStateId() {
             return name;
         }
         
@@ -217,13 +215,13 @@ public class WorkflowTestBuilders {
         }
         
         @Override
-        public String getNextState() {
-            return nextState;
+        public StateId getNextState() {
+            return StateId.ofNullable(nextState);
         }
         
         @Override
-        public String getTargetState() {
-            return targetState;
+        public StateId getTargetState() {
+            return StateId.ofNullable(targetState);
         }
         
         @Override
@@ -321,7 +319,7 @@ public class WorkflowTestBuilders {
          */
         public ICycleDefinition build() {
             if (entryState == null && !states.isEmpty()) {
-                entryState = states.get(0).getName();
+                entryState = states.get(0).getStateId().asString();
             }
             
             return new SimpleTestCycle(name, priority, interruptionPriority, entryState, entryGuard, interruptionGuard, states);
@@ -332,20 +330,20 @@ public class WorkflowTestBuilders {
      * Simple test cycle implementation.
      */
     private static class SimpleTestCycle implements ICycleDefinition {
-        private final String name;
+        private final CycleId name;
         private final int priority;
         private final int interruptionPriority;
-        private final String entryState;
+        private final StateId entryState;
         private final IGuard entryGuard;
         private final IGuard interruptionGuard;
         private final List<ICycleState> states;
-        private final Map<String, ICycleState> statesMap;
+        private final Map<StateId, ICycleState> statesMap;
         
         SimpleTestCycle(String name, int priority, int interruptionPriority, String entryState, IGuard entryGuard, IGuard interruptionGuard, List<IWorkflowState> states) {
-            this.name = name;
+            this.name = CycleId.of(name);
             this.priority = priority;
             this.interruptionPriority = interruptionPriority;
-            this.entryState = entryState;
+            this.entryState = StateId.of(entryState);
             this.entryGuard = entryGuard;
             this.interruptionGuard = interruptionGuard;
             // Convert IWorkflowState to ICycleState if needed
@@ -356,13 +354,13 @@ public class WorkflowTestBuilders {
                     ? (ICycleState) state 
                     : new WrapperCycleState(state);
                 cycleStates.add(cycleState);
-                statesMap.put(state.getName(), cycleState);
+                statesMap.put(state.getStateId(), cycleState);
             }
             this.states = cycleStates;
         }
         
         @Override
-        public String getName() {
+        public CycleId getCycleId() {
             return name;
         }
         
@@ -372,7 +370,7 @@ public class WorkflowTestBuilders {
         }
         
         @Override
-        public String getEntryStateName() {
+        public StateId getEntryState() {
             return entryState;
         }
         
@@ -407,7 +405,7 @@ public class WorkflowTestBuilders {
         }
         
         @Override
-        public ICycleState getState(String stateName) {
+        public ICycleState getState(StateId stateName) {
             return statesMap.get(stateName);
         }
         
@@ -428,15 +426,15 @@ public class WorkflowTestBuilders {
         }
         
         @Override
-        public String getName() { return delegate.getName(); }
+        public StateId getStateId() { return delegate.getStateId(); }
         @Override
         public IGuard getGuard() { return delegate.getGuard(); }
         @Override
         public IAction getAction() { return delegate.getAction(); }
         @Override
-        public String getNextState() { return delegate.getNextState(); }
+        public StateId getNextState() { return delegate.getNextState(); }
         @Override
-        public String getTargetState() { return delegate.getTargetState(); }
+        public StateId getTargetState() { return delegate.getTargetState(); }
         @Override
         public Integer getCustomDelay() { return delegate.getCustomDelay(); }
         @Override

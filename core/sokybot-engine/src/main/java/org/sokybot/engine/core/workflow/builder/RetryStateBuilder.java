@@ -39,9 +39,17 @@ public class RetryStateBuilder {
         this.nextState = stateName;
         return this;
     }
+    public RetryStateBuilder nextState(StateId stateId) {
+        this.nextState = stateId != null ? stateId.asString() : null;
+        return this;
+    }
     
     public RetryStateBuilder targetState(String stateName) {
         this.targetState = stateName;
+        return this;
+    }
+    public RetryStateBuilder targetState(StateId stateId) {
+        this.targetState = stateId != null ? stateId.asString() : null;
         return this;
     }
     
@@ -57,6 +65,10 @@ public class RetryStateBuilder {
     
     public RetryStateBuilder retry(String stateName) {
         this.retryState = stateName;
+        return this;
+    }
+    public RetryStateBuilder retry(StateId stateId) {
+        this.retryState = stateId != null ? stateId.asString() : null;
         return this;
     }
     
@@ -77,6 +89,10 @@ public class RetryStateBuilder {
     
     public RetryStateBuilder orGoTo(String stateName) {
         this.exhaustedState = stateName;
+        return this;
+    }
+    public RetryStateBuilder orGoTo(StateId stateId) {
+        this.exhaustedState = stateId != null ? stateId.asString() : null;
         return this;
     }
     

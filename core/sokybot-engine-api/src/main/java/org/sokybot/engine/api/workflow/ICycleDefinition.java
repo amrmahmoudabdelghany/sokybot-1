@@ -7,14 +7,7 @@ import java.util.List;
  * Bundles define cycles with multiple states and transitions.
  */
 public interface ICycleDefinition {
-    
-    /**
-     * Gets the unique name of this cycle.
-     * Used for identification and logging.
-     * 
-     * @return Cycle name (e.g., "training-cycle")
-     */
-    String getName();
+    CycleId getCycleId();
     
     /**
      * Gets the desired priority for this cycle.
@@ -38,7 +31,7 @@ public interface ICycleDefinition {
      * 
      * @return The entry state name
      */
-    String getEntryStateName();
+    StateId getEntryState();
     
     /**
      * Gets the entry guard for this cycle.
@@ -107,7 +100,7 @@ public interface ICycleDefinition {
      * @param stateName The state name
      * @return The state, or null if not found
      */
-    ICycleState getState(String stateName);
+    ICycleState getState(StateId stateName);
     
     /**
      * Gets cycle lifecycle hooks.
@@ -116,5 +109,22 @@ public interface ICycleDefinition {
      */
     default ICycleLifecycle getLifecycle() {
         return null;
+    }
+
+    @Deprecated
+    default String getName() {
+        CycleId id = getCycleId();
+        return id != null ? id.asString() : null;
+    }
+
+    @Deprecated
+    default String getEntryStateName() {
+        StateId id = getEntryState();
+        return id != null ? id.asString() : null;
+    }
+
+    @Deprecated
+    default ICycleState getState(String stateName) {
+        return getState(StateId.of(stateName));
     }
 }

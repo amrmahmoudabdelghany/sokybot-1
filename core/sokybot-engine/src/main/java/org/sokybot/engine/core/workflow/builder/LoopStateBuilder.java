@@ -40,9 +40,17 @@ public class LoopStateBuilder {
         this.nextState = stateName;
         return this;
     }
+    public LoopStateBuilder nextState(StateId stateId) {
+        this.nextState = stateId != null ? stateId.asString() : null;
+        return this;
+    }
     
     public LoopStateBuilder targetState(String stateName) {
         this.targetState = stateName;
+        return this;
+    }
+    public LoopStateBuilder targetState(StateId stateId) {
+        this.targetState = stateId != null ? stateId.asString() : null;
         return this;
     }
     
@@ -58,6 +66,10 @@ public class LoopStateBuilder {
     
     public LoopStateBuilder loopBackTo(String stateName) {
         this.loopBackState = stateName;
+        return this;
+    }
+    public LoopStateBuilder loopBackTo(StateId stateId) {
+        this.loopBackState = stateId != null ? stateId.asString() : null;
         return this;
     }
     

@@ -28,9 +28,17 @@ public class GuardStateBuilder {
         this.successState = stateName;
         return this;
     }
+    public GuardStateBuilder onSuccess(StateId stateId) {
+        this.successState = stateId != null ? stateId.asString() : null;
+        return this;
+    }
     
     public GuardStateBuilder onFailure(String stateName) {
         this.failureState = stateName;
+        return this;
+    }
+    public GuardStateBuilder onFailure(StateId stateId) {
+        this.failureState = stateId != null ? stateId.asString() : null;
         return this;
     }
     

@@ -44,7 +44,7 @@ public class CycleExecutor {
             return false;
         }
         
-        String entryStateName = cycle.getEntryStateName();
+        StateId entryStateName = cycle.getEntryState();
         ICycleState entryState = cycle.getState(entryStateName);
         
         if (entryState == null) {
@@ -257,7 +257,7 @@ public class CycleExecutor {
             }
         }
         
-        String nextStateName;
+        StateId nextStateName;
         long delay = DEFAULT_DELAY_MS;
         
         if (guardPassed) {
@@ -318,7 +318,7 @@ public class CycleExecutor {
     private ICycleState executeLoopState(ICycleDefinition cycle, ILoopState loopState) {
         String counterKey = loopState.getCounterKey();
         if (counterKey == null) {
-            counterKey = cycle.getName() + "." + loopState.getLoopBackState() + ".iterations";
+            counterKey = cycle.getName() + "." + loopState.getLoopBackState().asString() + ".iterations";
         }
         
         Map<String, Object> persistentData = context.getPersistentData();
@@ -459,7 +459,7 @@ public class CycleExecutor {
             // Continue to next state
             String continueState = exitState.getContinueState();
             if (continueState != null) {
-                return cycle.getState(continueState);
+                return cycle.getState(StateId.of(continueState));
             } else {
                 return cycle.getState(exitState.getNextState());
             }
@@ -491,7 +491,7 @@ public class CycleExecutor {
         }
         
         // No match, use default
-        return cycle.getState(condState.getDefaultState());
+        return cycle.getState(StateId.of(condState.getDefaultState()));
     }
     
     /**
@@ -500,14 +500,14 @@ public class CycleExecutor {
     private ICycleState executeGuardOnlyState(ICycleDefinition cycle, IGuardOnlyState guardState) {
         try {
             if (guardState.getGuard().evaluate(context)) {
-                return cycle.getState(guardState.getSuccessState());
+                return cycle.getState(StateId.of(guardState.getSuccessState()));
             } else {
-                return cycle.getState(guardState.getFailureState());
+                return cycle.getState(StateId.of(guardState.getFailureState()));
             }
         } catch (WorkflowException e) {
             log.error("Error evaluating guard: {}", e.getMessage(), e);
             // Treat as failure
-            return cycle.getState(guardState.getFailureState());
+            return cycle.getState(StateId.of(guardState.getFailureState()));
         }
     }
     
@@ -524,7 +524,7 @@ public class CycleExecutor {
             log.debug("Retry state '{}' exhausted after {} retries",
                      retryState.getName(), retryState.getMaxRetries());
             persistentData.remove(counterKey);
-            return cycle.getState(retryState.getExhaustedState());
+            return cycle.getState(StateId.of(retryState.getExhaustedState()));
         }
         
         // Check retry guard
@@ -533,12 +533,12 @@ public class CycleExecutor {
                 if (!retryState.getRetryGuard().evaluate(context)) {
                     // Should not retry
                     persistentData.remove(counterKey);
-                    return cycle.getState(retryState.getExhaustedState());
+                    return cycle.getState(StateId.of(retryState.getExhaustedState()));
                 }
             } catch (WorkflowException e) {
                 log.error("Error evaluating retry guard: {}", e.getMessage(), e);
                 persistentData.remove(counterKey);
-                return cycle.getState(retryState.getExhaustedState());
+                return cycle.getState(StateId.of(retryState.getExhaustedState()));
             }
         }
         
@@ -554,7 +554,7 @@ public class CycleExecutor {
             }
         }
         
-        return cycle.getState(retryState.getRetryState());
+        return cycle.getState(StateId.of(retryState.getRetryState()));
     }
     
     /**

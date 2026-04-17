@@ -31,6 +31,11 @@ public class CycleDefinitionBuilder {
         this.name = name;
         return this;
     }
+
+    public CycleDefinitionBuilder cycle(CycleId cycleId) {
+        this.name = cycleId != null ? cycleId.asString() : null;
+        return this;
+    }
     
     /**
      * Sets the cycle priority (lower = earlier in overall cycle).
@@ -45,6 +50,11 @@ public class CycleDefinitionBuilder {
      */
     public CycleDefinitionBuilder entryState(String stateName) {
         this.entryState = stateName;
+        return this;
+    }
+
+    public CycleDefinitionBuilder entryState(StateId stateId) {
+        this.entryState = stateId != null ? stateId.asString() : null;
         return this;
     }
     

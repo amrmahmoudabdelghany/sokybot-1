@@ -8,11 +8,11 @@ import org.sokybot.engine.api.workflow.*;
  */
 public class CycleStateImpl implements ICycleState {
     
-    private final String name;
+    private final StateId name;
     private final IGuard guard;
     private final IAction action;
-    private final String nextState;
-    private final String targetState;
+    private final StateId nextState;
+    private final StateId targetState;
     private final Integer customDelay;
     private final IStateLifecycle lifecycle;
     private final StateType stateType;
@@ -24,18 +24,18 @@ public class CycleStateImpl implements ICycleState {
         if (name == null || name.trim().isEmpty()) {
             throw new IllegalArgumentException("State name cannot be null or empty");
         }
-        this.name = name;
+        this.name = StateId.of(name);
         this.guard = guard;
         this.action = action;
-        this.nextState = nextState;
-        this.targetState = targetState;
+        this.nextState = StateId.ofNullable(nextState);
+        this.targetState = StateId.ofNullable(targetState);
         this.customDelay = customDelay;
         this.lifecycle = lifecycle;
         this.stateType = stateType != null ? stateType : StateType.STANDARD;
     }
     
     @Override
-    public String getName() {
+    public StateId getStateId() {
         return name;
     }
     
@@ -50,12 +50,12 @@ public class CycleStateImpl implements ICycleState {
     }
     
     @Override
-    public String getNextState() {
+    public StateId getNextState() {
         return nextState;
     }
     
     @Override
-    public String getTargetState() {
+    public StateId getTargetState() {
         return targetState;
     }
     

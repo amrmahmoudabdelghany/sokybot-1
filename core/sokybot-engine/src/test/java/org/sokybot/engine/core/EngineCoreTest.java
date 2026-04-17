@@ -6,8 +6,10 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.EngineState;
+import org.sokybot.engine.api.workflow.CycleId;
 import org.sokybot.engine.api.workflow.ICycleDefinition;
 import org.sokybot.engine.api.workflow.ICycleState;
+import org.sokybot.engine.api.workflow.StateId;
 import org.sokybot.engine.test.EngineTestBase;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -156,11 +158,12 @@ class EngineCoreTest extends EngineTestBase {
         // Register training-cycle
         ICycleDefinition trainingCycle = mock(ICycleDefinition.class);
         when(trainingCycle.getName()).thenReturn("training-cycle");
+        when(trainingCycle.getCycleId()).thenReturn(CycleId.of("training-cycle"));
         when(trainingCycle.getDesiredPriority()).thenReturn(100);
         when(trainingCycle.isEnabled()).thenReturn(true);
-        when(trainingCycle.getEntryStateName()).thenReturn("START");
+        when(trainingCycle.getEntryState()).thenReturn(StateId.of("START"));
         ICycleState startState = mock(ICycleState.class);
-        when(startState.getName()).thenReturn("START");
+        when(startState.getStateId()).thenReturn(StateId.of("START"));
         when(trainingCycle.getStates()).thenReturn(List.of(startState));
 
         engine.getWorkflowRegistry().registerCycle(trainingCycle);

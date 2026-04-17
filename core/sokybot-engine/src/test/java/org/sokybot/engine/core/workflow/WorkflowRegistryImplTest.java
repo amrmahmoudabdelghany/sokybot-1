@@ -95,7 +95,7 @@ class WorkflowRegistryImplTest {
     void testEnableDisableCycle() {
         // Create CycleDefinitionImpl directly to support enable/disable
         ICycleState state1 = mock(ICycleState.class);
-        when(state1.getName()).thenReturn("STATE1");
+        when(state1.getStateId()).thenReturn(StateId.of("STATE1"));
         
         ICycleDefinition cycle = new CycleDefinitionImpl(
             "test-cycle", 100, "STATE1", 
@@ -127,15 +127,15 @@ class WorkflowRegistryImplTest {
     }
     
     @Test
-    @DisplayName("Should throw exception when registering while cycle is active")
+    @DisplayName("Should allow registration while cycle is active")
     void testRegisterWhileCycleActive() {
         registry.setCycleActive(true);
         
         IOrthogonalState state = createMockOrthogonalState("test-state", 100);
-        
-        assertThrows(IllegalStateException.class, () -> {
-            registry.registerOrthogonalState(state);
-        });
+
+        int priority = registry.registerOrthogonalState(state);
+        assertEquals(100, priority);
+        assertNotNull(registry.getOrthogonalState("test-state"));
     }
     
     @Test
@@ -166,6 +166,7 @@ class WorkflowRegistryImplTest {
     private IOrthogonalState createMockOrthogonalState(String name, int priority) {
         IOrthogonalState state = mock(IOrthogonalState.class);
         when(state.getName()).thenReturn(name);
+        when(state.getStateId()).thenReturn(StateId.of(name));
         when(state.getDesiredPriority()).thenReturn(priority);
         when(state.getGuard()).thenReturn(null);
         when(state.getAction()).thenReturn(null);

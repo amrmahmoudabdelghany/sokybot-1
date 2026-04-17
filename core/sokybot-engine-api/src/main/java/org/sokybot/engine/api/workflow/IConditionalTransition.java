@@ -18,7 +18,7 @@ public interface IConditionalTransition {
      * 
      * @return Target state name
      */
-    String getTargetState();
+    StateId getTargetState();
     
     /**
      * Optional action for this transition.
@@ -28,5 +28,11 @@ public interface IConditionalTransition {
      */
     default IAction getAction() {
         return null;
+    }
+
+    @Deprecated
+    default String getTargetStateName() {
+        StateId id = getTargetState();
+        return id != null ? id.asString() : null;
     }
 }

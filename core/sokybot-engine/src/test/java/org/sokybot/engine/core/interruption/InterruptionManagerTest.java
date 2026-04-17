@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import org.sokybot.engine.api.workflow.*;
 import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
-import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.engine.test.WorkflowTestBase;
 import org.sokybot.engine.test.util.WorkflowTestBuilders;
 
@@ -124,20 +123,25 @@ class InterruptionManagerTest extends WorkflowTestBase {
     
     @Test
     @DisplayName("Should save and restore cycle state on interruption")
+    @SuppressWarnings("deprecation")
     void testSaveRestoreState() {
         IWorkflowContext context = createWorkflowContext();
         
         // Create a mock state
         ICycleState mockState = mock(ICycleState.class);
         when(mockState.getName()).thenReturn("STATE1");
+        when(mockState.getStateId()).thenReturn(StateId.of("STATE1"));
         
         // Register test-cycle
         ICycleDefinition testCycle = mock(ICycleDefinition.class);
         when(testCycle.getName()).thenReturn("test-cycle");
+        when(testCycle.getCycleId()).thenReturn(CycleId.of("test-cycle"));
         when(testCycle.isInterruptible()).thenReturn(true);
         when(testCycle.getState("STATE1")).thenReturn(mockState);
+        when(testCycle.getState(StateId.of("STATE1"))).thenReturn(mockState);
         when(testCycle.isEnabled()).thenReturn(true);
         when(testCycle.getEntryStateName()).thenReturn("STATE1");
+        when(testCycle.getEntryState()).thenReturn(StateId.of("STATE1"));
         when(testCycle.getStates()).thenReturn(List.of(mockState));
         registry.registerCycle(testCycle);
 
@@ -167,7 +171,7 @@ class InterruptionManagerTest extends WorkflowTestBase {
         ICycleState restoredState = interruptionManager.resumeCycle(savedState, context);
         
         assertNotNull(restoredState);
-        assertEquals("STATE1", restoredState.getName());
+        assertEquals(StateId.of("STATE1"), restoredState.getStateId());
     }
     
     @Test

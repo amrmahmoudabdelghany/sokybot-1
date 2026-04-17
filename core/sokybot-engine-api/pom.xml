@@ -49,8 +49,8 @@
                         <Bundle-Description>${project.description}</Bundle-Description>
                         <Export-Package>
                             org.sokybot.engine,
-                            org.sokybot.engine.api.*,
-                            org.sokybot.engine.api.event
+                            org.sokybot.engine.api,
+                            org.sokybot.engine.api.*
                         </Export-Package>
                         <Import-Package>
                             !com.aayushatharva.brotli4j,

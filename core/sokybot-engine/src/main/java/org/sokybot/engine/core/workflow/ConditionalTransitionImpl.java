@@ -8,7 +8,7 @@ import org.sokybot.engine.api.workflow.*;
 public class ConditionalTransitionImpl implements IConditionalTransition {
     
     private final IGuard guard;
-    private final String targetState;
+    private final StateId targetState;
     private final IAction action;
     
     public ConditionalTransitionImpl(IGuard guard, String targetState, IAction action) {
@@ -19,7 +19,7 @@ public class ConditionalTransitionImpl implements IConditionalTransition {
             throw new IllegalArgumentException("Target state cannot be null or empty");
         }
         this.guard = guard;
-        this.targetState = targetState;
+        this.targetState = StateId.of(targetState);
         this.action = action;
     }
     
@@ -29,7 +29,7 @@ public class ConditionalTransitionImpl implements IConditionalTransition {
     }
     
     @Override
-    public String getTargetState() {
+    public StateId getTargetState() {
         return targetState;
     }
     

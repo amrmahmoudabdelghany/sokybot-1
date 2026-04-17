@@ -37,9 +37,17 @@ public class DelayStateBuilder {
         this.nextState = stateName;
         return this;
     }
+    public DelayStateBuilder nextState(StateId stateId) {
+        this.nextState = stateId != null ? stateId.asString() : null;
+        return this;
+    }
     
     public DelayStateBuilder targetState(String stateName) {
         this.targetState = stateName;
+        return this;
+    }
+    public DelayStateBuilder targetState(StateId stateId) {
+        this.targetState = stateId != null ? stateId.asString() : null;
         return this;
     }
     

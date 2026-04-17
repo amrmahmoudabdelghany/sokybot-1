@@ -1,25 +1,28 @@
 package org.sokybot.engine.api;
 
+import org.sokybot.engine.api.event.Connect;
+import org.sokybot.engine.api.event.Disconnect;
+import org.sokybot.engine.api.event.StartTraining;
+import org.sokybot.engine.api.event.StopTraining;
+
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
 
-public class EngineEvent {
-    public static final EngineEvent START_TRAINING = new EngineEvent("START_TRAINING");
-    public static final EngineEvent STOP_TRAINING = new EngineEvent("STOP_TRAINING");
-    public static final EngineEvent CONNECT = new EngineEvent("CONNECT");
-    public static final EngineEvent DISCONNECT = new EngineEvent("DISCONNECT");
+public abstract class EngineEvent {
+    @Deprecated
+    public static final EngineEvent START_TRAINING = new StartTraining();
+    @Deprecated
+    public static final EngineEvent STOP_TRAINING = new StopTraining();
+    @Deprecated
+    public static final EngineEvent CONNECT = new Connect();
+    @Deprecated
+    public static final EngineEvent DISCONNECT = new Disconnect();
 
     private final String type;
-    private final Map<String, Object> payload;
 
-    public EngineEvent(String type) {
-        this(type, Collections.emptyMap());
-    }
-
-    public EngineEvent(String type, Map<String, Object> payload) {
+    protected EngineEvent(String type) {
         this.type = Objects.requireNonNull(type, "type");
-        this.payload = payload == null ? Collections.emptyMap() : Collections.unmodifiableMap(payload);
     }
 
     public String type() {
@@ -27,6 +30,6 @@ public class EngineEvent {
     }
 
     public Map<String, Object> payload() {
-        return payload;
+        return Collections.emptyMap();
     }
 }

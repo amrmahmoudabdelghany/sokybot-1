@@ -3,6 +3,12 @@ package org.sokybot.engine.core;
 import org.sokybot.engine.IEngine;
 import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.EngineState;
+import org.sokybot.engine.api.event.Connect;
+import org.sokybot.engine.api.event.Disconnect;
+import org.sokybot.engine.api.event.PartyIntent;
+import org.sokybot.engine.api.event.StartTraining;
+import org.sokybot.engine.api.event.StopTraining;
+import org.sokybot.engine.api.event.Wake;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.core.dispatcher.DispatcherImpl;
 import org.sokybot.engine.core.execution.ParentCycleExecutor;
@@ -25,6 +31,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  * Core engine implementation.
@@ -55,6 +62,9 @@ public class EngineCore implements IEngine, IConnectionListener {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     private final AtomicReference<DesiredMode> desiredMode = new AtomicReference<>(DesiredMode.IDLE);
     private final Object eventLock = new Object();
+    private volatile Consumer<PartyIntent> partyIntentMediator = intent -> {
+        // no-op default until a mediator is wired by runtime composition
+    };
 
     // Actuator management
     private final ActuatorRegistry actuatorRegistry;
@@ -212,7 +222,7 @@ public class EngineCore implements IEngine, IConnectionListener {
     }
 
     @Override
-    public void sendEvent(EngineEvent event) {
+    public void dispatch(EngineEvent event) {
         if (!isRunning()) {
             throw new IllegalStateException("Engine is not running");
         }
@@ -224,30 +234,23 @@ public class EngineCore implements IEngine, IConnectionListener {
 
         // Handle events
         synchronized (eventLock) {
-        switch (eventName) {
-            case "START_TRAINING":
+        if (event instanceof StartTraining || "START_TRAINING".equals(eventName)) {
                 desiredMode.set(DesiredMode.TRAINING);
                 // Enable training cycle
                 enableCycle("training-cycle");
                 state.compareAndSet(EngineState.IDLE, EngineState.ACTIVE);
                 publishStateChanged();
-                break;
-
-            case "STOP_TRAINING":
+        } else if (event instanceof StopTraining || "STOP_TRAINING".equals(eventName)) {
                 desiredMode.set(DesiredMode.IDLE);
                 // Disable training cycle
                 disableCycle("training-cycle");
                 state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
                 publishStateChanged();
-                break;
-
-            case "CONNECT":
+        } else if (event instanceof Connect || "CONNECT".equals(eventName)) {
                 workflowContext.getPersistentData().put("explicitConnectRequested", true);
                 enableCycle("login-cycle");
                 publishLifecycle("CONNECT");
-                break;
-
-            case "DISCONNECT":
+        } else if (event instanceof Disconnect || "DISCONNECT".equals(eventName)) {
                 desiredMode.set(DesiredMode.IDLE);
                 workflowContext.getPersistentData().remove("explicitConnectRequested");
                 disableCycle("login-cycle");
@@ -257,12 +260,26 @@ public class EngineCore implements IEngine, IConnectionListener {
                 state.compareAndSet(EngineState.ACTIVE, EngineState.IDLE);
                 publishLifecycle("DISCONNECT");
                 publishStateChanged();
-                break;
+        } else if (event instanceof Wake || "WAKE".equals(eventName)) {
+                parentExecutor.triggerTransition();
+        } else if (event instanceof PartyIntent || "PARTY_INTENT".equals(eventName)) {
+                if (event instanceof PartyIntent) {
+                    partyIntentMediator.accept((PartyIntent) event);
+                }
+        } else {
+            log.warn("Unknown event: {} for machine: {}", eventName, machineId);
+        }
+        } 
+    }
 
-            default:
-                log.warn("Unknown event: {} for machine: {}", eventName, machineId);
-        }
-        }
+    @Override
+    public void sendEvent(EngineEvent event) {
+        dispatch(event);
+    }
+
+    @Override
+    public void wakeWorkflow() {
+        dispatch(Wake.INSTANCE);
     }
 
     private void enableCycle(String cycleName) {
@@ -454,17 +471,18 @@ public class EngineCore implements IEngine, IConnectionListener {
         return activities;
     }
 
-    @Override
-    public void wakeWorkflow() {
-        parentExecutor.triggerTransition();
-    }
-
     private void publishLifecycle(String eventType) {
         log.debug("Lifecycle event [{}] for machine {}", eventType, machineId);
     }
 
     private void publishStateChanged() {
         log.debug("State changed for machine {} -> {} ({})", machineId, state.get(), getActiveActivities());
+    }
+
+    void setPartyIntentMediator(Consumer<PartyIntent> partyIntentMediator) {
+        this.partyIntentMediator = partyIntentMediator != null ? partyIntentMediator : intent -> {
+            // no-op
+        };
     }
 
 }

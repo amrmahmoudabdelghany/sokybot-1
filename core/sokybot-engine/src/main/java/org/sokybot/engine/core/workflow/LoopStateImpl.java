@@ -7,7 +7,7 @@ import org.sokybot.engine.api.workflow.*;
  */
 public class LoopStateImpl extends CycleStateImpl implements ILoopState {
     
-    private final String loopBackState;
+    private final StateId loopBackState;
     private final IGuard loopGuard;
     private final Integer maxIterations;
     private final Integer loopDelay;
@@ -21,7 +21,7 @@ public class LoopStateImpl extends CycleStateImpl implements ILoopState {
                         Integer maxIterations, Integer loopDelay,
                         String counterKey, IAction loopExitAction) {
         super(name, guard, action, nextState, targetState, customDelay, lifecycle, StateType.LOOP);
-        this.loopBackState = loopBackState;
+        this.loopBackState = StateId.of(loopBackState);
         this.loopGuard = loopGuard;
         this.maxIterations = maxIterations;
         this.loopDelay = loopDelay;
@@ -30,7 +30,7 @@ public class LoopStateImpl extends CycleStateImpl implements ILoopState {
     }
     
     @Override
-    public String getLoopBackState() {
+    public StateId getLoopBackState() {
         return loopBackState;
     }
     

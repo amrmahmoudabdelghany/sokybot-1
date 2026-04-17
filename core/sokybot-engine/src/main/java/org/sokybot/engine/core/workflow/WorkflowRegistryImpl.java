@@ -205,9 +205,9 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
 
     private void validateCycle(ICycleDefinition cycle) {
         // Validate entry state exists
-        String entryStateName = cycle.getEntryStateName();
+        StateId entryStateName = cycle.getEntryState();
         boolean entryStateFound = cycle.getStates().stream()
-                .anyMatch(s -> s.getName().equals(entryStateName));
+                .anyMatch(s -> s.getStateId().equals(entryStateName));
 
         if (!entryStateFound) {
             throw new IllegalArgumentException(
@@ -216,13 +216,13 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
 
         // Validate state references
         for (ICycleState state : cycle.getStates()) {
-            String stateName = state.getName();
+            String stateName = state.getStateId().asString();
 
             // Validate nextState
-            String nextState = state.getNextState();
+            StateId nextState = state.getNextState();
             if (nextState != null) {
                 boolean nextStateFound = cycle.getStates().stream()
-                        .anyMatch(s -> s.getName().equals(nextState));
+                        .anyMatch(s -> s.getStateId().equals(nextState));
                 if (!nextStateFound) {
                     log.warn("State '{}' references nextState '{}' which doesn't exist in cycle '{}'",
                             stateName, nextState, cycle.getName());
@@ -230,10 +230,10 @@ public class WorkflowRegistryImpl implements IWorkflowRegistry {
             }
 
             // Validate targetState
-            String targetState = state.getTargetState();
+            StateId targetState = state.getTargetState();
             if (targetState != null) {
                 boolean targetStateFound = cycle.getStates().stream()
-                        .anyMatch(s -> s.getName().equals(targetState));
+                        .anyMatch(s -> s.getStateId().equals(targetState));
                 if (!targetStateFound) {
                     log.warn("State '{}' references targetState '{}' which doesn't exist in cycle '{}'",
                             stateName, targetState, cycle.getName());

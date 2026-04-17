@@ -38,7 +38,7 @@ public class MockWorkflowRegistry implements IWorkflowRegistry {
 
     @Override
     public int registerCycle(ICycleDefinition cycle) {
-        cycles.put(cycle.getName(), cycle);
+        cycles.put(cycle.getCycleId().asString(), cycle);
         return cycle.getDesiredPriority();
     }
 

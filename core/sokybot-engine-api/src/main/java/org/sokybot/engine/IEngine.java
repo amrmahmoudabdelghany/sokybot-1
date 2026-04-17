@@ -2,6 +2,7 @@ package org.sokybot.engine;
 
 import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.EngineEvent;
+import org.sokybot.engine.api.event.Wake;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.api.IDispatcher;
 
@@ -68,7 +69,12 @@ public interface IEngine extends AutoCloseable {
      * @throws IllegalArgumentException if event name is invalid
      * @throws IllegalStateException    if engine is not running
      */
-    void sendEvent(EngineEvent event);
+    void dispatch(EngineEvent event);
+
+    @Deprecated
+    default void sendEvent(EngineEvent event) {
+        dispatch(event);
+    }
 
     /**
      * Gets the workflow registry for this engine.
@@ -108,7 +114,10 @@ public interface IEngine extends AutoCloseable {
      * Wakes the workflow parent executor (e.g. after CONNECT) so a parked or
      * waiting cycle is evaluated on the next tick without waiting for a delay state.
      */
-    void wakeWorkflow();
+    @Deprecated
+    default void wakeWorkflow() {
+        dispatch(Wake.INSTANCE);
+    }
 
     @Override
     default void close() {

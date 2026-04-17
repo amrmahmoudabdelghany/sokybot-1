@@ -5,13 +5,7 @@ package org.sokybot.engine.api.workflow;
  * Provides common state functionality.
  */
 public interface IWorkflowState {
-    
-    /**
-     * Gets the unique name of this state.
-     * 
-     * @return State name
-     */
-    String getName();
+    StateId getStateId();
     
     /**
      * Gets the guard that determines if the action should execute.
@@ -32,7 +26,7 @@ public interface IWorkflowState {
      * 
      * @return Next state name, or null to exit cycle
      */
-    String getNextState();
+    StateId getNextState();
     
     /**
      * Gets the target state name when guard fails.
@@ -40,7 +34,7 @@ public interface IWorkflowState {
      * 
      * @return Target state name (for loops), or null to exit cycle
      */
-    String getTargetState();
+    StateId getTargetState();
     
     /**
      * Gets custom delay after action execution (ms).
@@ -56,4 +50,22 @@ public interface IWorkflowState {
      * @return State lifecycle, or null
      */
     IStateLifecycle getLifecycle();
+
+    @Deprecated
+    default String getName() {
+        StateId id = getStateId();
+        return id != null ? id.asString() : null;
+    }
+
+    @Deprecated
+    default String getNextStateName() {
+        StateId id = getNextState();
+        return id != null ? id.asString() : null;
+    }
+
+    @Deprecated
+    default String getTargetStateName() {
+        StateId id = getTargetState();
+        return id != null ? id.asString() : null;
+    }
 }

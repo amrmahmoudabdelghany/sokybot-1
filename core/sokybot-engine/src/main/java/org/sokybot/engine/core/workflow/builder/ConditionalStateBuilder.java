@@ -40,9 +40,17 @@ public class ConditionalStateBuilder {
         this.nextState = stateName;
         return this;
     }
+    public ConditionalStateBuilder nextState(StateId stateId) {
+        this.nextState = stateId != null ? stateId.asString() : null;
+        return this;
+    }
     
     public ConditionalStateBuilder targetState(String stateName) {
         this.targetState = stateName;
+        return this;
+    }
+    public ConditionalStateBuilder targetState(StateId stateId) {
+        this.targetState = stateId != null ? stateId.asString() : null;
         return this;
     }
     
@@ -59,6 +67,9 @@ public class ConditionalStateBuilder {
     public ConditionalStateBuilder when(IGuard guard, String targetState) {
         return when(guard, targetState, null);
     }
+    public ConditionalStateBuilder when(IGuard guard, StateId targetState) {
+        return when(guard, targetState != null ? targetState.asString() : null, null);
+    }
     
     public ConditionalStateBuilder when(IGuard guard, String targetState, IAction action) {
         transitions.add(new ConditionalTransitionImpl(guard, targetState, action));
@@ -67,6 +78,10 @@ public class ConditionalStateBuilder {
     
     public ConditionalStateBuilder defaultTo(String stateName) {
         this.defaultState = stateName;
+        return this;
+    }
+    public ConditionalStateBuilder defaultTo(StateId stateId) {
+        this.defaultState = stateId != null ? stateId.asString() : null;
         return this;
     }
     

@@ -3,7 +3,7 @@ package org.sokybot.devshell.command;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.sokybot.engine.api.EngineEvent;
+import org.sokybot.engine.api.event.Connect;
 
 @Service
 @Command(scope = "dev", name = "bot-restart", description = "Restart a bot engine")
@@ -25,7 +25,7 @@ public class BotRestartCommand extends DevCommand {
                         bot.getEngine().stop();
                     }
                     bot.getEngine().start();
-                    bot.getEngine().sendEvent(EngineEvent.CONNECT);
+                    bot.getEngine().dispatch(Connect.INSTANCE);
                     println("Bot restarted.");
                 } catch (Exception e) {
                     error("Failed to restart bot: %s", e.getMessage());

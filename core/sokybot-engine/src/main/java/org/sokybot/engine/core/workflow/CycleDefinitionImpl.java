@@ -12,9 +12,9 @@ import java.util.stream.Collectors;
  */
 public class CycleDefinitionImpl implements ICycleDefinition {
     
-    private final String name;
+    private final CycleId name;
     private final int desiredPriority;
-    private final String entryStateName;
+    private final StateId entryStateName;
     private final IGuard entryGuard;
     private final IGuard interruptionGuard;
     private final int interruptionPriority;
@@ -23,8 +23,8 @@ public class CycleDefinitionImpl implements ICycleDefinition {
     private final ICycleLifecycle lifecycle;
     private volatile boolean enabled;
     
-    private final Map<String, ICycleState> states = new ConcurrentHashMap<>();
-    private final List<String> stateOrder = new ArrayList<>();
+    private final Map<StateId, ICycleState> states = new ConcurrentHashMap<>();
+    private final List<StateId> stateOrder = new ArrayList<>();
     
     public CycleDefinitionImpl(String name, int desiredPriority, String entryStateName,
                               IGuard entryGuard, IGuard interruptionGuard,
@@ -38,9 +38,9 @@ public class CycleDefinitionImpl implements ICycleDefinition {
             throw new IllegalArgumentException("Entry state name cannot be null or empty");
         }
         
-        this.name = name;
+        this.name = CycleId.of(name);
         this.desiredPriority = desiredPriority;
-        this.entryStateName = entryStateName;
+        this.entryStateName = StateId.of(entryStateName);
         this.entryGuard = entryGuard;
         this.interruptionGuard = interruptionGuard;
         this.interruptionPriority = interruptionPriority;
@@ -57,7 +57,7 @@ public class CycleDefinitionImpl implements ICycleDefinition {
         }
         
         // Validate entry state exists
-        if (!this.states.containsKey(entryStateName)) {
+        if (!this.states.containsKey(this.entryStateName)) {
             throw new IllegalArgumentException("Entry state '" + entryStateName + "' not found in cycle '" + name + "'");
         }
         
@@ -66,24 +66,24 @@ public class CycleDefinitionImpl implements ICycleDefinition {
     }
     
     private void registerState(ICycleState state) {
-        if (states.containsKey(state.getName())) {
-            throw new IllegalArgumentException("Duplicate state name: " + state.getName());
+        if (states.containsKey(state.getStateId())) {
+            throw new IllegalArgumentException("Duplicate state name: " + state.getStateId());
         }
-        states.put(state.getName(), state);
-        stateOrder.add(state.getName());
+        states.put(state.getStateId(), state);
+        stateOrder.add(state.getStateId());
     }
     
     private void validateStateReferences() {
         for (ICycleState state : states.values()) {
             // Validate nextState
-            String nextState = state.getNextState();
+            StateId nextState = state.getNextState();
             if (nextState != null && !states.containsKey(nextState)) {
                 // Could be a loop back - check if it's intentional
                 // For now, just log warning
             }
             
             // Validate targetState
-            String targetState = state.getTargetState();
+            StateId targetState = state.getTargetState();
             if (targetState != null && !states.containsKey(targetState)) {
                 // Could be a loop back - check if it's intentional
                 // For now, just log warning
@@ -92,7 +92,7 @@ public class CycleDefinitionImpl implements ICycleDefinition {
             // Validate special state references
             if (state.getStateType() == StateType.LOOP && state instanceof ILoopState) {
                 ILoopState loopState = (ILoopState) state;
-                String loopBackState = loopState.getLoopBackState();
+                StateId loopBackState = loopState.getLoopBackState();
                 if (loopBackState != null && !states.containsKey(loopBackState)) {
                     throw new IllegalArgumentException("Loop back state '" + loopBackState + 
                                                      "' not found for state '" + state.getName() + "'");
@@ -102,7 +102,7 @@ public class CycleDefinitionImpl implements ICycleDefinition {
     }
     
     @Override
-    public String getName() {
+    public CycleId getCycleId() {
         return name;
     }
     
@@ -112,7 +112,7 @@ public class CycleDefinitionImpl implements ICycleDefinition {
     }
     
     @Override
-    public String getEntryStateName() {
+    public StateId getEntryState() {
         return entryStateName;
     }
     
@@ -158,7 +158,7 @@ public class CycleDefinitionImpl implements ICycleDefinition {
     }
     
     @Override
-    public ICycleState getState(String stateName) {
+    public ICycleState getState(StateId stateName) {
         return states.get(stateName);
     }
     

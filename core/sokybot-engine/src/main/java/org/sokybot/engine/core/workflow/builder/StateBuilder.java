@@ -33,9 +33,19 @@ public class StateBuilder {
         this.nextState = stateName;
         return this;
     }
+
+    public StateBuilder nextState(StateId stateId) {
+        this.nextState = stateId != null ? stateId.asString() : null;
+        return this;
+    }
     
     public StateBuilder targetState(String stateName) {
         this.targetState = stateName;
+        return this;
+    }
+
+    public StateBuilder targetState(StateId stateId) {
+        this.targetState = stateId != null ? stateId.asString() : null;
         return this;
     }
     

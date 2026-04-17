@@ -11,7 +11,7 @@ public interface ILoopState extends ICycleState {
      * 
      * @return The state name to loop back to
      */
-    String getLoopBackState();
+    StateId getLoopBackState();
     
     /**
      * Guard that determines if loop should continue.
@@ -60,5 +60,11 @@ public interface ILoopState extends ICycleState {
      */
     default IAction getLoopExitAction() {
         return null;
+    }
+
+    @Deprecated
+    default String getLoopBackStateName() {
+        StateId id = getLoopBackState();
+        return id != null ? id.asString() : null;
     }
 }
