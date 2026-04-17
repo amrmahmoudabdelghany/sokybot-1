@@ -10,6 +10,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.sokybot.commons.osgi.AtomicServiceHandle;
 import org.sokybot.http.server.events.BridgeEvent;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.webview.api.IRSocketHandler;
@@ -38,15 +39,15 @@ public class EventBridgeHandler implements IRSocketHandler, IRSocketStreamHandle
 
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ISO_INSTANT;
 
-    private volatile IEventBridge eventBridge;
+    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setEventBridge(IEventBridge bridge) {
-        this.eventBridge = bridge;
+        this.eventBridge.set(bridge);
     }
 
     protected void unsetEventBridge(IEventBridge bridge) {
-        this.eventBridge = null;
+        this.eventBridge.clear(bridge);
     }
 
     // ===== IRSocketHandler =====
@@ -62,6 +63,11 @@ public class EventBridgeHandler implements IRSocketHandler, IRSocketStreamHandle
     }
 
     @Override
+    public int getRanking() {
+        return 0;
+    }
+
+    @Override
     public Mono<RSocketResponse> handle(RSocketRequest request) {
         String method = request.getMethod();
 
@@ -73,15 +79,16 @@ public class EventBridgeHandler implements IRSocketHandler, IRSocketStreamHandle
     }
 
     private Mono<RSocketResponse> handleStatus(RSocketRequest request) {
-        if (eventBridge == null) {
+        IEventBridge bridge = eventBridge.tryGet().orElse(null);
+        if (bridge == null) {
             return Mono.just(RSocketResponse.error(
                     RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
                     "Event bridge not available"));
         }
 
         Map<String, Object> response = new HashMap<>();
-        response.put("subscriberCount", eventBridge.getSubscriberCount());
-        response.put("eventCount", eventBridge.getEventCount());
+        response.put("subscriberCount", bridge.getSubscriberCount());
+        response.put("eventCount", bridge.getEventCount());
         response.put("available", true);
 
         return Mono.just(RSocketResponse.success(response));
@@ -96,7 +103,8 @@ public class EventBridgeHandler implements IRSocketHandler, IRSocketStreamHandle
 
     @Override
     public Flux<Object> handleStream(RSocketRequest request) {
-        if (eventBridge == null) {
+        IEventBridge bridge = eventBridge.tryGet().orElse(null);
+        if (bridge == null) {
             return Flux.error(new IllegalStateException("Event bridge not available"));
         }
 
@@ -116,7 +124,7 @@ public class EventBridgeHandler implements IRSocketHandler, IRSocketStreamHandle
         AtomicReference<IEventBridge.Subscription> subRef = new AtomicReference<>();
 
         // Subscribe to events
-        IEventBridge.Subscription subscription = eventBridge.subscribe(
+        IEventBridge.Subscription subscription = bridge.subscribe(
                 machineId,
                 finalPattern,
                 event -> {

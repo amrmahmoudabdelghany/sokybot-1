@@ -6,6 +6,8 @@ import org.sokybot.gameevents.GatewayAgentListTranslator;
 import org.sokybot.gameevents.GatewayLoginResponseTranslator;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
+import org.sokybot.commons.lifecycle.ISubscriptionScope;
+import org.sokybot.commons.lifecycle.SubscriptionScopeImpl;
 
 import org.sokybot.runtime.internal.domain.MachineInfo;
 import org.sokybot.engine.IEngine;
@@ -39,7 +41,7 @@ public class MachineContextImpl implements IMachineContext {
     private org.sokybot.gamemodel.IGameModel gameModel;
     private java.util.Map<Integer, org.sokybot.gameevents.events.core.IPacketTranslator> sharedTranslators;
     private org.sokybot.gameevents.ChunkedPacketManager chunkManager;
-    private java.util.List<org.sokybot.network.IPacketSubscription> subscriptions = new java.util.ArrayList<>();
+    private final ISubscriptionScope subscriptionScope = new SubscriptionScopeImpl();
 
     public MachineContextImpl(MachineInfo machineInfo,
             IGroupContext groupContext,
@@ -214,7 +216,7 @@ public class MachineContextImpl implements IMachineContext {
                         Integer.toHexString(op).toUpperCase(), machineId, e);
             }
         }, op);
-        subscriptions.add(sub);
+        subscriptionScope.register(sub);
     }
 
     private static final int SERVICE_LOOKUP_RETRIES = 15;
@@ -302,6 +304,11 @@ public class MachineContextImpl implements IMachineContext {
         return this.gameModel;
     }
 
+    @Override
+    public ISubscriptionScope getSubscriptionScope() {
+        return subscriptionScope;
+    }
+
     public void destroy() {
         MDC.put("sokybot.log.category", "MACHINE");
         MDC.put("sokybot.log.machineFullName", fullName());
@@ -315,6 +322,8 @@ public class MachineContextImpl implements IMachineContext {
             if (chunkManager != null) {
                 org.sokybot.gameevents.ChunkedPacketManagerRegistry.getInstance().unregister(fullName());
             }
+
+            subscriptionScope.close();
 
             // Stop engine (destroys Spring context internally)
             if (engine != null) {

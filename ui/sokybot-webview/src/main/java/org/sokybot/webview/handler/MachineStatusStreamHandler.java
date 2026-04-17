@@ -6,11 +6,14 @@ import java.util.Map;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sokybot.commons.osgi.AtomicServiceHandle;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.webview.api.IRSocketStreamHandler;
 import org.sokybot.webview.api.RSocketRequest;
@@ -26,12 +29,16 @@ public class MachineStatusStreamHandler implements IRSocketStreamHandler, EventH
 
     private static final Logger log = LoggerFactory.getLogger(MachineStatusStreamHandler.class);
 
-    private volatile IEventBridge eventBridge;
+    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
     private volatile MachineStatusHubRegistry hubRegistry;
 
-    @Reference
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, unbind = "unsetEventBridge")
     protected void setEventBridge(IEventBridge eventBridge) {
-        this.eventBridge = eventBridge;
+        this.eventBridge.set(eventBridge);
+    }
+
+    protected void unsetEventBridge(IEventBridge eventBridge) {
+        this.eventBridge.clear(eventBridge);
     }
 
     @Reference
@@ -52,7 +59,7 @@ public class MachineStatusStreamHandler implements IRSocketStreamHandler, EventH
     @Override
     public Flux<Object> handleStream(RSocketRequest request) {
         final String requestedMachineId = request.getString("machineId");
-        final IEventBridge bridge = this.eventBridge;
+        final IEventBridge bridge = this.eventBridge.tryGet().orElse(null);
         final MachineStatusHubRegistry registry = this.hubRegistry;
 
         if (bridge == null) {
@@ -86,7 +93,7 @@ public class MachineStatusStreamHandler implements IRSocketStreamHandler, EventH
 
     @Override
     public void handleEvent(Event event) {
-        if (event == null || this.eventBridge == null) {
+        if (event == null) {
             return;
         }
         Map<String, Object> payload = new HashMap<>();
@@ -105,6 +112,7 @@ public class MachineStatusStreamHandler implements IRSocketStreamHandler, EventH
                 machineId = String.valueOf(mid);
             }
         }
-        this.eventBridge.publish(machineId, event.getTopic().replace('/', '.'), payload);
+        final String finalMachineId = machineId;
+        eventBridge.ifPresent(bridge -> bridge.publish(finalMachineId, event.getTopic().replace('/', '.'), payload));
     }
 }

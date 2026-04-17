@@ -33,6 +33,7 @@ public interface IRSocketHandler {
      * OSGi service property key for the method name.
      */
     String METHOD_PROPERTY = "rsocket.method";
+    String RANKING_PROPERTY = "rsocket.method.ranking";
     
     /**
      * Get the method names this handler responds to.
@@ -48,6 +49,10 @@ public interface IRSocketHandler {
      * @return a Mono containing the response
      */
     Mono<RSocketResponse> handle(RSocketRequest request);
+
+    default int getRanking() {
+        return 0;
+    }
     
     /**
      * Get a description of this handler for documentation/debugging.

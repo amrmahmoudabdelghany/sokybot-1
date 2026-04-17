@@ -17,11 +17,13 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sokybot.commons.osgi.AtomicServiceHandle;
 import org.sokybot.http.server.events.BridgeEvent;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.runtime.ContextLifecycleEvents;
@@ -56,15 +58,19 @@ public class MachineStatusHubRegistry implements EventHandler {
     private final Object wildcardLock = new Object();
     private volatile IEventBridge.Subscription wildcardBridgeSubscription;
 
-    private volatile IEventBridge eventBridge;
+    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
     private volatile ISokybotContext sokybotContext;
 
     private ScheduledExecutorService scheduler;
 
-    @Reference
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, unbind = "unsetEventBridge")
     protected void setEventBridge(IEventBridge eventBridge) {
-        this.eventBridge = eventBridge;
+        this.eventBridge.set(eventBridge);
         tryBootstrap();
+    }
+
+    protected void unsetEventBridge(IEventBridge bridge) {
+        this.eventBridge.clear(bridge);
     }
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL)
@@ -109,7 +115,7 @@ public class MachineStatusHubRegistry implements EventHandler {
     }
 
     private void tryBootstrap() {
-        IEventBridge bridge = this.eventBridge;
+        IEventBridge bridge = this.eventBridge.tryGet().orElse(null);
         ISokybotContext ctx = this.sokybotContext;
         if (bridge == null || ctx == null) {
             return;
@@ -154,7 +160,7 @@ public class MachineStatusHubRegistry implements EventHandler {
      * Wildcard stream: one EventBridge subscription fans out to this connection's sink.
      */
     public Flux<Map<String, Object>> wildcardStatusFlux() {
-        IEventBridge bridge = this.eventBridge;
+        IEventBridge bridge = this.eventBridge.tryGet().orElse(null);
         if (bridge == null) {
             return Flux.empty();
         }
@@ -201,7 +207,7 @@ public class MachineStatusHubRegistry implements EventHandler {
     }
 
     public MachineStatusHub getOrCreateHub(String fullName) {
-        IEventBridge bridge = this.eventBridge;
+        IEventBridge bridge = this.eventBridge.tryGet().orElse(null);
         if (bridge == null || fullName == null || fullName.isEmpty()) {
             return null;
         }

@@ -81,13 +81,16 @@
                             org.sokybot.commons.metrics,
                             org.sokybot.commons.event,
                             org.sokybot.commons.osgi,
-                            org.sokybot.commons.script
+                            org.sokybot.commons.script,
+                            org.sokybot.commons.lifecycle
                         </Export-Package>
                         <Private-Package>
                             org.sokybot.commons.error.internal,
                             org.sokybot.commons.health.internal,
                             org.sokybot.commons.metrics.internal,
-                            org.sokybot.commons.event.internal
+                            org.sokybot.commons.event.internal,
+                            org.sokybot.commons.osgi.internal,
+                            org.sokybot.commons.lifecycle.internal
                         </Private-Package>
                         <Import-Package>
                             *;resolution:=optional

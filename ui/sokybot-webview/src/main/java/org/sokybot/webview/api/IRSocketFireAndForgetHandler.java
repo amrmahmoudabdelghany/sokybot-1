@@ -8,10 +8,15 @@ import reactor.core.publisher.Mono;
 public interface IRSocketFireAndForgetHandler {
 
     String METHOD_PROPERTY = "rsocket.fireAndForget";
+    String RANKING_PROPERTY = "rsocket.fireAndForget.ranking";
 
     String[] getMethods();
 
     Mono<Void> handleFireAndForget(RSocketRequest request);
+
+    default int getRanking() {
+        return 0;
+    }
 
     default String getDescription() {
         String[] methods = getMethods();

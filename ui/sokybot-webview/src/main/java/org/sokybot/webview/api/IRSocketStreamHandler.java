@@ -32,6 +32,7 @@ public interface IRSocketStreamHandler {
      * OSGi service property key for the stream name.
      */
     String STREAM_PROPERTY = "rsocket.stream";
+    String RANKING_PROPERTY = "rsocket.stream.ranking";
     
     /**
      * Get the stream name this handler responds to.
@@ -47,6 +48,10 @@ public interface IRSocketStreamHandler {
      * @return a Flux of data objects to stream to the client
      */
     Flux<Object> handleStream(RSocketRequest request);
+
+    default int getRanking() {
+        return 0;
+    }
     
     /**
      * Get a description of this stream handler.

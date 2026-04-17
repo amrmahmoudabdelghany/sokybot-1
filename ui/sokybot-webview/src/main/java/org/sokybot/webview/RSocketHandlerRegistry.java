@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -33,10 +34,11 @@ public class RSocketHandlerRegistry {
     
     private static final Logger logger = LoggerFactory.getLogger(RSocketHandlerRegistry.class);
     
-    private final Map<String, IRSocketHandler> handlers = new ConcurrentHashMap<>();
-    private final Map<String, IRSocketStreamHandler> streamHandlers = new ConcurrentHashMap<>();
-    private final Map<String, IRSocketFireAndForgetHandler> fireAndForgetHandlers = new ConcurrentHashMap<>();
-    private final Map<String, IRSocketChannelHandler> channelHandlers = new ConcurrentHashMap<>();
+    private final AtomicLong bindOrder = new AtomicLong();
+    private final Map<String, RegisteredHandler<IRSocketHandler>> handlers = new ConcurrentHashMap<>();
+    private final Map<String, RegisteredHandler<IRSocketStreamHandler>> streamHandlers = new ConcurrentHashMap<>();
+    private final Map<String, RegisteredHandler<IRSocketFireAndForgetHandler>> fireAndForgetHandlers = new ConcurrentHashMap<>();
+    private final Map<String, RegisteredHandler<IRSocketChannelHandler>> channelHandlers = new ConcurrentHashMap<>();
     private final Map<String, List<String>> requiredParamsByMethod = Map.of(
             "machine.start", List.of("machineId"),
             "machine.stop", List.of("machineId"),
@@ -52,6 +54,10 @@ public class RSocketHandlerRegistry {
         policy = ReferencePolicy.DYNAMIC
     )
     protected void bindHandler(IRSocketHandler handler) {
+        bindHandler(handler, null);
+    }
+
+    protected void bindHandler(IRSocketHandler handler, Map<String, Object> properties) {
         String[] methods = handler.getMethods();
         if (methods == null || methods.length == 0) {
             logger.warn("Handler {} has no methods defined, skipping", handler.getClass().getName());
@@ -60,8 +66,7 @@ public class RSocketHandlerRegistry {
         
         for (String method : methods) {
             if (method != null && !method.isEmpty()) {
-                handlers.put(method, handler);
-                logger.info("Registered RSocket handler: {} -> {}", method, handler.getClass().getSimpleName());
+                registerMethodHandler(method, handler, properties);
             }
         }
     }
@@ -71,8 +76,7 @@ public class RSocketHandlerRegistry {
         if (methods != null) {
             for (String method : methods) {
                 if (method != null) {
-                    handlers.remove(method);
-                    logger.info("Unregistered RSocket handler: {}", method);
+                    unregisterHandler(handlers, method, handler, "RSocket handler");
                 }
             }
         }
@@ -85,10 +89,15 @@ public class RSocketHandlerRegistry {
         policy = ReferencePolicy.DYNAMIC
     )
     protected void bindStreamHandler(IRSocketStreamHandler handler) {
+        bindStreamHandler(handler, null);
+    }
+
+    protected void bindStreamHandler(IRSocketStreamHandler handler, Map<String, Object> properties) {
         String stream = handler.getStreamName();
         if (stream != null && !stream.isEmpty()) {
-            streamHandlers.put(stream, handler);
-            logger.info("Registered RSocket stream handler: {} -> {}", stream, handler.getClass().getSimpleName());
+            registerSingleHandler(streamHandlers, stream, handler, resolveRanking(
+                    IRSocketStreamHandler.RANKING_PROPERTY,
+                    handler.getRanking(), properties), "RSocket stream handler");
         } else {
             logger.warn("Stream handler {} has null/empty stream name, skipping", handler.getClass().getName());
         }
@@ -97,8 +106,7 @@ public class RSocketHandlerRegistry {
     protected void unbindStreamHandler(IRSocketStreamHandler handler) {
         String stream = handler.getStreamName();
         if (stream != null) {
-            streamHandlers.remove(stream);
-            logger.info("Unregistered RSocket stream handler: {}", stream);
+            unregisterHandler(streamHandlers, stream, handler, "RSocket stream handler");
         }
     }
     
@@ -123,7 +131,8 @@ public class RSocketHandlerRegistry {
         }
         
         String method = request.getMethod();
-        IRSocketHandler handler = handlers.get(method);
+        RegisteredHandler<IRSocketHandler> registeredHandler = handlers.get(method);
+        IRSocketHandler handler = registeredHandler != null ? registeredHandler.handler : null;
         
         if (handler == null) {
             logger.debug("No handler found for method: {}", method);
@@ -166,7 +175,8 @@ public class RSocketHandlerRegistry {
         }
         
         String streamName = request.getMethod();
-        IRSocketStreamHandler handler = streamHandlers.get(streamName);
+        RegisteredHandler<IRSocketStreamHandler> registeredHandler = streamHandlers.get(streamName);
+        IRSocketStreamHandler handler = registeredHandler != null ? registeredHandler.handler : null;
         
         if (handler == null) {
             logger.debug("No stream handler found for: {}", streamName);
@@ -194,6 +204,10 @@ public class RSocketHandlerRegistry {
         policy = ReferencePolicy.DYNAMIC
     )
     protected void bindFireAndForgetHandler(IRSocketFireAndForgetHandler handler) {
+        bindFireAndForgetHandler(handler, null);
+    }
+
+    protected void bindFireAndForgetHandler(IRSocketFireAndForgetHandler handler, Map<String, Object> properties) {
         String[] methods = handler.getMethods();
         if (methods == null || methods.length == 0) {
             logger.warn("Fire-and-forget handler {} has no methods defined, skipping", handler.getClass().getName());
@@ -201,8 +215,12 @@ public class RSocketHandlerRegistry {
         }
         for (String method : methods) {
             if (method != null && !method.isEmpty()) {
-                fireAndForgetHandlers.put(method, handler);
-                logger.info("Registered fire-and-forget handler: {} -> {}", method, handler.getClass().getSimpleName());
+                registerSingleHandler(
+                        fireAndForgetHandlers,
+                        method,
+                        handler,
+                        resolveRanking(IRSocketFireAndForgetHandler.RANKING_PROPERTY, handler.getRanking(), properties),
+                        "Fire-and-forget handler");
             }
         }
     }
@@ -214,8 +232,7 @@ public class RSocketHandlerRegistry {
         }
         for (String method : methods) {
             if (method != null) {
-                fireAndForgetHandlers.remove(method);
-                logger.info("Unregistered fire-and-forget handler: {}", method);
+                unregisterHandler(fireAndForgetHandlers, method, handler, "Fire-and-forget handler");
             }
         }
     }
@@ -224,7 +241,8 @@ public class RSocketHandlerRegistry {
         if (validateEnvelope(request) != null || request == null || request.getMethod() == null) {
             return Mono.empty();
         }
-        IRSocketFireAndForgetHandler handler = fireAndForgetHandlers.get(request.getMethod());
+        RegisteredHandler<IRSocketFireAndForgetHandler> registeredHandler = fireAndForgetHandlers.get(request.getMethod());
+        IRSocketFireAndForgetHandler handler = registeredHandler != null ? registeredHandler.handler : null;
         if (handler == null) {
             if (logger.isDebugEnabled()) {
                 logger.debug("No fire-and-forget handler for method: {} (ignored)", request.getMethod());
@@ -244,10 +262,18 @@ public class RSocketHandlerRegistry {
         policy = ReferencePolicy.DYNAMIC
     )
     protected void bindChannelHandler(IRSocketChannelHandler handler) {
+        bindChannelHandler(handler, null);
+    }
+
+    protected void bindChannelHandler(IRSocketChannelHandler handler, Map<String, Object> properties) {
         String channel = handler.getChannelName();
         if (channel != null && !channel.isEmpty()) {
-            channelHandlers.put(channel, handler);
-            logger.info("Registered channel handler: {} -> {}", channel, handler.getClass().getSimpleName());
+            registerSingleHandler(
+                    channelHandlers,
+                    channel,
+                    handler,
+                    resolveRanking(IRSocketChannelHandler.RANKING_PROPERTY, handler.getRanking(), properties),
+                    "Channel handler");
         } else {
             logger.warn("Channel handler {} has null/empty channel name, skipping", handler.getClass().getName());
         }
@@ -256,8 +282,7 @@ public class RSocketHandlerRegistry {
     protected void unbindChannelHandler(IRSocketChannelHandler handler) {
         String channel = handler.getChannelName();
         if (channel != null) {
-            channelHandlers.remove(channel);
-            logger.info("Unregistered channel handler: {}", channel);
+            unregisterHandler(channelHandlers, channel, handler, "Channel handler");
         }
     }
 
@@ -272,7 +297,8 @@ public class RSocketHandlerRegistry {
                 "Initial channel request or method is null"
             ).toMap());
         }
-        IRSocketChannelHandler handler = channelHandlers.get(initialRequest.getMethod());
+        RegisteredHandler<IRSocketChannelHandler> registeredHandler = channelHandlers.get(initialRequest.getMethod());
+        IRSocketChannelHandler handler = registeredHandler != null ? registeredHandler.handler : null;
         if (handler == null) {
             logger.debug("No channel handler found for: {}", initialRequest.getMethod());
             return Flux.just(RSocketResponse.methodNotFound(initialRequest.getMethod()).toMap());
@@ -319,8 +345,8 @@ public class RSocketHandlerRegistry {
      */
     public Map<String, String> getHandlerInfo() {
         Map<String, String> info = new ConcurrentHashMap<>();
-        handlers.forEach((method, handler) -> 
-            info.put(method, handler.getDescription())
+        handlers.forEach((method, handler) ->
+            info.put(method, handler.handler.getDescription())
         );
         return info;
     }
@@ -330,10 +356,95 @@ public class RSocketHandlerRegistry {
      */
     public Map<String, String> getStreamHandlerInfo() {
         Map<String, String> info = new ConcurrentHashMap<>();
-        streamHandlers.forEach((stream, handler) -> 
-            info.put(stream, handler.getDescription())
+        streamHandlers.forEach((stream, handler) ->
+            info.put(stream, handler.handler.getDescription())
         );
         return info;
+    }
+
+    private void registerMethodHandler(String method, IRSocketHandler handler, Map<String, Object> properties) {
+        registerSingleHandler(
+                handlers,
+                method,
+                handler,
+                resolveRanking(IRSocketHandler.RANKING_PROPERTY, handler.getRanking(), properties),
+                "RSocket handler");
+    }
+
+    private int resolveRanking(String rankingProperty, int fallbackRanking, Map<String, Object> properties) {
+        if (properties != null) {
+            Object raw = properties.get(rankingProperty);
+            if (raw instanceof Number) {
+                return ((Number) raw).intValue();
+            }
+            if (raw instanceof String) {
+                try {
+                    return Integer.parseInt(((String) raw).trim());
+                } catch (NumberFormatException e) {
+                    logger.warn("Invalid ranking value '{}' for property '{}', using fallback {}", raw, rankingProperty,
+                            fallbackRanking);
+                }
+            }
+        }
+        return fallbackRanking;
+    }
+
+    private <T> void registerSingleHandler(
+            Map<String, RegisteredHandler<T>> registry,
+            String key,
+            T handler,
+            int ranking,
+            String kind) {
+        RegisteredHandler<T> candidate = new RegisteredHandler<>(handler, ranking, bindOrder.incrementAndGet());
+        registry.compute(key, (method, existing) -> {
+            if (existing == null) {
+                logger.info("Registered {}: {} -> {} (ranking={})", kind, method, className(handler), ranking);
+                return candidate;
+            }
+            if (existing.ranking > candidate.ranking) {
+                logger.debug(
+                        "Ignored {} for {} because existing handler has higher ranking ({} > {})",
+                        kind, method, existing.ranking, candidate.ranking);
+                return existing;
+            }
+            if (existing.ranking < candidate.ranking) {
+                logger.info(
+                        "Replaced {} for {} with higher-ranked handler {} ({} -> {})",
+                        kind, method, className(handler), existing.ranking, candidate.ranking);
+                return candidate;
+            }
+            logger.error(
+                    "Equal-ranking collision for {} '{}': keeping older {} and ignoring {} (ranking={})",
+                    kind, method, className(existing.handler), className(handler), candidate.ranking);
+            return existing;
+        });
+    }
+
+    private <T> void unregisterHandler(Map<String, RegisteredHandler<T>> registry, String key, T handler, String kind) {
+        registry.computeIfPresent(key, (method, existing) -> {
+            if (existing.handler == handler) {
+                logger.info("Unregistered {}: {}", kind, method);
+                return null;
+            }
+            return existing;
+        });
+    }
+
+    private static String className(Object handler) {
+        return handler.getClass().getSimpleName();
+    }
+
+    private static final class RegisteredHandler<T> {
+        private final T handler;
+        private final int ranking;
+        @SuppressWarnings("unused")
+        private final long bindOrder;
+
+        private RegisteredHandler(T handler, int ranking, long bindOrder) {
+            this.handler = handler;
+            this.ranking = ranking;
+            this.bindOrder = bindOrder;
+        }
     }
 
     private RSocketResponse validateEnvelope(RSocketRequest request) {

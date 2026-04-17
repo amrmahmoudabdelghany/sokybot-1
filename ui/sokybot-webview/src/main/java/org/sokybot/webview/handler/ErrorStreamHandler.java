@@ -68,6 +68,11 @@ public class ErrorStreamHandler implements IRSocketHandler, IRSocketStreamHandle
     }
 
     @Override
+    public int getRanking() {
+        return 0;
+    }
+
+    @Override
     public Mono<RSocketResponse> handle(RSocketRequest request) {
         String method = request.getMethod();
 

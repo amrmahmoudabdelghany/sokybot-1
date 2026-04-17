@@ -79,6 +79,7 @@
                         </Export-Package>
                         <Private-Package>org.sokybot.proxy.internal.*</Private-Package>
                         <Import-Package>
+                            org.sokybot.commons.lifecycle;version="[1.0,2)",
                             org.sokybot.security.*;version="[1.0,2)",
                             *;resolution:=optional
                         </Import-Package>

@@ -17,6 +17,13 @@
     <description>Shared Reactor Netty HTTP Server and Router provider</description>
 
     <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- Reactor Netty - provided by dedicated Karaf feature -->
         <dependency>
             <groupId>io.projectreactor.netty</groupId>
@@ -130,6 +137,7 @@
                             !javax.annotation.meta,
                             !java.nio.file.spi,
                             <!-- Required -->
+                            org.sokybot.commons.lifecycle;version="[1.0,2)",
                             com.fasterxml.jackson.*;version="[2.15,3)",
                             *
                         </Import-Package>

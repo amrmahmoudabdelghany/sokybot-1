@@ -59,7 +59,7 @@ public interface IEventBridge {
     /**
      * Subscription handle for cancellation.
      */
-    interface Subscription {
+    interface Subscription extends org.sokybot.commons.lifecycle.Subscription {
         /**
          * Unsubscribe from events.
          */
@@ -68,6 +68,12 @@ public interface IEventBridge {
         /**
          * Check if still active.
          */
+        @Override
         boolean isActive();
+
+        @Override
+        default void close() {
+            unsubscribe();
+        }
     }
 }

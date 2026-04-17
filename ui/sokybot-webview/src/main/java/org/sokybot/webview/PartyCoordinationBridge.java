@@ -5,9 +5,12 @@ import java.util.Map;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.event.Event;
 import org.osgi.service.event.EventConstants;
 import org.osgi.service.event.EventHandler;
+import org.sokybot.commons.osgi.AtomicServiceHandle;
 import org.sokybot.http.server.events.IEventBridge;
 
 /**
@@ -22,16 +25,20 @@ import org.sokybot.http.server.events.IEventBridge;
 )
 public class PartyCoordinationBridge implements EventHandler {
 
-    private volatile IEventBridge eventBridge;
+    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
 
-    @Reference
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, unbind = "unsetEventBridge")
     protected void setEventBridge(IEventBridge eventBridge) {
-        this.eventBridge = eventBridge;
+        this.eventBridge.set(eventBridge);
+    }
+
+    protected void unsetEventBridge(IEventBridge eventBridge) {
+        this.eventBridge.clear(eventBridge);
     }
 
     @Override
     public void handleEvent(Event event) {
-        if (event == null || eventBridge == null) {
+        if (event == null) {
             return;
         }
         Map<String, Object> payload = new HashMap<>();
@@ -44,7 +51,8 @@ public class PartyCoordinationBridge implements EventHandler {
         if (targetMachineId != null) {
             machineId = String.valueOf(targetMachineId);
         }
-        eventBridge.publish(machineId, event.getTopic().replace('/', '.'), payload);
+        final String finalMachineId = machineId;
+        eventBridge.ifPresent(bridge -> bridge.publish(finalMachineId, event.getTopic().replace('/', '.'), payload));
     }
 }
 

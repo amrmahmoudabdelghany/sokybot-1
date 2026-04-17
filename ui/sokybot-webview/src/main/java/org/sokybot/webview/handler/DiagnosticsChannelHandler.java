@@ -12,6 +12,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.sokybot.commons.osgi.AtomicServiceHandle;
 import org.sokybot.http.server.events.BridgeEvent;
 import org.sokybot.http.server.events.IEventBridge;
 import org.sokybot.webview.api.IRSocketChannelHandler;
@@ -32,15 +33,15 @@ public class DiagnosticsChannelHandler implements IRSocketChannelHandler {
 
     public static final String CHANNEL_NAME = "diagnostics.stream";
 
-    private volatile IEventBridge eventBridge;
+    private final AtomicServiceHandle<IEventBridge> eventBridge = new AtomicServiceHandle<>();
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     protected void setEventBridge(IEventBridge eventBridge) {
-        this.eventBridge = eventBridge;
+        this.eventBridge.set(eventBridge);
     }
 
     protected void unsetEventBridge(IEventBridge eventBridge) {
-        this.eventBridge = null;
+        this.eventBridge.clear(eventBridge);
     }
 
     @Override
@@ -90,7 +91,7 @@ public class DiagnosticsChannelHandler implements IRSocketChannelHandler {
                 if (old != null) {
                     old.unsubscribe();
                 }
-                IEventBridge bridge = DiagnosticsChannelHandler.this.eventBridge;
+                IEventBridge bridge = DiagnosticsChannelHandler.this.eventBridge.tryGet().orElse(null);
                 if (bridge == null || paused.get()) {
                     return;
                 }
@@ -107,7 +108,7 @@ public class DiagnosticsChannelHandler implements IRSocketChannelHandler {
 
             reconnectRef.set(reconnect);
 
-            if (this.eventBridge == null) {
+            if (!this.eventBridge.isAvailable()) {
                 sink.next(Map.of(
                         "type", "ERROR",
                         "message", "event_bridge_unavailable"));

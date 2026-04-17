@@ -20,7 +20,7 @@ import org.sokybot.engine.api.IDispatcher;
  * The new engine architecture is framework-agnostic and uses OSGi for service
  * discovery. Legacy Spring State Machine dependencies have been removed.
  */
-public interface IEngine {
+public interface IEngine extends AutoCloseable {
 
     /**
      * Gets the machine ID this engine belongs to.
@@ -109,4 +109,15 @@ public interface IEngine {
      * waiting cycle is evaluated on the next tick without waiting for a delay state.
      */
     void wakeWorkflow();
+
+    @Override
+    default void close() {
+        try {
+            if (isRunning()) {
+                stop();
+            }
+        } catch (RuntimeException ignored) {
+            // Keep close idempotent during teardown.
+        }
+    }
 }
