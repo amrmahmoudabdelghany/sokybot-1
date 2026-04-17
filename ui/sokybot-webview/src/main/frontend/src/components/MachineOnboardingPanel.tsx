@@ -9,6 +9,11 @@ import { CharacterSelectionCard } from './CharacterSelectionCard';
 import { deriveStepStates, resolvePhaseToUX } from '../machines/loginPhaseMapping';
 import type { ActionIntent } from '../machines/loginPhaseMapping';
 import type { RetryCountdownState } from '../machines/useRetryCountdown';
+import {
+    describeAgentResult,
+    describeGatewayResult,
+    maybeVersionMismatchMessage,
+} from '../utils/loginErrorMessages';
 
 export type OnboardingFormValues = {
     targetGateway: string;
@@ -44,7 +49,11 @@ type MachineStatus = {
     gatewayResultCode?: number | null;
     agentAuthResultCode?: number | null;
     failureReason?: string | null;
+    lastFailureReason?: string | null;
     queuePosition?: number | null;
+    retryCount?: number | null;
+    maxRetries?: number | null;
+    configuredClientVersion?: number | null;
 };
 
 interface MachineOnboardingPanelProps {
@@ -85,6 +94,13 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
     if (!selectedMachineId) {
         return null;
     }
+
+    const gatewayDescription = describeGatewayResult(currentMachineStatus.gatewayResultCode);
+    const agentDescription = describeAgentResult(currentMachineStatus.agentAuthResultCode);
+    const versionMismatchHint = maybeVersionMismatchMessage(
+        currentMachineStatus.gatewayResultCode,
+        currentMachineStatus.configuredClientVersion
+    );
 
     return (
         <div className="space-y-4">
@@ -139,6 +155,7 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
 
                         {(currentMachineStatus.gatewayResultCode != null
                             || currentMachineStatus.agentAuthResultCode != null
+                            || currentMachineStatus.configuredClientVersion != null
                             || (currentMachineStatus.failureReason
                                 && String(currentMachineStatus.failureReason).trim().length > 0)) && (
                             <details className="text-[10px] text-muted-foreground border border-border/60 rounded-md px-2 py-1.5">
@@ -150,12 +167,32 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
                                         <>
                                             <dt className="inline text-muted-foreground">gateway</dt>
                                             <dd className="inline ml-1">{currentMachineStatus.gatewayResultCode}</dd>
+                                            {gatewayDescription && (
+                                                <dd className="block text-[10px] text-foreground/85">{gatewayDescription}</dd>
+                                            )}
                                         </>
                                     )}
                                     {currentMachineStatus.agentAuthResultCode != null && (
                                         <>
                                             <dt className="inline text-muted-foreground">agent</dt>
                                             <dd className="inline ml-1">{currentMachineStatus.agentAuthResultCode}</dd>
+                                            {agentDescription && (
+                                                <dd className="block text-[10px] text-foreground/85">{agentDescription}</dd>
+                                            )}
+                                        </>
+                                    )}
+                                    {currentMachineStatus.configuredClientVersion != null && (
+                                        <>
+                                            <dt className="block text-muted-foreground mt-1">clientVersion</dt>
+                                            <dd className="break-words text-foreground">
+                                                {currentMachineStatus.configuredClientVersion}
+                                            </dd>
+                                        </>
+                                    )}
+                                    {versionMismatchHint && (
+                                        <>
+                                            <dt className="block text-amber-500 mt-1">versionHint</dt>
+                                            <dd className="break-words text-amber-500/90">{versionMismatchHint}</dd>
                                         </>
                                     )}
                                     {currentMachineStatus.failureReason
@@ -170,7 +207,14 @@ export const MachineOnboardingPanel: React.FC<MachineOnboardingPanelProps> = ({
                         )}
 
                         {/* Retry countdown */}
-                        {retryCountdown && <RetryCountdown countdown={retryCountdown} />}
+                        {retryCountdown && (
+                            <RetryCountdown
+                                countdown={retryCountdown}
+                                retryCount={currentMachineStatus.retryCount}
+                                maxRetries={currentMachineStatus.maxRetries}
+                                lastFailureReason={currentMachineStatus.lastFailureReason || currentMachineStatus.failureReason}
+                            />
+                        )}
                     </>
                 );
             })()}

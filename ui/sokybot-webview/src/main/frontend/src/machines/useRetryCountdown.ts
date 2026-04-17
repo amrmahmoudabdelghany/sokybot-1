@@ -43,6 +43,8 @@ export interface RetryCountdownState {
     isActive: boolean;
     /** Whether a stall has been detected (auto-retry may have failed). */
     isStalled: boolean;
+    /** Countdown denominator derived from initial retry delay input. */
+    totalSeconds: number;
     /** Trigger a manual retry (with dedupe guard). */
     triggerRetry: () => void;
 }
@@ -61,8 +63,10 @@ export function useRetryCountdown({
     onRetryNow,
 }: UseRetryCountdownOptions): RetryCountdownState {
     const [remainingMs, setRemainingMs] = useState(0);
+    const [totalMs, setTotalMs] = useState(1000);
     const [isStalled, setIsStalled] = useState(false);
-    const retryInProgressRef = useRef(false);
+    const [retryInProgress, setRetryInProgress] = useState(false);
+    const [localScheduleTimestamp, setLocalScheduleTimestamp] = useState(0);
     const stallTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Compute target time from available sources
@@ -70,7 +74,9 @@ export function useRetryCountdown({
         if (!isRetryPhase || fatal) return null;
         if (retryAt != null && retryAt > 0) return retryAt;
         if (retryDelayMs != null && retryDelayMs > 0) {
-            const base = (serverTimestamp != null && serverTimestamp > 0) ? serverTimestamp : Date.now();
+            const base = (serverTimestamp != null && serverTimestamp > 0)
+                ? serverTimestamp
+                : localScheduleTimestamp;
             return base + retryDelayMs;
         }
         return null;
@@ -78,19 +84,30 @@ export function useRetryCountdown({
 
     // Reset stall state when phase changes
     useEffect(() => {
-        setIsStalled(false);
-        retryInProgressRef.current = false;
+        const resetId = setTimeout(() => {
+            setLocalScheduleTimestamp(Date.now());
+            setIsStalled(false);
+            setRetryInProgress(false);
+        }, 0);
+        const initial = retryDelayMs != null && retryDelayMs > 0
+            ? retryDelayMs
+            : 1000;
+        const totalId = setTimeout(() => setTotalMs(Math.max(1000, initial)), 0);
         if (stallTimerRef.current) {
             clearTimeout(stallTimerRef.current);
             stallTimerRef.current = null;
         }
+        return () => {
+            clearTimeout(resetId);
+            clearTimeout(totalId);
+        };
     }, [isRetryPhase, retryAt, retryDelayMs]);
 
     // Countdown tick
     useEffect(() => {
         if (targetMs == null || isOffline) {
-            setRemainingMs(0);
-            return;
+            const id = setTimeout(() => setRemainingMs(0), 0);
+            return () => clearTimeout(id);
         }
 
         const tick = () => {
@@ -102,7 +119,7 @@ export function useRetryCountdown({
             if (rem <= 0 && !stallTimerRef.current) {
                 stallTimerRef.current = setTimeout(() => {
                     setIsStalled(true);
-                    retryInProgressRef.current = false;
+                    setRetryInProgress(false);
                 }, STALL_TIMEOUT_MS);
             }
         };
@@ -121,28 +138,30 @@ export function useRetryCountdown({
     const canRetryNow = isRetryPhase
         && !fatal
         && !isOffline
-        && !retryInProgressRef.current
+        && !retryInProgress
         && (remainingMs > BOUNDARY_GUARD_MS || isStalled);
 
     const triggerRetry = useCallback(() => {
-        if (!canRetryNow || retryInProgressRef.current) return;
-        retryInProgressRef.current = true;
+        if (!canRetryNow || retryInProgress) return;
+        setRetryInProgress(true);
         setIsStalled(false);
         if (stallTimerRef.current) {
             clearTimeout(stallTimerRef.current);
             stallTimerRef.current = null;
         }
         onRetryNow();
-    }, [canRetryNow, onRetryNow]);
+    }, [canRetryNow, onRetryNow, retryInProgress]);
 
     const isActive = isRetryPhase && !fatal && targetMs != null;
     const remainingSeconds = Math.ceil(remainingMs / 1000);
+    const totalSeconds = Math.max(1, Math.ceil(totalMs / 1000));
 
     return {
         remainingSeconds,
         canRetryNow,
         isActive,
         isStalled,
+        totalSeconds,
         triggerRetry,
     };
 }

@@ -5,21 +5,44 @@ import type { RetryCountdownState } from '../machines/useRetryCountdown';
 
 interface RetryCountdownProps {
     countdown: RetryCountdownState;
+    retryCount?: number | null;
+    maxRetries?: number | null;
+    lastFailureReason?: string | null;
 }
 
 /**
  * Live countdown display for RETRY_DELAY phases.
  * Shows remaining time and a "Retry now" button with boundary dedupe guard.
  */
-export const RetryCountdown: React.FC<RetryCountdownProps> = ({ countdown }) => {
+export const RetryCountdown: React.FC<RetryCountdownProps> = ({
+    countdown,
+    retryCount,
+    maxRetries,
+    lastFailureReason,
+}) => {
     if (!countdown.isActive) return null;
     const ringStateClass = countdown.isStalled ? 'opacity-70' : 'opacity-100';
+
+    const denominator = Math.max(1, countdown.totalSeconds);
+    const progress = Math.min(countdown.remainingSeconds / denominator, 1);
 
     return (
         <div className="bg-card text-card-foreground border border-border p-4 shadow-sm rounded-lg space-y-3 transition-all duration-200">
             <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Retry
             </div>
+            {(typeof retryCount === 'number' || typeof maxRetries === 'number' || lastFailureReason) && (
+                <div className="text-[11px] text-muted-foreground leading-snug">
+                    {typeof retryCount === 'number' && `Attempt ${retryCount}`}
+                    {typeof maxRetries === 'number' && ` of ${maxRetries}`}
+                    {lastFailureReason && (
+                        <>
+                            {' — Last failure: '}
+                            <span className="text-foreground">{lastFailureReason}</span>
+                        </>
+                    )}
+                </div>
+            )}
 
             {countdown.remainingSeconds > 0 && (
                 <div className="flex items-center gap-2">
@@ -39,7 +62,7 @@ export const RetryCountdown: React.FC<RetryCountdownProps> = ({ countdown }) => 
                                 stroke="currentColor"
                                 strokeWidth="2"
                                 strokeDasharray="94.25"
-                                strokeDashoffset={94.25 * (1 - Math.min(countdown.remainingSeconds / 60, 1))}
+                                strokeDashoffset={94.25 * (1 - progress)}
                                 strokeLinecap="round"
                                 className="text-primary transition-all duration-200"
                             />

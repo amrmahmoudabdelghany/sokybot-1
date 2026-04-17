@@ -46,7 +46,11 @@ describe('machineOnboardingMachine', () => {
             gatewayResultCode: null,
             agentAuthResultCode: null,
             failureReason: null,
+            lastFailureReason: null,
             queuePosition: null,
+            retryCount: null,
+            maxRetries: null,
+            configuredClientVersion: null,
             signInComplete: false,
             awaitingCharacterSelection: false,
         };
@@ -80,7 +84,11 @@ describe('machineOnboardingMachine', () => {
             gatewayResultCode: null,
             agentAuthResultCode: null,
             failureReason: null,
+            lastFailureReason: null,
             queuePosition: null,
+            retryCount: null,
+            maxRetries: null,
+            configuredClientVersion: null,
             signInComplete: false,
             awaitingCharacterSelection: false,
         };

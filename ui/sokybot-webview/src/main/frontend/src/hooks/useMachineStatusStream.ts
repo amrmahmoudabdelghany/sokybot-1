@@ -2,10 +2,11 @@ import type { MutableRefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { rsocketService } from '../RSocketClient';
 import { streamEventToMachineEvent } from '../machines/machineOnboarding.machine';
+import type { OnboardingMachineEvent } from '../machines/machineOnboarding.machine';
 
 type Params = {
     machineId: string;
-    send: (event: unknown) => void;
+    send: (event: OnboardingMachineEvent) => void;
     refreshMachineStatusSnapshot: (id: string, attempt?: number) => Promise<void>;
     isHighPriorityPhase: (phase?: string) => boolean;
     throttleGuard: { recordTransition: () => boolean };

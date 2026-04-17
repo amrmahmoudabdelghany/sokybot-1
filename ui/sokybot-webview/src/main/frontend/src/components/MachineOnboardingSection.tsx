@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { CharacterStatus } from '../CharacterStatus';
 import { rsocketService } from '../RSocketClient';
 import { MachineOnboardingPanel } from './MachineOnboardingPanel';
@@ -18,11 +18,17 @@ import { useOnboardingFormState } from '../hooks/useOnboardingFormState';
 
 interface MachineOnboardingSectionProps {
     machineId: string;
+    compact?: boolean;
+    onStableInGameChange?: (machineId: string, stableInGame: boolean) => void;
 }
 
 const CONNECT_RPC_TIMEOUT_MS = 20_000;
 
-export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> = ({ machineId }) => {
+export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> = ({
+    machineId,
+    compact = false,
+    onStableInGameChange,
+}) => {
     const { invalidateMachines } = useInvalidateSokybotQueries();
     const { state, send, ctx, isOffline, stableInGame, stableTitle } = useMachineOnboardingMachine(machineId);
     const {
@@ -36,6 +42,9 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
     } = useOnboardingFormState(machineId);
     const loginPhaseRef = useRef<string>(state.context.loginPhase);
     loginPhaseRef.current = ctx.loginPhase;
+    useEffect(() => {
+        onStableInGameChange?.(machineId, stableInGame);
+    }, [machineId, onStableInGameChange, stableInGame]);
 
     // --- Stream thrashing guard ---
     const throttleGuard = useStreamThrottleGuard();
@@ -270,8 +279,36 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
         gatewayResultCode: ctx.gatewayResultCode,
         agentAuthResultCode: ctx.agentAuthResultCode,
         failureReason: ctx.failureReason,
+        lastFailureReason: ctx.lastFailureReason,
         queuePosition: ctx.queuePosition,
+        retryCount: ctx.retryCount,
+        maxRetries: ctx.maxRetries,
+        configuredClientVersion: ctx.configuredClientVersion,
     };
+
+    if (compact) {
+        return (
+            <div className="w-8 border-l border-border bg-card/80 backdrop-blur-md flex flex-col items-center py-2 gap-2 transition-all duration-300 z-20 shadow-[-4px_0_20px_rgba(0,0,0,0.02)]">
+                <span
+                    className={cn(
+                        'h-2 w-2 rounded-full',
+                        isOffline ? 'bg-destructive' : ctx.connected ? 'bg-emerald-400' : 'bg-muted-foreground/60'
+                    )}
+                    title={isOffline ? 'Offline' : ctx.connected ? 'Connected' : 'Disconnected'}
+                />
+                <span
+                    className={cn(
+                        'h-2 w-2 rounded-full',
+                        ctx.fatal ? 'bg-red-400' : ctx.authenticated || ctx.signInComplete ? 'bg-primary' : 'bg-muted-foreground/60'
+                    )}
+                    title={ctx.fatal ? 'Auth failed' : (ctx.authenticated || ctx.signInComplete) ? 'Auth success' : 'Auth pending'}
+                />
+                <span className="text-[9px] text-muted-foreground [writing-mode:vertical-rl] rotate-180 select-none">
+                    {ctx.loginPhase}
+                </span>
+            </div>
+        );
+    }
 
     return (
         <div className="w-80 border-l border-border bg-card/80 backdrop-blur-md flex flex-col min-h-0 transition-all duration-300 z-20 shadow-[-4px_0_20px_rgba(0,0,0,0.02)]">

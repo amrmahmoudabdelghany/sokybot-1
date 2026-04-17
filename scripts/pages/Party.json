@@ -1,0 +1,171 @@
+{
+    "type": "Stack",
+    "className": "h-full space-y-6",
+    "props": { "gap": 6 },
+    "children": [
+        {
+            "type": "Flex",
+            "className": "justify-between items-center border-b border-border pb-2",
+            "props": { "gap": 2 },
+            "children": [
+                {
+                    "type": "h3",
+                    "className": "text-foreground font-bold",
+                    "props": { "children": "Party Management" }
+                },
+                {
+                    "type": "Flex",
+                    "className": "space-x-2",
+                    "props": { "gap": 2 },
+                    "children": [
+                        {
+                            "type": "Button",
+                            "variant": "outline",
+                            "size": "sm",
+                            "props": {
+                                "onClick": "refresh",
+                                "children": "Refresh"
+                            }
+                        },
+                        {
+                            "type": "Button",
+                            "variant": "default",
+                            "size": "sm",
+                            "props": {
+                                "onClick": "save",
+                                "children": "Save Settings"
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "Grid",
+            "props": { "cols": 1, "colsMd": 2, "gap": 6 },
+            "children": [
+                {
+                    "type": "Box",
+                    "className": "bg-card border border-border rounded p-4 shadow-sm",
+                    "children": [
+                        {
+                            "type": "SectionTitle",
+                            "className": "text-primary",
+                            "props": { "children": "Party Automation" }
+                        },
+                        {
+                            "type": "Stack",
+                            "className": "space-y-4",
+                            "props": { "gap": 4 },
+                            "children": [
+                                {
+                                    "type": "Flex",
+                                    "className": "items-center space-x-2",
+                                    "props": { "gap": 2 },
+                                    "children": [
+                                        {
+                                            "type": "Checkbox",
+                                            "props": {
+                                                "checked": "${settings.partyAutoInvite}",
+                                                "onCheckedChange": "update",
+                                                "name": "partyAutoInvite"
+                                            }
+                                        },
+                                        {
+                                            "type": "Label",
+                                            "props": { "children": "Leader: Auto-invite group members" }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "Flex",
+                                    "className": "items-center space-x-2",
+                                    "props": { "gap": 2 },
+                                    "children": [
+                                        {
+                                            "type": "Checkbox",
+                                            "props": {
+                                                "checked": "${settings.partyAutoAccept}",
+                                                "onCheckedChange": "update",
+                                                "name": "partyAutoAccept"
+                                            }
+                                        },
+                                        {
+                                            "type": "Label",
+                                            "props": { "children": "Member: Auto-accept leader invites" }
+                                        }
+                                    ]
+                                },
+                                {
+                                    "type": "Stack",
+                                    "props": { "gap": 1 },
+                                    "children": [
+                                        { "type": "Label", "props": { "children": "Party Leader Machine" } },
+                                        {
+                                            "type": "Select",
+                                            "props": {
+                                                "value": "${settings.partyLeaderMachineId}",
+                                                "onChange": "update",
+                                                "name": "partyLeaderMachineId",
+                                                "children": [
+                                                    { "type": "option", "props": { "value": "", "children": "Select leader machine" } },
+                                                    { "type": "option", "props": { "value": "${leaderOptions[0] || ''}", "children": "${leaderOptions[0] || ''}" } },
+                                                    { "type": "option", "props": { "value": "${leaderOptions[1] || ''}", "children": "${leaderOptions[1] || ''}" } },
+                                                    { "type": "option", "props": { "value": "${leaderOptions[2] || ''}", "children": "${leaderOptions[2] || ''}" } },
+                                                    { "type": "option", "props": { "value": "${leaderOptions[3] || ''}", "children": "${leaderOptions[3] || ''}" } },
+                                                    { "type": "option", "props": { "value": "${leaderOptions[4] || ''}", "children": "${leaderOptions[4] || ''}" } },
+                                                    { "type": "option", "props": { "value": "${leaderOptions[5] || ''}", "children": "${leaderOptions[5] || ''}" } },
+                                                    { "type": "option", "props": { "value": "${leaderOptions[6] || ''}", "children": "${leaderOptions[6] || ''}" } },
+                                                    { "type": "option", "props": { "value": "${leaderOptions[7] || ''}", "children": "${leaderOptions[7] || ''}" } }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "type": "Box",
+                    "className": "bg-card border border-border rounded p-4 shadow-sm",
+                    "children": [
+                        {
+                            "type": "SectionTitle",
+                            "className": "text-emerald-500",
+                            "props": { "children": "Party Members" }
+                        },
+                        {
+                            "type": "Stack",
+                            "className": "space-y-2",
+                            "props": { "gap": 2 },
+                            "children": [
+                                {
+                                    "type": "Text",
+                                    "props": {
+                                        "variant": "small",
+                                        "children": "Machine: ${machineId} (group ${groupName})"
+                                    }
+                                },
+                                { "type": "Text", "props": { "variant": "small", "children": "Member #1: ${members[0] && members[0].name || '-'}" } },
+                                { "type": "Text", "props": { "variant": "small", "children": "Member #2: ${members[1] && members[1].name || '-'}" } },
+                                { "type": "Text", "props": { "variant": "small", "children": "Member #3: ${members[2] && members[2].name || '-'}" } },
+                                { "type": "Text", "props": { "variant": "small", "children": "Member #4: ${members[3] && members[3].name || '-'}" } },
+                                {
+                                    "type": "Button",
+                                    "variant": "outline",
+                                    "size": "sm",
+                                    "props": {
+                                        "onClick": "clearMembers",
+                                        "children": "Clear Member Cache"
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+

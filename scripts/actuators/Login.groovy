@@ -2461,6 +2461,35 @@ class Login extends BaseActuator {
             if (reason != null && !reason.isEmpty()) {
                 props.put("reason", reason)
             }
+            int retryCount = 0
+            try {
+                def retryRaw = ctx.getPersistentData().getOrDefault("loginRetryAttempt", 0)
+                retryCount = (retryRaw instanceof Number) ? ((Number) retryRaw).intValue() : toInt(retryRaw, 0)
+            } catch (Exception ignored) {}
+            props.put("retryCount", Math.max(0, retryCount))
+
+            int maxRetries = 0
+            int configuredClientVersion = 188
+            try {
+                def runtime = resolveRuntimeSettings(ctx, loginSettingsProvider, false)
+                if (runtime != null) {
+                    maxRetries = Math.max(0, toInt(runtime.maxRetryAttempts, 0))
+                    configuredClientVersion = toInt(runtime.gatewayClientVersion, 188)
+                }
+            } catch (Exception ignored) {}
+            props.put("maxRetries", maxRetries)
+            props.put("configuredClientVersion", configuredClientVersion)
+            String lastFailureReason = null
+            try {
+                lastFailureReason = String.valueOf(
+                        (reason != null && !reason.isEmpty())
+                                ? reason
+                                : (state?.getFailureReason() ?: "")
+                )
+            } catch (Exception ignored) {}
+            if (lastFailureReason != null && !lastFailureReason.isEmpty()) {
+                props.put("lastFailureReason", lastFailureReason)
+            }
             if (extras != null) {
                 props.putAll(extras)
             }

@@ -152,6 +152,10 @@ public class CharacterStateHandler implements IRSocketHandler {
         String failureReasonSnap = null;
         String loginDetailMessage = null;
         Integer queuePosition = null;
+        Integer retryCount = null;
+        Integer maxRetries = null;
+        String lastFailureReason = null;
+        Integer configuredClientVersion = null;
         List<Map<String, Object>> agentOptions = java.util.Collections.emptyList();
         List<String> availableCharacters = java.util.Collections.emptyList();
         String selectedCharacter = null;
@@ -208,10 +212,29 @@ public class CharacterStateHandler implements IRSocketHandler {
                 if (!savedLogin.isEmpty()) {
                     state.put("savedLogin", savedLogin);
                 }
+                Object cfgClientVersionRaw = raw != null ? raw.get("gatewayClientVersion") : null;
+                if (cfgClientVersionRaw instanceof Number) {
+                    configuredClientVersion = Integer.valueOf(((Number) cfgClientVersionRaw).intValue());
+                } else if (cfgClientVersionRaw != null) {
+                    try {
+                        configuredClientVersion = Integer.valueOf(Integer.parseInt(String.valueOf(cfgClientVersionRaw)));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
+                Object maxRetriesRaw = raw != null ? raw.get("maxRetryAttempts") : null;
+                if (maxRetriesRaw instanceof Number) {
+                    maxRetries = Integer.valueOf(Math.max(0, ((Number) maxRetriesRaw).intValue()));
+                } else if (maxRetriesRaw != null) {
+                    try {
+                        maxRetries = Integer.valueOf(Math.max(0, Integer.parseInt(String.valueOf(maxRetriesRaw))));
+                    } catch (NumberFormatException ignored) {
+                    }
+                }
             }
         } catch (Exception ignored) {
             // optional snapshot
         }
+        lastFailureReason = failureReasonSnap;
         state.put("connected", connected);
         state.put("loginPhase", loginPhase);
         state.put("agentsDiscovered", agentsDiscovered);
@@ -221,8 +244,12 @@ public class CharacterStateHandler implements IRSocketHandler {
         state.put("gatewayResultCode", gatewayResultCode);
         state.put("agentAuthResultCode", agentAuthResultCode);
         state.put("failureReason", failureReasonSnap);
+        state.put("lastFailureReason", lastFailureReason);
         state.put("loginDetailMessage", loginDetailMessage);
         state.put("queuePosition", queuePosition);
+        state.put("retryCount", retryCount);
+        state.put("maxRetries", maxRetries);
+        state.put("configuredClientVersion", configuredClientVersion);
         state.put("agentOptions", agentOptions);
         state.put("availableCharacters", availableCharacters);
         state.put("selectedCharacter", selectedCharacter);

@@ -192,6 +192,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
     const [isCreateGroupOpen, setCreateGroupOpen] = useState(false);
     const [isCreateMachineOpen, setCreateMachineOpen] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [stableInGameByMachine, setStableInGameByMachine] = useState<Record<string, boolean>>({});
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -432,7 +433,17 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
 
             {/* Right Sidebar (Dashboard) */}
             {selectedMachineId && (
-                <MachineOnboardingSection key={selectedMachineId} machineId={selectedMachineId} />
+                <MachineOnboardingSection
+                    key={selectedMachineId}
+                    machineId={selectedMachineId}
+                    compact={Boolean(stableInGameByMachine[selectedMachineId])}
+                    onStableInGameChange={(machineId, stableInGame) => {
+                        setStableInGameByMachine((prev) => {
+                            if (prev[machineId] === stableInGame) return prev;
+                            return { ...prev, [machineId]: stableInGame };
+                        });
+                    }}
+                />
             )}
         </div>
     );

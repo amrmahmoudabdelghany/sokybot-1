@@ -31,7 +31,11 @@ export type OnboardingMachineContext = {
     gatewayResultCode: number | null;
     agentAuthResultCode: number | null;
     failureReason: string | null;
+    lastFailureReason: string | null;
     queuePosition: number | null;
+    retryCount: number | null;
+    maxRetries: number | null;
+    configuredClientVersion: number | null;
     signInComplete: boolean;
     awaitingCharacterSelection: boolean;
 };
@@ -62,7 +66,11 @@ export type OnboardingMachineEvent =
         gatewayResultCode?: number | null;
         agentAuthResultCode?: number | null;
         failureReason?: string | null;
+        lastFailureReason?: string | null;
         queuePosition?: number | null;
+        retryCount?: number | null;
+        maxRetries?: number | null;
+        configuredClientVersion?: number | null;
         signInComplete?: boolean;
         awaitingCharacterSelection?: boolean;
     }
@@ -86,10 +94,29 @@ export function showAgentServerCard(ctx: OnboardingMachineContext): boolean {
     );
 }
 
+function asRecord(value: unknown): Record<string, unknown> {
+    if (value != null && typeof value === 'object') {
+        return value as Record<string, unknown>;
+    }
+    return {};
+}
+
+function getMaybeNumber(record: Record<string, unknown>, key: string): number | null {
+    const value = record[key];
+    return typeof value === 'number' ? value : null;
+}
+
+function getMaybeString(record: Record<string, unknown>, key: string): string | null {
+    const value = record[key];
+    if (value == null) return null;
+    return typeof value === 'string' ? value : String(value);
+}
+
 function mergeFromCharacterState(
     context: OnboardingMachineContext,
     data: CharacterState
 ): Partial<OnboardingMachineContext> {
+    const extra = asRecord(data);
     return {
         loginPhase: data.loginPhase || context.loginPhase || 'DISCONNECTED',
         connected: Boolean(data.connected),
@@ -120,12 +147,28 @@ function mergeFromCharacterState(
             data.failureReason !== undefined
                 ? (data.failureReason === null ? null : String(data.failureReason))
                 : context.failureReason,
+        lastFailureReason:
+            extra.lastFailureReason !== undefined
+                ? getMaybeString(extra, 'lastFailureReason')
+                : context.lastFailureReason,
         queuePosition:
             data.queuePosition === undefined
                 ? context.queuePosition
                 : typeof data.queuePosition === 'number'
                     ? data.queuePosition
                     : null,
+        retryCount:
+            extra.retryCount === undefined
+                ? context.retryCount
+                : getMaybeNumber(extra, 'retryCount'),
+        maxRetries:
+            extra.maxRetries === undefined
+                ? context.maxRetries
+                : getMaybeNumber(extra, 'maxRetries'),
+        configuredClientVersion:
+            extra.configuredClientVersion === undefined
+                ? context.configuredClientVersion
+                : getMaybeNumber(extra, 'configuredClientVersion'),
         signInComplete: data.signInComplete !== undefined ? Boolean(data.signInComplete) : context.signInComplete,
         awaitingCharacterSelection:
             data.awaitingCharacterSelection !== undefined
@@ -238,7 +281,13 @@ export const machineOnboardingMachine = setup({
                     e.agentAuthResultCode !== undefined ? e.agentAuthResultCode : context.agentAuthResultCode,
                 failureReason:
                     e.failureReason !== undefined ? (e.failureReason ?? null) : context.failureReason,
+                lastFailureReason:
+                    e.lastFailureReason !== undefined ? (e.lastFailureReason ?? null) : context.lastFailureReason,
                 queuePosition: e.queuePosition !== undefined ? e.queuePosition : context.queuePosition,
+                retryCount: e.retryCount !== undefined ? e.retryCount : context.retryCount,
+                maxRetries: e.maxRetries !== undefined ? e.maxRetries : context.maxRetries,
+                configuredClientVersion:
+                    e.configuredClientVersion !== undefined ? e.configuredClientVersion : context.configuredClientVersion,
                 signInComplete:
                     e.signInComplete !== undefined ? Boolean(e.signInComplete) : context.signInComplete,
                 awaitingCharacterSelection:
@@ -259,7 +308,11 @@ export const machineOnboardingMachine = setup({
             gatewayResultCode: null,
             agentAuthResultCode: null,
             failureReason: null,
+            lastFailureReason: null,
             queuePosition: null,
+            retryCount: null,
+            maxRetries: null,
+            configuredClientVersion: null,
             signInComplete: false,
             awaitingCharacterSelection: false,
         }),
@@ -327,7 +380,11 @@ export const machineOnboardingMachine = setup({
         gatewayResultCode: null,
         agentAuthResultCode: null,
         failureReason: null,
+        lastFailureReason: null,
         queuePosition: null,
+        retryCount: null,
+        maxRetries: null,
+        configuredClientVersion: null,
         signInComplete: false,
         awaitingCharacterSelection: false,
     }),
@@ -362,6 +419,7 @@ export const machineOnboardingMachine = setup({
 
 /** Map RSocket machine status stream payload to a STREAM_UPDATE event. */
 export function streamEventToMachineEvent(ev: MachineStatusEvent): OnboardingMachineEvent {
+    const extra = asRecord(ev);
     return {
         type: 'STREAM_UPDATE',
         loginPhase: ev.loginPhase,
@@ -386,7 +444,11 @@ export function streamEventToMachineEvent(ev: MachineStatusEvent): OnboardingMac
         gatewayResultCode: ev.gatewayResultCode,
         agentAuthResultCode: ev.agentAuthResultCode,
         failureReason: ev.failureReason,
+        lastFailureReason: getMaybeString(extra, 'lastFailureReason'),
         queuePosition: ev.queuePosition,
+        retryCount: getMaybeNumber(extra, 'retryCount'),
+        maxRetries: getMaybeNumber(extra, 'maxRetries'),
+        configuredClientVersion: getMaybeNumber(extra, 'configuredClientVersion'),
         signInComplete: ev.signInComplete,
         awaitingCharacterSelection: ev.awaitingCharacterSelection,
     };
