@@ -1,147 +1,44 @@
-import React, { useCallback, useEffect, useState, useRef } from 'react';
-import { useMachine } from '@xstate/react';
+import React, { useCallback, useRef } from 'react';
 import { CharacterStatus } from '../CharacterStatus';
 import { rsocketService } from '../RSocketClient';
 import { MachineOnboardingPanel } from './MachineOnboardingPanel';
 import { useInvalidateSokybotQueries } from '../query/sokybotQueries';
 import {
-    machineOnboardingMachine,
     showAgentServerCard,
     showConnectCard,
-    streamEventToMachineEvent,
 } from '../machines/machineOnboarding.machine';
 import { resolvePhaseToUX } from '../machines/loginPhaseMapping';
-import { useStablePhase } from '../machines/useStablePhase';
 import { useRetryCountdown } from '../machines/useRetryCountdown';
 import { useStreamThrottleGuard } from '../machines/useStreamThrottleGuard';
-import { useMachineSeverityStore } from '../machines/useMachineSeverityStore';
 import { cn } from '@sokybot/frontend-shared';
+import { useMachineOnboardingMachine } from '../hooks/useMachineOnboardingMachine';
+import { useGameEventsSync } from '../hooks/useGameEventsSync';
+import { useMachineStatusStream } from '../hooks/useMachineStatusStream';
+import { useOnboardingFormState } from '../hooks/useOnboardingFormState';
 
 interface MachineOnboardingSectionProps {
     machineId: string;
 }
 
-/** Phases where we still poll character.state so agentOptions stay in sync with the model. */
-const AGENT_WAIT_LOGIN_PHASES = new Set([
-    'WAITING_FOR_AGENTS',
-    'WAITING_FOR_AGENTS_TIMEOUT',
-    'MISSING_AGENT_SERVER',
-    'AGENTS_RECEIVED',
-    'REDIRECTING',
-    'SERVER_INSPECTION',
-]);
 const CONNECT_RPC_TIMEOUT_MS = 20_000;
 
 export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> = ({ machineId }) => {
     const { invalidateMachines } = useInvalidateSokybotQueries();
-    const [state, send] = useMachine(machineOnboardingMachine, { input: { machineId } });
-
-    const [onboardingFormByMachine, setOnboardingFormByMachine] = useState<Record<string, {
-        targetGateway: string;
-        username: string;
-        password: string;
-        passcode: string;
-        targetAgent: string;
-        selectedCharacter: string;
-        selectedCharacterSlot?: number;
-        characterSlotBase?: number;
-        characterSelectionStrictMode?: boolean;
-        agentWaitTimeoutMs?: number;
-        loginResponseTimeoutMs?: number;
-        agentAuthTimeoutMs?: number;
-        passcodeWaitTimeoutMs?: number;
-        passcodeUserInputTimeoutMs?: number;
-    }>>({});
-
-    const [abortInFlightByMachine, setAbortInFlightByMachine] = useState<Record<string, boolean>>({});
-    const abortInFlightRef = useRef<Record<string, boolean>>({});
-    /** Bumped on each connect attempt and on cancel; stale async work must not apply success side effects. */
-    const connectOperationGenRef = useRef(0);
-
-    const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' ? !navigator.onLine : false);
-    const streamSessionIdRef = useRef<number>(0);
-    const terminalPhaseGateUntilRef = useRef<number>(0);
-    const machineRemovedRef = useRef(false);
-    const lastStreamEventAtRef = useRef<number>(Date.now());
-    const streamReconnectAttemptRef = useRef(0);
-    const streamResubscribePendingRef = useRef(false);
-    const [streamEpoch, setStreamEpoch] = useState(0);
-
-    const [stableInGame, setStableInGame] = useState(false);
-
+    const { state, send, ctx, isOffline, stableInGame, stableTitle } = useMachineOnboardingMachine(machineId);
+    const {
+        setOnboardingFormByMachine,
+        abortInFlightByMachine,
+        setAbortInFlightByMachine,
+        abortInFlightRef,
+        connectOperationGenRef,
+        parseMachineParts,
+        currentOnboardingForm,
+    } = useOnboardingFormState(machineId);
     const loginPhaseRef = useRef<string>(state.context.loginPhase);
-    const lastHeartbeatSnapshotAtRef = useRef<number>(0);
-    const gameEventsSessionIdRef = useRef(0);
-
-    useEffect(() => {
-        const handleOnline = () => setIsOffline(false);
-        const handleOffline = () => setIsOffline(true);
-        window.addEventListener('online', handleOnline);
-        window.addEventListener('offline', handleOffline);
-        return () => {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-        };
-    }, []);
-
-    const ctx = state.context;
     loginPhaseRef.current = ctx.loginPhase;
-
-    // --- Delay hiding the onboarding panel until inGame has been stable for 2s ---
-    useEffect(() => {
-        if (ctx.inGame) {
-            const timer = setTimeout(() => setStableInGame(true), 2000);
-            return () => clearTimeout(timer);
-        } else {
-            setStableInGame(false);
-        }
-    }, [ctx.inGame]);
-
-    // --- Derive UX model ---
-    const ux = resolvePhaseToUX({
-        loginPhase: ctx.loginPhase,
-        uxCategory: ctx.uxCategory,
-        requiresInput: ctx.requiresInput,
-        fatal: ctx.fatal,
-    });
-
-    // --- Anti-flicker debounce (errors immediate, others 400ms) ---
-    const { stable: stableTitle } = useStablePhase(ux.displayTitle, ux.severity, machineId);
-
-    // --- Propagate severity to global sidebar ---
-    const setSeverity = useMachineSeverityStore((s) => s.setSeverity);
-    const clearMachine = useMachineSeverityStore((s) => s.clearMachine);
-    useEffect(() => {
-        setSeverity(machineId, ux.severity);
-    }, [machineId, ux.severity, setSeverity]);
-    useEffect(() => {
-        return () => clearMachine(machineId);
-    }, [machineId, clearMachine]);
 
     // --- Stream thrashing guard ---
     const throttleGuard = useStreamThrottleGuard();
-    const currentOnboardingForm = onboardingFormByMachine[machineId] || {
-        targetGateway: '',
-        username: '',
-        password: '',
-        passcode: '',
-        targetAgent: '',
-        selectedCharacter: '',
-        selectedCharacterSlot: -1,
-        characterSlotBase: 0,
-        characterSelectionStrictMode: false,
-        agentWaitTimeoutMs: 15000,
-        loginResponseTimeoutMs: 15000,
-        agentAuthTimeoutMs: 30000,
-        passcodeWaitTimeoutMs: 60000,
-        passcodeUserInputTimeoutMs: 60000,
-    };
-
-    const parseMachineParts = useCallback((id: string) => {
-        const parts = id.split('.', 2);
-        if (parts.length < 2) return null;
-        return { group: parts[0], name: parts[1] };
-    }, []);
 
     const isHighPriorityPhase = useCallback((phase?: string) => {
         if (!phase) return false;
@@ -191,187 +88,21 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
                 setTimeout(() => refreshMachineStatusSnapshot(id, attempt + 1), base + jitter);
             }
         }
-    }, [send]);
+    }, [send, setOnboardingFormByMachine]);
 
-    // Refresh onboarding snapshot when agent list arrives (CharacterStatus is not mounted until inGame).
-    useEffect(() => {
-        const sid = ++gameEventsSessionIdRef.current;
-        const minIntervalMs = 400;
-        let debounceId: number | null = null;
-        let lastRefreshAt = 0;
-
-        const scheduleSnapshot = () => {
-            const now = Date.now();
-            const waitMs = now - lastRefreshAt >= minIntervalMs ? 0 : minIntervalMs - (now - lastRefreshAt);
-            if (debounceId != null) {
-                window.clearTimeout(debounceId);
-            }
-            debounceId = window.setTimeout(() => {
-                debounceId = null;
-                if (gameEventsSessionIdRef.current !== sid) {
-                    return;
-                }
-                lastRefreshAt = Date.now();
-                void refreshMachineStatusSnapshot(machineId);
-            }, waitMs);
-        };
-
-        const sub = rsocketService.subscribeToGameEvents(
-            (event) => {
-                if (gameEventsSessionIdRef.current !== sid || !event) {
-                    return;
-                }
-                if (String(event.eventType) !== 'AgentListEvent') {
-                    return;
-                }
-                const eventTopicsRaw = (event as Record<string, unknown>)['event.topics'];
-                const eventTopics = Array.isArray(eventTopicsRaw) ? eventTopicsRaw.map(String) : [];
-                const isForMachine =
-                    eventTopics.some((topic) => topic.includes(machineId))
-                    || (typeof (event as Record<string, unknown>).fullName === 'string'
-                        && String((event as Record<string, unknown>).fullName).includes(machineId));
-                if (!isForMachine) {
-                    return;
-                }
-                scheduleSnapshot();
-            },
-            (err) => console.error('Onboarding game.events stream error', err)
-        );
-
-        return () => {
-            if (debounceId != null) {
-                window.clearTimeout(debounceId);
-            }
-            if (sub && typeof sub.unsubscribe === 'function') {
-                sub.unsubscribe();
-            }
-        };
-    }, [machineId, refreshMachineStatusSnapshot]);
-
-    useEffect(() => {
-        // Increment session ID on each mount/reconnect to invalidate stale events
-        const currentSessionId = ++streamSessionIdRef.current;
-        machineRemovedRef.current = false;
-        lastStreamEventAtRef.current = Date.now();
-        streamReconnectAttemptRef.current = 0;
-        streamResubscribePendingRef.current = false;
-
-        void refreshMachineStatusSnapshot(machineId);
-        const sub = rsocketService.subscribeToMachineStatus(
-            machineId,
-            (statusEvent) => {
-                // Stale event guard
-                if (streamSessionIdRef.current !== currentSessionId) return;
-
-                if (!statusEvent || statusEvent.machineId !== machineId) return;
-
-                if (machineRemovedRef.current) {
-                    return;
-                }
-
-                if (statusEvent.type === 'heartbeat') {
-                    lastStreamEventAtRef.current = Date.now();
-                    streamReconnectAttemptRef.current = 0;
-                    const phase = loginPhaseRef.current;
-                    if (phase && AGENT_WAIT_LOGIN_PHASES.has(phase)) {
-                        const now = Date.now();
-                        if (now - lastHeartbeatSnapshotAtRef.current >= 4000) {
-                            lastHeartbeatSnapshotAtRef.current = now;
-                            void refreshMachineStatusSnapshot(machineId);
-                        }
-                    }
-                    return;
-                }
-
-                if (statusEvent.type === 'MACHINE_REMOVED') {
-                    machineRemovedRef.current = true;
-                    lastStreamEventAtRef.current = Date.now();
-                    send(streamEventToMachineEvent({
-                        ...statusEvent,
-                        machineId,
-                        loginPhase: 'DISCONNECTED',
-                        connected: false,
-                        authenticated: false,
-                    }));
-                    return;
-                }
-
-                lastStreamEventAtRef.current = Date.now();
-                streamReconnectAttemptRef.current = 0;
-
-                // Cancellation race condition guard
-                if (
-                    abortInFlightRef.current[statusEvent.machineId]
-                    && statusEvent.loginPhase !== 'FAILED'
-                    && statusEvent.loginPhase !== 'DISCONNECTED'
-                ) {
-                    console.log(`[${statusEvent.machineId}] Suppressing intermediate phase ${statusEvent.loginPhase} during abort`);
-                    return;
-                }
-
-                // If a terminal/high-priority phase arrived recently, ignore stale in-progress regressions.
-                if (
-                    terminalPhaseGateUntilRef.current > Date.now()
-                    && !isHighPriorityPhase(statusEvent.loginPhase)
-                ) {
-                    void refreshMachineStatusSnapshot(machineId);
-                    return;
-                }
-
-                // Stream thrashing protection
-                if (!isHighPriorityPhase(statusEvent.loginPhase) && throttleGuard.recordTransition()) {
-                    console.warn(`[${machineId}] Stream thrashing detected – transitions throttled`);
-                    void refreshMachineStatusSnapshot(machineId);
-                    return;
-                }
-                if (isHighPriorityPhase(statusEvent.loginPhase)) {
-                    // Cancel/flush pending low-priority lag by blocking stale phases briefly.
-                    terminalPhaseGateUntilRef.current = Date.now() + 1200;
-                }
-                send(streamEventToMachineEvent(statusEvent));
-                void refreshMachineStatusSnapshot(machineId);
-            },
-            (err) => console.error('Layout machine status stream error', err)
-        );
-        const stalenessId = window.setInterval(() => {
-            if (machineRemovedRef.current || streamResubscribePendingRef.current) {
-                return;
-            }
-            if (Date.now() - lastStreamEventAtRef.current <= 15_000) {
-                return;
-            }
-            streamResubscribePendingRef.current = true;
-            const nextAttempt = streamReconnectAttemptRef.current + 1;
-            streamReconnectAttemptRef.current = Math.min(nextAttempt, 16);
-            const base = Math.min(30_000, 500 * Math.pow(2, Math.max(0, nextAttempt - 1)));
-            const jitter = Math.random() * 2000;
-            window.setTimeout(() => {
-                streamResubscribePendingRef.current = false;
-                if (machineRemovedRef.current) {
-                    return;
-                }
-                setStreamEpoch((e) => e + 1);
-            }, base + jitter);
-        }, 5000);
-
-        const softSyncId = window.setInterval(() => {
-            if (machineRemovedRef.current) {
-                return;
-            }
-            if (Date.now() - lastStreamEventAtRef.current > 15_000) {
-                return;
-            }
-            void refreshMachineStatusSnapshot(machineId);
-        }, 60_000);
-
-        return () => {
-            window.clearInterval(stalenessId);
-            window.clearInterval(softSyncId);
-            if (sub && typeof sub.unsubscribe === 'function') {
-                sub.unsubscribe();
-            }
-        };
-    }, [isHighPriorityPhase, machineId, refreshMachineStatusSnapshot, send, streamEpoch, throttleGuard]);
+    useGameEventsSync({
+        machineId,
+        refreshMachineStatusSnapshot: async (id) => refreshMachineStatusSnapshot(id),
+    });
+    useMachineStatusStream({
+        machineId,
+        send,
+        refreshMachineStatusSnapshot,
+        isHighPriorityPhase,
+        throttleGuard,
+        abortInFlightRef,
+        loginPhaseRef,
+    });
 
     const saveLoginPayload = async (id: string, payload: Record<string, unknown>, startAfterSave?: boolean) => {
         const parts = parseMachineParts(id);

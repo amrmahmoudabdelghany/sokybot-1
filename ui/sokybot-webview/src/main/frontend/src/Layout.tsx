@@ -39,6 +39,97 @@ const SeverityDot: React.FC<{ machineId: string }> = ({ machineId }) => {
     );
 };
 
+interface MachineListItemProps {
+    machine: { machineId: string; name?: string; isRunning?: boolean };
+    selectedMachineId: string | null;
+    selectedPageId: string | null;
+    setSelectedMachineId: (id: string | null) => void;
+    setSelectedPageId: (id: string | null) => void;
+    getMachineTabs: (machineId: string) => string[];
+    getPageIcon: (pageId: string) => React.ReactNode;
+    getSimpleName: (machineId: string) => string;
+    extensionPages: Record<string, { title?: string }>;
+    selectedIndicatorClass: string;
+    nestedTreeClass: string;
+}
+
+const MachineListItem: React.FC<MachineListItemProps> = ({
+    machine,
+    selectedMachineId,
+    selectedPageId,
+    setSelectedMachineId,
+    setSelectedPageId,
+    getMachineTabs,
+    getPageIcon,
+    getSimpleName,
+    extensionPages,
+    selectedIndicatorClass,
+    nestedTreeClass,
+}) => {
+    const tabs = getMachineTabs(machine.machineId);
+    const isSelected = selectedMachineId === machine.machineId;
+
+    return (
+        <div key={machine.machineId} className="space-y-1">
+            <Button
+                variant={isSelected ? "secondary" : "ghost"}
+                className={cn(
+                    "w-full justify-start font-normal pl-3 h-9 transition-all duration-200 group relative overflow-hidden",
+                    isSelected
+                        ? "font-medium bg-primary/10 text-primary hover:bg-primary/15"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+                )}
+                onClick={() => {
+                    setSelectedMachineId(machine.machineId);
+                }}
+            >
+                <Bot className={cn("h-4 w-4 mr-2.5 transition-colors",
+                    machine.isRunning ? "text-emerald-500" : "text-muted-foreground/85 group-hover:text-foreground"
+                )} />
+                <span className="truncate">{machine.name || getSimpleName(machine.machineId)}</span>
+                <SeverityDot machineId={machine.machineId} />
+                {isSelected && (
+                    <div className={selectedIndicatorClass} />
+                )}
+            </Button>
+
+            {isSelected && (
+                <div className={nestedTreeClass}>
+                    {tabs.length > 0 ? (
+                        tabs.map(tabId => {
+                            const page = extensionPages[tabId];
+                            const isActive = selectedPageId === tabId;
+                            return (
+                                <Button
+                                    key={tabId}
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                        "w-full justify-start h-8 text-xs font-normal transition-colors",
+                                        isActive
+                                            ? "text-primary bg-primary/5 font-medium"
+                                            : "text-muted-foreground/90 hover:text-foreground hover:bg-secondary/30"
+                                    )}
+                                    onClick={() => setSelectedPageId(tabId)}
+                                >
+                                    <div className="flex items-center">
+                                        {getPageIcon(tabId)}
+                                        {page?.title || tabId}
+                                    </div>
+                                </Button>
+                            );
+                        })
+                    ) : (
+                        <div className="text-[10px] text-muted-foreground/75 italic pl-2 py-1.5">
+                            No pages registered
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) => {
     const {
         selectedMachineId,
@@ -197,67 +288,21 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                                         <span className="text-[9px] bg-secondary px-1.5 py-0.5 rounded-full text-secondary-foreground font-mono shadow-sm border border-border/60">{groupMachines.length}</span>
                                     </div>
                                 </div>
-                                {groupMachines.map(m => (
-                                    /* Machine Item */
-                                    <div key={m.machineId} className="space-y-1">
-                                        <Button
-                                            key={m.machineId}
-                                            variant={selectedMachineId === m.machineId ? "secondary" : "ghost"}
-                                            className={cn(
-                                                "w-full justify-start font-normal pl-3 h-9 transition-all duration-200 group relative overflow-hidden",
-                                                selectedMachineId === m.machineId
-                                                    ? "font-medium bg-primary/10 text-primary hover:bg-primary/15"
-                                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-                                            )}
-                                            onClick={() => {
-                                                setSelectedMachineId(m.machineId);
-                                            }}
-                                        >
-                                            <Bot className={cn("h-4 w-4 mr-2.5 transition-colors",
-                                                m.isRunning ? "text-emerald-500" : "text-muted-foreground/85 group-hover:text-foreground"
-                                            )} />
-                                            <span className="truncate">{m.name || getSimpleName(m.machineId)}</span>
-                                            <SeverityDot machineId={m.machineId} />
-                                            {selectedMachineId === m.machineId && (
-                                                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary animate-in fade-in slide-in-from-left-1 duration-300" />
-                                            )}
-                                        </Button>
-
-                                        {/* Nested Pages (Tree View) */}
-                                        {selectedMachineId === m.machineId && (
-                                            <div className="ml-5 pl-3 border-l border-border/30 space-y-0.5 my-1 animate-in slide-in-from-top-2 duration-200 fade-in-0">
-                                                {getMachineTabs(m.machineId).length > 0 ? (
-                                                    getMachineTabs(m.machineId).map(tabId => {
-                                                        const page = extensionRegistry.pages[tabId];
-                                                        const isActive = selectedPageId === tabId;
-                                                        return (
-                                                            <Button
-                                                                key={tabId}
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className={cn(
-                                                                    "w-full justify-start h-8 text-xs font-normal transition-colors",
-                                                                    isActive
-                                                                        ? "text-primary bg-primary/5 font-medium"
-                                                                        : "text-muted-foreground/90 hover:text-foreground hover:bg-secondary/30"
-                                                                )}
-                                                                onClick={() => setSelectedPageId(tabId)}
-                                                            >
-                                                                <div className="flex items-center">
-                                                                    {getPageIcon(tabId)}
-                                                                    {page?.title || tabId}
-                                                                </div>
-                                                            </Button>
-                                                        );
-                                                    })
-                                                ) : (
-                                                    <div className="text-[10px] text-muted-foreground/75 italic pl-2 py-1.5">
-                                                        No pages registered
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
+                                {groupMachines.map((m) => (
+                                    <MachineListItem
+                                        key={m.machineId}
+                                        machine={m}
+                                        selectedMachineId={selectedMachineId}
+                                        selectedPageId={selectedPageId}
+                                        setSelectedMachineId={setSelectedMachineId}
+                                        setSelectedPageId={setSelectedPageId}
+                                        getMachineTabs={getMachineTabs}
+                                        getPageIcon={getPageIcon}
+                                        getSimpleName={getSimpleName}
+                                        extensionPages={extensionRegistry.pages}
+                                        selectedIndicatorClass="absolute left-0 top-0 bottom-0 w-0.5 bg-primary animate-in fade-in slide-in-from-left-1 duration-300"
+                                        nestedTreeClass="ml-5 pl-3 border-l border-border/30 space-y-0.5 my-1 animate-in slide-in-from-top-2 duration-200 fade-in-0"
+                                    />
                                 ))}
                             </div>
                         );
@@ -267,63 +312,21 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
                     {groupNames.length === 0 && uniqueMachines.length > 0 && (
                         <div className="space-y-1">
                             <div className="px-3 text-[10px] font-bold text-muted-foreground/90 uppercase tracking-widest mb-2">Default</div>
-                            {uniqueMachines.map(m => (
-                                <div key={m.machineId} className="space-y-1">
-                                    <Button
-                                        variant={selectedMachineId === m.machineId ? "secondary" : "ghost"}
-                                        className={cn(
-                                            "w-full justify-start font-normal pl-3 h-9 transition-all duration-200 group relative",
-                                            selectedMachineId === m.machineId
-                                                ? "font-medium bg-primary/10 text-primary hover:bg-primary/15"
-                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/40"
-                                        )}
-                                        onClick={() => setSelectedMachineId(m.machineId)}
-                                    >
-                                        <Bot className={cn("h-4 w-4 mr-2.5 transition-colors",
-                                            m.isRunning ? "text-emerald-500" : "text-muted-foreground/85 group-hover:text-foreground"
-                                        )} />
-                                        <span className="truncate">{m.name || m.machineId}</span>
-                                        <SeverityDot machineId={m.machineId} />
-                                        {selectedMachineId === m.machineId && (
-                                            <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-r-full" />
-                                        )}
-                                    </Button>
-
-                                    {/* Nested Pages (Tree View) */}
-                                    {selectedMachineId === m.machineId && (
-                                        <div className="ml-5 pl-3 border-l border-border/70 space-y-0.5 my-1 animate-in slide-in-from-top-2 duration-200 fade-in-0">
-                                            {getMachineTabs(m.machineId).length > 0 ? (
-                                                getMachineTabs(m.machineId).map(tabId => {
-                                                    const page = extensionRegistry.pages[tabId];
-                                                    const isActive = selectedPageId === tabId;
-                                                    return (
-                                                        <Button
-                                                            key={tabId}
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className={cn(
-                                                                "w-full justify-start h-8 text-xs font-normal transition-colors",
-                                                                isActive
-                                                                    ? "text-primary bg-primary/5 font-medium"
-                                                                    : "text-muted-foreground/90 hover:text-foreground hover:bg-secondary/30"
-                                                            )}
-                                                            onClick={() => setSelectedPageId(tabId)}
-                                                        >
-                                                            <div className="flex items-center">
-                                                                {getPageIcon(tabId)}
-                                                                {page?.title || tabId}
-                                                            </div>
-                                                        </Button>
-                                                    );
-                                                })
-                                            ) : (
-                                                <div className="text-[10px] text-muted-foreground/75 italic pl-2 py-1.5">
-                                                    No pages registered
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                            {uniqueMachines.map((m) => (
+                                <MachineListItem
+                                    key={m.machineId}
+                                    machine={m}
+                                    selectedMachineId={selectedMachineId}
+                                    selectedPageId={selectedPageId}
+                                    setSelectedMachineId={setSelectedMachineId}
+                                    setSelectedPageId={setSelectedPageId}
+                                    getMachineTabs={getMachineTabs}
+                                    getPageIcon={getPageIcon}
+                                    getSimpleName={getSimpleName}
+                                    extensionPages={extensionRegistry.pages}
+                                    selectedIndicatorClass="absolute left-0 top-0 bottom-0 w-0.5 bg-primary rounded-r-full"
+                                    nestedTreeClass="ml-5 pl-3 border-l border-border/70 space-y-0.5 my-1 animate-in slide-in-from-top-2 duration-200 fade-in-0"
+                                />
                             ))}
                         </div>
                     )}

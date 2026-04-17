@@ -134,6 +134,54 @@ function mergeFromCharacterState(
     };
 }
 
+function isConnectPhaseValue(loginPhase: string, connected: boolean): boolean {
+    return (
+        loginPhase === 'DISCONNECTED'
+        || loginPhase === 'MISSING_GATEWAY'
+        || loginPhase === 'CONNECTING_GATEWAY'
+        || loginPhase === 'GATEWAY_CONNECTED'
+        || (loginPhase === 'CONNECTING_GATEWAY' && !connected)
+    );
+}
+
+function isAgentPhaseValue(loginPhase: string): boolean {
+    return (
+        loginPhase === 'WAITING_FOR_AGENTS'
+        || loginPhase === 'WAITING_FOR_AGENTS_TIMEOUT'
+        || loginPhase === 'MISSING_AGENT_SERVER'
+        || loginPhase === 'SERVER_INSPECTION'
+        || loginPhase === 'AGENTS_RECEIVED'
+        || loginPhase === 'REDIRECTING'
+    );
+}
+
+function isCredentialsPhaseValue(loginPhase: string): boolean {
+    return (
+        loginPhase === 'MISSING_CREDENTIALS'
+        || loginPhase === 'LOGIN_SENT'
+        || loginPhase === 'LOGIN_SUCCESS'
+        || loginPhase === 'AUTH_SENT'
+        || loginPhase === 'AGENT_CONNECTED'
+        || loginPhase === 'WAITING_FOR_PASSCODE'
+        || loginPhase === 'WAIT_FOR_CAPTCHA'
+        || loginPhase === 'PASSCODE_SUBMITTED'
+        || loginPhase === 'IN_QUEUE'
+        || loginPhase === 'RETRY_DELAY'
+        || loginPhase === 'RETRY_DISABLED'
+        || loginPhase === 'RETRY_LIMIT_REACHED'
+        || loginPhase === 'FAILED'
+        || loginPhase === 'MANUAL_VERIFICATION_REQUIRED'
+    );
+}
+
+function isCharacterPhaseValue(loginPhase: string): boolean {
+    return (
+        loginPhase === 'AUTHENTICATED'
+        || loginPhase === 'MISSING_CHARACTER_SELECTION'
+        || loginPhase === 'LOADING_ENVIRONMENT'
+    );
+}
+
 export const machineOnboardingMachine = setup({
     types: {
         context: {} as OnboardingMachineContext,
@@ -218,37 +266,38 @@ export const machineOnboardingMachine = setup({
     },
     guards: {
         isConnectPhase: ({ context }) =>
-            context.loginPhase === 'DISCONNECTED'
-            || context.loginPhase === 'MISSING_GATEWAY'
-            || context.loginPhase === 'CONNECTING_GATEWAY'
-            || context.loginPhase === 'GATEWAY_CONNECTED',
+            isConnectPhaseValue(context.loginPhase, context.connected),
         isAgentPhase: ({ context }) =>
-            context.loginPhase === 'WAITING_FOR_AGENTS'
-            || context.loginPhase === 'WAITING_FOR_AGENTS_TIMEOUT'
-            || context.loginPhase === 'MISSING_AGENT_SERVER'
-            || context.loginPhase === 'SERVER_INSPECTION'
-            || context.loginPhase === 'AGENTS_RECEIVED'
-            || context.loginPhase === 'REDIRECTING',
+            isAgentPhaseValue(context.loginPhase),
         isCredentialsPhase: ({ context }) =>
-            context.loginPhase === 'MISSING_CREDENTIALS'
-            || context.loginPhase === 'LOGIN_SENT'
-            || context.loginPhase === 'LOGIN_SUCCESS'
-            || context.loginPhase === 'AUTH_SENT'
-            || context.loginPhase === 'AGENT_CONNECTED'
-            || context.loginPhase === 'WAITING_FOR_PASSCODE'
-            || context.loginPhase === 'WAIT_FOR_CAPTCHA'
-            || context.loginPhase === 'PASSCODE_SUBMITTED'
-            || context.loginPhase === 'IN_QUEUE'
-            || context.loginPhase === 'RETRY_DELAY'
-            || context.loginPhase === 'RETRY_DISABLED'
-            || context.loginPhase === 'RETRY_LIMIT_REACHED'
-            || context.loginPhase === 'FAILED'
-            || context.loginPhase === 'MANUAL_VERIFICATION_REQUIRED',
+            isCredentialsPhaseValue(context.loginPhase),
         isCharacterPhase: ({ context }) =>
-            context.loginPhase === 'AUTHENTICATED'
-            || context.loginPhase === 'MISSING_CHARACTER_SELECTION'
-            || context.loginPhase === 'LOADING_ENVIRONMENT',
+            isCharacterPhaseValue(context.loginPhase),
         isInGamePhase: ({ context }) => context.loginPhase === 'IN_GAME' || context.inGame === true,
+        isInGameStreamPhase: ({ event }) =>
+            event.type === 'STREAM_UPDATE' && (event.loginPhase === 'IN_GAME' || event.inGame === true),
+        isCharacterStreamPhase: ({ event }) =>
+            event.type === 'STREAM_UPDATE' && isCharacterPhaseValue(String(event.loginPhase ?? '')),
+        isCredentialsStreamPhase: ({ event }) =>
+            event.type === 'STREAM_UPDATE' && isCredentialsPhaseValue(String(event.loginPhase ?? '')),
+        isAgentStreamPhase: ({ event }) =>
+            event.type === 'STREAM_UPDATE' && isAgentPhaseValue(String(event.loginPhase ?? '')),
+        isInGameSnapshotPhase: ({ event }) =>
+            event.type === 'SNAPSHOT'
+            && !!event.data
+            && (event.data.loginPhase === 'IN_GAME' || Boolean(event.data.inGame)),
+        isCharacterSnapshotPhase: ({ event }) =>
+            event.type === 'SNAPSHOT'
+            && !!event.data
+            && isCharacterPhaseValue(String(event.data.loginPhase ?? '')),
+        isCredentialsSnapshotPhase: ({ event }) =>
+            event.type === 'SNAPSHOT'
+            && !!event.data
+            && isCredentialsPhaseValue(String(event.data.loginPhase ?? '')),
+        isAgentSnapshotPhase: ({ event }) =>
+            event.type === 'SNAPSHOT'
+            && !!event.data
+            && isAgentPhaseValue(String(event.data.loginPhase ?? '')),
     },
 }).createMachine({
     id: 'machineOnboarding',
@@ -289,17 +338,22 @@ export const machineOnboardingMachine = setup({
         character: {},
         inGame: {},
     },
-    always: [
-        { guard: 'isInGamePhase', target: '.inGame' },
-        { guard: 'isCharacterPhase', target: '.character' },
-        { guard: 'isCredentialsPhase', target: '.credentials' },
-        { guard: 'isAgentPhase', target: '.agent' },
-        { target: '.connect' },
-    ],
     on: {
-        SNAPSHOT: { actions: 'applyCharacterSnapshot' },
+        SNAPSHOT: [
+            { guard: 'isInGameSnapshotPhase', target: '.inGame', actions: 'applyCharacterSnapshot' },
+            { guard: 'isCharacterSnapshotPhase', target: '.character', actions: 'applyCharacterSnapshot' },
+            { guard: 'isCredentialsSnapshotPhase', target: '.credentials', actions: 'applyCharacterSnapshot' },
+            { guard: 'isAgentSnapshotPhase', target: '.agent', actions: 'applyCharacterSnapshot' },
+            { target: '.connect', actions: 'applyCharacterSnapshot' },
+        ],
         // Backend is the source of truth; allow jump transitions to any phase bucket.
-        STREAM_UPDATE: { actions: 'applyStreamStatus' },
+        STREAM_UPDATE: [
+            { guard: 'isInGameStreamPhase', target: '.inGame', actions: 'applyStreamStatus' },
+            { guard: 'isCharacterStreamPhase', target: '.character', actions: 'applyStreamStatus' },
+            { guard: 'isCredentialsStreamPhase', target: '.credentials', actions: 'applyStreamStatus' },
+            { guard: 'isAgentStreamPhase', target: '.agent', actions: 'applyStreamStatus' },
+            { target: '.connect', actions: 'applyStreamStatus' },
+        ],
         CONNECT_BEGIN: { actions: 'setConnectInFlightOn' },
         CONNECT_END: { actions: 'setConnectInFlightOff' },
         CANCEL: { actions: 'applyCancelState', target: '.connect' },
