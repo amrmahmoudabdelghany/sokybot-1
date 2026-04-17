@@ -1,5 +1,8 @@
 import org.sokybot.settings.security.Encrypted
 import org.sokybot.gamemodel.LoginState
+import org.sokybot.engine.api.login.GatewayErrorClassifier
+import org.sokybot.engine.api.login.GatewayFailureClassification
+import org.sokybot.engine.api.login.LoginPhaseAliases
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventAdmin
 import java.nio.charset.Charset
@@ -19,15 +22,6 @@ class Login extends BaseActuator {
     private static final List<Long> RETRY_DELAYS_MS = [5000L, 10000L, 30000L, 60000L]
     private static final long MIN_RETRY_DELAY_MS = 5000L
     private static final long MAX_RETRY_DELAY_MS = 300000L
-    // Gateway result codes (0xA102 failure byte) observed on common SRO builds.
-    private static final int GATEWAY_ERR_INVALID_CREDENTIAL_1 = 1
-    private static final int GATEWAY_ERR_INVALID_CREDENTIAL_2 = 2
-    private static final int GATEWAY_ERR_ALREADY_CONNECTED = 4
-    private static final int GATEWAY_ERR_DISCONNECTED_OR_BLOCKED = 6
-    private static final int GATEWAY_ERR_INVALID_CREDENTIAL_0B = 0x0B
-    private static final int GATEWAY_ERR_INVALID_CREDENTIAL_0C = 0x0C
-    private static final int GATEWAY_ERR_INVALID_CREDENTIAL_0D = 0x0D
-
     private static final String KEY_LOGIN_HALTED_CREDENTIAL = "loginHaltedCredentialFailure"
     private static final String KEY_LOGIN_LAST_HALT_SIGNATURE = "loginLastHaltSignature"
     private static final String FAILURE_NETWORK = "NETWORK"
@@ -2213,18 +2207,18 @@ class Login extends BaseActuator {
         String reason = String.valueOf(loginState?.getFailureReason() ?: "").toLowerCase()
         Integer gatewayCode = readGatewayFailureCode(loginState)
         if (gatewayCode != null) {
-            if (gatewayCode == GATEWAY_ERR_ALREADY_CONNECTED) {
-                return FAILURE_GHOST_COOLDOWN
-            }
-            if (gatewayCode == GATEWAY_ERR_DISCONNECTED_OR_BLOCKED) {
-                return FAILURE_NETWORK
-            }
-            if (gatewayCode == GATEWAY_ERR_INVALID_CREDENTIAL_1
-                    || gatewayCode == GATEWAY_ERR_INVALID_CREDENTIAL_2
-                    || gatewayCode == GATEWAY_ERR_INVALID_CREDENTIAL_0B
-                    || gatewayCode == GATEWAY_ERR_INVALID_CREDENTIAL_0C
-                    || gatewayCode == GATEWAY_ERR_INVALID_CREDENTIAL_0D) {
-                return FAILURE_CREDENTIAL
+            def classified = GatewayErrorClassifier.classify(gatewayCode, reason).orElse(null)
+            if (classified != null) {
+                switch (classified) {
+                    case GatewayFailureClassification.GHOST_COOLDOWN:
+                        return FAILURE_GHOST_COOLDOWN
+                    case GatewayFailureClassification.NETWORK:
+                        return FAILURE_NETWORK
+                    case GatewayFailureClassification.CREDENTIAL:
+                        return FAILURE_CREDENTIAL
+                    default:
+                        return classified.name()
+                }
             }
             log.warn("Unhandled gateway login failure code {} (reason='{}')", gatewayCode, String.valueOf(loginState?.getFailureReason() ?: ""))
             return FAILURE_UNKNOWN_RETRY
@@ -2499,69 +2493,24 @@ class Login extends BaseActuator {
         }
     }
 
-    /** Resolves engine phase strings to enum values for idempotent model updates (null if not an enum constant). */
+    /** Resolves engine phase strings to enum values for idempotent model updates (null if not known). */
     private LoginState.Phase resolveLoginPhaseEnum(String phase) {
         if (phase == null) return null
-        try {
-            return LoginState.Phase.valueOf(phase)
-        } catch (IllegalArgumentException ignored) {
-            return null
-        }
+        return LoginPhaseAliases.resolve(phase).orElse(null)
     }
 
     private void setLoginStatePhase(def loginState, String phase) {
         if (loginState == null || phase == null) return
         try {
-            try {
-                loginState.setPhase(LoginState.Phase.valueOf(phase))
-                return
-            } catch (IllegalArgumentException ignored) {
-                // non-enum aliases are handled below
-            }
-            switch (phase) {
-                case PHASE_MISSING_GATEWAY:
-                    loginState.setPhase(LoginState.Phase.MISSING_GATEWAY); return
-                case PHASE_PENDING_MANUAL_CONNECT:
-                    loginState.setPhase(LoginState.Phase.PENDING_MANUAL_CONNECT); return
-                case PHASE_MISSING_CREDENTIALS:
-                    loginState.setPhase(LoginState.Phase.MISSING_CREDENTIALS); return
-                case PHASE_MISSING_AGENT_SERVER:
-                    loginState.setPhase(LoginState.Phase.MISSING_AGENT_SERVER); return
-                case PHASE_MISSING_CHARACTER_SELECTION:
-                    loginState.setPhase(LoginState.Phase.MISSING_CHARACTER_SELECTION); return
-                case PHASE_WAITING_FOR_AGENTS:
-                    loginState.setPhase(LoginState.Phase.WAITING_FOR_AGENTS); return
-                case PHASE_GATEWAY_LOGIN_PAUSE:
-                    loginState.setPhase(LoginState.Phase.AGENTS_RECEIVED); return
-                case PHASE_WAITING_FOR_AGENTS_TIMEOUT:
-                    loginState.setPhase(LoginState.Phase.WAITING_FOR_AGENTS_TIMEOUT); return
-                case PHASE_WAITING_FOR_PASSCODE:
-                    loginState.setPhase(LoginState.Phase.WAITING_FOR_PASSCODE); return
-                case PHASE_WAIT_FOR_CAPTCHA:
-                    loginState.setPhase(LoginState.Phase.WAIT_FOR_CAPTCHA); return
-                case PHASE_PASSCODE_SUBMITTED:
-                    loginState.setPhase(LoginState.Phase.PASSCODE_SUBMITTED); return
-                case PHASE_IN_QUEUE:
-                    loginState.setPhase(LoginState.Phase.IN_QUEUE); return
-                case PHASE_LOADING_ENVIRONMENT:
-                    loginState.setPhase(LoginState.Phase.LOADING_ENVIRONMENT); return
-                case "CONNECTING_GATEWAY":
-                    loginState.setPhase(LoginState.Phase.CONNECTING_GATEWAY); return
-                case "MANUAL_VERIFICATION_REQUIRED":
-                    loginState.setPhase(LoginState.Phase.MANUAL_VERIFICATION_REQUIRED); return
-                case "RETRY_DELAY":
-                    loginState.setPhase(LoginState.Phase.RETRY_DELAY); return
-                case "RETRY_DISABLED":
-                    loginState.setPhase(LoginState.Phase.RETRY_DISABLED); return
-                case "RETRY_LIMIT_REACHED":
-                    loginState.setPhase(LoginState.Phase.RETRY_LIMIT_REACHED); return
-                default:
-                    return
-            }
+            LoginPhaseAliases.resolve(phase).ifPresent { p -> loginState.setPhase(p) }
         } catch (Exception ignored) {
             // Ignore unknown/non-enum phases
         }
     }
+
+    /** @deprecated Retained for script/plugin cross-references; prefer LoginPhaseAliases. */
+    @Deprecated
+    private static final Map<String, LoginState.Phase> LEGACY_PHASE_ALIASES = LoginPhaseAliases.defaultAliases()
 
     @Override
     void shutdown(IActuatorContext ctx) {

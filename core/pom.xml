@@ -18,5 +18,6 @@
         <module>sokybot-engine-api</module>
         <module>sokybot-runtime</module>
         <module>sokybot-behaviors-training</module>
+        <module>sokybot-login-policies-builtin</module>
     </modules>
 </project>
