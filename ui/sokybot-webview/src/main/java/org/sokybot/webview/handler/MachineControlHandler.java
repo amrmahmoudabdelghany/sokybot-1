@@ -1,6 +1,7 @@
 package org.sokybot.webview.handler;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -107,23 +108,30 @@ public class MachineControlHandler implements IRSocketHandler {
             return Mono.just(RSocketResponse.invalidParams("machineId is required"));
         }
 
-        IMachineContext ctx = findMachine(machineId).orElse(null);
+        ISokybotContext sokybotCtx = this.sokybotContext;
+        IGroupContext groupCtx = this.groupContext;
+        IMachineContext ctx = findMachine(machineId, sokybotCtx, groupCtx).orElse(null);
         if (ctx == null) {
             return Mono.just(RSocketResponse.notFound("Machine not found: " + machineId));
         }
 
         try {
             boolean alreadyRunning = ctx.isRunning();
-            boolean alreadyConnecting = alreadyRunning && ctx.getEngine().getActiveActivities().contains("LOGIN");
+            List<String> activities = alreadyRunning
+                    ? ctx.getEngine().getActiveActivities()
+                    : Collections.emptyList();
+            boolean alreadyConnecting = activities.contains("LOGIN");
             if (alreadyConnecting) {
                 return Mono.just(RSocketResponse.success(new MachineActionResultDto("already_connecting", machineId)));
             }
-            if (!alreadyRunning) {
-                ctx.getEngine().start();
+            if (alreadyRunning) {
+                ctx.getEngine().wakeWorkflow();
+                return Mono.just(RSocketResponse.success(new MachineActionResultDto("already_running", machineId)));
             }
+            ctx.getEngine().start();
             ctx.getEngine().sendEvent(EngineEvent.CONNECT);
             ctx.getEngine().wakeWorkflow();
-            return Mono.just(RSocketResponse.success(new MachineActionResultDto(alreadyRunning ? "already_running" : "started", machineId)));
+            return Mono.just(RSocketResponse.success(new MachineActionResultDto("started", machineId)));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));
         }
@@ -136,7 +144,9 @@ public class MachineControlHandler implements IRSocketHandler {
             return Mono.just(RSocketResponse.invalidParams("machineId is required"));
         }
 
-        IMachineContext ctx = findMachine(machineId).orElse(null);
+        ISokybotContext sokybotCtx = this.sokybotContext;
+        IGroupContext groupCtx = this.groupContext;
+        IMachineContext ctx = findMachine(machineId, sokybotCtx, groupCtx).orElse(null);
         if (ctx == null) {
             return Mono.just(RSocketResponse.notFound("Machine not found: " + machineId));
         }
@@ -149,23 +159,25 @@ public class MachineControlHandler implements IRSocketHandler {
         }
     }
 
-    private java.util.Optional<IMachineContext> findMachine(String machineId) {
-        return MachineResolver.resolve(sokybotContext, groupContext, machineId);
+    private java.util.Optional<IMachineContext> findMachine(String machineId, ISokybotContext sokybotCtx, IGroupContext groupCtx) {
+        return MachineResolver.resolve(sokybotCtx, groupCtx, machineId);
     }
 
     private Mono<RSocketResponse> handleList(RSocketRequest request) {
+        ISokybotContext sokybotCtx = this.sokybotContext;
+        IGroupContext groupCtx = this.groupContext;
         Map<String, MachineInfoDto> machineMap = new java.util.LinkedHashMap<>();
 
-        if (sokybotContext != null) {
-            for (IGroupContext group : sokybotContext.getGroups()) {
+        if (sokybotCtx != null) {
+            for (IGroupContext group : sokybotCtx.getGroups()) {
                 for (IMachineContext machine : group.getMachines()) {
                     MachineInfoDto info = new MachineInfoDto(machine.fullName(), machine.getMachineName(), group.name(), machine.isRunning());
                     machineMap.put(machine.fullName(), info);
                 }
             }
-        } else if (groupContext != null) {
-            for (IMachineContext machine : groupContext.getMachines()) {
-                MachineInfoDto info = new MachineInfoDto(machine.fullName(), machine.getMachineName(), groupContext.name(), machine.isRunning());
+        } else if (groupCtx != null) {
+            for (IMachineContext machine : groupCtx.getMachines()) {
+                MachineInfoDto info = new MachineInfoDto(machine.fullName(), machine.getMachineName(), groupCtx.name(), machine.isRunning());
                 machineMap.put(machine.fullName(), info);
             }
         }
@@ -175,6 +187,7 @@ public class MachineControlHandler implements IRSocketHandler {
     }
 
     private Mono<RSocketResponse> handleCreate(RSocketRequest request) {
+        ISokybotContext sokybotCtx = this.sokybotContext;
         String group = request.getString("group");
         String name = request.getString("name");
 
@@ -185,13 +198,13 @@ public class MachineControlHandler implements IRSocketHandler {
             return Mono.just(RSocketResponse.invalidParams("name is required"));
         }
 
-        if (sokybotContext == null) {
+        if (sokybotCtx == null) {
             return Mono.just(RSocketResponse.error(
                     RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
                     "Sokybot context not available"));
         }
 
-        IGroupContext grpCtx = sokybotContext.findGroupCtx(group).orElse(null);
+        IGroupContext grpCtx = sokybotCtx.findGroupCtx(group).orElse(null);
         if (grpCtx == null) {
             return Mono.just(RSocketResponse.notFound("Group not found: " + group));
         }
@@ -210,6 +223,7 @@ public class MachineControlHandler implements IRSocketHandler {
 
     @SuppressWarnings("unchecked")
     private Mono<RSocketResponse> handleInitialize(RSocketRequest request) {
+        org.sokybot.settings.api.ISettingsRegistry localSettingsRegistry = this.settingsRegistry;
         String group = request.getString("group");
         String name = request.getString("name");
         String scope = request.getString("scope");
@@ -219,14 +233,14 @@ public class MachineControlHandler implements IRSocketHandler {
             return Mono.just(RSocketResponse.invalidParams("group, name, scope, and payload are required"));
         }
 
-        if (settingsRegistry == null) {
+        if (localSettingsRegistry == null) {
             return Mono.just(RSocketResponse.error(
                     RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
                     "Settings registry not available"));
         }
 
         try {
-            settingsRegistry.writeRawSettings(group, name, scope, payload);
+            localSettingsRegistry.writeRawSettings(group, name, scope, payload);
 
             return Mono.just(RSocketResponse.success(new MachineActionResultDto("initialized", group + "." + name)));
         } catch (Exception e) {

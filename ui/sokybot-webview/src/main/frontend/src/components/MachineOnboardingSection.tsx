@@ -30,6 +30,7 @@ const AGENT_WAIT_LOGIN_PHASES = new Set([
     'REDIRECTING',
     'SERVER_INSPECTION',
 ]);
+const CONNECT_RPC_TIMEOUT_MS = 20_000;
 
 export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> = ({ machineId }) => {
     const { invalidateMachines } = useInvalidateSokybotQueries();
@@ -402,17 +403,28 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
             connectGen = ++connectOperationGenRef.current;
             send({ type: 'CONNECT_BEGIN' });
         }
+        const timeoutError = new Error(`Connect initialization timed out after ${CONNECT_RPC_TIMEOUT_MS}ms`);
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            window.setTimeout(() => reject(timeoutError), CONNECT_RPC_TIMEOUT_MS);
+        });
         try {
-            await rsocketService.initializeMachine(parts.group, parts.name, 'login', payload);
-            if (
-                startAfterSave
-                && connectGen !== undefined
-                && connectGen !== connectOperationGenRef.current
-            ) {
-                return;
-            }
+            await Promise.race([
+                (async () => {
+                    await rsocketService.initializeMachine(parts.group, parts.name, 'login', payload);
+                    if (
+                        startAfterSave
+                        && connectGen !== undefined
+                        && connectGen !== connectOperationGenRef.current
+                    ) {
+                        return;
+                    }
+                    if (startAfterSave) {
+                        await rsocketService.startBot(id);
+                    }
+                })(),
+                timeoutPromise,
+            ]);
             if (startAfterSave) {
-                await rsocketService.startBot(id);
                 if (connectGen !== undefined && connectGen !== connectOperationGenRef.current) {
                     return;
                 }
@@ -426,6 +438,21 @@ export const MachineOnboardingSection: React.FC<MachineOnboardingSectionProps> =
                 return;
             }
             await refreshMachineStatusSnapshot(id);
+        } catch (err) {
+            const isTimeout = err instanceof Error && err.message === timeoutError.message;
+            if (isTimeout && startAfterSave) {
+                send({
+                    type: 'STREAM_UPDATE',
+                    loginPhase: 'FAILED',
+                    reason: 'Initialization/start request timed out',
+                    loginDetailMessage: 'Connection attempt timed out while initializing machine',
+                    failureReason: 'connect_timeout',
+                    fatal: false,
+                    failureClass: 'NETWORK',
+                    uxCategory: 'ERROR',
+                });
+            }
+            console.error('Failed to save login payload', err);
         } finally {
             if (
                 startAfterSave
