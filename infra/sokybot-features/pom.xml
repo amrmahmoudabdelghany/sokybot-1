@@ -94,7 +94,17 @@
         </dependency>
         <dependency>
             <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-login-policies-builtin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-login-security-builtin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-login-workflow-builtin</artifactId>
             <version>${project.version}</version>
         </dependency>
 

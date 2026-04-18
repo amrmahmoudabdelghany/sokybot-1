@@ -151,6 +151,15 @@ public class SettingsRegistryImpl implements ISettingsRegistry {
         return registrations.keySet();
     }
 
+    @Override
+    public Class<?> getRegisteredSettingsType(String scope) {
+        if (scope == null) {
+            return null;
+        }
+        ScopeRegistration<?> reg = registrations.get(scope);
+        return reg == null ? null : reg.type;
+    }
+
     private Path getSettingsFile(String groupName, String machineName, String scope) {
         String safeGroup = sanitize(groupName);
         String safeMachine = sanitize(machineName);

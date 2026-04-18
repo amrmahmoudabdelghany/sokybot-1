@@ -39,6 +39,11 @@ public interface ISettingsRegistry {
     Set<String> getRegisteredScopes();
 
     /**
+     * Returns the Java settings type registered for a scope, or {@code null} if the scope is unknown.
+     */
+    Class<?> getRegisteredSettingsType(String scope);
+
+    /**
      * Dynamically write settings to disk without requiring a registered generic
      * type.
      * This is useful for initialization/UI components that don't depend on the

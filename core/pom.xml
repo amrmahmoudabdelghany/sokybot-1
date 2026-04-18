@@ -22,6 +22,7 @@
         <module>sokybot-login-protocol-builtin</module>
         <module>sokybot-login-settings-builtin</module>
         <module>sokybot-login-security-builtin</module>
+        <module>sokybot-login-workflow-builtin</module>
         <module>sokybot-trade-coordination-api</module>
         <module>sokybot-trade-coordinator</module>
         <module>sokybot-behaviors-trade</module>

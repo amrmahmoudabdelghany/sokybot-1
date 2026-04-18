@@ -38,7 +38,7 @@ public final class LoginSettingsSnapshotterImpl implements ILoginSettingsSnapsho
             return null;
         }
         try {
-            Class<?> loginSettingsType = resolveLoginSettingsType();
+            Class<?> loginSettingsType = resolveLoginSettingsType(registry);
             if (loginSettingsType != null) {
                 @SuppressWarnings({"rawtypes", "unchecked"})
                 ISettingsProvider<?> provider = ((ISettingsRegistry) registry).getProvider(
@@ -62,7 +62,13 @@ public final class LoginSettingsSnapshotterImpl implements ILoginSettingsSnapsho
         }
     }
 
-    private static Class<?> resolveLoginSettingsType() {
+    private static Class<?> resolveLoginSettingsType(ISettingsRegistry registry) {
+        if (registry != null) {
+            Class<?> registered = registry.getRegisteredSettingsType(LOGIN_SCOPE);
+            if (registered != null) {
+                return registered;
+            }
+        }
         try {
             return Class.forName("LoginSettings");
         } catch (Exception ignored) {

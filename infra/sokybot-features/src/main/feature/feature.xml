@@ -169,11 +169,13 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- LOGIN RUNTIME FEATURE: Decomposed login protocol/settings/security      -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
-    <feature name="sokybot-login-runtime" version="${project.version}" description="Login protocol, settings snapshots, and interactive security coordinator">
+    <feature name="sokybot-login-runtime" version="${project.version}" description="Login protocol, settings, failure policies, security coordinator, and compiled login workflow">
         <feature>sokybot-core</feature>
         <bundle>mvn:org.sokybot/sokybot-login-protocol-builtin/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-login-settings-builtin/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-login-policies-builtin/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-login-security-builtin/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-login-workflow-builtin/${project.version}</bundle>
     </feature>
 
 
