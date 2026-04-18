@@ -82,6 +82,21 @@
             <artifactId>sokybot-dev-shell</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-login-protocol-builtin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-login-settings-builtin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-login-security-builtin</artifactId>
+            <version>${project.version}</version>
+        </dependency>
 
         <!-- Trade & stall network (sokybot-trade feature) -->
         <dependency>

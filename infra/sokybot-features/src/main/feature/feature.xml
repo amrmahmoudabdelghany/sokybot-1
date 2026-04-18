@@ -166,6 +166,16 @@
         <bundle>mvn:org.sokybot/sokybot-behaviors-trade/${project.version}</bundle>
     </feature>
 
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- LOGIN RUNTIME FEATURE: Decomposed login protocol/settings/security      -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-login-runtime" version="${project.version}" description="Login protocol, settings snapshots, and interactive security coordinator">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:org.sokybot/sokybot-login-protocol-builtin/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-login-settings-builtin/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-login-security-builtin/${project.version}</bundle>
+    </feature>
+
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- DEV FEATURE: Development and debugging tools (not for production)       -->
@@ -184,6 +194,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-full" version="${project.version}" description="Sokybot Full Application">
         <feature>sokybot-core</feature>
+        <feature>sokybot-login-runtime</feature>
         <feature>sokybot-trade</feature>
     </feature>
 

@@ -1,21 +1,16 @@
 import org.sokybot.settings.security.Encrypted
 import org.sokybot.gamemodel.LoginState
-import org.sokybot.engine.api.login.GatewayErrorClassifier
-import org.sokybot.engine.api.login.GatewayFailureClassification
+import org.sokybot.engine.api.login.GatewayCredentials
+import org.sokybot.engine.api.login.IGatewayProtocolEmitter
+import org.sokybot.engine.api.login.ILoginFailureClassifier
+import org.sokybot.engine.api.login.ILoginInteractiveCoordinator
+import org.sokybot.engine.api.login.ILoginSettingsSnapshotter
+import org.sokybot.engine.api.login.InteractiveOutcome
+import org.sokybot.engine.api.login.LoginFailureClass
 import org.sokybot.engine.api.login.LoginPhaseAliases
 import org.osgi.service.event.Event
 import org.osgi.service.event.EventAdmin
-import java.nio.charset.Charset
-import java.nio.charset.StandardCharsets
-import org.sokybot.engine.api.RateLimitException
-import org.sokybot.network.NetworkPeer
-import org.sokybot.network.packet.ClientOpcode
-import org.sokybot.network.packet.Encoding
-import org.sokybot.network.packet.MutablePacket
-import groovy.lang.MissingMethodException
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 class Login extends BaseActuator {
     private def loginSettingsProvider
@@ -118,19 +113,7 @@ class Login extends BaseActuator {
     private static final String KEY_ERROR_THROTTLE = "loginErrorThrottle"
     private static final long DNS_STICKY_TTL_MS = 60000L
 
-    /** Matches DispatcherImpl agent-request min interval; used only for Groovy 0x6101 fallback. */
     private static final long AGENT_REQUEST_MIN_INTERVAL_MS = 10_000L
-    /** Workflow persistent keys: per machine (IWorkflowContext), not script statics. */
-    private static final String KEY_FALLBACK_AGENT_REQUEST_LAST_MS = "loginFallbackAgentRequestLastMs"
-    private static final String KEY_FALLBACK_AGENT_COLD_BYPASS_USED = "loginFallbackAgentColdBypassUsed"
-
-    /**
-     * Resilience for OSGi/API skew: null = unknown, true = use {@code disp.send*} dynamic calls,
-     * false = use script packet fallbacks until JVM restart or script reload (new script class).
-     * Ops: refresh {@code sokybot-engine} and {@code sokybot-engine-api} together; script fallback masks stale bundles.
-     */
-    private static final AtomicReference<Boolean> DISPATCHER_DYNAMIC_PACKET_API_OK = new AtomicReference<>(null)
-    private static final AtomicBoolean LOGGED_DISPATCHER_PACKET_API_FAILURE = new AtomicBoolean(false)
 
     /** OSGi Event topics reject {@code '.'} in segments (machine ids are {@code Group.Machine}). */
     private static String osgiEventTopicSeg(String s) {
@@ -332,7 +315,7 @@ class Login extends BaseActuator {
                         .guard({ ctx -> ctx.getPersistentData().get("gatewayHost") != null })
                         .action({ ctx ->
                             def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
-                            if (settings instanceof Map) {
+                            if (settings != null) {
                                 beginAttemptSnapshot(ctx, settings)
                             }
                             String host = normalizeHostForSocket((String) ctx.getPersistentData().get("gatewayHost"))
@@ -340,7 +323,7 @@ class Login extends BaseActuator {
                             emitEnginePhase(ctx, "CONNECTING_GATEWAY", "Connecting", null)
                             logInfoCtx(ctx, "CONNECT_TO_GATEWAY attempting -> {}:{} (alreadyConnected={})",
                                     host, port, ctx.getDispatcher().isServerConnected())
-                            applyGatewayHandshakeHintsToProxy(ctx, settings instanceof Map ? (Map) settings : [:])
+                            applyGatewayHandshakeHintsToProxy(ctx, settings)
                             ctx.getDispatcher().setClientlessMode(true)
                             ctx.getDispatcher().connect(host, port)
                             logInfoCtx(ctx, "CONNECT_TO_GATEWAY result connected={}",
@@ -591,11 +574,12 @@ class Login extends BaseActuator {
                         })
                         .action({ ctx ->
                             def loginState = ctx.getGameModel()?.getLoginState()
-                            String failureClass = classifyFailure(loginState, ctx)
+                            def verdict = classifyFailureVerdict(loginState, ctx)
+                            String failureClass = verdict?.getFailureClass() != null ? String.valueOf(verdict.getFailureClass().name()) : classifyFailure(loginState, ctx)
                             ctx.getPersistentData().remove(KEY_LOGIN_RESPONSE_DEADLINE_MS)
                             emitEnginePhase(ctx, LoginState.Phase.FAILED.name(), "GatewayLoginFailed",
                                     String.valueOf(loginState?.getFailureReason() ?: ""),
-                                    [failureClass: failureClass, gatewayResultCode: parseGatewayFailureCode(loginState)])
+                                    [failureClass: failureClass, gatewayResultCode: verdict?.getGatewayCode()])
                         })
                         .nextState(STATE_RETRY_DELAY)
                         .targetState(STATE_CHECK_LOGIN_TIMEOUT)
@@ -771,11 +755,12 @@ class Login extends BaseActuator {
                             // (c) missing prereqs / user-resume-required
                             if (handleMissingPrereq(ctx, loginState)) return
 
-                            String failureClass = classifyFailure(loginState, ctx)
+                            def verdict = classifyFailureVerdict(loginState, ctx)
+                            String failureClass = verdict?.getFailureClass() != null ? String.valueOf(verdict.getFailureClass().name()) : classifyFailure(loginState, ctx)
                             logInfoCtx(ctx, "Failure classified as {}", failureClass)
 
                             // (d) terminal halts / special cases
-                            if (handleTerminalFailure(ctx, loginState, failureClass, settings)) return
+                            if (handleTerminalFailure(ctx, loginState, verdict, settings)) return
 
                             // (e) schedule retry
                             scheduleRetry(ctx, loginState, s, failureClass, settings)
@@ -900,6 +885,22 @@ class Login extends BaseActuator {
                 it.remove()
             }
         }
+    }
+
+    private IGatewayProtocolEmitter gatewayProtocolEmitter(def ctx) {
+        return ctx?.getServiceOptional(IGatewayProtocolEmitter)?.orElse(null)
+    }
+
+    private ILoginSettingsSnapshotter loginSettingsSnapshotter(def ctx) {
+        return ctx?.getServiceOptional(ILoginSettingsSnapshotter)?.orElse(null)
+    }
+
+    private ILoginFailureClassifier loginFailureClassifier(def ctx) {
+        return ctx?.getServiceOptional(ILoginFailureClassifier)?.orElse(null)
+    }
+
+    private ILoginInteractiveCoordinator loginInteractiveCoordinator(def ctx) {
+        return ctx?.getServiceOptional(ILoginInteractiveCoordinator)?.orElse(null)
     }
 
     private short parseAgentId(String targetAgent) {
@@ -1080,14 +1081,14 @@ class Login extends BaseActuator {
     }
 
     /** Forwards locale / module / build to proxy before TCP connect (clientless 0x6100 + 0x2002 after gateway 0x2001). */
-    private void applyGatewayHandshakeHintsToProxy(def ctx, Map settings) {
+    private void applyGatewayHandshakeHintsToProxy(def ctx, def settings) {
         try {
             def proxy = ctx?.getProxyConnection()
             if (proxy == null) return
-            Map s = settings != null ? settings : [:]
+            def s = settings
             byte loc = effectiveGatewayLocale(s)
-            String mod = normalizeGatewayClientModule(s.gatewayClientModule)
-            int ver = toInt(s.gatewayClientVersion, 188)
+            String mod = normalizeGatewayClientModule(s?.gatewayClientModule)
+            int ver = toInt(s?.gatewayClientVersion, 188)
             proxy.setGatewayHandshakeHints(loc, mod, ver)
         } catch (Exception e) {
             log.debug("setGatewayHandshakeHints skipped: {}", e.message)
@@ -1107,7 +1108,7 @@ class Login extends BaseActuator {
     }
 
     private long effectiveGatewayLoginMinIntervalMs(def settings) {
-        if (settings instanceof Map && settings.gatewayLoginMinIntervalMs instanceof Number) {
+        if (settings?.gatewayLoginMinIntervalMs instanceof Number) {
             return Math.max(0L, ((Number) settings.gatewayLoginMinIntervalMs).longValue())
         }
         String prop = System.getProperty("sokybot.login.request.minIntervalMs")
@@ -1125,7 +1126,7 @@ class Login extends BaseActuator {
      * {@code sokybot.login.pauseAfterAgentListMs} then default {@code 1500} ms.
      */
     private long effectiveGatewayLoginPauseAfterAgentListMs(def settings) {
-        if (settings instanceof Map && settings.gatewayLoginPauseAfterAgentListMs instanceof Number) {
+        if (settings?.gatewayLoginPauseAfterAgentListMs instanceof Number) {
             return Math.max(0L, Math.min(60000L, ((Number) settings.gatewayLoginPauseAfterAgentListMs).longValue()))
         }
         String prop = System.getProperty("sokybot.login.pauseAfterAgentListMs")
@@ -1208,14 +1209,6 @@ class Login extends BaseActuator {
         }
     }
 
-    private long ensureInteractiveWaitDeadline(def ctx, long timeoutMs) {
-        def existing = ctx.getPersistentData().get(KEY_INTERACTIVE_WAIT_UNTIL_MS)
-        if (existing instanceof Number) return ((Number) existing).longValue()
-        long deadline = System.currentTimeMillis() + Math.max(1000L, timeoutMs)
-        ctx.getPersistentData().put(KEY_INTERACTIVE_WAIT_UNTIL_MS, deadline)
-        return deadline
-    }
-
     private long readInteractiveWaitUntil(def ctx) {
         def existing = ctx.getPersistentData().get(KEY_INTERACTIVE_WAIT_UNTIL_MS)
         return (existing instanceof Number) ? ((Number) existing).longValue() : 0L
@@ -1276,75 +1269,15 @@ class Login extends BaseActuator {
         return attempt < maxAttempts
     }
 
-    /**
-     * @param fetchFromProvider false: return cached runtime map only (may be null).
-     *                          true: use cache if present; otherwise load from provider.
-     *                          Explicit connect always bypasses cache via buildAndStoreRuntimeSettings.
-     */
-    private Map resolveRuntimeSettings(def ctx, def settingsProvider, boolean fetchFromProvider) {
+    private def resolveRuntimeSettings(def ctx, def settingsProvider, boolean fetchFromProvider) {
         boolean explicitConnect = Boolean.TRUE.equals(ctx.getPersistentData().get("explicitConnectRequested"))
+        def snapshotter = loginSettingsSnapshotter(ctx)
+        if (snapshotter == null) {
+            return null
+        }
+        boolean forceRefresh = explicitConnect || fetchFromProvider
+        def snapshot = snapshotter.snapshot(ctx, forceRefresh)
         if (explicitConnect) {
-            return buildAndStoreRuntimeSettings(ctx, settingsProvider, true)
-        }
-        if (!fetchFromProvider) {
-            def existing = ctx.getPersistentData().get(KEY_RUNTIME_LOGIN_SETTINGS)
-            return existing instanceof Map ? existing : null
-        }
-        def existing = ctx.getPersistentData().get(KEY_RUNTIME_LOGIN_SETTINGS)
-        if (existing instanceof Map) {
-            return existing
-        }
-        return buildAndStoreRuntimeSettings(ctx, settingsProvider, false)
-    }
-
-    private Map buildAndStoreRuntimeSettings(def ctx, def settingsProvider, boolean explicitSideEffects) {
-        def raw = null
-        try {
-            raw = settingsProvider?.get()
-        } catch (Exception e) {
-            log.warn("Login settings get() failed for machine {}: {}", ctx?.getMachineName(), e.getMessage())
-        }
-        Map snapshot
-        if (raw == null) {
-            snapshot = emptyRuntimeLoginSettingsSnapshot()
-        } else {
-            snapshot = [
-                    targetGateway    : String.valueOf(raw.getTargetGateway() ?: ""),
-                    username         : String.valueOf(raw.getUsername() ?: ""),
-                    password         : String.valueOf(raw.getPassword() ?: ""),
-                    passcode         : String.valueOf(raw.getPasscode() ?: ""),
-                    targetAgent      : String.valueOf(raw.getTargetAgent() ?: ""),
-                    selectedCharacter: String.valueOf(raw.getSelectedCharacter() ?: ""),
-                    locale           : raw.getLocale(),
-                    autoLogin        : raw.isAutoLogin(),
-                    autoReconnect    : raw.isAutoReconnect(),
-                    retryBaseDelayMs : raw.getRetryBaseDelayMs(),
-                    retryMaxDelayMs  : raw.getRetryMaxDelayMs(),
-                    maxRetryAttempts : raw.getMaxRetryAttempts(),
-                    infiniteRetryMode: raw.isInfiniteRetryMode(),
-                    loginCharset     : resolveSettingField(raw, "loginCharset", "windows-1252"),
-                    agentWaitTimeoutMs: normalizeTimeout("agentWaitTimeoutMs", resolveSettingField(raw, "agentWaitTimeoutMs", String.valueOf(AGENT_WAIT_TIMEOUT_MS)), AGENT_WAIT_TIMEOUT_MS, 5000L, 30000L),
-                    loginResponseTimeoutMs: normalizeTimeout("loginResponseTimeoutMs", resolveSettingField(raw, "loginResponseTimeoutMs", String.valueOf(LOGIN_RESPONSE_TIMEOUT_MS)), LOGIN_RESPONSE_TIMEOUT_MS, 15000L, 30000L),
-                    agentAuthTimeoutMs: normalizeTimeout("agentAuthTimeoutMs", resolveSettingField(raw, "agentAuthTimeoutMs", String.valueOf(AGENT_AUTH_TIMEOUT_MS)), AGENT_AUTH_TIMEOUT_MS, 10000L, 30000L),
-                    passcodeWaitTimeoutMs: normalizeTimeout("passcodeWaitTimeoutMs", resolveSettingField(raw, "passcodeWaitTimeoutMs", String.valueOf(PASSCODE_WAIT_TIMEOUT_MS)), PASSCODE_WAIT_TIMEOUT_MS, 5000L, 120000L),
-                    passcodeUserInputTimeoutMs: normalizeTimeout("passcodeUserInputTimeoutMs", resolveSettingField(raw, "passcodeUserInputTimeoutMs", String.valueOf(PASSCODE_USER_INPUT_TIMEOUT_MS)), PASSCODE_USER_INPUT_TIMEOUT_MS, 5000L, 180000L),
-                    agentRequestMaxRetries: Math.max(0, toInt(resolveSettingField(raw, "agentRequestMaxRetries", "2"), 2)),
-                    agentRequestRetryBackoffMs: normalizeTimeout("agentRequestRetryBackoffMs", resolveSettingField(raw, "agentRequestRetryBackoffMs", "2000"), 2000L, 500L, 60000L),
-                    agentBanBlockDurationMs: normalizeTimeout("agentBanBlockDurationMs", resolveSettingField(raw, "agentBanBlockDurationMs", "300000"), 300000L, 10000L, 3600000L),
-                    gatewayLoginMinIntervalMs: normalizeTimeout("gatewayLoginMinIntervalMs", resolveSettingField(raw, "gatewayLoginMinIntervalMs", "2000"), 2000L, 0L, 60000L),
-                    gatewayLoginPauseAfterAgentListMs: normalizeTimeout("gatewayLoginPauseAfterAgentListMs", resolveSettingField(raw, "gatewayLoginPauseAfterAgentListMs", "1500"), 1500L, 0L, 60000L),
-                    gatewayClientVersion: toInt(resolveSettingField(raw, "gatewayClientVersion", "188"), 188),
-                    gatewayClientModule: normalizeGatewayClientModule(resolveSettingField(raw, "gatewayClientModule", "SR_Client")),
-                    selectedCharacterSlot: toInt(resolveSettingField(raw, "selectedCharacterSlot", "-1"), -1),
-                    characterSlotBase: toInt(resolveSettingField(raw, "characterSlotBase", "0"), 0),
-                    characterSelectionStrictMode: toBool(resolveSettingField(raw, "characterSelectionStrictMode", "false"), false),
-                    passcodeStringDetectionEnabled: toBool(resolveSettingField(raw, "passcodeStringDetectionEnabled", "true"), true),
-                    logoutAckTimeoutMs: normalizeTimeout("logoutAckTimeoutMs", resolveSettingField(raw, "logoutAckTimeoutMs", String.valueOf(LOGOUT_ACK_TIMEOUT_MS)), LOGOUT_ACK_TIMEOUT_MS, 500L, 10000L)
-            ]
-            enforceTimeoutHierarchy(snapshot)
-        }
-        ctx.getPersistentData().put(KEY_RUNTIME_LOGIN_SETTINGS, snapshot)
-        if (explicitSideEffects) {
             ctx.getPersistentData().remove("uiLoginPhase")
             ctx.getPersistentData().remove(KEY_UI_LOGIN_PHASE_EVENT_DEDUP)
             ctx.getPersistentData().remove(KEY_LOGIN_LAST_HALT_SIGNATURE)
@@ -1360,47 +1293,8 @@ class Login extends BaseActuator {
                 }
             } catch (Exception ignored) {
             }
-            log.info("Refreshed runtime login settings for explicit connect on machine {}", ctx.getMachineName())
         }
         return snapshot
-    }
-
-    private Map emptyRuntimeLoginSettingsSnapshot() {
-        Map snap = [
-                targetGateway    : "",
-                username         : "",
-                password         : "",
-                passcode         : "",
-                targetAgent      : "",
-                selectedCharacter: "",
-                locale           : null,
-                autoLogin        : false,
-                autoReconnect    : false,
-                retryBaseDelayMs : 5000,
-                retryMaxDelayMs  : 60000,
-                maxRetryAttempts : 0,
-                infiniteRetryMode: true,
-                loginCharset     : "windows-1252",
-                agentWaitTimeoutMs: AGENT_WAIT_TIMEOUT_MS,
-                loginResponseTimeoutMs: LOGIN_RESPONSE_TIMEOUT_MS,
-                agentAuthTimeoutMs: AGENT_AUTH_TIMEOUT_MS,
-                passcodeWaitTimeoutMs: PASSCODE_WAIT_TIMEOUT_MS,
-                passcodeUserInputTimeoutMs: PASSCODE_USER_INPUT_TIMEOUT_MS,
-                agentRequestMaxRetries: 2,
-                agentRequestRetryBackoffMs: 2000L,
-                agentBanBlockDurationMs: 300000L,
-                gatewayLoginMinIntervalMs: 2000L,
-                gatewayLoginPauseAfterAgentListMs: 1500L,
-                gatewayClientVersion: 188,
-                gatewayClientModule: "SR_Client",
-                selectedCharacterSlot: -1,
-                characterSlotBase: 0,
-                characterSelectionStrictMode: false,
-                passcodeStringDetectionEnabled: true,
-                logoutAckTimeoutMs: LOGOUT_ACK_TIMEOUT_MS
-        ]
-        enforceTimeoutHierarchy(snap)
-        return snap
     }
 
     private boolean isHalted(def ctx, def loginState) {
@@ -1429,232 +1323,39 @@ class Login extends BaseActuator {
     }
 
     private void beginAttemptSnapshot(def ctx, def settings) {
-        if (!(settings instanceof Map)) return
-        ctx.getPersistentData().put(KEY_ATTEMPT_LOGIN_SETTINGS, new LinkedHashMap(settings))
+        if (settings == null) return
+        ctx.getPersistentData().put(KEY_ATTEMPT_LOGIN_SETTINGS, settings)
         long current = currentAttemptId(ctx)
         ctx.getPersistentData().put(KEY_ACTIVE_ATTEMPT_ID, current + 1L)
     }
 
-    private String resolveSettingField(def settingsObj, String fieldName, String defaultValue) {
-        if (settingsObj == null || fieldName == null || fieldName.isEmpty()) return defaultValue
-        try {
-            def value = settingsObj."${fieldName}"
-            if (value == null) return defaultValue
-            String asString = String.valueOf(value).trim()
-            return asString.isEmpty() ? defaultValue : asString
-        } catch (Exception ignored) {
-            return defaultValue
-        }
-    }
-
-    private long normalizeTimeout(String name, def rawValue, long defaultValue, long minValue, long maxValue) {
-        long value = toLong(rawValue, defaultValue)
-        long clamped = Math.max(minValue, Math.min(maxValue, value))
-        if (clamped != value) {
-            log.warn("Clamped {} from {} to {}", name, value, clamped)
-        }
-        return clamped
-    }
-
-    private void enforceTimeoutHierarchy(Map snapshot) {
-        long parent = (snapshot?.loginResponseTimeoutMs instanceof Number) ? ((Number) snapshot.loginResponseTimeoutMs).longValue() : LOGIN_RESPONSE_TIMEOUT_MS
-        long childAgent = (snapshot?.agentWaitTimeoutMs instanceof Number) ? ((Number) snapshot.agentWaitTimeoutMs).longValue() : AGENT_WAIT_TIMEOUT_MS
-        if (childAgent >= parent) {
-            snapshot.agentWaitTimeoutMs = Math.max(1000L, parent - 1000L)
-            log.warn("Adjusted agentWaitTimeoutMs to {} to keep it below loginResponseTimeoutMs={}", snapshot.agentWaitTimeoutMs, parent)
-        }
-        int retries = (snapshot?.agentRequestMaxRetries instanceof Number) ? ((Number) snapshot.agentRequestMaxRetries).intValue() : 0
-        long backoff = (snapshot?.agentRequestRetryBackoffMs instanceof Number) ? ((Number) snapshot.agentRequestRetryBackoffMs).longValue() : 2000L
-        long perAttempt = (snapshot?.agentWaitTimeoutMs instanceof Number) ? ((Number) snapshot.agentWaitTimeoutMs).longValue() : AGENT_WAIT_TIMEOUT_MS
-        long totalBudget = perAttempt * (retries + 1L) + (backoff * retries)
-        if (totalBudget > parent) {
-            long divisor = Math.max(1L, perAttempt + backoff)
-            long headroom = parent - perAttempt
-            // Groovy '/' can yield BigDecimal and break Math.max(long, ?); use integer division.
-            long computed = headroom > 0L ? headroom.intdiv(divisor) : 0L
-            int maxRetries = (int) Math.max(0L, computed)
-            if (maxRetries < retries) {
-                snapshot.agentRequestMaxRetries = maxRetries
-                log.warn("Adjusted agentRequestMaxRetries from {} to {} to fit loginResponseTimeoutMs budget", retries, maxRetries)
-            }
-        }
-    }
-
     private long effectiveAgentWaitTimeoutMs(def settings) {
         if (settings?.agentWaitTimeoutMs instanceof Number) return ((Number) settings.agentWaitTimeoutMs).longValue()
+        if (settings?.getAgentWaitTimeoutMs() != null) return (long) settings.getAgentWaitTimeoutMs()
         return AGENT_WAIT_TIMEOUT_MS
     }
 
     private long effectiveLoginResponseTimeoutMs(def settings) {
         if (settings?.loginResponseTimeoutMs instanceof Number) return ((Number) settings.loginResponseTimeoutMs).longValue()
+        if (settings?.getLoginResponseTimeoutMs() != null) return (long) settings.getLoginResponseTimeoutMs()
         return LOGIN_RESPONSE_TIMEOUT_MS
     }
 
     private long effectiveAgentAuthTimeoutMs(def settings) {
         if (settings?.agentAuthTimeoutMs instanceof Number) return ((Number) settings.agentAuthTimeoutMs).longValue()
+        if (settings?.getAgentAuthTimeoutMs() != null) return (long) settings.getAgentAuthTimeoutMs()
         return AGENT_AUTH_TIMEOUT_MS
     }
 
     private long effectivePasscodeUserInputTimeoutMs(def settings) {
         if (settings?.passcodeUserInputTimeoutMs instanceof Number) return ((Number) settings.passcodeUserInputTimeoutMs).longValue()
+        if (settings?.getPasscodeUserInputTimeoutMs() != null) return (long) settings.getPasscodeUserInputTimeoutMs()
         return PASSCODE_USER_INPUT_TIMEOUT_MS
     }
 
-    private static final String DISPATCHER_IMPL_CLASS_NAME = 'org.sokybot.engine.core.dispatcher.DispatcherImpl'
-
     /**
-     * Resolves {@code IProxyConnection} for server sends when {@code IDispatcher} / {@code IWorkflowContext}
-     * interface dispatch is broken (e.g. OSGi {@code AbstractMethodError}). Uses the concrete dispatcher field last.
+     * Requests 0x6101 through IGatewayProtocolEmitter with cache/ban guards.
      */
-    private Object resolveWorkflowProxyConnection(def ctx, def disp) {
-        try {
-            def p = ctx?.getProxyConnection()
-            if (p != null) {
-                return p
-            }
-        } catch (Throwable ignored) {
-            // Skewed IWorkflowContext vs runtime class
-        }
-        if (disp == null) {
-            return null
-        }
-        try {
-            def cls = disp.getClass()
-            if (DISPATCHER_IMPL_CLASS_NAME == cls.getName()) {
-                def f = cls.getDeclaredField('proxyConnection')
-                f.setAccessible(true)
-                return f.get(disp)
-            }
-        } catch (Throwable e) {
-            log.debug("Could not read proxyConnection from dispatcher: {}", e.getMessage())
-        }
-        return null
-    }
-
-    /**
-     * Sends a server-bound workflow packet. When {@code DISPATCHER_DYNAMIC_PACKET_API_OK} is false (e.g. OSGi
-     * {@code AbstractMethodError} on {@code IDispatcher}), uses only {@code IProxyConnection} — never the broken dispatcher.
-     *
-     * @return true if the packet was sent; false if nothing was sent (caller should treat as failure)
-     */
-    private boolean sendWorkflowServerPacket(def ctx, MutablePacket pkt) {
-        def disp = ctx != null ? ctx.getDispatcher() : null
-        if (disp == null) {
-            try {
-                disp = context?.getDispatcher()
-            } catch (Exception ignored) {
-            }
-        }
-        if (DISPATCHER_DYNAMIC_PACKET_API_OK.get() == Boolean.FALSE) {
-            try {
-                def proxy = resolveWorkflowProxyConnection(ctx, disp)
-                if (proxy != null) {
-                    proxy.sendToServer(pkt)
-                    return true
-                }
-            } catch (Throwable e) {
-                log.warn("Proxy sendToServer failed while dispatcher API disabled: {}", e.getMessage())
-            }
-            log.error("SEVERE: Dispatcher packet API disabled and no proxy; cannot send server packet")
-            return false
-        }
-        if (disp == null) {
-            try {
-                def proxy = resolveWorkflowProxyConnection(ctx, null)
-                if (proxy != null) {
-                    proxy.sendToServer(pkt)
-                    return true
-                }
-            } catch (Throwable e) {
-                log.warn("Proxy sendToServer failed (no dispatcher): {}", e.getMessage())
-            }
-            log.error("SEVERE: No dispatcher and no proxy; cannot send server packet")
-            return false
-        }
-        try {
-            disp.sendToServer(pkt)
-            return true
-        } catch (Throwable t) {
-            if (isDispatcherPacketApiChainFailure(t)) {
-                DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
-                logDispatcherPacketApiFirstFailure(disp, t)
-                try {
-                    def proxy = resolveWorkflowProxyConnection(ctx, disp)
-                    if (proxy != null) {
-                        proxy.sendToServer(pkt)
-                        return true
-                    }
-                } catch (Throwable e) {
-                    log.warn("Proxy fallback after dispatcher failure: {}", e.getMessage())
-                }
-                log.error("SEVERE: Dispatcher failed and proxy unavailable; cannot send server packet")
-                return false
-            }
-            if (t instanceof Error && !(t instanceof Exception)) {
-                throw (Error) t
-            }
-            if (t instanceof Exception) {
-                throw (Exception) t
-            }
-            throw new RuntimeException(t)
-        }
-    }
-
-    private static boolean isDispatcherPacketApiChainFailure(Throwable t) {
-        for (Throwable c = t; c != null; c = c.getCause()) {
-            if (c instanceof MissingMethodException) return true
-            if (c instanceof AbstractMethodError) return true
-            if (c instanceof NoSuchMethodError) return true
-            if (c instanceof IncompatibleClassChangeError) return true
-        }
-        return false
-    }
-
-    private void logDispatcherPacketApiFirstFailure(def disp, Throwable t) {
-        if (LOGGED_DISPATCHER_PACKET_API_FAILURE.compareAndSet(false, true)) {
-            String cls = disp != null ? String.valueOf(disp.getClass().getName()) : "null"
-            String head = "First failure detected; using raw packet fallbacks until JVM restart or script reload (receiver=" + cls + ")"
-            if (t != null) {
-                log.error(head + ": " + t.getMessage(), t)
-            } else {
-                log.error(head)
-            }
-        }
-    }
-
-    /**
-     * 0x6101 via sendToServer with DispatcherImpl-equivalent spacing; state in workflow persistent data (per machine).
-     */
-    private boolean sendAgentRequestFallback(def ctx, def settings, boolean allowBypass) {
-        long now = System.currentTimeMillis()
-        def pd = ctx?.getPersistentData()
-        if (pd == null) {
-            log.error("SEVERE: Cannot enforce agent-request rate limit (no persistent data); skipping 0x6101 fallback send")
-            return false
-        }
-        long last = (pd.get(KEY_FALLBACK_AGENT_REQUEST_LAST_MS) instanceof Number)
-                ? ((Number) pd.get(KEY_FALLBACK_AGENT_REQUEST_LAST_MS)).longValue() : 0L
-        boolean bypass = allowBypass && !Boolean.TRUE.equals(pd.get(KEY_FALLBACK_AGENT_COLD_BYPASS_USED))
-        if (!bypass && last > 0L && (now - last) < AGENT_REQUEST_MIN_INTERVAL_MS) {
-            long left = AGENT_REQUEST_MIN_INTERVAL_MS - (now - last)
-            log.error("SEVERE: Skipping agent list request (fallback rate limit); dispatcher packet API unavailable, {} ms left in interval", left)
-            return false
-        }
-        MutablePacket agentPkt = MutablePacket.getBuilder(0, ClientOpcode.AGENT_REQUEST)
-                .packetEncoding(Encoding.ENCRYPTED)
-                .dataEncoding(Encoding.PLAIN)
-                .packetSource(NetworkPeer.BOT)
-                .build()
-        if (!sendWorkflowServerPacket(ctx, agentPkt)) {
-            return false
-        }
-        pd.put(KEY_FALLBACK_AGENT_REQUEST_LAST_MS, now)
-        if (bypass) {
-            pd.put(KEY_FALLBACK_AGENT_COLD_BYPASS_USED, Boolean.TRUE)
-        }
-        return true
-    }
-
     private boolean requestAgentList(def ctx, def settings, boolean allowBypass) {
         long now = System.currentTimeMillis()
         long cacheAt = (ctx.getPersistentData().get(KEY_AGENT_LIST_CACHE_AT_MS) instanceof Number)
@@ -1671,54 +1372,12 @@ class Login extends BaseActuator {
             return false
         }
         try {
-            def disp = ctx?.getDispatcher()
-            if (disp == null) {
-                MutablePacket agentPkt = MutablePacket.getBuilder(0, ClientOpcode.AGENT_REQUEST)
-                        .packetEncoding(Encoding.ENCRYPTED)
-                        .dataEncoding(Encoding.PLAIN)
-                        .packetSource(NetworkPeer.BOT)
-                        .build()
-                try {
-                    def proxy = resolveWorkflowProxyConnection(ctx, null)
-                    if (proxy != null) {
-                        proxy.sendToServer(agentPkt)
-                    } else {
-                        sendToServer(0, ClientOpcode.AGENT_REQUEST) { it }
-                    }
-                } catch (Exception e) {
-                    log.warn("Agent request (no dispatcher): {}", e.getMessage())
-                    sendToServer(0, ClientOpcode.AGENT_REQUEST) { it }
-                }
-                return true
+            def protocol = gatewayProtocolEmitter(ctx)
+            if (protocol == null) {
+                log.warn("Gateway protocol emitter unavailable; cannot request agent list")
+                return false
             }
-            Boolean pathOk = DISPATCHER_DYNAMIC_PACKET_API_OK.get()
-            if (pathOk != Boolean.FALSE) {
-                try {
-                    def r = disp.sendAgentRequest(allowBypass)
-                    DISPATCHER_DYNAMIC_PACKET_API_OK.compareAndSet(null, Boolean.TRUE)
-                    return r as boolean
-                } catch (RateLimitException e) {
-                    log.warn("Agent request rate-limited: {}", e.getMessage())
-                    return false
-                } catch (Throwable t) {
-                    if (isDispatcherPacketApiChainFailure(t)) {
-                        DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
-                        logDispatcherPacketApiFirstFailure(disp, t)
-                        return sendAgentRequestFallback(ctx, settings, allowBypass)
-                    }
-                    if (t instanceof Error && !(t instanceof Exception)) {
-                        throw (Error) t
-                    }
-                    if (t instanceof Exception) {
-                        throw (Exception) t
-                    }
-                    throw new RuntimeException(t)
-                }
-            }
-            return sendAgentRequestFallback(ctx, settings, allowBypass)
-        } catch (RateLimitException e) {
-            log.warn("Agent request rate-limited: {}", e.getMessage())
-            return false
+            return protocol.requestAgentList(ctx, allowBypass, AGENT_REQUEST_MIN_INTERVAL_MS)
         } catch (Exception e) {
             long cooldown = (settings?.agentRequestRetryBackoffMs instanceof Number) ? ((Number) settings.agentRequestRetryBackoffMs).longValue() : 2000L
             ctx.getPersistentData().put(KEY_AGENT_BYPASS_COOLDOWN_UNTIL_MS, now + cooldown)
@@ -1728,82 +1387,29 @@ class Login extends BaseActuator {
     }
 
     private void sendLoginRequest(def ctx, byte locale, String username, String password, short agentId, String charsetName) {
-        if ((locale & 0xFF) == 0) {
-            locale = (byte) 22
+        def protocol = gatewayProtocolEmitter(ctx)
+        if (protocol == null) {
+            throw new IllegalStateException("Gateway protocol emitter unavailable")
         }
-        boolean legacy = Boolean.parseBoolean(System.getProperty("sokybot.login.serializer.legacy", "false"))
-        def disp = ctx?.getDispatcher()
-        if (!legacy && disp != null && DISPATCHER_DYNAMIC_PACKET_API_OK.get() != Boolean.FALSE) {
-            try {
-                disp.sendLoginRequest(locale, username, password, ((int) agentId) & 0xFFFF, charsetName)
-                DISPATCHER_DYNAMIC_PACKET_API_OK.compareAndSet(null, Boolean.TRUE)
-                return
-            } catch (Throwable t) {
-                if (isDispatcherPacketApiChainFailure(t)) {
-                    DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
-                    logDispatcherPacketApiFirstFailure(disp, t)
-                } else {
-                    if (t instanceof Error && !(t instanceof Exception)) throw (Error) t
-                    if (t instanceof Exception) throw (Exception) t
-                    throw new RuntimeException(t)
-                }
-            }
-        }
-        try {
-            disp?.awaitGatewayLoginPauseAfterAgentList()
-        } catch (MissingMethodException ignored) {
-        }
-        Charset charset = resolveLoginCharset([loginCharset: charsetName])
-        byte[] usernameBytes = username.getBytes(charset)
-        byte[] passwordBytes = password.getBytes(charset)
-        int packetLen = 7 + usernameBytes.length + passwordBytes.length
-        MutablePacket loginPkt = MutablePacket.getBuilder(packetLen, ClientOpcode.LOGIN_REQUEST)
-                .packetEncoding(Encoding.ENCRYPTED)
-                .dataEncoding(Encoding.PLAIN)
-                .packetSource(NetworkPeer.BOT)
-                .put(locale)
-                .putShort((short) usernameBytes.length)
-                .putBytes(usernameBytes)
-                .putShort((short) passwordBytes.length)
-                .putBytes(passwordBytes)
-                .putShort(agentId)
-                .build()
-        if (!sendWorkflowServerPacket(ctx, loginPkt)) {
-            throw new IllegalStateException("Failed to send login request packet (dispatcher/proxy unavailable)")
-        }
+        protocol.sendLoginRequest(ctx, new GatewayCredentials(username, password), locale, (int) agentId & 0xFFFF, charsetName, true)
     }
 
     private void sendGatewayImageCodeAnswer(def ctx, String answer) {
-        String a = answer != null ? answer : ""
-        byte[] utf16 = a.getBytes(StandardCharsets.UTF_16LE)
-        if ((utf16.length & 1) != 0) {
-            throw new IllegalStateException("UTF-16LE byte length must be even")
+        def protocol = gatewayProtocolEmitter(ctx)
+        if (protocol == null) {
+            throw new IllegalStateException("Gateway protocol emitter unavailable")
         }
-        int wcharCount = utf16.length / 2
-        if (wcharCount > 65535) {
-            throw new IllegalStateException("Image code answer too long")
-        }
-        int packetLen = 2 + utf16.length
-        MutablePacket pkt = MutablePacket.getBuilder(packetLen, ClientOpcode.GATEWAY_IMAGE_CODE_ANSWER)
-                .packetEncoding(Encoding.ENCRYPTED)
-                .dataEncoding(Encoding.PLAIN)
-                .packetSource(NetworkPeer.BOT)
-                .putShort((short) wcharCount)
-                .putBytes(utf16)
-                .build()
-        if (!sendWorkflowServerPacket(ctx, pkt)) {
-            throw new IllegalStateException("Failed to send gateway 0x6323")
-        }
+        protocol.sendGatewayImageCodeAnswer(ctx, answer)
     }
 
 
-    private Map currentAttemptSettings(def ctx, def settingsProvider) {
+    private def currentAttemptSettings(def ctx, def settingsProvider) {
         def existing = ctx.getPersistentData().get(KEY_ATTEMPT_LOGIN_SETTINGS)
-        if (existing instanceof Map) {
+        if (existing != null) {
             return existing
         }
         def settings = resolveRuntimeSettings(ctx, settingsProvider, true)
-        if (settings instanceof Map) {
+        if (settings != null) {
             beginAttemptSnapshot(ctx, settings)
         }
         return settings
@@ -1813,26 +1419,6 @@ class Login extends BaseActuator {
         def raw = ctx.getPersistentData().get(KEY_ACTIVE_ATTEMPT_ID)
         if (raw instanceof Number) return ((Number) raw).longValue()
         return 0L
-    }
-
-    private void safeDisconnect(def sourceCtx) {
-        try {
-            def dispatcher = null
-            try { dispatcher = sourceCtx?.getDispatcher() } catch (Exception ignored) {}
-            if (dispatcher == null) {
-                try { dispatcher = sourceCtx?.getProxyConnection() } catch (Exception ignored) {}
-            }
-            if (dispatcher == null) return
-            if (dispatcher.metaClass?.respondsTo(dispatcher, "disconnect")) {
-                dispatcher.disconnect()
-                return
-            }
-            if (dispatcher.metaClass?.respondsTo(dispatcher, "close")) {
-                dispatcher.close()
-            }
-        } catch (Exception e) {
-            logErrorThrottled(sourceCtx, "LOGIN_SAFE_DISCONNECT_01", e)
-        }
     }
 
     private boolean isAgentSessionEstablished(def ctx) {
@@ -1850,57 +1436,13 @@ class Login extends BaseActuator {
     }
 
     private void gracefulShutdown(def ctx) {
-        try {
-            if (isAgentSessionEstablished(ctx)) {
-                try {
-                    def d = ctx?.getDispatcher()
-                    if (d != null && DISPATCHER_DYNAMIC_PACKET_API_OK.get() != Boolean.FALSE) {
-                        try {
-                            d.sendLogoutRequest()
-                            DISPATCHER_DYNAMIC_PACKET_API_OK.compareAndSet(null, Boolean.TRUE)
-                        } catch (Throwable t) {
-                            if (isDispatcherPacketApiChainFailure(t)) {
-                                DISPATCHER_DYNAMIC_PACKET_API_OK.set(Boolean.FALSE)
-                                logDispatcherPacketApiFirstFailure(d, t)
-                                MutablePacket lo = MutablePacket.getBuilder(0, ClientOpcode.LOGOUT_REQUEST)
-                                        .packetEncoding(Encoding.ENCRYPTED)
-                                        .dataEncoding(Encoding.PLAIN)
-                                        .packetSource(NetworkPeer.BOT)
-                                        .build()
-                                sendWorkflowServerPacket(ctx, lo)
-                            } else {
-                                log.warn("Logout packet send failed during shutdown: {}", t.getMessage())
-                            }
-                        }
-                    } else if (d != null) {
-                        MutablePacket lo = MutablePacket.getBuilder(0, ClientOpcode.LOGOUT_REQUEST)
-                                .packetEncoding(Encoding.ENCRYPTED)
-                                .dataEncoding(Encoding.PLAIN)
-                                .packetSource(NetworkPeer.BOT)
-                                .build()
-                        sendWorkflowServerPacket(ctx, lo)
-                    }
-                } catch (Exception e) {
-                    log.warn("Logout packet send failed during shutdown: {}", e.getMessage())
-                }
-                long timeout = LOGOUT_ACK_TIMEOUT_MS
-                try {
-                    def settings = resolveRuntimeSettings(ctx, loginSettingsProvider, false)
-                    if (settings?.logoutAckTimeoutMs instanceof Number) timeout = ((Number) settings.logoutAckTimeoutMs).longValue()
-                } catch (Exception ignored) {}
-                long until = System.currentTimeMillis() + Math.max(500L, timeout)
-                while (System.currentTimeMillis() < until) {
-                    try {
-                        if (ctx?.getDispatcher() == null || !ctx.getDispatcher().isServerConnected()) break
-                    } catch (Exception ignored) {
-                        break
-                    }
-                    try { Thread.sleep(100L) } catch (InterruptedException ie) { Thread.currentThread().interrupt(); break }
-                }
-            }
-        } finally {
-            safeDisconnect(ctx)
+        def protocol = gatewayProtocolEmitter(ctx)
+        if (protocol == null) {
+            return
         }
+        def settings = resolveRuntimeSettings(ctx, loginSettingsProvider, false)
+        long timeout = (settings?.logoutAckTimeoutMs instanceof Number) ? ((Number) settings.logoutAckTimeoutMs).longValue() : LOGOUT_ACK_TIMEOUT_MS
+        protocol.gracefulShutdown(ctx, timeout)
     }
 
     private Map snapshot(def ctx) {
@@ -1957,78 +1499,52 @@ class Login extends BaseActuator {
     }
 
     private boolean handleInteractivePasscodeWait(def ctx, def loginState, def snap, def settings) {
-        if (!isPasscodeInputRequired(loginState)) {
-            ctx.getPersistentData().remove(KEY_INTERACTIVE_WAIT_UNTIL_MS)
+        def coordinator = loginInteractiveCoordinator(ctx)
+        if (coordinator == null) {
             return false
         }
-        if (loginState?.getPhase() == LoginState.Phase.PASSCODE_SUBMITTED && !isInteractiveWaitTimedOut(ctx)) {
-            emitEnginePhase(ctx, PHASE_PASSCODE_SUBMITTED, "PasscodeSubmitted", String.valueOf(snap?.failureReason ?: ""))
+        InteractiveOutcome outcome = coordinator.handle(ctx, settings)
+        if (outcome == InteractiveOutcome.WAITING_FOR_PASSCODE) {
+            emitEnginePhase(ctx, PHASE_WAITING_FOR_PASSCODE, "WaitingForPasscode", String.valueOf(snap?.failureReason ?: ""))
             return true
         }
-        // Abort interactive wait if the socket is already down; re-prompting is pointless.
-        try {
-            if (ctx?.getDispatcher() != null && !ctx.getDispatcher().isServerConnected()) {
-                if (loginState != null) {
-                    loginState.setFailureReason("Connection dropped while waiting for passcode")
-                }
-                ctx.getPersistentData().remove(KEY_INTERACTIVE_WAIT_UNTIL_MS)
-                return false
-            }
-        } catch (Exception ignored) {
-        }
-        if (!isInteractiveWaitTimedOut(ctx)) {
-            long waitUntil = ensureInteractiveWaitDeadline(ctx, effectivePasscodeUserInputTimeoutMs(settings))
-            String phaseName = (loginState?.getPhase() == LoginState.Phase.WAIT_FOR_CAPTCHA) ? PHASE_WAIT_FOR_CAPTCHA : PHASE_WAITING_FOR_PASSCODE
-            emitEnginePhase(ctx, phaseName, "WaitingForPasscode",
-                    String.valueOf(snap?.failureReason ?: ""),
-                    [interactive: true, waitUntil: waitUntil])
+        if (outcome == InteractiveOutcome.WAITING_FOR_CAPTCHA) {
+            emitEnginePhase(ctx, PHASE_WAIT_FOR_CAPTCHA, "WaitingForPasscode", String.valueOf(snap?.failureReason ?: ""))
             return true
         }
-        if (loginState != null) {
-            loginState.setFailureReason("Passcode/Captcha input timeout")
+        if (outcome == InteractiveOutcome.TIMED_OUT_DISCONNECT) {
+            return false
         }
-        ctx.getPersistentData().remove(KEY_INTERACTIVE_WAIT_UNTIL_MS)
-        safeDisconnect(ctx)
         return false
     }
 
     private boolean handleQueueWait(def ctx, def loginState) {
-        if (!isInQueueState(loginState)) {
-            return false
+        def coordinator = loginInteractiveCoordinator(ctx)
+        if (coordinator == null) return false
+        InteractiveOutcome outcome = coordinator.handle(ctx, resolveRuntimeSettings(ctx, loginSettingsProvider, false))
+        if (outcome == InteractiveOutcome.IN_QUEUE) {
+            emitEnginePhase(ctx, PHASE_IN_QUEUE, "QueueWaiting", String.valueOf(loginState?.getFailureReason() ?: ""),
+                    [queuePosition: parseQueuePosition(loginState)])
+            return true
         }
-        boolean connected = false
-        try { connected = ctx?.getDispatcher() != null && ctx.getDispatcher().isServerConnected() } catch (Exception ignored) {}
-        if (!connected) {
-            if (loginState != null) {
-                loginState.setFailureReason("Queue connection dropped")
-            }
-            return false
-        }
-        emitEnginePhase(ctx, PHASE_IN_QUEUE, "QueueWaiting", String.valueOf(loginState?.getFailureReason() ?: ""),
-                [queuePosition: parseQueuePosition(loginState)])
-        return true
+        return false
     }
 
     private boolean handleMissingPrereq(def ctx, def loginState) {
-        if (!isMissingPrereqPhase(loginState)) {
-            return false
+        def coordinator = loginInteractiveCoordinator(ctx)
+        if (coordinator == null) return false
+        InteractiveOutcome outcome = coordinator.handle(ctx, resolveRuntimeSettings(ctx, loginSettingsProvider, false))
+        if (outcome == InteractiveOutcome.WAITING_FOR_USER_RESUME) {
+            ctx.getPersistentData().remove(KEY_RETRY_UNTIL_MS)
+            ctx.getPersistentData().remove(KEY_RETRY_ATTEMPT_ID)
+            return true
         }
-        try {
-            if (ctx?.getDispatcher() != null && !ctx.getDispatcher().isServerConnected()) {
-                if (loginState != null) {
-                    loginState.setPhase(LoginState.Phase.DISCONNECTED)
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        ctx.getPersistentData().put(KEY_USER_RESUME_REQUIRED, true)
-        ctx.getPersistentData().remove(KEY_RETRY_UNTIL_MS)
-        ctx.getPersistentData().remove(KEY_RETRY_ATTEMPT_ID)
-        return true
+        return false
     }
 
-    private boolean handleTerminalFailure(def ctx, def loginState, String failureClass, def settings) {
-        if (FAILURE_MISSING_PREREQ.equals(failureClass)) {
+    private boolean handleTerminalFailure(def ctx, def loginState, def verdict, def settings) {
+        String failureClass = verdict?.getFailureClass() != null ? String.valueOf(verdict.getFailureClass().name()) : FAILURE_UNKNOWN_RETRY
+        if (LoginFailureClass.MISSING_PREREQ.name().equals(failureClass)) {
             ctx.getPersistentData().put(KEY_USER_RESUME_REQUIRED, true)
             return true
         }
@@ -2036,7 +1552,7 @@ class Login extends BaseActuator {
         String lastHaltSignature = String.valueOf(ctx.getPersistentData().getOrDefault(KEY_LOGIN_LAST_HALT_SIGNATURE, ""))
         boolean haltAlreadyLogged = haltSignature == lastHaltSignature
 
-        if (FAILURE_MANUAL_VERIFICATION.equals(failureClass)) {
+        if (LoginFailureClass.MANUAL_VERIFICATION.name().equals(failureClass)) {
             emitEnginePhase(ctx, "MANUAL_VERIFICATION_REQUIRED", "ManualVerification", String.valueOf(loginState?.getFailureReason() ?: ""),
                     [failureClass: failureClass, fatal: true])
             if (!haltAlreadyLogged) {
@@ -2045,7 +1561,7 @@ class Login extends BaseActuator {
             }
             return true
         }
-        if (FAILURE_CREDENTIAL.equals(failureClass)) {
+        if (LoginFailureClass.CREDENTIAL.name().equals(failureClass)) {
             ctx.getPersistentData().put(KEY_LOGIN_HALTED_CREDENTIAL, true)
             String credDetail = credentialFailureDetail(loginState)
             emitEnginePhase(ctx, LoginState.Phase.FAILED.name(), "CredentialFailure", credDetail,
@@ -2057,20 +1573,19 @@ class Login extends BaseActuator {
             }
             return true
         }
-        if (FAILURE_CHARACTER_NOT_FOUND.equals(failureClass)) {
+        if (LoginFailureClass.CHARACTER_NOT_FOUND.name().equals(failureClass)) {
             emitEnginePhase(ctx, LoginState.Phase.FAILED.name(), "CharacterUnavailable",
                     String.valueOf(loginState?.getFailureReason() ?: "CHARACTER_SELECTION_UNAVAILABLE"),
                     [failureClass: failureClass, fatal: true])
             return true
         }
-        if (FAILURE_AGENT_TIMEOUT.equals(failureClass)) {
+        if (LoginFailureClass.AGENT_TIMEOUT.name().equals(failureClass)) {
             emitEnginePhase(ctx, PHASE_WAITING_FOR_AGENTS_TIMEOUT, "WaitingForAgentsTimeout",
                     String.valueOf(loginState?.getFailureReason() ?: "Agent list timeout"))
         }
-        if (FAILURE_SERVER_INSPECTION.equals(failureClass)) {
+        if (LoginFailureClass.SERVER_INSPECTION.name().equals(failureClass)) {
             long now = System.currentTimeMillis()
-            long delayMs = Math.max(nextRetryDelayMs(ctx, settings), 60000L)
-            safeDisconnect(ctx)
+            long delayMs = Math.max(nextRetryDelayMs(ctx, settings), verdict?.getRetryDelayFloorMs() instanceof Number ? (long) verdict.getRetryDelayFloorMs() : 60000L)
             emitEnginePhase(ctx, PHASE_SERVER_INSPECTION, "ServerInspection",
                     String.valueOf(loginState?.getFailureReason() ?: "Target server is under inspection."),
                     [retryDelayMs: delayMs, serverTimestamp: now, retryAt: now + delayMs, failureClass: failureClass])
@@ -2107,11 +1622,11 @@ class Login extends BaseActuator {
                 ? Math.max(0L, (long) toInt(settings.retryBaseDelayMs, 5000))
                 : RETRY_DELAYS_MS.get(0)
         long delayMs = nextRetryDelayMs(ctx, settings)
-        if (FAILURE_GHOST_COOLDOWN.equals(failureClass)) {
+        if (LoginFailureClass.GHOST_COOLDOWN.name().equals(failureClass)) {
             delayMs = Math.max(delayMs, 60000L)
         }
         boolean infiniteRequested = settings != null && toBool(settings.infiniteRetryMode, true)
-        boolean infiniteEffective = (FAILURE_NETWORK.equals(failureClass) || FAILURE_AGENT_TIMEOUT.equals(failureClass)) && infiniteRequested
+        boolean infiniteEffective = ((LoginFailureClass.NETWORK.name().equals(failureClass) || LoginFailureClass.AGENT_TIMEOUT.name().equals(failureClass))) && infiniteRequested
         String phase = String.valueOf(snap?.phase ?: "DISCONNECTED")
         String host = String.valueOf(ctx.getPersistentData().get("gatewayHost") ?: "")
         String port = String.valueOf(ctx.getPersistentData().get("gatewayPort") ?: "")
@@ -2157,19 +1672,6 @@ class Login extends BaseActuator {
         return Math.max(MIN_RETRY_DELAY_MS, Math.min(value, MAX_RETRY_DELAY_MS))
     }
 
-    private Charset resolveLoginCharset(def settings) {
-        String configured = String.valueOf(settings?.loginCharset ?: "").trim()
-        if (configured.isEmpty()) {
-            return Charset.forName("windows-1252")
-        }
-        try {
-            return Charset.forName(configured)
-        } catch (Exception ignored) {
-            log.warn("Unsupported login charset '{}', falling back to windows-1252", configured)
-            return Charset.forName("windows-1252")
-        }
-    }
-
     private String redactForLog(String username) {
         if (username == null || username.isEmpty()) return "<empty>"
         if (username.length() == 1) return "*"
@@ -2177,171 +1679,25 @@ class Login extends BaseActuator {
         return username.substring(0, 1) + "***" + username.substring(username.length() - 1)
     }
 
+    private def classifyFailureVerdict(def loginState, def ctx) {
+        def classifier = loginFailureClassifier(ctx)
+        if (classifier == null) {
+            return null
+        }
+        return classifier.classify(ctx, String.valueOf(loginState?.getFailureReason() ?: ""))
+    }
+
     private String classifyFailure(def loginState, def ctx) {
-        if (isMissingPrereqPhase(loginState)) {
-            return FAILURE_MISSING_PREREQ
-        }
-        if (isServerInspectionState(loginState)) {
-            return FAILURE_SERVER_INSPECTION
-        }
-        if (isAgentWaitTimedOut(ctx)) {
-            return FAILURE_AGENT_TIMEOUT
-        }
-        if (requiresManualVerification(loginState)) {
-            return FAILURE_MANUAL_VERIFICATION
-        }
-        if (isInQueueState(loginState)) {
-            return FAILURE_NETWORK
-        }
-
-        try {
-            def phase = loginState?.getPhase()
-            if ((phase == LoginState.Phase.LOGIN_SUCCESS || phase == LoginState.Phase.REDIRECTING
-                    || phase == LoginState.Phase.AGENT_CONNECTED)
-                    && ctx?.getDispatcher() != null && !ctx.getDispatcher().isServerConnected()) {
-                return FAILURE_NETWORK
-            }
-        } catch (Exception ignored) {
-        }
-
-        String reason = String.valueOf(loginState?.getFailureReason() ?: "").toLowerCase()
-        Integer gatewayCode = readGatewayFailureCode(loginState)
-        if (gatewayCode != null) {
-            def classified = GatewayErrorClassifier.classify(gatewayCode, reason).orElse(null)
-            if (classified != null) {
-                switch (classified) {
-                    case GatewayFailureClassification.GHOST_COOLDOWN:
-                        return FAILURE_GHOST_COOLDOWN
-                    case GatewayFailureClassification.NETWORK:
-                        return FAILURE_NETWORK
-                    case GatewayFailureClassification.CREDENTIAL:
-                        return FAILURE_CREDENTIAL
-                    default:
-                        return classified.name()
-                }
-            }
-            log.warn("Unhandled gateway login failure code {} (reason='{}')", gatewayCode, String.valueOf(loginState?.getFailureReason() ?: ""))
+        def verdict = classifyFailureVerdict(loginState, ctx)
+        if (verdict == null || verdict.getFailureClass() == null) {
             return FAILURE_UNKNOWN_RETRY
         }
-        if (reason.contains("password")
-                || reason.contains("invalid account")
-                || reason.contains("invalid credentials")
-                || reason.contains("auth failed")
-                || reason.contains("rejected")
-                || reason.contains("denied")) {
-            return FAILURE_CREDENTIAL
-        }
-        if (reason.contains("already connected")) {
-            return FAILURE_GHOST_COOLDOWN
-        }
-        if (reason.contains("character not found") || reason.contains("character_selection_unavailable")) {
-            return FAILURE_CHARACTER_NOT_FOUND
-        }
-        if (reason.contains("inspection") || reason.contains("maintenance")) {
-            return FAILURE_SERVER_INSPECTION
-        }
-        if (reason.contains("too many requests") || reason.contains("6110")) {
-            try {
-                def settings = resolveRuntimeSettings(ctx, loginSettingsProvider, false)
-                long blockMs = (settings?.agentBanBlockDurationMs instanceof Number) ? ((Number) settings.agentBanBlockDurationMs).longValue() : 300000L
-                ctx?.getPersistentData()?.put("agentBanUntilMs", System.currentTimeMillis() + blockMs)
-            } catch (Exception ignored) {}
-            return FAILURE_NETWORK
-        }
-
-        try {
-            if (ctx?.getDispatcher() != null && !ctx.getDispatcher().isServerConnected()) {
-                return FAILURE_NETWORK
-            }
-        } catch (Exception ignored) {}
-
-        if (reason.contains("timeout")
-                || reason.contains("disconnect")
-                || reason.contains("unreachable")
-                || reason.contains("refused")
-                || reason.contains("network")) {
-            return FAILURE_NETWORK
-        }
-
-        return FAILURE_UNKNOWN_RETRY
+        return String.valueOf(verdict.getFailureClass().name())
     }
 
-    private Integer readGatewayFailureCode(def loginState) {
-        try {
-            if (loginState != null && loginState.metaClass?.respondsTo(loginState, "getGatewayResultCode")) {
-                def value = loginState.getGatewayResultCode()
-                if (value instanceof Number) {
-                    return ((Number) value).intValue()
-                }
-                return null
-            }
-        } catch (Exception ignored) {
-        }
-        int parsed = parseGatewayFailureCode(loginState)
-        return parsed >= 0 ? parsed : null
-    }
-
-    /** Failure reason text, or gateway byte code when reason was cleared but code remains. */
     private String credentialFailureDetail(def loginState) {
-        try {
-            String r = loginState?.getFailureReason()
-            if (r != null && !r.trim().isEmpty()) {
-                return r
-            }
-        } catch (Exception ignored) {
-        }
-        try {
-            Integer code = readGatewayFailureCode(loginState)
-            if (code != null) {
-                return "gateway code " + (code.intValue() & 0xFF)
-            }
-        } catch (Exception ignored) {
-        }
-        return ""
-    }
-
-    private boolean isMissingPrereqPhase(def loginState) {
-        try {
-            def phase = loginState?.getPhase()
-            return phase == LoginState.Phase.MISSING_CREDENTIALS || phase == LoginState.Phase.MISSING_AGENT_SERVER
-        } catch (Exception ignored) {
-            return false
-        }
-    }
-
-    private boolean isServerInspectionState(def loginState) {
-        try {
-            def phase = loginState?.getPhase()
-            if ("SERVER_INSPECTION".equals(String.valueOf(phase))) return true
-            String reason = String.valueOf(loginState?.getFailureReason() ?: "").toLowerCase()
-            return reason.contains("inspection")
-        } catch (Exception ignored) {
-            return false
-        }
-    }
-
-    private int parseGatewayFailureCode(def loginState) {
-        try {
-            String reason = String.valueOf(loginState?.getFailureReason() ?: "")
-            def m = (reason =~ /(?i)\bcode\s+(\d+)\b/)
-            if (m.find()) {
-                return Integer.parseInt(String.valueOf(m.group(1)))
-            }
-        } catch (Exception ignored) {
-        }
-        return -1
-    }
-
-    private boolean isInQueueState(def loginState) {
-        try {
-            if (loginState?.getPhase() == LoginState.Phase.IN_QUEUE) {
-                return true
-            }
-            String reason = String.valueOf(loginState?.getFailureReason() ?: "").toLowerCase()
-            return reason.contains("queue")
-        } catch (Exception ignored) {
-            return false
-        }
+        String r = String.valueOf(loginState?.getFailureReason() ?: "")
+        return r == null ? "" : r
     }
 
     private int parseQueuePosition(def loginState) {
