@@ -1,7 +1,6 @@
 package org.sokybot.runtime.internal;
 
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 import org.sokybot.commons.lifecycle.ISubscriptionScope;
@@ -37,10 +36,10 @@ public class MachineContextImpl implements IMachineContext {
     private volatile boolean engineInitialized;
     private IProxyConnection proxyConnection;
     private org.sokybot.gamemodel.IGameModel gameModel;
-    private org.sokybot.gamemodel.spi.IGameModelMutator gameModelMutator;
     private java.util.Map<Integer, java.util.List<org.sokybot.gameevents.events.core.IPacketTranslator>> sharedTranslators;
     private org.sokybot.gameevents.ChunkedPacketManager chunkManager;
     private final ISubscriptionScope subscriptionScope = new SubscriptionScopeImpl();
+    private final TranslatorBridgeWirer translatorBridgeWirer;
 
     public MachineContextImpl(MachineInfo machineInfo,
             IGroupContext groupContext,
@@ -55,9 +54,9 @@ public class MachineContextImpl implements IMachineContext {
         this.bundleContext = bundleContext;
         this.proxyConnection = proxyConnection;
         this.gameModel = gameModel;
-        this.gameModelMutator = gameModelMutator;
         this.sharedTranslators = sharedTranslators;
         this.chunkManager = chunkManager;
+        this.translatorBridgeWirer = new TranslatorBridgeWirer(chunkManager, gameModelMutator, subscriptionScope);
         log.info("Machine context created (engine will initialize lazily): {}", fullName());
     }
 
@@ -74,10 +73,12 @@ public class MachineContextImpl implements IMachineContext {
 
         try {
             // Get factories from OSGi service registry
-            IEngineFactory engineFactory = getService(IEngineFactory.class);
-            org.osgi.service.event.EventAdmin eventAdmin = getService(org.osgi.service.event.EventAdmin.class);
-            org.sokybot.commons.event.IReactiveEventBus reactiveBus = getService(
-                    org.sokybot.commons.event.IReactiveEventBus.class);
+            IEngineFactory engineFactory = RetryingServiceLocator.get(bundleContext, IEngineFactory.class, 15, 500L,
+                    log);
+            org.osgi.service.event.EventAdmin eventAdmin = RetryingServiceLocator.get(bundleContext,
+                    org.osgi.service.event.EventAdmin.class, 15, 500L, log);
+            org.sokybot.commons.event.IReactiveEventBus reactiveBus = RetryingServiceLocator.get(bundleContext,
+                    org.sokybot.commons.event.IReactiveEventBus.class, 15, 500L, log);
 
             if (engineFactory == null) {
                 throw new IllegalStateException("IEngineFactory not available");
@@ -91,41 +92,22 @@ public class MachineContextImpl implements IMachineContext {
             // have captured an empty map — resolve from the group again here (with short retries).
             java.util.Map<Integer, java.util.List<org.sokybot.gameevents.events.core.IPacketTranslator>> translatorsToWire = sharedTranslators;
             if (translatorsToWire == null || translatorsToWire.isEmpty()) {
-                if (groupContext instanceof GroupContextImpl) {
-                    GroupContextImpl g = (GroupContextImpl) groupContext;
-                    for (int tAttempt = 0; tAttempt < 12; tAttempt++) {
-                        if (tAttempt > 0) {
-                            try {
-                                Thread.sleep(400);
-                            } catch (InterruptedException ie) {
-                                Thread.currentThread().interrupt();
-                                break;
-                            }
-                            g.invalidateSharedTranslators();
-                        }
-                        translatorsToWire = g.getTranslators();
-                        if (translatorsToWire != null && !translatorsToWire.isEmpty()) {
-                            log.info("Resolved {} packet translators for machine {} after deferred load (attempt {})",
-                                    translatorsToWire.size(), machineId, tAttempt + 1);
-                            break;
-                        }
-                    }
+                if (groupContext instanceof ITranslatorRefreshable) {
+                    translatorsToWire = TranslatorRetryHelper.resolveForMachineInit(
+                            (ITranslatorRefreshable) groupContext,
+                            translatorsToWire,
+                            log,
+                            machineId);
                 }
             }
             if (proxyConnection != null) {
                 org.sokybot.network.IPacketPublisher publisher = proxyConnection.getPacketPublisher();
                 if (publisher != null) {
                     if (translatorsToWire != null && !translatorsToWire.isEmpty()) {
-                        translatorsToWire.forEach((opcode, chain) -> {
-                            if (chain == null) {
-                                return;
-                            }
-                            for (org.sokybot.gameevents.events.core.IPacketTranslator translator : chain) {
-                                wireTranslatorBridge(publisher, opcode, translator, machineId, eventAdmin, reactiveBus);
-                            }
-                        });
+                        translatorBridgeWirer.wireTranslatorChains(publisher, translatorsToWire, machineId, eventAdmin,
+                                reactiveBus);
                         log.info("Wired translator chains for machine {} (opcodes: {})",
-                                machineId, translatorsToWire.size());
+                                machineId, Integer.valueOf(translatorsToWire.size()));
                     } else {
                         log.warn(
                                 "No shared packet translators for machine {}",
@@ -154,92 +136,9 @@ public class MachineContextImpl implements IMachineContext {
         }
     }
 
-    private void wireTranslatorBridge(org.sokybot.network.IPacketPublisher publisher, Integer opcode,
-            org.sokybot.gameevents.events.core.IPacketTranslator translator, String machineId,
-            org.osgi.service.event.EventAdmin eventAdmin,
-            org.sokybot.commons.event.IReactiveEventBus reactiveBus) {
-        int op = opcode == null ? translator.getOpcode() : opcode.intValue();
-        org.sokybot.network.IPacketSubscription sub = publisher.subscribe((packet) -> {
-            try {
-                java.util.List<org.sokybot.gameevents.events.core.IGameEvent> events = translator.translate(machineId,
-                        packet, chunkManager);
-                if (log.isDebugEnabled() && op == 0xA101) {
-                    int eventCount = events != null ? events.size() : 0;
-                    log.debug("Translator bridge machine={} opcode=0xA101 translator={} produced {} events", machineId,
-                            translator.getClass().getName(), eventCount);
-                }
-                if (op == 0xA101 && (events == null || events.isEmpty())) {
-                    log.warn(
-                            "Agent list packet (0xA101) produced no events for machine {} (size={}) via {}",
-                            machineId, packet != null ? packet.getPacketSize() : -1,
-                            translator.getClass().getName());
-                }
-                if (events != null) {
-                    for (org.sokybot.gameevents.events.core.IGameEvent event : events) {
-                        if (event == null) {
-                            continue;
-                        }
-                        gameModelMutator.dispatchGameEvent(event);
-                        java.util.Map<String, Object> props = new java.util.HashMap<>();
-                        props.put("event", event);
-                        props.put("machineId", machineId);
-                        props.put("fullName", machineId);
-                        String topic = org.sokybot.commons.osgi.OsgiEventTopics.gameTopic(machineId,
-                                event.getClass().getSimpleName());
-                        if (log.isDebugEnabled()) {
-                            log.debug("Posting game event machine={} topic={} type={}", machineId, topic,
-                                    event.getClass().getName());
-                        }
-                        if (eventAdmin != null) {
-                            eventAdmin.postEvent(new org.osgi.service.event.Event(topic, props));
-                        }
-                        if (reactiveBus != null) {
-                            reactiveBus.publish(event);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.error("Error translating packet opcode 0x{} for machine {}",
-                        Integer.toHexString(op).toUpperCase(), machineId, e);
-            }
-        }, op);
-        subscriptionScope.register(sub);
-    }
-
-    private static final int SERVICE_LOOKUP_RETRIES = 15;
-    private static final long SERVICE_LOOKUP_DELAY_MS = 500;
-
     @Override
     public <T> T getService(Class<T> serviceClass) {
-        if (bundleContext == null) {
-            return null;
-        }
-
-        // Try multiple times with small delays to handle timing issues during startup
-        for (int attempt = 0; attempt < SERVICE_LOOKUP_RETRIES; attempt++) {
-            try {
-                ServiceReference<T> ref = bundleContext.getServiceReference(serviceClass);
-                if (ref != null) {
-                    T service = bundleContext.getService(ref);
-                    if (service != null) {
-                        return service;
-                    }
-                }
-            } catch (Exception e) {
-                log.debug("Service {} not available (attempt {})", serviceClass.getName(), attempt + 1, e);
-            }
-
-            if (attempt < SERVICE_LOOKUP_RETRIES - 1) {
-                try {
-                    Thread.sleep(SERVICE_LOOKUP_DELAY_MS);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                }
-            }
-        }
-        log.warn("Service {} not available after {} retries", serviceClass.getName(), SERVICE_LOOKUP_RETRIES);
-        return null;
+        return RetryingServiceLocator.get(bundleContext, serviceClass, 15, 500L, log);
     }
 
     @Override

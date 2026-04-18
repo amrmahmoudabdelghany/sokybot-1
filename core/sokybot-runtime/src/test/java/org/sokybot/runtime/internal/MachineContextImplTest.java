@@ -24,6 +24,7 @@ import org.sokybot.gameevents.events.core.IPacketTranslator;
 import org.sokybot.network.packet.ImmutablePacket;
 import org.sokybot.proxy.IProxyConnectionFactory;
 import org.sokybot.proxy.IProxyConnection;
+import org.sokybot.commons.event.IReactiveEventBus;
 import org.sokybot.runtime.test.RuntimeTestBase;
 import org.sokybot.gamemodel.IGameModelFactory;
 import org.sokybot.runtime.internal.domain.MachineInfo;
@@ -64,6 +65,9 @@ class MachineContextImplTest extends RuntimeTestBase {
     private org.sokybot.gamemodel.spi.IGameModelMutator gameModelMutator;
 
     @Mock
+    private IReactiveEventBus reactiveEventBus;
+
+    @Mock
     private org.sokybot.network.IPacketSubscription packetSubscription;
 
     private MachineContextImpl machineContext;
@@ -92,6 +96,7 @@ class MachineContextImplTest extends RuntimeTestBase {
 
         // Register services in MockBundleContext
         mockBundleContext.registerMockService(IEngineFactory.class, engineFactory, null);
+        mockBundleContext.registerMockService(IReactiveEventBus.class, reactiveEventBus, null);
         // EventAdmin is already registered in RuntimeTestBase.setUp()
         gameModel = (org.sokybot.gamemodel.IGameModel) java.lang.reflect.Proxy.newProxyInstance(
                 org.sokybot.gamemodel.IGameModel.class.getClassLoader(),

@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
  * - Publishes machine lifecycle events via EventAdmin
  * - Accesses services via OSGi service registry
  */
-public class GroupContextImpl implements IGroupContext {
+public class GroupContextImpl implements IGroupContext, ITranslatorRefreshable {
 
     private static final Logger log = LoggerFactory.getLogger(GroupContextImpl.class);
 
@@ -278,10 +278,9 @@ public class GroupContextImpl implements IGroupContext {
         return routeFinder;
     }
 
-    // Package-private method - accessible to MachineContextFactory in same package
-    // Not exposed in public IGroupContext interface (internal implementation
-    // detail)
-    Map<Integer, java.util.List<org.sokybot.gameevents.events.core.IPacketTranslator>> getTranslators() {
+    /** Shared translator map; also exposed via {@link ITranslatorRefreshable}. */
+    @Override
+    public Map<Integer, java.util.List<org.sokybot.gameevents.events.core.IPacketTranslator>> getTranslators() {
         synchronized (translatorsLock) {
             if (sharedTranslators == null) {
                 IGameDataLookup lookup = getGameDataLookup();
@@ -318,7 +317,8 @@ public class GroupContextImpl implements IGroupContext {
      * Clears cached translators so the next {@link #getTranslators()} rebuilds
      * (e.g. after scripts finish loading).
      */
-    void invalidateSharedTranslators() {
+    @Override
+    public void invalidateTranslators() {
         synchronized (translatorsLock) {
             sharedTranslators = null;
         }

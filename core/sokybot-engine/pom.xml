@@ -175,6 +175,9 @@
                             org.sokybot.engine.internal.handler,
                             org.sokybot.engine.internal.behavior,
                             org.sokybot.engine.internal.login,
+                            org.sokybot.engine.internal.journal,
+                            org.sokybot.engine.internal.cycle,
+                            org.sokybot.engine.internal.connection,
                             org.sokybot.machine.*
                         </Private-Package>
                         <Export-Package>
