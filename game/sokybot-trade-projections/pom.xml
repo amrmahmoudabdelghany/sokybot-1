@@ -11,10 +11,10 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>sokybot-trade-coordination-api</artifactId>
+    <artifactId>sokybot-trade-projections</artifactId>
     <packaging>bundle</packaging>
-    <name>Sokybot :: Trade Coordination API</name>
-    <description>SPI for cross-bot trade and stall coordination (EngineEvents + ITradeCoordinator)</description>
+    <name>sokybot-trade-projections</name>
+    <description>In-memory trade/stall snapshots driven by IReactiveEventBus</description>
 
     <properties>
         <maven.compiler.release>11</maven.compiler.release>
@@ -23,7 +23,7 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-engine-api</artifactId>
+            <artifactId>sokybot-trade-coordination-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -31,6 +31,29 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-game-events-api</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-commons</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>3.6.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <version>1.5.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -41,21 +64,23 @@
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
-                <configuration>
+                <configuration combine.self="override">
                     <instructions>
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
-                        <Export-Package>
-                            org.sokybot.trade.coordination.api,
-                            org.sokybot.trade.coordination.event,
-                            org.sokybot.trade.events
-                        </Export-Package>
+                        <Export-Package>org.sokybot.trade.projections.api</Export-Package>
+                        <Private-Package>org.sokybot.trade.projections.internal</Private-Package>
                         <Import-Package>
-                            org.sokybot.engine.api;version="[1.0,2)",
-                            org.sokybot.gameevents.events.core;version="[1.0,2)",
+                            org.sokybot.commons.event;version="[1.0,2)",
+                            org.sokybot.trade.events;version="[1.0,2)",
+                            org.osgi.service.component.annotations;version="[1.5,2)",
+                            org.slf4j;version="[1.7,2)",
+                            reactor.core;version="[3.6,4)",
+                            reactor.core.publisher;version="[3.6,4)",
                             *;resolution:=optional
                         </Import-Package>
+                        <_dsannotations>*</_dsannotations>
                     </instructions>
                 </configuration>
             </plugin>
