@@ -83,6 +83,33 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Trade & stall network (sokybot-trade feature) -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-trade-coordination-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-trade-coordinator</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-trade-projections</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-translators-trade</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-behaviors-trade</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Hibernate OSGi Dependencies (needed for assembly resolution) -->
         <dependency>
             <groupId>javax.enterprise</groupId>

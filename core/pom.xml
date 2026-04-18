@@ -21,5 +21,6 @@
         <module>sokybot-login-policies-builtin</module>
         <module>sokybot-trade-coordination-api</module>
         <module>sokybot-trade-coordinator</module>
+        <module>sokybot-behaviors-trade</module>
     </modules>
 </project>

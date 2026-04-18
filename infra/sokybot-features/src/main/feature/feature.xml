@@ -154,6 +154,18 @@
         <bundle>mvn:org.sokybot/sokybot-dev-shell/${project.version}</bundle>        
     </feature>
 
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- TRADE FEATURE: P2P trade & stall coordination (additive bundles)        -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-trade" version="${project.version}" description="Trade coordination, translators, projections, and workflow behaviors">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:org.sokybot/sokybot-trade-coordination-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-trade-coordinator/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-trade-projections/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-translators-trade/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-behaviors-trade/${project.version}</bundle>
+    </feature>
+
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- DEV FEATURE: Development and debugging tools (not for production)       -->
@@ -172,6 +184,7 @@
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-full" version="${project.version}" description="Sokybot Full Application">
         <feature>sokybot-core</feature>
+        <feature>sokybot-trade</feature>
     </feature>
 
 </features>
