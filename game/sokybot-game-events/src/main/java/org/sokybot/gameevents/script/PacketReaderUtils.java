@@ -50,6 +50,42 @@ public final class PacketReaderUtils {
     }
 
     /**
+     * Reads one inventory-style item stack header (slot byte, rentType, rent payload, refObjId) and returns
+     * {@code int[] { slotIndex, itemRefId }}.
+     * <p>
+     * Used for best-effort storage (0x3049) row parsing; quantity is not part of this common record and is
+     * defaulted by the caller.
+     * </p>
+     */
+    public static int[] readInventoryStyleSlotAndRefId(IStreamReader reader) {
+        byte slot = reader.getByte();
+        int rentType = reader.getInt();
+        switch (rentType) {
+            case 1:
+                reader.getShort();
+                reader.getInt();
+                reader.getInt();
+                break;
+            case 2:
+                reader.getShort();
+                reader.getShort();
+                reader.getInt();
+                break;
+            case 3:
+                reader.getShort();
+                reader.getInt();
+                reader.getInt();
+                reader.getShort();
+                reader.getInt();
+                break;
+            default:
+                break;
+        }
+        int refId = reader.getInt();
+        return new int[] { slot & 0xFF, refId };
+    }
+
+    /**
      * Skip one quest entry (variable structure by type).
      */
     public static void skipQuest(IStreamReader reader) {

@@ -179,6 +179,18 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Storage projections (sokybot-storage feature) -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-storage-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-storage-projections</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Pet awareness subsystem (sokybot-pet feature) -->
         <dependency>
             <groupId>org.sokybot</groupId>

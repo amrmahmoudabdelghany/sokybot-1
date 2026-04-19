@@ -198,6 +198,15 @@
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- STORAGE FEATURE: Personal + guild storage API and projections           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-storage" version="${project.version}" description="Storage API + projections (Personal + read-only Guild)">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:org.sokybot/sokybot-storage-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-storage-projections/${project.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- PARTY FEATURE: Party automation API, projections, coordinator, translators, behaviors -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-party" version="${project.version}" description="Party API, coordination, projections, translators, coordinator, and party-cycle behaviors">
@@ -245,6 +254,7 @@
         <feature>sokybot-trade</feature>
         <feature>sokybot-combat</feature>
         <feature>sokybot-town</feature>
+        <feature>sokybot-storage</feature>
         <feature>sokybot-pet</feature>
         <feature>sokybot-party</feature>
     </feature>

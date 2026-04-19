@@ -1,5 +1,6 @@
 package org.sokybot.gameevents.script;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -26,6 +27,19 @@ public class TranslatorContext {
 
     public List<IGameEvent> noEvents() {
         return Collections.emptyList();
+    }
+
+    public List<IGameEvent> multiEvents(IGameEvent... events) {
+        if (events == null || events.length == 0) {
+            return Collections.emptyList();
+        }
+        List<IGameEvent> out = new ArrayList<>(events.length);
+        for (IGameEvent e : events) {
+            if (e != null) {
+                out.add(e);
+            }
+        }
+        return out;
     }
 
     public ChunkedPacketManager getChunkManager(String machineFullName) {

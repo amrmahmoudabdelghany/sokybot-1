@@ -15,6 +15,7 @@ import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.gameevents.events.chat.NpcTalkEvent;
 import org.sokybot.gameevents.events.inventory.InventoryOperationEvent;
 import org.sokybot.gameevents.events.inventory.ItemDurabilityUpdateEvent;
+import org.sokybot.gameevents.events.storage.StorageOpenEvent;
 import org.sokybot.town.api.INpcInteractionFacade;
 import org.sokybot.town.api.NpcInteractionResult;
 import org.sokybot.town.api.NpcRef;
@@ -128,6 +129,40 @@ public final class NpcInteractionFacadeImpl implements INpcInteractionFacade {
                 .subscribe(e -> cf.complete(NpcInteractionResult.ok()),
                         err -> cf.complete(NpcInteractionResult.failure(err.getMessage())));
         attachTimeout(cf, sub, () -> NpcInteractionResult.failure("stash-ack-timeout"));
+        return cf;
+    }
+
+    @Override
+    public CompletableFuture<NpcInteractionResult> openStorage(IWorkflowContext ctx, VendorRef storageNpc) {
+        CompletableFuture<NpcInteractionResult> cf = new CompletableFuture<>();
+        if (!storageNpc.getEntityUniqueId().isPresent()) {
+            cf.complete(NpcInteractionResult.failure("missing-storage-npc-entity-id"));
+            return cf;
+        }
+        int npcUid = storageNpc.getEntityUniqueId().get().intValue();
+        TownPackets.sendNpcSelect(ctx, storageNpc.toNpc());
+        TownPackets.sendNpcInteract(ctx, npcUid, NpcTalkEvent.OPTION_TRADE);
+        Disposable sub = reactiveEventBus.on(StorageOpenEvent.class)
+                .filter(e -> ctx.getMachineId().equals(e.getFullName()) && e.isPersonal())
+                .take(1)
+                .subscribe(e -> cf.complete(NpcInteractionResult.ok()),
+                        err -> cf.complete(NpcInteractionResult.failure(err.getMessage())));
+        attachTimeout(cf, sub, () -> NpcInteractionResult.failure("storage-open-timeout"));
+        return cf;
+    }
+
+    @Override
+    public CompletableFuture<NpcInteractionResult> withdraw(IWorkflowContext ctx, VendorRef storageNpc,
+            int storageSlotIndex, int quantity) {
+        CompletableFuture<NpcInteractionResult> cf = new CompletableFuture<>();
+        TownPackets.sendWithdrawItem(ctx, storageSlotIndex, quantity);
+        Disposable sub = reactiveEventBus.on(InventoryOperationEvent.class)
+                .filter(e -> ctx.getMachineId().equals(e.getFullName()) && e.isSuccess()
+                        && e.getOperationType() == InventoryOperationEvent.OP_WITHDRAW_ITEM)
+                .take(1)
+                .subscribe(e -> cf.complete(NpcInteractionResult.ok()),
+                        err -> cf.complete(NpcInteractionResult.failure(err.getMessage())));
+        attachTimeout(cf, sub, () -> NpcInteractionResult.failure("withdraw-ack-timeout"));
         return cf;
     }
 

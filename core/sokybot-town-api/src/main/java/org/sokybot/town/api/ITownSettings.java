@@ -27,5 +27,11 @@ public interface ITownSettings {
 
     boolean isStashOverflowLoot();
 
+    boolean isWithdrawFromStorageEnabled();
+
+    boolean isDepositOverflowToStorage();
+
+    int getStorageOpenStaleAfterMs();
+
     ITownPolicy toPolicy();
 }

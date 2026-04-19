@@ -67,6 +67,18 @@ public final class VendorRef {
         return regionId;
     }
 
+    /** Adapt back to a catalogue/runtime NPC handle (drops vendor category metadata). */
+    public NpcRef toNpc() {
+        return NpcRef.builder()
+                .entityUniqueId(entityUniqueId)
+                .catalogueNpcRefId(catalogueNpcRefId)
+                .displayName(displayName)
+                .role(role)
+                .worldPosition(worldX, worldY, worldZ)
+                .regionId(regionId)
+                .build();
+    }
+
     /** Convenience adapter when a generic {@link NpcRef} must become a vendor handle. */
     public static VendorRef fromNpc(NpcRef npc, String vendorCategoryKey) {
         return VendorRef.builder()

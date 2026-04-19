@@ -11,10 +11,10 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>sokybot-town-api</artifactId>
+    <artifactId>sokybot-storage-api</artifactId>
     <packaging>bundle</packaging>
-    <name>Sokybot :: Town API</name>
-    <description>SPI and DTOs for autonomous town loops (additive)</description>
+    <name>Sokybot :: Storage API</name>
+    <description>SPI and DTOs for personal and guild storage snapshots (additive)</description>
 
     <properties>
         <maven.compiler.release>11</maven.compiler.release>
@@ -22,15 +22,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-engine-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-storage-api</artifactId>
-            <version>${project.version}</version>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -46,10 +39,10 @@
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
-                        <Export-Package>org.sokybot.town.api</Export-Package>
+                        <Export-Package>org.sokybot.storage.api</Export-Package>
                         <Import-Package>
-                            org.sokybot.engine.api.workflow;version="[1.0,2)",
-                            org.sokybot.storage.api;version="[1.0,2)",
+                            reactor.core;version="[3.6,4)",
+                            reactor.core.publisher;version="[3.6,4)",
                             *;resolution:=optional
                         </Import-Package>
                     </instructions>

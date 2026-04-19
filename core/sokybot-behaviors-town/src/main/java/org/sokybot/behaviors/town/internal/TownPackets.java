@@ -87,6 +87,18 @@ final class TownPackets {
         ctx.getDispatcher().sendToServer(packet);
     }
 
+    static void sendWithdrawItem(IWorkflowContext ctx, int storageSlotIndex, int quantity) {
+        MutablePacket packet = MutablePacket.getBuilder(8, CLIENT_INVENTORY_OPERATION)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .put(InventoryOperationEvent.OP_WITHDRAW_ITEM)
+                .put((byte) storageSlotIndex)
+                .putShort((short) Math.min(0xffff, quantity))
+                .build();
+        ctx.getDispatcher().sendToServer(packet);
+    }
+
     static void sendRepair(IWorkflowContext ctx, byte equipSlotIndex) {
         MutablePacket packet = MutablePacket.getBuilder(3, CLIENT_INVENTORY_OPERATION)
                 .packetEncoding(Encoding.ENCRYPTED)

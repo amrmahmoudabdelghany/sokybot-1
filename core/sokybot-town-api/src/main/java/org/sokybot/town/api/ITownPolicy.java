@@ -33,4 +33,19 @@ public interface ITownPolicy {
 
     /** When true, logistics may move non-essential loot into storage before hunting again. */
     boolean isStashOverflowLoot();
+
+    /** Opt-in: withdraw consumables from personal storage during town visits. */
+    default boolean isWithdrawFromStorageEnabled() {
+        return false;
+    }
+
+    /** When true, overflow loot may be deposited into personal storage (when a storage model is available). */
+    default boolean isDepositOverflowToStorage() {
+        return false;
+    }
+
+    /** Personal storage dialog considered stale after this many milliseconds without a refresh. */
+    default int getStorageOpenStaleAfterMs() {
+        return 30_000;
+    }
 }

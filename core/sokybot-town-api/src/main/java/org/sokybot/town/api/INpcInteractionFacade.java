@@ -22,6 +22,18 @@ public interface INpcInteractionFacade {
     CompletableFuture<NpcInteractionResult> stash(IWorkflowContext ctx, VendorRef storageNpc, int inventorySlotIndex,
             int quantity);
 
+    default CompletableFuture<NpcInteractionResult> withdraw(IWorkflowContext ctx, VendorRef storageNpc,
+            int storageSlotIndex, int quantity) {
+        CompletableFuture<NpcInteractionResult> cf = new CompletableFuture<>();
+        cf.complete(NpcInteractionResult.failure("withdraw-not-supported"));
+        return cf;
+    }
+
+    /** Opens personal storage UI (fallback: plain NPC dialog). */
+    default CompletableFuture<NpcInteractionResult> openStorage(IWorkflowContext ctx, VendorRef storageNpc) {
+        return openDialog(ctx, storageNpc.toNpc());
+    }
+
     /**
      * Escape hatch for scripted sequences (guild skills, teleport menus, stable routes, …).
      *

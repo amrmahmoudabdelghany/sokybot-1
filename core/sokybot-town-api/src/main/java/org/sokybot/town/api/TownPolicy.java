@@ -20,6 +20,9 @@ public final class TownPolicy implements ITownPolicy {
     private final List<RestockItem> extraRestockTargets;
     private final long bankGoldThreshold;
     private final boolean stashOverflowLoot;
+    private final boolean withdrawFromStorageEnabled;
+    private final boolean depositOverflowToStorage;
+    private final int storageOpenStaleAfterMs;
 
     private TownPolicy(Builder builder) {
         this.townLoopEnabled = builder.townLoopEnabled;
@@ -32,6 +35,9 @@ public final class TownPolicy implements ITownPolicy {
         this.extraRestockTargets = Collections.unmodifiableList(new ArrayList<>(builder.extraRestockTargets));
         this.bankGoldThreshold = builder.bankGoldThreshold;
         this.stashOverflowLoot = builder.stashOverflowLoot;
+        this.withdrawFromStorageEnabled = builder.withdrawFromStorageEnabled;
+        this.depositOverflowToStorage = builder.depositOverflowToStorage;
+        this.storageOpenStaleAfterMs = builder.storageOpenStaleAfterMs;
     }
 
     public static TownPolicy copyOf(ITownPolicy policy) {
@@ -47,6 +53,9 @@ public final class TownPolicy implements ITownPolicy {
                 .extraRestockTargets(policy.getExtraRestockTargets())
                 .bankGoldThreshold(policy.getBankGoldThreshold())
                 .stashOverflowLoot(policy.isStashOverflowLoot())
+                .withdrawFromStorageEnabled(policy.isWithdrawFromStorageEnabled())
+                .depositOverflowToStorage(policy.isDepositOverflowToStorage())
+                .storageOpenStaleAfterMs(policy.getStorageOpenStaleAfterMs())
                 .build();
     }
 
@@ -100,6 +109,21 @@ public final class TownPolicy implements ITownPolicy {
         return stashOverflowLoot;
     }
 
+    @Override
+    public boolean isWithdrawFromStorageEnabled() {
+        return withdrawFromStorageEnabled;
+    }
+
+    @Override
+    public boolean isDepositOverflowToStorage() {
+        return depositOverflowToStorage;
+    }
+
+    @Override
+    public int getStorageOpenStaleAfterMs() {
+        return storageOpenStaleAfterMs;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -115,6 +139,9 @@ public final class TownPolicy implements ITownPolicy {
         private final List<RestockItem> extraRestockTargets = new ArrayList<>();
         private long bankGoldThreshold = 1_000_000L;
         private boolean stashOverflowLoot = true;
+        private boolean withdrawFromStorageEnabled;
+        private boolean depositOverflowToStorage;
+        private int storageOpenStaleAfterMs = 30_000;
 
         public Builder townLoopEnabled(boolean townLoopEnabled) {
             this.townLoopEnabled = townLoopEnabled;
@@ -173,6 +200,21 @@ public final class TownPolicy implements ITownPolicy {
 
         public Builder stashOverflowLoot(boolean stashOverflowLoot) {
             this.stashOverflowLoot = stashOverflowLoot;
+            return this;
+        }
+
+        public Builder withdrawFromStorageEnabled(boolean withdrawFromStorageEnabled) {
+            this.withdrawFromStorageEnabled = withdrawFromStorageEnabled;
+            return this;
+        }
+
+        public Builder depositOverflowToStorage(boolean depositOverflowToStorage) {
+            this.depositOverflowToStorage = depositOverflowToStorage;
+            return this;
+        }
+
+        public Builder storageOpenStaleAfterMs(int storageOpenStaleAfterMs) {
+            this.storageOpenStaleAfterMs = storageOpenStaleAfterMs;
             return this;
         }
 
