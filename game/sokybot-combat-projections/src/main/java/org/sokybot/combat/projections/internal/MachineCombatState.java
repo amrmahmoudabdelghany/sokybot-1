@@ -5,6 +5,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import org.sokybot.combat.api.ActiveBuff;
+import org.sokybot.combat.api.ICombatSnapshot;
+
+import reactor.core.publisher.Sinks;
 
 /**
  * Mutable per-machine tactical accumulator (projection-owned; not part of {@link org.sokybot.gamemodel.IGameModel}).
@@ -33,6 +36,11 @@ final class MachineCombatState {
     final ConcurrentMap<Integer, ActiveBuff> activeBuffsById = new ConcurrentHashMap<>();
 
     volatile boolean skillCastInFlight;
+    /** Epoch millis of last self {@link org.sokybot.gameevents.events.skill.SkillCastEvent} (for watchdog). */
+    volatile long lastSkillCastEventEpochMs;
+
+    final Sinks.Many<ICombatSnapshot> snapshotSink = Sinks.many().multicast().onBackpressureBuffer(64, false);
+
     volatile Long berserkActiveUntilEpochMs;
 
     void resetCooldowns() {

@@ -53,6 +53,7 @@ import org.slf4j.LoggerFactory;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 /**
  * Tactical overlay sourced from {@link org.sokybot.commons.event.IReactiveEventBus}; keys state by machine full name.
@@ -63,8 +64,7 @@ public final class CombatModelComponent implements ICombatModel {
     private static final Logger log = LoggerFactory.getLogger(CombatModelComponent.class);
 
     private static final long DEFAULT_SKILL_COOLDOWN_MS = 1200L;
-    private static final long BERSERK_WINDOW_GUESS_MS = 60_000L;
-    private static final long DEFAULT_LOOT_OWNER_MS = 15_000L;
+    private static final long SKILL_CAST_WATCHDOG_MS = 4000L;
 
     private final Map<String, MachineCombatState> stateByMachine = new ConcurrentHashMap<>();
 
@@ -123,6 +123,9 @@ public final class CombatModelComponent implements ICombatModel {
             }
         }
         subscriptions.clear();
+        for (MachineCombatState st : stateByMachine.values()) {
+            st.snapshotSink.tryEmitComplete();
+        }
         stateByMachine.clear();
     }
 
@@ -136,6 +139,13 @@ public final class CombatModelComponent implements ICombatModel {
 
     private MachineCombatState stateFor(String fullNameKey) {
         return stateByMachine.computeIfAbsent(fullNameKey, fn -> new MachineCombatState());
+    }
+
+    private void publishSnapshot(String fullNameKey, MachineCombatState st) {
+        if (fullNameKey == null || st == null) {
+            return;
+        }
+        st.snapshotSink.emitNext(buildSnapshot(fullNameKey, st), Sinks.EmitFailureHandler.FAIL_FAST);
     }
 
     private void onCharacterLoaded(CharacterLoadedEvent e) {
@@ -155,6 +165,7 @@ public final class CombatModelComponent implements ICombatModel {
             st.selfY = pos[1];
             st.selfZ = pos[2];
         }
+        publishSnapshot(key, st);
     }
 
     private void onPlayerSpawn(PlayerSpawnEvent e) {
@@ -173,6 +184,7 @@ public final class CombatModelComponent implements ICombatModel {
         }
         float[] pos = CombatPositions.xyzFromSpawn(p);
         applySelfPosition(st, pos);
+        publishSnapshot(key, st);
     }
 
     private void onMonsterSpawn(MonsterSpawnEvent e) {
@@ -198,6 +210,7 @@ public final class CombatModelComponent implements ICombatModel {
             tm.z = pos[2];
         }
         st.monsters.put(tm.entityId, tm);
+        publishSnapshot(key, st);
     }
 
     private void onItemSpawn(ItemSpawnEvent e) {
@@ -214,7 +227,7 @@ public final class CombatModelComponent implements ICombatModel {
         tl.itemRefId = item.getRefId();
         if (item.isOwnerExist()) {
             tl.ownerEntityId = item.getOwnerJID();
-            tl.ownerExpiresAtEpochMs = System.currentTimeMillis() + DEFAULT_LOOT_OWNER_MS;
+            tl.ownerExpiresAtEpochMs = e.getTimestamp() + LootOwnerDurationTable.durationMsFor(item);
         } else {
             tl.ownerEntityId = null;
             tl.ownerExpiresAtEpochMs = Long.MAX_VALUE;
@@ -226,6 +239,7 @@ public final class CombatModelComponent implements ICombatModel {
             tl.z = pos[2];
         }
         st.loot.put(tl.entityId, tl);
+        publishSnapshot(key, st);
     }
 
     private void onEntityDespawn(EntityDespawnEvent e) {
@@ -244,6 +258,7 @@ public final class CombatModelComponent implements ICombatModel {
         if (tgt != null && tgt.intValue() == id) {
             st.currentTargetEntityId = null;
         }
+        publishSnapshot(key, st);
     }
 
     private void onEntityMovement(EntityMovementEvent e) {
@@ -263,6 +278,7 @@ public final class CombatModelComponent implements ICombatModel {
         Integer selfId = st.selfEntityId;
         if (selfId != null && e.getEntityId() == selfId.intValue()) {
             applySelfPosition(st, pos);
+            publishSnapshot(key, st);
             return;
         }
         TacticalMonster tm = st.monsters.get(e.getEntityId());
@@ -270,6 +286,7 @@ public final class CombatModelComponent implements ICombatModel {
             tm.x = pos[0];
             tm.y = pos[1];
             tm.z = pos[2];
+            publishSnapshot(key, st);
             return;
         }
         TacticalLoot loot = st.loot.get(e.getEntityId());
@@ -278,6 +295,7 @@ public final class CombatModelComponent implements ICombatModel {
             loot.y = pos[1];
             loot.z = pos[2];
         }
+        publishSnapshot(key, st);
     }
 
     private void onHpMp(EntityHPMPUpdateEvent e) {
@@ -297,6 +315,7 @@ public final class CombatModelComponent implements ICombatModel {
                 st.currentMp = e.getNewMP();
                 st.maxMp = Math.max(st.maxMp, st.currentMp);
             }
+            publishSnapshot(key, st);
             return;
         }
         TacticalMonster tm = st.monsters.get(id);
@@ -304,6 +323,7 @@ public final class CombatModelComponent implements ICombatModel {
             tm.currentHp = e.getNewHP();
             tm.maxHp = Math.max(tm.maxHp, tm.currentHp);
         }
+        publishSnapshot(key, st);
     }
 
     private void onEntityState(EntityStateUpdateEvent e) {
@@ -323,13 +343,21 @@ public final class CombatModelComponent implements ICombatModel {
                 st.currentMp = e.getCurrentMP();
                 st.maxMp = Math.max(st.maxMp, st.currentMp);
             }
+            publishSnapshot(key, st);
             return;
         }
         TacticalMonster tm = st.monsters.get(id);
-        if (tm != null && e.getCurrentHP() != null) {
-            tm.currentHp = e.getCurrentHP();
-            tm.maxHp = Math.max(tm.maxHp, tm.currentHp);
+        if (tm != null) {
+            Integer tgt = st.currentTargetEntityId;
+            if (tgt != null && tgt.intValue() == id) {
+                tm.aggressiveTowardSelf = true;
+            }
+            if (e.getCurrentHP() != null) {
+                tm.currentHp = e.getCurrentHP();
+                tm.maxHp = Math.max(tm.maxHp, tm.currentHp);
+            }
         }
+        publishSnapshot(key, st);
     }
 
     private void onEntitySelected(EntitySelectedEvent e) {
@@ -339,6 +367,7 @@ public final class CombatModelComponent implements ICombatModel {
         }
         MachineCombatState st = stateFor(key);
         st.currentTargetEntityId = e.getSelectedEntityId();
+        publishSnapshot(key, st);
     }
 
     private void onEntityDeselected(EntityDeselectedEvent e) {
@@ -348,6 +377,7 @@ public final class CombatModelComponent implements ICombatModel {
         }
         MachineCombatState st = stateFor(key);
         st.currentTargetEntityId = null;
+        publishSnapshot(key, st);
     }
 
     private void onSkillCast(SkillCastEvent e) {
@@ -355,16 +385,21 @@ public final class CombatModelComponent implements ICombatModel {
         if (key == null) {
             return;
         }
-        if (!e.isSuccess()) {
-            return;
-        }
         MachineCombatState st = stateFor(key);
         Integer caster = e.getCasterId();
+        Integer target = e.getTargetId();
         Integer selfId = st.selfEntityId;
-        if (selfId == null || caster == null || caster.intValue() != selfId.intValue()) {
-            return;
+        if (caster != null && target != null && selfId != null && target.intValue() == selfId.intValue()) {
+            TacticalMonster tmAggro = st.monsters.get(caster.intValue());
+            if (tmAggro != null) {
+                tmAggro.aggressiveTowardSelf = true;
+            }
         }
-        st.skillCastInFlight = true;
+        if (selfId != null && caster != null && caster.intValue() == selfId.intValue()) {
+            st.skillCastInFlight = true;
+            st.lastSkillCastEventEpochMs = e.getTimestamp();
+        }
+        publishSnapshot(key, st);
     }
 
     private void onSkillCastEnd(SkillCastEndEvent e) {
@@ -380,6 +415,7 @@ public final class CombatModelComponent implements ICombatModel {
         st.skillCastInFlight = false;
         long readyAt = e.getTimestamp() + DEFAULT_SKILL_COOLDOWN_MS;
         st.skillCooldownReadyAtEpochMs.put(e.getSkillId(), readyAt);
+        publishSnapshot(key, st);
     }
 
     private void onSkillCastError(SkillCastErrorEvent e) {
@@ -389,6 +425,7 @@ public final class CombatModelComponent implements ICombatModel {
         }
         MachineCombatState st = stateFor(key);
         st.skillCastInFlight = false;
+        publishSnapshot(key, st);
     }
 
     private void onPickupAnimation(PickupAnimationEvent e) {
@@ -402,6 +439,7 @@ public final class CombatModelComponent implements ICombatModel {
             return;
         }
         st.loot.remove(e.getTargetItemId());
+        publishSnapshot(key, st);
     }
 
     private void onBerserk(BerserkConfirmEvent e) {
@@ -413,7 +451,8 @@ public final class CombatModelComponent implements ICombatModel {
             return;
         }
         MachineCombatState st = stateFor(key);
-        st.berserkActiveUntilEpochMs = e.getTimestamp() + BERSERK_WINDOW_GUESS_MS;
+        st.berserkActiveUntilEpochMs = e.getTimestamp() + BerserkDurationTable.durationMsForLevel(e.getBerserkLevel());
+        publishSnapshot(key, st);
     }
 
     private void onBuffApplied(BuffAppliedEvent e) {
@@ -438,6 +477,7 @@ public final class CombatModelComponent implements ICombatModel {
                 .imbue(false)
                 .build();
         st.activeBuffsById.put(storageKey, buff);
+        publishSnapshot(key, st);
     }
 
     private void onBuffRemoved(BuffRemovedEvent e) {
@@ -449,6 +489,7 @@ public final class CombatModelComponent implements ICombatModel {
         int buffId = e.getBuffId();
         int storageKey = buffStorageKey(buffId, buffId);
         st.activeBuffsById.remove(storageKey);
+        publishSnapshot(key, st);
     }
 
     private void onCharacterBuffLoaded(CharacterBuffLoadedEvent e) {
@@ -472,6 +513,7 @@ public final class CombatModelComponent implements ICombatModel {
                 .imbue(false)
                 .build();
         st.activeBuffsById.put(storageKey, buff);
+        publishSnapshot(key, st);
     }
 
     private void onLifeState(LifeStateUpdateEvent e) {
@@ -488,6 +530,7 @@ public final class CombatModelComponent implements ICombatModel {
         if (tgt != null && tgt.intValue() == e.getUniqueId()) {
             st.currentTargetEntityId = null;
         }
+        publishSnapshot(key, st);
     }
 
     private static void applySelfPosition(MachineCombatState st, float[] pos) {
@@ -518,10 +561,13 @@ public final class CombatModelComponent implements ICombatModel {
         if (key == null) {
             return Flux.empty();
         }
-        return Flux.interval(Duration.ofMillis(150))
-                .map(t -> snapshot(key))
-                .filter(Optional::isPresent)
-                .map(Optional::get);
+        MachineCombatState st = stateFor(key);
+        Flux<ICombatSnapshot> tail = st.snapshotSink.asFlux().sample(Duration.ofMillis(50));
+        Optional<ICombatSnapshot> seed = snapshot(machineFullName);
+        if (seed.isPresent()) {
+            return Flux.concat(Flux.just(seed.get()), tail);
+        }
+        return tail;
     }
 
     @Override
@@ -533,6 +579,7 @@ public final class CombatModelComponent implements ICombatModel {
         MachineCombatState st = stateByMachine.get(key);
         if (st != null) {
             st.resetCooldowns();
+            publishSnapshot(key, st);
         }
     }
 
@@ -567,6 +614,11 @@ public final class CombatModelComponent implements ICombatModel {
         long now = System.currentTimeMillis();
         removeExpiredBuffs(st, now);
 
+        if (st.skillCastInFlight && st.lastSkillCastEventEpochMs > 0L
+                && now - st.lastSkillCastEventEpochMs > SKILL_CAST_WATCHDOG_MS) {
+            st.skillCastInFlight = false;
+        }
+
         float[] selfPos = new float[] { st.selfX, st.selfY, st.selfZ };
 
         Optional<float[]> anchorOpt = leashAnchorStore.getAnchor(machineFullName);
@@ -584,7 +636,7 @@ public final class CombatModelComponent implements ICombatModel {
             Optional<Integer> firstAttacker = mobOwnershipTracker.getFirstAttackerEntityId(machineFullName,
                     tm.entityId);
             MonsterTier tier = MonsterTierMapping.from(tm.monsterType);
-            monsters.add(new MonsterRef(tm.entityId, tm.refObjId, tm.levelOrZero, dist, pct, false,
+            monsters.add(new MonsterRef(tm.entityId, tm.refObjId, tm.levelOrZero, dist, pct, tm.aggressiveTowardSelf,
                     tm.championOrUnique(), firstAttacker, distFromAnchor, tier));
         }
 

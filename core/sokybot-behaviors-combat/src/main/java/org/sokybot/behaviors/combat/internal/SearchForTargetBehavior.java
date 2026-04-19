@@ -77,6 +77,6 @@ public final class SearchForTargetBehavior implements IBehavior<CombatSettings> 
 
     @Override
     public boolean canInterrupt() {
-        return false;
+        return true;
     }
 }

@@ -13,6 +13,7 @@ final class TacticalMonster {
     volatile float y;
     volatile float z;
     volatile MonsterType monsterType;
+    volatile boolean aggressiveTowardSelf = false;
 
     TacticalMonster(int entityId) {
         this.entityId = entityId;

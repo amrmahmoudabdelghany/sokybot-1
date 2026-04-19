@@ -143,11 +143,16 @@ public final class RecoverHpMpBehavior implements IBehavior<CombatSettings> {
                 continue;
             }
             if (refId > 0 && item.getRefId() == refId) {
-                return item;
+                if ((item.getStackCount() & 0xFFFF) > 0) {
+                    return item;
+                }
+                continue;
             }
             if (refId <= 0 && longIdPattern != null && item.getLongId() != null
                     && item.getLongId().contains(longIdPattern)) {
-                return item;
+                if ((item.getStackCount() & 0xFFFF) > 0) {
+                    return item;
+                }
             }
         }
         return null;
