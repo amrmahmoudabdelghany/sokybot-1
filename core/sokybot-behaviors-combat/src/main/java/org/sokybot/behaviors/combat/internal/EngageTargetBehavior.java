@@ -6,9 +6,13 @@ import java.util.Optional;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.component.annotations.ServiceScope;
 import org.sokybot.behaviors.combat.internal.settings.CombatSettings;
+import org.sokybot.commons.SilkroadUtils;
 import org.sokybot.combat.api.CombatCycleKeys;
+import org.sokybot.combat.api.IAmmoMonitor;
 import org.sokybot.combat.api.ICombatPolicy;
 import org.sokybot.combat.api.ICombatSnapshot;
 import org.sokybot.combat.api.ISkillRotation;
@@ -19,6 +23,7 @@ import org.sokybot.combat.projections.api.ICombatModel;
 import org.sokybot.engine.api.behavior.BehaviorStatus;
 import org.sokybot.engine.api.behavior.IBehavior;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
+import org.sokybot.navigation.api.WorldPoint;
 
 @Component(service = IBehavior.class, immediate = true, scope = ServiceScope.PROTOTYPE)
 public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
@@ -30,6 +35,9 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
 
     @Reference
     private ISkillRotation skillRotation;
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    private volatile IAmmoMonitor ammoMonitor;
 
     @Override
     public String id() {
@@ -89,11 +97,11 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
                 break;
             case ATTACK_SKILL:
                 incrementImbueAttackCounter(context);
-                CombatPackets.sendSkillCast(context, a.getSkillRefId(), target);
+                dispatchSkillCast(context, a, target);
                 break;
             case BUFF:
             case IMBUE:
-                CombatPackets.sendSkillCast(context, a.getSkillRefId(), target);
+                dispatchSkillCast(context, a, target);
                 break;
             default:
                 return BehaviorStatus.SKIPPED;
@@ -123,7 +131,8 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
             IWorkflowContext ctx) {
         List<Integer> rotation = settings.getAttackSkillRotation();
         if (rotation != null && !rotation.isEmpty()) {
-            Optional<SkillAction> fromRotation = pickFromRotation(snap, rotation, ctx.getPersistentData());
+            Optional<SkillAction> fromRotation = pickFromRotation(snap, rotation, ctx.getPersistentData(),
+                    ctx.getMachineId(), policy);
             if (fromRotation.isPresent()) {
                 return fromRotation;
             }
@@ -133,7 +142,7 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
     }
 
     private Optional<SkillAction> pickFromRotation(ICombatSnapshot snap, List<Integer> rotation,
-            java.util.Map<String, Object> persistentData) {
+            java.util.Map<String, Object> persistentData, String machineFullName, ICombatPolicy policy) {
         Optional<Integer> tid = snap.getCurrentTargetEntityId();
         if (!tid.isPresent()) {
             return Optional.empty();
@@ -151,6 +160,12 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
             Long readyAt = snap.getSkillCooldownReadyAtEpochMs().get(skillRef);
             if (readyAt != null && readyAt > now) {
                 continue;
+            }
+            if (policy.getAmmoConsumingSkillRefIds().contains(Integer.valueOf(skillRef))) {
+                IAmmoMonitor mon = ammoMonitor;
+                if (mon != null && policy.isPauseOnEmptyAmmo() && !mon.hasAmmo(machineFullName)) {
+                    continue;
+                }
             }
             persistentData.put(PD_SKILL_CURSOR, Integer.valueOf((idx + 1) % rotation.size()));
             return Optional.of(new SkillAction(SkillActionKind.ATTACK_SKILL, skillRef, targetId, readyAt));
@@ -172,5 +187,17 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
             }
         }
         return false;
+    }
+
+    private static void dispatchSkillCast(IWorkflowContext context, SkillAction a, int targetUniqueId) {
+        if (a.getAoeTarget().isPresent()) {
+            WorldPoint p = a.getAoeTarget().get();
+            short secX = SilkroadUtils.getSectorX(p.getX());
+            byte secY = SilkroadUtils.getSectorY(p.getY());
+            CombatPackets.sendSkillCastAtPoint(context, a.getSkillRefId(), p.getX(), p.getY(), p.getZ(),
+                    secX & 0xFFFF, secY & 0xFF);
+        } else {
+            CombatPackets.sendSkillCast(context, a.getSkillRefId(), targetUniqueId);
+        }
     }
 }

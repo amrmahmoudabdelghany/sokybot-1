@@ -35,6 +35,12 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-navigation-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-town-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -118,6 +124,8 @@
                         </Private-Package>
                         <Import-Package>
                             org.sokybot.combat.api;version="[1.0,2)",
+                            org.sokybot.navigation.api;version="[1.0,2)",
+                            org.sokybot.commons;version="[1.0,2)",
                             org.sokybot.town.api;version="[1.0,2)",
                             org.sokybot.pet.api;version="[1.0,2)";resolution:=optional,
                             org.sokybot.combat.projections.api;version="[1.0,2)",

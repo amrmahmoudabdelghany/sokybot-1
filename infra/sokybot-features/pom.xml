@@ -143,6 +143,11 @@
         </dependency>
         <dependency>
             <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-navigation-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
             <artifactId>sokybot-combat-projections</artifactId>
             <version>${project.version}</version>
         </dependency>

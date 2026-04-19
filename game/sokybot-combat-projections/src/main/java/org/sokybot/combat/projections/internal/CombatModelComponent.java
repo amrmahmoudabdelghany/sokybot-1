@@ -21,6 +21,7 @@ import org.sokybot.combat.api.IMobOwnershipTracker;
 import org.sokybot.combat.api.DroppedItemRef;
 import org.sokybot.combat.api.ICombatSnapshot;
 import org.sokybot.combat.api.MonsterRef;
+import org.sokybot.combat.api.MonsterTier;
 import org.sokybot.combat.projections.api.ICombatModel;
 import org.sokybot.commons.event.IReactiveEventBus;
 import org.sokybot.gameevents.dto.MonsterData;
@@ -582,8 +583,9 @@ public final class CombatModelComponent implements ICombatModel {
             }
             Optional<Integer> firstAttacker = mobOwnershipTracker.getFirstAttackerEntityId(machineFullName,
                     tm.entityId);
+            MonsterTier tier = MonsterTierMapping.from(tm.monsterType);
             monsters.add(new MonsterRef(tm.entityId, tm.refObjId, tm.levelOrZero, dist, pct, false,
-                    tm.championOrUnique(), firstAttacker, distFromAnchor));
+                    tm.championOrUnique(), firstAttacker, distFromAnchor, tier));
         }
 
         List<DroppedItemRef> drops = new ArrayList<>();

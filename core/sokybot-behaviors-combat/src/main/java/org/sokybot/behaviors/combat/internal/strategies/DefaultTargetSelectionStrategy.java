@@ -10,6 +10,7 @@ import org.sokybot.combat.api.ICombatPolicy;
 import org.sokybot.combat.api.ICombatSnapshot;
 import org.sokybot.combat.api.ITargetSelectionStrategy;
 import org.sokybot.combat.api.MonsterRef;
+import org.sokybot.combat.api.MonsterTier;
 
 @Component(service = ITargetSelectionStrategy.class, immediate = true, property = {
         "service.ranking:Integer=0"
@@ -64,6 +65,25 @@ public final class DefaultTargetSelectionStrategy implements ITargetSelectionStr
                 continue;
             }
             if (m.getHpPercentOrNegativeIfUnknown() == 0) {
+                continue;
+            }
+            MonsterTier tier = m.getTier();
+            if (policy.isAvoidGiants() && tier == MonsterTier.GIANT) {
+                continue;
+            }
+            if (policy.isAvoidUniques() && tier == MonsterTier.UNIQUE) {
+                continue;
+            }
+            if (policy.isAvoidChampions() && tier == MonsterTier.CHAMPION) {
+                continue;
+            }
+            if (policy.isAvoidTitans() && tier == MonsterTier.TITAN) {
+                continue;
+            }
+            if (policy.isAvoidPartyMobs() && tier == MonsterTier.PARTY) {
+                continue;
+            }
+            if (policy.isAvoidQuestMobs() && tier == MonsterTier.QUEST) {
                 continue;
             }
             candidates.add(m);

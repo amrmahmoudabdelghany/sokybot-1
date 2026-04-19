@@ -1,6 +1,7 @@
 package org.sokybot.behaviors.combat.internal;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.osgi.service.component.annotations.Component;
@@ -8,6 +9,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ServiceScope;
 import org.sokybot.behaviors.combat.internal.settings.CombatSettings;
 import org.sokybot.combat.api.CombatCycleKeys;
+import org.sokybot.combat.api.ICombatPolicy;
 import org.sokybot.combat.api.ICombatSnapshot;
 import org.sokybot.combat.api.IRecoveryStrategy;
 import org.sokybot.combat.api.RecoveryAction;
@@ -59,7 +61,11 @@ public final class RecoverHpMpBehavior implements IBehavior<CombatSettings> {
         if (!snap.isPresent() || settings == null) {
             return false;
         }
-        return recoveryStrategy.nextRecovery(snap.get(), settings.toPolicy()).isPresent();
+        ICombatPolicy policy = settings.toPolicy();
+        if (isRecoveryThrottleActive(context.getPersistentData(), policy.getRecoveryCooldownMs())) {
+            return false;
+        }
+        return recoveryStrategy.nextRecovery(snap.get(), policy).isPresent();
     }
 
     @Override
@@ -68,7 +74,11 @@ public final class RecoverHpMpBehavior implements IBehavior<CombatSettings> {
         if (!snap.isPresent() || settings == null) {
             return BehaviorStatus.SKIPPED;
         }
-        Optional<RecoveryAction> ra = recoveryStrategy.nextRecovery(snap.get(), settings.toPolicy());
+        ICombatPolicy policy = settings.toPolicy();
+        if (isRecoveryThrottleActive(context.getPersistentData(), policy.getRecoveryCooldownMs())) {
+            return BehaviorStatus.SKIPPED;
+        }
+        Optional<RecoveryAction> ra = recoveryStrategy.nextRecovery(snap.get(), policy);
         if (!ra.isPresent()) {
             return BehaviorStatus.SKIPPED;
         }
@@ -88,6 +98,8 @@ public final class RecoverHpMpBehavior implements IBehavior<CombatSettings> {
             return BehaviorStatus.SKIPPED;
         }
         CombatPackets.sendInventoryItemUse(context, item.getSlot(), item.getRefId());
+        context.getPersistentData().put(CombatCycleKeys.KEY_RECOVERY_LAST_ACTION_AT_MS,
+                Long.valueOf(System.currentTimeMillis()));
         context.getPersistentData().put(CombatCycleKeys.KEY_COMBAT_PHASE, CombatCycleKeys.PHASE_RECOVERING);
         return BehaviorStatus.EXECUTED;
     }
@@ -105,6 +117,19 @@ public final class RecoverHpMpBehavior implements IBehavior<CombatSettings> {
     @Override
     public int interruptionPriority() {
         return 800;
+    }
+
+    private static boolean isRecoveryThrottleActive(Map<String, Object> persistentData, int cooldownMs) {
+        if (cooldownMs <= 0) {
+            return false;
+        }
+        Object raw = persistentData.get(CombatCycleKeys.KEY_RECOVERY_LAST_ACTION_AT_MS);
+        long last = raw instanceof Number ? ((Number) raw).longValue() : 0L;
+        if (last <= 0L) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        return now - last < cooldownMs;
     }
 
     private static IItem findPotion(IWorkflowContext ctx, int refId, String longIdPattern) {

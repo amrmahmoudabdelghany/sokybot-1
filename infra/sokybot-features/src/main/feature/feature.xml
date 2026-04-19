@@ -172,6 +172,7 @@
     <feature name="sokybot-combat" version="${project.version}" description="Combat API, tactical projection, translators, and grinding-cycle behaviors">
         <feature>sokybot-core</feature>
         <bundle>mvn:org.sokybot/sokybot-combat-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-navigation-api/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-combat-projections/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-translators-combat/${project.version}</bundle>
         <bundle>mvn:org.sokybot/sokybot-behaviors-combat/${project.version}</bundle>

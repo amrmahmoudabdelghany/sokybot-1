@@ -2,6 +2,7 @@ package org.sokybot.combat.api;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Read-only combat settings for strategies and the behavior cycle (mirrors persisted user config).
@@ -95,6 +96,51 @@ public interface ICombatSettings {
     /** Buffs cast while in {@link WeaponLoadout#BUFF_CASTER} (separate from town {@link #getBuffSkillRotation()}). */
     default List<Integer> getBuffCasterSkillRotation() {
         return Collections.emptyList();
+    }
+
+    /** When {@code true}, targeting skips {@link MonsterTier#GIANT} mobs. */
+    default boolean isAvoidGiants() {
+        return true;
+    }
+
+    /** When {@code true}, targeting skips {@link MonsterTier#UNIQUE} mobs. */
+    default boolean isAvoidUniques() {
+        return true;
+    }
+
+    /** When {@code true}, targeting skips {@link MonsterTier#CHAMPION} mobs. */
+    default boolean isAvoidChampions() {
+        return true;
+    }
+
+    /** When {@code true}, targeting skips {@link MonsterTier#TITAN} mobs. */
+    default boolean isAvoidTitans() {
+        return true;
+    }
+
+    /** When {@code true}, targeting skips {@link MonsterTier#PARTY} mobs. */
+    default boolean isAvoidPartyMobs() {
+        return true;
+    }
+
+    /** When {@code true}, targeting skips {@link MonsterTier#QUEST} mobs. */
+    default boolean isAvoidQuestMobs() {
+        return true;
+    }
+
+    /** Minimum interval between recovery potion dispatches (HP/MP behaviors). */
+    default int getRecoveryCooldownMs() {
+        return 15000;
+    }
+
+    /** Skill ref ids that consume ammunition when used (bow/crossbow skills). */
+    default Set<Integer> getAmmoConsumingSkillRefIds() {
+        return Collections.emptySet();
+    }
+
+    /** When {@code true}, ranged attack skills listed in {@link #getAmmoConsumingSkillRefIds()} wait for ammo. */
+    default boolean isPauseOnEmptyAmmo() {
+        return true;
     }
 
     /**

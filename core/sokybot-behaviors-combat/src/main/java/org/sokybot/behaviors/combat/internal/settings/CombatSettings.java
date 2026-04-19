@@ -1,7 +1,9 @@
 package org.sokybot.behaviors.combat.internal.settings;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.sokybot.combat.api.CombatPolicy;
 import org.sokybot.combat.api.ICombatPolicy;
@@ -37,6 +39,15 @@ public final class CombatSettings implements ICombatSettings {
     private int buffCasterSecondaryInventorySlot = -1;
     private int weaponSwapTimeoutMs = 4000;
     private final List<Integer> buffCasterSkillRotation = new ArrayList<>();
+    private boolean avoidGiants = true;
+    private boolean avoidUniques = true;
+    private boolean avoidChampions = true;
+    private boolean avoidTitans = true;
+    private boolean avoidPartyMobs = true;
+    private boolean avoidQuestMobs = true;
+    private int recoveryCooldownMs = 15000;
+    private final LinkedHashSet<Integer> ammoConsumingSkillRefIds = new LinkedHashSet<>();
+    private boolean pauseOnEmptyAmmo = true;
 
     @Override
     public boolean isAutoAttack() {
@@ -232,6 +243,90 @@ public final class CombatSettings implements ICombatSettings {
     }
 
     @Override
+    public boolean isAvoidGiants() {
+        return avoidGiants;
+    }
+
+    public void setAvoidGiants(boolean avoidGiants) {
+        this.avoidGiants = avoidGiants;
+    }
+
+    @Override
+    public boolean isAvoidUniques() {
+        return avoidUniques;
+    }
+
+    public void setAvoidUniques(boolean avoidUniques) {
+        this.avoidUniques = avoidUniques;
+    }
+
+    @Override
+    public boolean isAvoidChampions() {
+        return avoidChampions;
+    }
+
+    public void setAvoidChampions(boolean avoidChampions) {
+        this.avoidChampions = avoidChampions;
+    }
+
+    @Override
+    public boolean isAvoidTitans() {
+        return avoidTitans;
+    }
+
+    public void setAvoidTitans(boolean avoidTitans) {
+        this.avoidTitans = avoidTitans;
+    }
+
+    @Override
+    public boolean isAvoidPartyMobs() {
+        return avoidPartyMobs;
+    }
+
+    public void setAvoidPartyMobs(boolean avoidPartyMobs) {
+        this.avoidPartyMobs = avoidPartyMobs;
+    }
+
+    @Override
+    public boolean isAvoidQuestMobs() {
+        return avoidQuestMobs;
+    }
+
+    public void setAvoidQuestMobs(boolean avoidQuestMobs) {
+        this.avoidQuestMobs = avoidQuestMobs;
+    }
+
+    @Override
+    public int getRecoveryCooldownMs() {
+        return recoveryCooldownMs;
+    }
+
+    public void setRecoveryCooldownMs(int recoveryCooldownMs) {
+        this.recoveryCooldownMs = recoveryCooldownMs;
+    }
+
+    @Override
+    public Set<Integer> getAmmoConsumingSkillRefIds() {
+        return Set.copyOf(ammoConsumingSkillRefIds);
+    }
+
+    public void setAmmoConsumingSkillRefIds(Set<Integer> ammoConsumingSkillRefIds) {
+        this.ammoConsumingSkillRefIds.clear();
+        if (ammoConsumingSkillRefIds != null) {
+            this.ammoConsumingSkillRefIds.addAll(ammoConsumingSkillRefIds);
+        }
+    }
+
+    @Override
+    public boolean isPauseOnEmptyAmmo() {
+        return pauseOnEmptyAmmo;
+    }
+
+    public void setPauseOnEmptyAmmo(boolean pauseOnEmptyAmmo) {
+        this.pauseOnEmptyAmmo = pauseOnEmptyAmmo;
+    }
+
+    @Override
     public ICombatPolicy toPolicy() {
         return CombatPolicy.builder()
                 .hpPotionThresholdPercent(hpPotionThresholdPercent)
@@ -258,6 +353,15 @@ public final class CombatSettings implements ICombatSettings {
                 .buffCasterSecondaryInventorySlot(buffCasterSecondaryInventorySlot)
                 .weaponSwapTimeoutMs(weaponSwapTimeoutMs)
                 .buffCasterSkillRotation(new ArrayList<>(buffCasterSkillRotation))
+                .avoidGiants(avoidGiants)
+                .avoidUniques(avoidUniques)
+                .avoidChampions(avoidChampions)
+                .avoidTitans(avoidTitans)
+                .avoidPartyMobs(avoidPartyMobs)
+                .avoidQuestMobs(avoidQuestMobs)
+                .recoveryCooldownMs(recoveryCooldownMs)
+                .ammoConsumingSkillRefIds(getAmmoConsumingSkillRefIds())
+                .pauseOnEmptyAmmo(pauseOnEmptyAmmo)
                 .build();
     }
 }

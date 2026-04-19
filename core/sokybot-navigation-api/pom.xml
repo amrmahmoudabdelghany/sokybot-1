@@ -6,15 +6,15 @@
 
     <parent>
         <groupId>org.sokybot</groupId>
-        <artifactId>sokybot</artifactId>
+        <artifactId>sokybot-core-aggregator</artifactId>
         <version>1.0-SNAPSHOT</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>sokybot-combat-api</artifactId>
+    <artifactId>sokybot-navigation-api</artifactId>
     <packaging>bundle</packaging>
-    <name>Sokybot :: Combat API</name>
-    <description>SPI and DTOs for autonomous combat / hunting cycles (additive)</description>
+    <name>Sokybot :: Navigation API</name>
+    <description>Immutable navigation DTOs and SPI for stuck detection / navigation (additive)</description>
 
     <properties>
         <maven.compiler.release>11</maven.compiler.release>
@@ -24,12 +24,6 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-engine-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-navigation-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -46,10 +40,9 @@
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
-                        <Export-Package>org.sokybot.combat.api</Export-Package>
+                        <Export-Package>org.sokybot.navigation.api</Export-Package>
                         <Import-Package>
                             org.sokybot.engine.api.workflow;version="[1.0,2)",
-                            org.sokybot.navigation.api;version="[1.0,2)",
                             *;resolution:=optional
                         </Import-Package>
                     </instructions>

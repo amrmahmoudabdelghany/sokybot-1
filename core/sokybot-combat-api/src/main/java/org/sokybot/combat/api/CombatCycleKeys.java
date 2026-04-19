@@ -18,6 +18,7 @@ public final class CombatCycleKeys {
     public static final String BEHAVIOR_ENGAGE = "engage";
     public static final String BEHAVIOR_MAINTAIN_BUFFS = "maintainBuffs";
     public static final String BEHAVIOR_ENSURE_IMBUE = "ensureImbue";
+    public static final String BEHAVIOR_UNSTUCK = "unstuck";
 
     /** Blackboard keys on {@link org.sokybot.engine.api.workflow.IWorkflowContext#getPersistentData()}. */
     public static final String KEY_CURRENT_TARGET_ENTITY_ID = "combat.currentTargetEntityId";
@@ -41,4 +42,5 @@ public final class CombatCycleKeys {
     public static final String PHASE_LOOTING = "LOOTING";
     public static final String PHASE_RECOVERING = "RECOVERING";
     public static final String PHASE_LEASH_RETURN = "LEASH_RETURN";
+    public static final String PHASE_UNSTUCK = "UNSTUCK";
 }

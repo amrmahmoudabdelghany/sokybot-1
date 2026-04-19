@@ -2,6 +2,7 @@ package org.sokybot.combat.api;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Read-only policy thresholds and filters driving strategy decisions.
@@ -81,5 +82,41 @@ public interface ICombatPolicy {
 
     default List<Integer> getBuffCasterSkillRotation() {
         return Collections.emptyList();
+    }
+
+    default boolean isAvoidGiants() {
+        return true;
+    }
+
+    default boolean isAvoidUniques() {
+        return true;
+    }
+
+    default boolean isAvoidChampions() {
+        return true;
+    }
+
+    default boolean isAvoidTitans() {
+        return true;
+    }
+
+    default boolean isAvoidPartyMobs() {
+        return true;
+    }
+
+    default boolean isAvoidQuestMobs() {
+        return true;
+    }
+
+    default int getRecoveryCooldownMs() {
+        return 15000;
+    }
+
+    default Set<Integer> getAmmoConsumingSkillRefIds() {
+        return Collections.emptySet();
+    }
+
+    default boolean isPauseOnEmptyAmmo() {
+        return true;
     }
 }

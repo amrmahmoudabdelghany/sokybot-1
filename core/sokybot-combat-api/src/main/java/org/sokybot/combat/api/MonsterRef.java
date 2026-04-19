@@ -17,10 +17,21 @@ public final class MonsterRef {
     private final boolean championOrUnique;
     private final Optional<Integer> firstAttackerEntityId;
     private final Optional<Float> distanceFromTrainingAnchor;
+    private final MonsterTier tier;
 
+    /**
+     * Legacy constructor; {@link #getTier()} defaults to {@link MonsterTier#NORMAL}.
+     */
     public MonsterRef(int entityId, int refObjId, int levelOrZero, float distanceToSelf,
             int hpPercentOrNegativeIfUnknown, boolean aggressiveTowardSelf, boolean championOrUnique,
             Optional<Integer> firstAttackerEntityId, Optional<Float> distanceFromTrainingAnchor) {
+        this(entityId, refObjId, levelOrZero, distanceToSelf, hpPercentOrNegativeIfUnknown, aggressiveTowardSelf,
+                championOrUnique, firstAttackerEntityId, distanceFromTrainingAnchor, MonsterTier.NORMAL);
+    }
+
+    public MonsterRef(int entityId, int refObjId, int levelOrZero, float distanceToSelf,
+            int hpPercentOrNegativeIfUnknown, boolean aggressiveTowardSelf, boolean championOrUnique,
+            Optional<Integer> firstAttackerEntityId, Optional<Float> distanceFromTrainingAnchor, MonsterTier tier) {
         this.entityId = entityId;
         this.refObjId = refObjId;
         this.levelOrZero = levelOrZero;
@@ -31,6 +42,11 @@ public final class MonsterRef {
         this.firstAttackerEntityId = firstAttackerEntityId != null ? firstAttackerEntityId : Optional.empty();
         this.distanceFromTrainingAnchor = distanceFromTrainingAnchor != null ? distanceFromTrainingAnchor
                 : Optional.empty();
+        this.tier = tier != null ? tier : MonsterTier.UNKNOWN;
+    }
+
+    public MonsterTier getTier() {
+        return tier;
     }
 
     public int getEntityId() {

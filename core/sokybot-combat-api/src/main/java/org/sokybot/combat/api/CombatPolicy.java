@@ -2,8 +2,10 @@ package org.sokybot.combat.api;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * Immutable default implementation of {@link ICombatPolicy}.
@@ -34,6 +36,15 @@ public final class CombatPolicy implements ICombatPolicy {
     private final int buffCasterSecondaryInventorySlot;
     private final int weaponSwapTimeoutMs;
     private final List<Integer> buffCasterSkillRotation;
+    private final boolean avoidGiants;
+    private final boolean avoidUniques;
+    private final boolean avoidChampions;
+    private final boolean avoidTitans;
+    private final boolean avoidPartyMobs;
+    private final boolean avoidQuestMobs;
+    private final int recoveryCooldownMs;
+    private final Set<Integer> ammoConsumingSkillRefIds;
+    private final boolean pauseOnEmptyAmmo;
 
     private CombatPolicy(Builder builder) {
         this.hpPotionThresholdPercent = builder.hpPotionThresholdPercent;
@@ -60,6 +71,16 @@ public final class CombatPolicy implements ICombatPolicy {
         this.buffCasterSecondaryInventorySlot = builder.buffCasterSecondaryInventorySlot;
         this.weaponSwapTimeoutMs = builder.weaponSwapTimeoutMs;
         this.buffCasterSkillRotation = Collections.unmodifiableList(new ArrayList<>(builder.buffCasterSkillRotation));
+        this.avoidGiants = builder.avoidGiants;
+        this.avoidUniques = builder.avoidUniques;
+        this.avoidChampions = builder.avoidChampions;
+        this.avoidTitans = builder.avoidTitans;
+        this.avoidPartyMobs = builder.avoidPartyMobs;
+        this.avoidQuestMobs = builder.avoidQuestMobs;
+        this.recoveryCooldownMs = builder.recoveryCooldownMs;
+        this.ammoConsumingSkillRefIds = Collections
+                .unmodifiableSet(new LinkedHashSet<>(builder.ammoConsumingSkillRefIds));
+        this.pauseOnEmptyAmmo = builder.pauseOnEmptyAmmo;
     }
 
     @Override
@@ -182,6 +203,51 @@ public final class CombatPolicy implements ICombatPolicy {
         return buffCasterSkillRotation;
     }
 
+    @Override
+    public boolean isAvoidGiants() {
+        return avoidGiants;
+    }
+
+    @Override
+    public boolean isAvoidUniques() {
+        return avoidUniques;
+    }
+
+    @Override
+    public boolean isAvoidChampions() {
+        return avoidChampions;
+    }
+
+    @Override
+    public boolean isAvoidTitans() {
+        return avoidTitans;
+    }
+
+    @Override
+    public boolean isAvoidPartyMobs() {
+        return avoidPartyMobs;
+    }
+
+    @Override
+    public boolean isAvoidQuestMobs() {
+        return avoidQuestMobs;
+    }
+
+    @Override
+    public int getRecoveryCooldownMs() {
+        return recoveryCooldownMs;
+    }
+
+    @Override
+    public Set<Integer> getAmmoConsumingSkillRefIds() {
+        return ammoConsumingSkillRefIds;
+    }
+
+    @Override
+    public boolean isPauseOnEmptyAmmo() {
+        return pauseOnEmptyAmmo;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -211,6 +277,15 @@ public final class CombatPolicy implements ICombatPolicy {
         private int buffCasterSecondaryInventorySlot = -1;
         private int weaponSwapTimeoutMs = 4000;
         private List<Integer> buffCasterSkillRotation = new ArrayList<>();
+        private boolean avoidGiants = true;
+        private boolean avoidUniques = true;
+        private boolean avoidChampions = true;
+        private boolean avoidTitans = true;
+        private boolean avoidPartyMobs = true;
+        private boolean avoidQuestMobs = true;
+        private int recoveryCooldownMs = 15000;
+        private LinkedHashSet<Integer> ammoConsumingSkillRefIds = new LinkedHashSet<>();
+        private boolean pauseOnEmptyAmmo = true;
 
         public Builder hpPotionThresholdPercent(int hpPotionThresholdPercent) {
             this.hpPotionThresholdPercent = hpPotionThresholdPercent;
@@ -329,6 +404,51 @@ public final class CombatPolicy implements ICombatPolicy {
 
         public Builder buffCasterSkillRotation(List<Integer> buffCasterSkillRotation) {
             this.buffCasterSkillRotation = Objects.requireNonNull(buffCasterSkillRotation);
+            return this;
+        }
+
+        public Builder avoidGiants(boolean avoidGiants) {
+            this.avoidGiants = avoidGiants;
+            return this;
+        }
+
+        public Builder avoidUniques(boolean avoidUniques) {
+            this.avoidUniques = avoidUniques;
+            return this;
+        }
+
+        public Builder avoidChampions(boolean avoidChampions) {
+            this.avoidChampions = avoidChampions;
+            return this;
+        }
+
+        public Builder avoidTitans(boolean avoidTitans) {
+            this.avoidTitans = avoidTitans;
+            return this;
+        }
+
+        public Builder avoidPartyMobs(boolean avoidPartyMobs) {
+            this.avoidPartyMobs = avoidPartyMobs;
+            return this;
+        }
+
+        public Builder avoidQuestMobs(boolean avoidQuestMobs) {
+            this.avoidQuestMobs = avoidQuestMobs;
+            return this;
+        }
+
+        public Builder recoveryCooldownMs(int recoveryCooldownMs) {
+            this.recoveryCooldownMs = recoveryCooldownMs;
+            return this;
+        }
+
+        public Builder ammoConsumingSkillRefIds(Set<Integer> ammoConsumingSkillRefIds) {
+            this.ammoConsumingSkillRefIds = new LinkedHashSet<>(Objects.requireNonNull(ammoConsumingSkillRefIds));
+            return this;
+        }
+
+        public Builder pauseOnEmptyAmmo(boolean pauseOnEmptyAmmo) {
+            this.pauseOnEmptyAmmo = pauseOnEmptyAmmo;
             return this;
         }
 

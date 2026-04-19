@@ -1,5 +1,6 @@
 package org.sokybot.behaviors.combat.internal;
 
+import org.sokybot.commons.SilkroadUtils;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.gameevents.events.inventory.InventoryOperationEvent;
 import org.sokybot.network.NetworkPeer;
@@ -20,6 +21,9 @@ final class CombatPackets {
 
     /** Skill cast request (matches {@link org.sokybot.behaviors.training.internal.CombatBehavior}). */
     static final int CLIENT_SKILL_CAST = ClientOpcode.JOIN_REQUEST;
+
+    /** Character movement click / walk ({@link ClientOpcode#CHAR_MOVEMENT}). */
+    private static final int CLIENT_CHAR_MOVEMENT = ClientOpcode.CHAR_MOVEMENT;
 
     private static final byte CHAR_ACTION_ATTACK = 0x01;
     /** Ground item pickup (common client convention; tune per server if needed). */
@@ -103,5 +107,67 @@ final class CombatPackets {
                 .putInt(targetUniqueId)
                 .build();
         ctx.getDispatcher().sendToServer(packet);
+    }
+
+    /**
+     * Skill cast at world coordinates: same header as {@link #sendSkillCast} with target id {@code 0}, then movement
+     * sector/offset block (mirrors {@link #sendCharMove}).
+     */
+    static void sendSkillCastAtPoint(IWorkflowContext ctx, int skillRefId, float dstX, float dstY, float dstZ,
+            int sectorX, int sectorY) {
+        short sx = (short) sectorX;
+        short sy = (short) sectorY;
+        int xOff = SilkroadUtils.getXOffset((int) dstX, sx);
+        int zOff = SilkroadUtils.getSectorOffset(dstZ);
+        int yOff = SilkroadUtils.getYOffset((int) dstY, sy);
+        MutablePacket packet = MutablePacket.getBuilder(19, CLIENT_SKILL_CAST)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .put((byte) 0x01)
+                .put((byte) 0x01)
+                .putInt(skillRefId)
+                .put((byte) 0x01)
+                .putInt(0)
+                .put((byte) (sectorX & 0xFF))
+                .put((byte) (sectorY & 0xFF))
+                .putShort(clampToShort(xOff))
+                .putShort(clampToShort(zOff))
+                .putShort(clampToShort(yOff))
+                .build();
+        ctx.getDispatcher().sendToServer(packet);
+    }
+
+    /**
+     * Client walk / movement to world coordinates (opcode {@link ClientOpcode#CHAR_MOVEMENT}), encoding aligned with
+     * server movement 0xB021 destination branch (sector bytes + three short offsets X, Z, Y).
+     */
+    static void sendCharMove(IWorkflowContext ctx, float dstX, float dstY, float dstZ, int sectorX, int sectorY) {
+        short sx = (short) sectorX;
+        short sy = (short) sectorY;
+        int xOff = SilkroadUtils.getXOffset((int) dstX, sx);
+        int zOff = SilkroadUtils.getSectorOffset(dstZ);
+        int yOff = SilkroadUtils.getYOffset((int) dstY, sy);
+        MutablePacket packet = MutablePacket.getBuilder(8, CLIENT_CHAR_MOVEMENT)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .put((byte) (sectorX & 0xFF))
+                .put((byte) (sectorY & 0xFF))
+                .putShort(clampToShort(xOff))
+                .putShort(clampToShort(zOff))
+                .putShort(clampToShort(yOff))
+                .build();
+        ctx.getDispatcher().sendToServer(packet);
+    }
+
+    private static short clampToShort(int v) {
+        if (v > Short.MAX_VALUE) {
+            return Short.MAX_VALUE;
+        }
+        if (v < Short.MIN_VALUE) {
+            return Short.MIN_VALUE;
+        }
+        return (short) v;
     }
 }
