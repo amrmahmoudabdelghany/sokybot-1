@@ -191,6 +191,38 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Party subsystem (sokybot-party feature) -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-party-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-party-coordination-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-translators-party</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-party-projections</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-party-coordinator</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-behaviors-party</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Hibernate OSGi Dependencies (needed for assembly resolution) -->
         <dependency>
             <groupId>javax.enterprise</groupId>

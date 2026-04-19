@@ -11,10 +11,10 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>sokybot-behaviors-combat</artifactId>
+    <artifactId>sokybot-behaviors-party</artifactId>
     <packaging>bundle</packaging>
-    <name>sokybot-behaviors-combat</name>
-    <description>Combat-cycle IBehavior services, default strategies, and CombatCycleRegistrar</description>
+    <name>sokybot-behaviors-party</name>
+    <description>Party automation IBehavior services and PartyCycleRegistrar</description>
 
     <properties>
         <maven.compiler.release>11</maven.compiler.release>
@@ -29,25 +29,19 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-party-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-party-coordination-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-combat-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-navigation-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-town-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-pet-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -59,13 +53,13 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-game-model</artifactId>
+            <artifactId>sokybot-behaviors-combat</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-game-events-api</artifactId>
+            <artifactId>sokybot-navigation-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -79,12 +73,6 @@
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-core</artifactId>
-            <version>3.6.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -118,34 +106,25 @@
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
                         <Private-Package>
-                            org.sokybot.behaviors.combat.internal,
-                            org.sokybot.behaviors.combat.internal.strategies
+                            org.sokybot.behaviors.party.internal,
+                            org.sokybot.behaviors.party.internal.settings
                         </Private-Package>
-                        <!-- Exposed so other behavior bundles can register IBehavior&lt;CombatSettings&gt; for combat-cycle. -->
-                        <Export-Package>
-                            org.sokybot.behaviors.combat.internal.settings;version="${project.version}"
-                        </Export-Package>
                         <Import-Package>
+                            org.sokybot.behaviors.combat.internal.settings;version="[1.0,2)",
+                            org.sokybot.party.api;version="[1.0,2)",
+                            org.sokybot.party.coordination.api;version="[1.0,2)",
                             org.sokybot.combat.api;version="[1.0,2)",
-                            org.sokybot.navigation.api;version="[1.0,2)",
-                            org.sokybot.commons;version="[1.0,2)",
-                            org.sokybot.town.api;version="[1.0,2)",
-                            org.sokybot.pet.api;version="[1.0,2)";resolution:=optional,
                             org.sokybot.combat.projections.api;version="[1.0,2)",
-                            org.sokybot.commons.event;version="[1.0,2)",
-                            org.sokybot.gameevents.dto;version="[1.0,2)",
-                            org.sokybot.gameevents.events.inventory;version="[1.0,2)",
+                            org.sokybot.navigation.api;version="[1.0,2)";resolution:=optional,
+                            org.sokybot.commons;version="[1.0,2)",
                             org.sokybot.engine.api.behavior;version="[1.0,2)",
                             org.sokybot.engine.api.extension;version="[1.0,2)",
                             org.sokybot.engine.api.workflow;version="[1.0,2)",
-                            org.sokybot.gamemodel.model;version="[1.0,2)",
                             org.sokybot.network;version="[1.0,2)",
                             org.sokybot.network.packet;version="[1.0,2)",
                             org.sokybot.settings.api;version="[1.0,2)",
                             org.osgi.service.component.annotations;version="[1.5,2)",
                             org.slf4j;version="[1.7,2)",
-                            reactor.core;version="[3.6,4)",
-                            reactor.core.publisher;version="[3.6,4)",
                             *;resolution:=optional
                         </Import-Package>
                         <_dsannotations>*</_dsannotations>

@@ -24,6 +24,8 @@
         <module>sokybot-town-projections</module>
         <module>sokybot-pet-projections</module>
         <module>sokybot-translators-combat</module>
+        <module>sokybot-translators-party</module>
+        <module>sokybot-party-projections</module>
         <module>sokybot-game-loader</module>
         <module>sokybot-game-model</module>
         <module>sokybot-game-navigation</module>

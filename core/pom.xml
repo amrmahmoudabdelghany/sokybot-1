@@ -32,5 +32,9 @@
         <module>sokybot-town-api</module>
         <module>sokybot-behaviors-town</module>
         <module>sokybot-pet-api</module>
+        <module>sokybot-party-api</module>
+        <module>sokybot-party-coordination-api</module>
+        <module>sokybot-party-coordinator</module>
+        <module>sokybot-behaviors-party</module>
     </modules>
 </project>
