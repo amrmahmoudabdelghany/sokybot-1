@@ -15,6 +15,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.sokybot.combat.api.CombatSnapshot;
+import org.sokybot.combat.api.ILeashAnchorStore;
+import org.sokybot.combat.api.IMobOwnershipTracker;
 import org.sokybot.combat.api.DroppedItemRef;
 import org.sokybot.combat.api.ICombatSnapshot;
 import org.sokybot.combat.api.MonsterRef;
@@ -65,6 +67,12 @@ public final class CombatModelComponent implements ICombatModel {
 
     @Reference
     private IReactiveEventBus reactiveEventBus;
+
+    @Reference
+    private IMobOwnershipTracker mobOwnershipTracker;
+
+    @Reference
+    private ILeashAnchorStore leashAnchorStore;
 
     /**
      * Optional global bind (per-machine instances normally live inside engine/workflow context). Present only if a
@@ -472,13 +480,22 @@ public final class CombatModelComponent implements ICombatModel {
     private ICombatSnapshot buildSnapshot(String machineFullName, MachineCombatState st) {
         float[] selfPos = new float[] { st.selfX, st.selfY, st.selfZ };
 
+        Optional<float[]> anchorOpt = leashAnchorStore.getAnchor(machineFullName);
+
         List<MonsterRef> monsters = new ArrayList<>();
         for (TacticalMonster tm : st.monsters.values()) {
             float[] mpos = new float[] { tm.x, tm.y, tm.z };
             float dist = CombatPositions.distance(selfPos, mpos);
             int pct = hpPercent(tm.currentHp, tm.maxHp);
+            Optional<Float> distFromAnchor = Optional.empty();
+            if (anchorOpt.isPresent()) {
+                float[] ap = anchorOpt.get();
+                distFromAnchor = Optional.of(Float.valueOf(CombatPositions.distance(ap, mpos)));
+            }
+            Optional<Integer> firstAttacker = mobOwnershipTracker.getFirstAttackerEntityId(machineFullName,
+                    tm.entityId);
             monsters.add(new MonsterRef(tm.entityId, tm.refObjId, tm.levelOrZero, dist, pct, false,
-                    tm.championOrUnique()));
+                    tm.championOrUnique(), firstAttacker, distFromAnchor));
         }
 
         long now = System.currentTimeMillis();

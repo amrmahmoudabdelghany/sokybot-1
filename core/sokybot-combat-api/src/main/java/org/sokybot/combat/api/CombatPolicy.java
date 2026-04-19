@@ -16,6 +16,8 @@ public final class CombatPolicy implements ICombatPolicy {
     private final int mpPotionItemRefId;
     private final int maxEngageDistance;
     private final int leashRadius;
+    private final int lootRadius;
+    private final List<Integer> partyMemberEntityIds;
     private final int minMobLevelDelta;
     private final int maxMobLevelDelta;
     private final boolean preferAggressiveOnSelf;
@@ -31,6 +33,8 @@ public final class CombatPolicy implements ICombatPolicy {
         this.mpPotionItemRefId = builder.mpPotionItemRefId;
         this.maxEngageDistance = builder.maxEngageDistance;
         this.leashRadius = builder.leashRadius;
+        this.lootRadius = builder.lootRadius;
+        this.partyMemberEntityIds = Collections.unmodifiableList(new ArrayList<>(builder.partyMemberEntityIds));
         this.minMobLevelDelta = builder.minMobLevelDelta;
         this.maxMobLevelDelta = builder.maxMobLevelDelta;
         this.preferAggressiveOnSelf = builder.preferAggressiveOnSelf;
@@ -68,6 +72,16 @@ public final class CombatPolicy implements ICombatPolicy {
     @Override
     public int getLeashRadius() {
         return leashRadius;
+    }
+
+    @Override
+    public int getLootRadius() {
+        return lootRadius;
+    }
+
+    @Override
+    public List<Integer> getPartyMemberEntityIds() {
+        return partyMemberEntityIds;
     }
 
     @Override
@@ -116,6 +130,8 @@ public final class CombatPolicy implements ICombatPolicy {
         private int mpPotionItemRefId;
         private int maxEngageDistance = 80;
         private int leashRadius = 150;
+        private int lootRadius = 40;
+        private List<Integer> partyMemberEntityIds = new ArrayList<>();
         private int minMobLevelDelta = -5;
         private int maxMobLevelDelta = 5;
         private boolean preferAggressiveOnSelf = true;
@@ -151,6 +167,16 @@ public final class CombatPolicy implements ICombatPolicy {
 
         public Builder leashRadius(int leashRadius) {
             this.leashRadius = leashRadius;
+            return this;
+        }
+
+        public Builder lootRadius(int lootRadius) {
+            this.lootRadius = lootRadius;
+            return this;
+        }
+
+        public Builder partyMemberEntityIds(List<Integer> partyMemberEntityIds) {
+            this.partyMemberEntityIds = Objects.requireNonNull(partyMemberEntityIds);
             return this;
         }
 

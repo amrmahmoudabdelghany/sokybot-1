@@ -21,7 +21,13 @@ public interface ICombatSettings {
 
     int getLeashRadius();
 
+    /** Max pickup distance around the character for ground loot. */
+    int getLootRadius();
+
     int getMaxEngageDistance();
+
+    /** Party member entity unique ids for KS sharing rules; may be empty. */
+    List<Integer> getPartyMemberEntityIds();
 
     /**
      * Ordered skill ref ids for the main rotation.

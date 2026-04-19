@@ -20,7 +20,7 @@ public final class DefaultLootingStrategy implements ILootingStrategy {
             return Optional.empty();
         }
         long now = System.currentTimeMillis();
-        float maxPick = policy.getLeashRadius();
+        float maxPick = policy.getLootRadius();
         List<Integer> white = policy.getLootItemRefIdWhitelist();
 
         DroppedItemRef best = null;

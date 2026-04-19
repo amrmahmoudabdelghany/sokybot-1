@@ -1,6 +1,7 @@
 package org.sokybot.combat.api;
 
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Lightweight view of a nearby monster candidate for targeting.
@@ -14,9 +15,12 @@ public final class MonsterRef {
     private final int hpPercentOrNegativeIfUnknown;
     private final boolean aggressiveTowardSelf;
     private final boolean championOrUnique;
+    private final Optional<Integer> firstAttackerEntityId;
+    private final Optional<Float> distanceFromTrainingAnchor;
 
     public MonsterRef(int entityId, int refObjId, int levelOrZero, float distanceToSelf,
-            int hpPercentOrNegativeIfUnknown, boolean aggressiveTowardSelf, boolean championOrUnique) {
+            int hpPercentOrNegativeIfUnknown, boolean aggressiveTowardSelf, boolean championOrUnique,
+            Optional<Integer> firstAttackerEntityId, Optional<Float> distanceFromTrainingAnchor) {
         this.entityId = entityId;
         this.refObjId = refObjId;
         this.levelOrZero = levelOrZero;
@@ -24,6 +28,9 @@ public final class MonsterRef {
         this.hpPercentOrNegativeIfUnknown = hpPercentOrNegativeIfUnknown;
         this.aggressiveTowardSelf = aggressiveTowardSelf;
         this.championOrUnique = championOrUnique;
+        this.firstAttackerEntityId = firstAttackerEntityId != null ? firstAttackerEntityId : Optional.empty();
+        this.distanceFromTrainingAnchor = distanceFromTrainingAnchor != null ? distanceFromTrainingAnchor
+                : Optional.empty();
     }
 
     public int getEntityId() {
@@ -55,6 +62,22 @@ public final class MonsterRef {
 
     public boolean isChampionOrUnique() {
         return championOrUnique;
+    }
+
+    /**
+     * When present, the unique id of the first player seen to land a skill on this mob; used for KS protection.
+     * Empty when no such event was recorded for this spawn.
+     */
+    public Optional<Integer> getFirstAttackerEntityId() {
+        return firstAttackerEntityId;
+    }
+
+    /**
+     * World distance from the training leash anchor to the mob, when an anchor is configured; empty when the
+     * anchor is not set.
+     */
+    public Optional<Float> getDistanceFromTrainingAnchor() {
+        return distanceFromTrainingAnchor;
     }
 
     @Override

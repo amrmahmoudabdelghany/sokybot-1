@@ -35,6 +35,12 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-town-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-combat-projections</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -42,6 +48,12 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-game-model</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-game-events-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -88,7 +100,9 @@
                         </Private-Package>
                         <Import-Package>
                             org.sokybot.combat.api;version="[1.0,2)",
+                            org.sokybot.town.api;version="[1.0,2)",
                             org.sokybot.combat.projections.api;version="[1.0,2)",
+                            org.sokybot.gameevents.dto;version="[1.0,2)",
                             org.sokybot.engine.api.behavior;version="[1.0,2)",
                             org.sokybot.engine.api.extension;version="[1.0,2)",
                             org.sokybot.engine.api.workflow;version="[1.0,2)",

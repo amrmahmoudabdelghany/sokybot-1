@@ -28,5 +28,7 @@
         <module>sokybot-behaviors-trade</module>
         <module>sokybot-combat-api</module>
         <module>sokybot-behaviors-combat</module>
+        <module>sokybot-town-api</module>
+        <module>sokybot-behaviors-town</module>
     </modules>
 </project>

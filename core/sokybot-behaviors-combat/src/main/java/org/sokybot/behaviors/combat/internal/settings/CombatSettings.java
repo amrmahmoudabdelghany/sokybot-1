@@ -18,6 +18,7 @@ public final class CombatSettings implements ICombatSettings {
     private int hpPotionItemRefId;
     private int mpPotionItemRefId;
     private int leashRadius = 150;
+    private int lootRadius = 40;
     private int maxEngageDistance = 80;
     private final List<Integer> attackSkillRotation = new ArrayList<>();
     private final List<Integer> buffSkillRotation = new ArrayList<>();
@@ -25,6 +26,7 @@ public final class CombatSettings implements ICombatSettings {
     private final List<Integer> mobRefIdBlockList = new ArrayList<>();
     private boolean pickupGold = true;
     private final List<Integer> lootItemRefIdWhitelist = new ArrayList<>();
+    private final List<Integer> partyMemberEntityIds = new ArrayList<>();
     private boolean returnToTownOnNearDeath;
 
     @Override
@@ -82,12 +84,26 @@ public final class CombatSettings implements ICombatSettings {
     }
 
     @Override
+    public int getLootRadius() {
+        return lootRadius;
+    }
+
+    public void setLootRadius(int lootRadius) {
+        this.lootRadius = lootRadius;
+    }
+
+    @Override
     public int getMaxEngageDistance() {
         return maxEngageDistance;
     }
 
     public void setMaxEngageDistance(int maxEngageDistance) {
         this.maxEngageDistance = maxEngageDistance;
+    }
+
+    @Override
+    public List<Integer> getPartyMemberEntityIds() {
+        return List.copyOf(partyMemberEntityIds);
     }
 
     @Override
@@ -142,6 +158,8 @@ public final class CombatSettings implements ICombatSettings {
                 .mpPotionItemRefId(mpPotionItemRefId)
                 .maxEngageDistance(maxEngageDistance)
                 .leashRadius(leashRadius)
+                .lootRadius(lootRadius)
+                .partyMemberEntityIds(new ArrayList<>(partyMemberEntityIds))
                 .minMobLevelDelta(-99)
                 .maxMobLevelDelta(99)
                 .preferAggressiveOnSelf(true)

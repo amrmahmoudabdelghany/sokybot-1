@@ -113,7 +113,8 @@ public final class RecoverHpMpBehavior implements IBehavior<CombatSettings> {
             return null;
         }
         for (IItem item : items) {
-            if (item.getSlot() < 0 || item.getSlot() >= 128) {
+            int slotUnsigned = item.getSlot() & 0xFF;
+            if (slotUnsigned >= 128) {
                 continue;
             }
             if (refId > 0 && item.getRefId() == refId) {

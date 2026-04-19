@@ -24,12 +24,39 @@ public final class DefaultTargetSelectionStrategy implements ITargetSelectionStr
         float maxDist = policy.getMaxEngageDistance();
         List<Integer> allow = policy.getMobRefIdAllowList();
         List<Integer> block = policy.getMobRefIdBlockList();
+        List<Integer> party = policy.getPartyMemberEntityIds();
+
+        Optional<Integer> selfOpt = snapshot.getSelfEntityId();
+        Integer selfId = selfOpt.orElse(null);
 
         List<MonsterRef> candidates = new ArrayList<>();
         for (MonsterRef m : snapshot.getNearbyMonsters()) {
             if (m.getDistanceToSelf() > maxDist || Float.isInfinite(m.getDistanceToSelf())) {
                 continue;
             }
+
+            Optional<Float> fromAnchor = m.getDistanceFromTrainingAnchor();
+            if (fromAnchor.isPresent()) {
+                if (fromAnchor.get().floatValue() > policy.getLeashRadius()) {
+                    continue;
+                }
+            } else {
+                if (m.getDistanceToSelf() > policy.getLeashRadius()) {
+                    continue;
+                }
+            }
+
+            Optional<Integer> owner = m.getFirstAttackerEntityId();
+            if (owner.isPresent()) {
+                int attacker = owner.get().intValue();
+                if (selfId == null) {
+                    continue;
+                }
+                if (attacker != selfId.intValue() && !party.contains(Integer.valueOf(attacker))) {
+                    continue;
+                }
+            }
+
             if (!allow.isEmpty() && !allow.contains(Integer.valueOf(m.getRefObjId()))) {
                 continue;
             }
@@ -46,7 +73,7 @@ public final class DefaultTargetSelectionStrategy implements ITargetSelectionStr
         }
 
         candidates.sort(Comparator
-                .comparing((MonsterRef m) -> !m.isAggressiveTowardSelf())
+                .comparing((MonsterRef mr) -> !mr.isAggressiveTowardSelf())
                 .thenComparingDouble(MonsterRef::getDistanceToSelf));
 
         return Optional.of(Integer.valueOf(candidates.get(0).getEntityId()));

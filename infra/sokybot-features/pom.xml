@@ -157,6 +157,23 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Town loop subsystem (sokybot-town feature) -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-town-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-town-projections</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-behaviors-town</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Hibernate OSGi Dependencies (needed for assembly resolution) -->
         <dependency>
             <groupId>javax.enterprise</groupId>

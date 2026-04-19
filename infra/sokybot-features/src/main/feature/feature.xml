@@ -178,6 +178,16 @@
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- TOWN FEATURE: Town API, projections (Phase 2), behaviors (Phase 2)       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-town" version="${project.version}" description="Town API, projections, and town-cycle behaviors">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:org.sokybot/sokybot-town-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-town-projections/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-behaviors-town/${project.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- LOGIN RUNTIME FEATURE: Decomposed login protocol/settings/security      -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-login-runtime" version="${project.version}" description="Login protocol, settings, failure policies, security coordinator, and compiled login workflow">
@@ -210,6 +220,7 @@
         <feature>sokybot-login-runtime</feature>
         <feature>sokybot-trade</feature>
         <feature>sokybot-combat</feature>
+        <feature>sokybot-town</feature>
     </feature>
 
 </features>

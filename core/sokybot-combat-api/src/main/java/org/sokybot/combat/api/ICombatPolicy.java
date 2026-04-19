@@ -20,6 +20,16 @@ public interface ICombatPolicy {
     int getLeashRadius();
 
     /**
+     * Max ground distance to a drop to attempt pickup, relative to the character (independent of leash anchor).
+     */
+    int getLootRadius();
+
+    /**
+     * Other player entity unique ids (e.g. party) allowed to share a mob for KS rules; may be empty.
+     */
+    List<Integer> getPartyMemberEntityIds();
+
+    /**
      * Minimum monster level relative to player (negative means can attack lower levels).
      */
     int getMinMobLevelDelta();
