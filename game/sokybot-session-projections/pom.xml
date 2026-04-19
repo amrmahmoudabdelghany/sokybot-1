@@ -11,10 +11,10 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>sokybot-login-workflow-builtin</artifactId>
+    <artifactId>sokybot-session-projections</artifactId>
     <packaging>bundle</packaging>
-    <name>Sokybot :: Login workflow (builtin)</name>
-    <description>Compiled login-cycle state machine and IActuator registration</description>
+    <name>sokybot-session-projections</name>
+    <description>Reactive session state projection (ISessionModel implementation)</description>
 
     <properties>
         <maven.compiler.release>11</maven.compiler.release>
@@ -23,19 +23,7 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-engine-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-engine</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-game-model</artifactId>
+            <artifactId>sokybot-session-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -47,32 +35,20 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-settings</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-proxy</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-commons</artifactId>
             <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+            <version>3.6.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.service.component.annotations</artifactId>
             <version>1.5.1</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.service.event</artifactId>
-            <version>1.4.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -93,24 +69,16 @@
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Private-Package>
-                            org.sokybot.login.workflow.builtin
-                        </Private-Package>
+                        <Private-Package>org.sokybot.session.projections.internal</Private-Package>
                         <Import-Package>
-                            org.sokybot.engine.api;version="[1.0,2)",
-                            org.sokybot.engine.api.extension;version="[1.0,2)",
-                            org.sokybot.engine.api.login;version="[1.0,2)",
-                            org.sokybot.engine.api.workflow;version="[1.0,2)",
-                            org.sokybot.engine.core.workflow.builder;version="[1.0,2)",
-                            org.sokybot.gamemodel;version="[1.0,2)",
-                            org.sokybot.gameevents.dto;version="[1.0,2)",
-                            org.sokybot.proxy;version="[1.0,2)",
-                            org.sokybot.settings.api;version="[1.0,2)",
-                            org.sokybot.settings.security;version="[1.0,2)",
+                            org.sokybot.session.api;version="[1.0,2)",
+                            org.sokybot.commons.event;version="[1.0,2)",
+                            org.sokybot.gameevents.events.core;version="[1.0,2)",
+                            org.sokybot.gameevents.events.session;version="[1.0,2)",
                             org.osgi.service.component.annotations;version="[1.5,2)",
-                            org.osgi.service.event;version="[1.4,2)",
                             org.slf4j;version="[1.7,2)",
+                            reactor.core;version="[3.6,4)",
+                            reactor.core.publisher;version="[3.6,4)",
                             *;resolution:=optional
                         </Import-Package>
                         <_dsannotations>*</_dsannotations>

@@ -39,5 +39,7 @@
         <module>sokybot-storage-api</module>
         <module>sokybot-scripting-api</module>
         <module>sokybot-scripting-core</module>
+        <module>sokybot-session-api</module>
+        <module>sokybot-session-solvers-builtin</module>
     </modules>
 </project>

@@ -1,7 +1,10 @@
 package org.sokybot.engine.internal.connection;
 
+import org.sokybot.commons.event.IReactiveEventBus;
 import org.sokybot.engine.internal.cycle.ICycleController;
 import org.sokybot.engine.internal.journal.INetworkTransitionJournal;
+import org.sokybot.gameevents.events.session.SessionConnectedEvent;
+import org.sokybot.gameevents.events.session.SessionDisconnectedEvent;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.gamemodel.LoginState;
 import org.sokybot.proxy.IConnectionListener;
@@ -21,17 +24,36 @@ public final class EngineConnectionListener implements IConnectionListener {
     private final ICycleController cycleController;
     private final IGameModel gameModel;
     private final Runnable clearSessionData;
+    private final IReactiveEventBus eventBus;
 
+    /**
+     * Backward-compatible constructor (no event bus).
+     */
     public EngineConnectionListener(String machineId,
             INetworkTransitionJournal journal,
             ICycleController cycleController,
             IGameModel gameModel,
             Runnable clearSessionData) {
+        this(machineId, journal, cycleController, gameModel, clearSessionData, null);
+    }
+
+    /**
+     * Full constructor with optional reactive event bus for session event emission.
+     *
+     * @param eventBus nullable; when present, session events are published on connect/disconnect
+     */
+    public EngineConnectionListener(String machineId,
+            INetworkTransitionJournal journal,
+            ICycleController cycleController,
+            IGameModel gameModel,
+            Runnable clearSessionData,
+            IReactiveEventBus eventBus) {
         this.machineId = machineId;
         this.journal = journal;
         this.cycleController = cycleController;
         this.gameModel = gameModel;
         this.clearSessionData = clearSessionData;
+        this.eventBus = eventBus;
     }
 
     @Override
@@ -85,6 +107,7 @@ public final class EngineConnectionListener implements IConnectionListener {
         log.info("EngineConnectionListener: Agent authentication complete for machine {}", machineId);
         journal.append("Authenticated", "AUTHENTICATED", null, null);
         cycleController.reconcileAfterAuthentication();
+        publishSessionEvent(new SessionConnectedEvent(machineId));
     }
 
     @Override
@@ -98,6 +121,17 @@ public final class EngineConnectionListener implements IConnectionListener {
         String loginPhase = (reason != null && reason.toLowerCase().contains("agent auth failed")) ? "AUTH_FAILED"
                 : "DISCONNECTED";
         journal.append("Disconnected", loginPhase, reason, null);
+        publishSessionEvent(new SessionDisconnectedEvent(machineId, reason, false));
         clearSessionData.run();
+    }
+
+    private void publishSessionEvent(Object event) {
+        if (eventBus != null) {
+            try {
+                eventBus.publish(event);
+            } catch (Exception e) {
+                log.debug("Failed to publish session event: {}", e.getMessage());
+            }
+        }
     }
 }

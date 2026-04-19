@@ -241,6 +241,15 @@
         <bundle>mvn:org.sokybot/sokybot-login-workflow-builtin/${project.version}</bundle>
     </feature>
 
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- SESSION FEATURE: Session API, captcha solver SPI, and built-in solvers  -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-session" version="${project.version}" description="Session resilience API, captcha solver SPI, and built-in solvers">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:org.sokybot/sokybot-session-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-session-projections/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-session-solvers-builtin/${project.version}</bundle>
+    </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- DEV FEATURE: Development and debugging tools (not for production)       -->
@@ -260,6 +269,7 @@
     <feature name="sokybot-full" version="${project.version}" description="Sokybot Full Application">
         <feature>sokybot-core</feature>
         <feature>sokybot-login-runtime</feature>
+        <feature>sokybot-session</feature>
         <feature>sokybot-trade</feature>
         <feature>sokybot-combat</feature>
         <feature>sokybot-town</feature>

@@ -38,6 +38,9 @@ public final class LoginSettingsSnapshot {
     private final long gatewayLoginMinIntervalMs;
     private final long gatewayLoginPauseAfterAgentListMs;
     private final long logoutAckTimeoutMs;
+    private final boolean alertOnImageCaptcha;
+    private final long captchaSolveTimeoutMs;
+    private final boolean stopBotOnCaptchaUnsolved;
 
     public LoginSettingsSnapshot(
             String targetGateway,
@@ -70,7 +73,10 @@ public final class LoginSettingsSnapshot {
             long agentBanBlockDurationMs,
             long gatewayLoginMinIntervalMs,
             long gatewayLoginPauseAfterAgentListMs,
-            long logoutAckTimeoutMs
+            long logoutAckTimeoutMs,
+            boolean alertOnImageCaptcha,
+            long captchaSolveTimeoutMs,
+            boolean stopBotOnCaptchaUnsolved
     ) {
         this.targetGateway = targetGateway != null ? targetGateway : "";
         this.username = username != null ? username : "";
@@ -103,6 +109,9 @@ public final class LoginSettingsSnapshot {
         this.gatewayLoginMinIntervalMs = gatewayLoginMinIntervalMs;
         this.gatewayLoginPauseAfterAgentListMs = gatewayLoginPauseAfterAgentListMs;
         this.logoutAckTimeoutMs = logoutAckTimeoutMs;
+        this.alertOnImageCaptcha = alertOnImageCaptcha;
+        this.captchaSolveTimeoutMs = captchaSolveTimeoutMs;
+        this.stopBotOnCaptchaUnsolved = stopBotOnCaptchaUnsolved;
     }
 
     public String getTargetGateway() { return targetGateway; }
@@ -136,6 +145,9 @@ public final class LoginSettingsSnapshot {
     public long getGatewayLoginMinIntervalMs() { return gatewayLoginMinIntervalMs; }
     public long getGatewayLoginPauseAfterAgentListMs() { return gatewayLoginPauseAfterAgentListMs; }
     public long getLogoutAckTimeoutMs() { return logoutAckTimeoutMs; }
+    public boolean isAlertOnImageCaptcha() { return alertOnImageCaptcha; }
+    public long getCaptchaSolveTimeoutMs() { return captchaSolveTimeoutMs; }
+    public boolean isStopBotOnCaptchaUnsolved() { return stopBotOnCaptchaUnsolved; }
 
     @Override
     public boolean equals(Object o) {
@@ -176,7 +188,10 @@ public final class LoginSettingsSnapshot {
                 && Objects.equals(selectedCharacter, that.selectedCharacter)
                 && locale == that.locale
                 && Objects.equals(loginCharset, that.loginCharset)
-                && Objects.equals(gatewayClientModule, that.gatewayClientModule);
+                && Objects.equals(gatewayClientModule, that.gatewayClientModule)
+                && alertOnImageCaptcha == that.alertOnImageCaptcha
+                && captchaSolveTimeoutMs == that.captchaSolveTimeoutMs
+                && stopBotOnCaptchaUnsolved == that.stopBotOnCaptchaUnsolved;
     }
 
     @Override
@@ -189,7 +204,8 @@ public final class LoginSettingsSnapshot {
                 infiniteRetryMode, agentWaitTimeoutMs, loginResponseTimeoutMs, agentAuthTimeoutMs,
                 passcodeWaitTimeoutMs, passcodeUserInputTimeoutMs, agentRequestMaxRetries,
                 agentRequestRetryBackoffMs, agentBanBlockDurationMs, gatewayLoginMinIntervalMs,
-                gatewayLoginPauseAfterAgentListMs, logoutAckTimeoutMs
+                gatewayLoginPauseAfterAgentListMs, logoutAckTimeoutMs,
+                alertOnImageCaptcha, captchaSolveTimeoutMs, stopBotOnCaptchaUnsolved
         );
     }
 
@@ -227,6 +243,9 @@ public final class LoginSettingsSnapshot {
                 + ", gatewayLoginMinIntervalMs=" + gatewayLoginMinIntervalMs
                 + ", gatewayLoginPauseAfterAgentListMs=" + gatewayLoginPauseAfterAgentListMs
                 + ", logoutAckTimeoutMs=" + logoutAckTimeoutMs
+                + ", alertOnImageCaptcha=" + alertOnImageCaptcha
+                + ", captchaSolveTimeoutMs=" + captchaSolveTimeoutMs
+                + ", stopBotOnCaptchaUnsolved=" + stopBotOnCaptchaUnsolved
                 + '}';
     }
 }

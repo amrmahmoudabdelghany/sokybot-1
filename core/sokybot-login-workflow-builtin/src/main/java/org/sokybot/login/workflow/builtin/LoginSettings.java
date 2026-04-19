@@ -38,6 +38,9 @@ public final class LoginSettings {
     public boolean characterSelectionStrictMode = false;
     public boolean passcodeStringDetectionEnabled = true;
     public int logoutAckTimeoutMs = 3000;
+    public boolean alertOnImageCaptcha = false;
+    public long captchaSolveTimeoutMs = 60000L;
+    public boolean stopBotOnCaptchaUnsolved = false;
 
     public LoginSettings() {
     }

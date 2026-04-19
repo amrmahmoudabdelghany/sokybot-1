@@ -16,6 +16,7 @@ import org.sokybot.engine.core.waiting.WaitingStateManager;
 import org.sokybot.engine.core.workflow.WorkflowContextImpl;
 import org.sokybot.engine.core.workflow.WorkflowRegistryImpl;
 import org.sokybot.engine.internal.NoopEngineEventMediator;
+import org.sokybot.commons.event.IReactiveEventBus;
 import org.sokybot.engine.internal.connection.EngineConnectionListener;
 import org.sokybot.engine.internal.cycle.CycleController;
 import org.sokybot.engine.internal.journal.NetworkTransitionJournal;
@@ -72,6 +73,17 @@ public class EngineCore implements IEngine {
             java.util.List<IEngineEventHandler<? extends EngineEvent>> handlers,
             IEngineEventMediator eventMediator,
             BundleContext bundleContext) {
+        this(machineId, groupName, machineName, proxyConnection, gameModel,
+                actuators, handlers, eventMediator, bundleContext, null);
+    }
+
+    public EngineCore(String machineId, String groupName, String machineName,
+            IProxyConnection proxyConnection, IGameModel gameModel,
+            java.util.List<org.sokybot.engine.api.extension.IActuator> actuators,
+            java.util.List<IEngineEventHandler<? extends EngineEvent>> handlers,
+            IEngineEventMediator eventMediator,
+            BundleContext bundleContext,
+            IReactiveEventBus reactiveEventBus) {
         if (machineId == null || machineId.trim().isEmpty()) {
             throw new IllegalArgumentException("Machine ID cannot be null or empty");
         }
@@ -146,7 +158,8 @@ public class EngineCore implements IEngine {
                 networkJournal,
                 cycleController,
                 gameModel,
-                () -> actuatorRegistry.clearSessionData()));
+                () -> actuatorRegistry.clearSessionData(),
+                reactiveEventBus));
 
         log.info("EngineCore created for machine: {}", machineId);
     }

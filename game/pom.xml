@@ -22,6 +22,7 @@
         <module>sokybot-trade-projections</module>
         <module>sokybot-combat-projections</module>
         <module>sokybot-town-projections</module>
+        <module>sokybot-session-projections</module>
         <module>sokybot-pet-projections</module>
         <module>sokybot-translators-combat</module>
         <module>sokybot-translators-party</module>

@@ -135,6 +135,11 @@ public final class LoginSettingsSnapshotterImpl implements ILoginSettingsSnapsho
         long logoutAckTimeoutMs = LoginTimeoutNormalizer.normalize(
                 SettingsValueReader.asLong(source, "logoutAckTimeoutMs", 3000L), 3000L, 500L, 10000L
         );
+        boolean alertOnImageCaptcha = SettingsValueReader.asBoolean(source, "alertOnImageCaptcha", false);
+        long captchaSolveTimeoutMs = LoginTimeoutNormalizer.normalize(
+                SettingsValueReader.asLong(source, "captchaSolveTimeoutMs", 60000L), 60000L, 5000L, 300000L
+        );
+        boolean stopBotOnCaptchaUnsolved = SettingsValueReader.asBoolean(source, "stopBotOnCaptchaUnsolved", false);
 
         LoginTimeoutNormalizer.Normalized normalized = LoginTimeoutNormalizer.normalized(
                 agentWaitTimeoutMs, loginResponseTimeoutMs, agentRequestMaxRetries, agentRequestRetryBackoffMs
@@ -171,7 +176,10 @@ public final class LoginSettingsSnapshotterImpl implements ILoginSettingsSnapsho
                 agentBanBlockDurationMs,
                 gatewayLoginMinIntervalMs,
                 gatewayLoginPauseAfterAgentListMs,
-                logoutAckTimeoutMs
+                logoutAckTimeoutMs,
+                alertOnImageCaptcha,
+                captchaSolveTimeoutMs,
+                stopBotOnCaptchaUnsolved
         );
     }
 
@@ -207,7 +215,10 @@ public final class LoginSettingsSnapshotterImpl implements ILoginSettingsSnapsho
                 300000L,
                 2000L,
                 1500L,
-                3000L
+                3000L,
+                false,
+                60000L,
+                false
         );
     }
 

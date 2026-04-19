@@ -18,6 +18,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.sokybot.commons.event.IReactiveEventBus;
 import org.sokybot.commons.osgi.ServiceHandle;
 import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.extension.IActuator;
@@ -48,6 +49,7 @@ public class EngineFactory implements IEngineFactory {
     private final List<IActuator> actuators = new CopyOnWriteArrayList<>();
     private final List<IEngineEventHandler<? extends EngineEvent>> handlers = new CopyOnWriteArrayList<>();
     private final ServiceHandle<IEngineEventMediator> eventMediator = ServiceHandle.create();
+    private final ServiceHandle<IReactiveEventBus> reactiveEventBus = ServiceHandle.create();
 
     private BundleContext bundleContext;
     private boolean resumeOnBoot;
@@ -119,6 +121,15 @@ public class EngineFactory implements IEngineFactory {
         engines.values().forEach(engine -> engine.clearEventMediator(mediator));
     }
 
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, unbind = "unsetReactiveEventBus")
+    protected void setReactiveEventBus(IReactiveEventBus bus) {
+        this.reactiveEventBus.bind(bus);
+    }
+
+    protected void unsetReactiveEventBus(IReactiveEventBus bus) {
+        this.reactiveEventBus.unbind(bus);
+    }
+
     @Override
     public IEngine createEngine(String machineId, IProxyConnection proxyConnection,
             IGameModel gameModel, String groupName, String machineName) {
@@ -138,7 +149,9 @@ public class EngineFactory implements IEngineFactory {
                 // Create engine core, passing the injected actuators list
                 EngineCore engine = new EngineCore(
                         machineId, groupName, machineName,
-                        proxyConnection, gameModel, actuators, handlers, eventMediator.tryGet().orElse(null), bundleContext);
+                        proxyConnection, gameModel, actuators, handlers,
+                        eventMediator.tryGet().orElse(null), bundleContext,
+                        reactiveEventBus.tryGet().orElse(null));
 
                 engines.put(machineId, engine);
 

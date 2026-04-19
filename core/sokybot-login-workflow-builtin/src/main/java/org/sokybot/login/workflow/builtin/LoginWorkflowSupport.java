@@ -28,8 +28,11 @@ import org.sokybot.engine.api.login.LoginPhaseAliases;
 import org.sokybot.engine.api.login.LoginSettingsSnapshot;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.gameevents.dto.AgentInfo;
+import org.sokybot.gameevents.events.session.SessionConnectedEvent;
+import org.sokybot.gameevents.events.session.SessionReconnectingEvent;
 import org.sokybot.gamemodel.LoginState;
 import org.sokybot.proxy.IProxyConnection;
+import org.sokybot.commons.event.IReactiveEventBus;
 
 /**
  * Port of the former {@code Login.groovy} helper logic: settings, gateway selection, telemetry, retry policy, and flow checks.
@@ -976,6 +979,14 @@ final class LoginWorkflowSupport {
         emitEnginePhase(ctx, "RETRY_DELAY", "RetryDelay", String.valueOf(loginState != null ? loginState.getFailureReason() : ""), extras);
         ctx.getPersistentData().put(LoginCycleKeys.KEY_RETRY_UNTIL_MS, nowMs + delayMs);
         ctx.getPersistentData().put(LoginCycleKeys.KEY_RETRY_ATTEMPT_ID, currentAttemptId(ctx));
+
+        // Publish SessionReconnectingEvent for the session projection
+        int attempt = 1;
+        try {
+            Object retryRaw = ctx.getPersistentData().getOrDefault("loginRetryAttempt", 0);
+            attempt = Math.max(1, (retryRaw instanceof Number) ? ((Number) retryRaw).intValue() : 1);
+        } catch (Exception ignored) { }
+        publishSessionEvent(ctx, new SessionReconnectingEvent(machineFullName(ctx), attempt, nowMs + delayMs));
     }
 
     String buildHaltSignature(IWorkflowContext ctx, LoginState loginState, String failureClass) {
@@ -1172,6 +1183,34 @@ final class LoginWorkflowSupport {
             return username.charAt(0) + "*";
         }
         return username.charAt(0) + "***" + username.substring(username.length() - 1);
+    }
+
+    /**
+     * Publish a session lifecycle event via the reactive event bus (obtained from the workflow context).
+     * Fails silently if the bus is unavailable.
+     */
+    void publishSessionEvent(IWorkflowContext ctx, Object event) {
+        try {
+            IReactiveEventBus bus = ctx.getServiceOptional(IReactiveEventBus.class).orElse(null);
+            if (bus != null) {
+                bus.publish(event);
+            }
+        } catch (Exception e) {
+            log.debug("Failed to publish session event: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Build the machine full name from the workflow context (group.machine).
+     */
+    String machineFullName(IWorkflowContext ctx) {
+        String group = ctx.getGroupName();
+        String machine = ctx.getMachineName();
+        if (group != null && !group.isEmpty() && machine != null && !machine.isEmpty()) {
+            return group + "." + machine;
+        }
+        String machineId = ctx.getMachineId();
+        return machineId != null ? machineId : String.valueOf(machine);
     }
 
 }

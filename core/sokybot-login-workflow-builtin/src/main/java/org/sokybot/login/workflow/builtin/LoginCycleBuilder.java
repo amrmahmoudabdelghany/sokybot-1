@@ -8,6 +8,8 @@ import org.sokybot.engine.api.workflow.ICycleDefinition;
 import org.sokybot.engine.api.workflow.IGuard;
 import org.sokybot.engine.core.workflow.builder.CycleDefinitionBuilder;
 import org.sokybot.gamemodel.LoginState;
+import org.sokybot.gameevents.events.session.SessionConnectedEvent;
+import org.sokybot.gameevents.events.session.LoginPhaseEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -324,6 +326,7 @@ final class LoginCycleBuilder {
                                         ls0.setPhase(LoginState.Phase.LOGIN_SENT);
                                     }
                                     w.emitEnginePhase(ctx, LoginState.Phase.LOGIN_SENT.name(), "LoginSent", null);
+                                    w.publishSessionEvent(ctx, new LoginPhaseEvent(w.machineFullName(ctx), "AUTHENTICATING"));
                                     long now = System.currentTimeMillis();
                                     ctx.getPersistentData().put(LoginCycleKeys.KEY_LOGIN_RESPONSE_DEADLINE_MS,
                                             now + w.effectiveLoginResponseTimeoutMs(settings));
@@ -564,6 +567,7 @@ final class LoginCycleBuilder {
                             ctx.getPersistentData().remove(LoginCycleKeys.KEY_RETRY_UNTIL_MS);
                             ctx.getPersistentData().remove("explicitConnectRequested");
                             w.emitEnginePhase(ctx, LoginState.Phase.AUTHENTICATED.name(), "Authenticated", null);
+                            w.publishSessionEvent(ctx, new SessionConnectedEvent(w.machineFullName(ctx)));
                             w.logInfoCtx(ctx, "Login/authentication successful");
                         })
                         .nextState((String) null)
