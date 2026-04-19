@@ -20,6 +20,13 @@ public final class DefaultReturnRouteStrategy implements IReturnRouteStrategy {
         if (snapshot.getInventory().getFreeSlots() <= policy.getMinFreeInventorySlots()) {
             return Optional.empty();
         }
+        if (policy.isTravelScriptEnabled() && policy.getTravelScriptId() != null
+                && !policy.getTravelScriptId().isEmpty()) {
+            return Optional.of(ReturnAction.builder()
+                    .kind(ReturnActionKind.FOLLOW_RECORDED_ROUTE)
+                    .putParameter("scriptId", policy.getTravelScriptId())
+                    .build());
+        }
         return Optional.of(ReturnAction.builder()
                 .kind(ReturnActionKind.WALK_TO_GATE)
                 .putParameter("hint", "leave-town")

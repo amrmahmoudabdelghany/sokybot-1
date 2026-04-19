@@ -20,6 +20,9 @@ final class TownPackets {
     /** Inventory manipulation (paired with server 0xB034 inventory operation ack). */
     static final int CLIENT_INVENTORY_OPERATION = 0x7034;
 
+    /** Teleport destination select (paired with server 0xB05A teleport response). */
+    static final int CLIENT_TELEPORT_USE = 0x705A;
+
     private TownPackets() {
     }
 
@@ -95,6 +98,16 @@ final class TownPackets {
                 .put(InventoryOperationEvent.OP_WITHDRAW_ITEM)
                 .put((byte) storageSlotIndex)
                 .putShort((short) Math.min(0xffff, quantity))
+                .build();
+        ctx.getDispatcher().sendToServer(packet);
+    }
+
+    static void sendTeleportUse(IWorkflowContext ctx, int destinationRefId) {
+        MutablePacket packet = MutablePacket.getBuilder(4, CLIENT_TELEPORT_USE)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .putInt(destinationRefId)
                 .build();
         ctx.getDispatcher().sendToServer(packet);
     }

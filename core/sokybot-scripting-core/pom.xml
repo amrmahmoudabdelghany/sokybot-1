@@ -6,15 +6,15 @@
 
     <parent>
         <groupId>org.sokybot</groupId>
-        <artifactId>sokybot</artifactId>
+        <artifactId>sokybot-core-aggregator</artifactId>
         <version>1.0-SNAPSHOT</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>sokybot-behaviors-town</artifactId>
+    <artifactId>sokybot-scripting-core</artifactId>
     <packaging>bundle</packaging>
-    <name>sokybot-behaviors-town</name>
-    <description>Town-cycle IBehavior services, NPC facade, and TownCycleRegistrar</description>
+    <name>sokybot-scripting-core</name>
+    <description>Plain-text travel scripts and IScriptModel projection</description>
 
     <properties>
         <maven.compiler.release>11</maven.compiler.release>
@@ -23,49 +23,7 @@
     <dependencies>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-engine-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-town-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-town-projections</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-storage-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>sokybot-scripting-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-navigation-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-combat-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-game-model</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -77,7 +35,13 @@
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-proxy</artifactId>
+            <artifactId>sokybot-navigation-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-engine-api</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -94,9 +58,9 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>sokybot-settings</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.cmpn</artifactId>
+            <version>6.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -123,29 +87,15 @@
                         <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
                         <Bundle-Name>${project.name}</Bundle-Name>
                         <Bundle-Version>${project.version}</Bundle-Version>
-                        <Private-Package>
-                            org.sokybot.behaviors.town.internal,
-                            org.sokybot.behaviors.town.internal.settings,
-                            org.sokybot.behaviors.town.internal.strategies
-                        </Private-Package>
+                        <Private-Package>org.sokybot.scripting.core.internal</Private-Package>
                         <Import-Package>
-                            org.sokybot.town.api;version="[1.0,2)",
-                            org.sokybot.town.projections.api;version="[1.0,2)",
+                            org.sokybot.scripting.api;version="[1.0,2)",
                             org.sokybot.commons.event;version="[1.0,2)",
                             org.sokybot.gameevents.dto;version="[1.0,2)",
-                            org.sokybot.gameevents.events.chat;version="[1.0,2)",
-                            org.sokybot.gameevents.events.inventory;version="[1.0,2)",
-                            org.sokybot.gameevents.events.storage;version="[1.0,2)",
-                            org.sokybot.storage.api;version="[1.0,2)",
-                            org.sokybot.scripting.api;version="[1.0,2)",
+                            org.sokybot.gameevents.events.character;version="[1.0,2)",
+                            org.sokybot.gameevents.events.entity;version="[1.0,2)",
+                            org.sokybot.gameevents.events.teleport;version="[1.0,2)",
                             org.sokybot.navigation.api;version="[1.0,2)",
-                            org.sokybot.engine.api.behavior;version="[1.0,2)",
-                            org.sokybot.engine.api.extension;version="[1.0,2)",
-                            org.sokybot.engine.api.workflow;version="[1.0,2)",
-                            org.sokybot.gamemodel.model;version="[1.0,2)",
-                            org.sokybot.network;version="[1.0,2)",
-                            org.sokybot.network.packet;version="[1.0,2)",
-                            org.sokybot.settings.api;version="[1.0,2)",
                             org.osgi.service.component.annotations;version="[1.5,2)",
                             org.slf4j;version="[1.7,2)",
                             reactor.core;version="[3.6,4)",

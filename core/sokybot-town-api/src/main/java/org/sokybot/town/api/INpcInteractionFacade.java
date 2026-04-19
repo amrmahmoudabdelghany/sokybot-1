@@ -34,6 +34,12 @@ public interface INpcInteractionFacade {
         return openDialog(ctx, storageNpc.toNpc());
     }
 
+    /** NPC teleport handshake (catalogue npc ref + destination ref). Default fails until overridden. */
+    default CompletableFuture<NpcInteractionResult> teleport(IWorkflowContext ctx, int npcRefId,
+            int destinationRefId) {
+        return CompletableFuture.completedFuture(NpcInteractionResult.failure("teleport-not-supported"));
+    }
+
     /**
      * Escape hatch for scripted sequences (guild skills, teleport menus, stable routes, …).
      *

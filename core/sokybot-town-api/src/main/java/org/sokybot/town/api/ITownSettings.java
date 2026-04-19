@@ -33,5 +33,13 @@ public interface ITownSettings {
 
     int getStorageOpenStaleAfterMs();
 
+    boolean isTravelScriptEnabled();
+
+    String getTravelScriptId();
+
+    float getArrivalToleranceWorldUnits();
+
+    long getLoadScreenStaleAfterMs();
+
     ITownPolicy toPolicy();
 }

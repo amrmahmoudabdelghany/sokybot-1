@@ -8,6 +8,15 @@ import org.sokybot.engine.api.workflow.IWorkflowContext;
 public interface INavigator {
 
     /**
+     * Walk toward an explicit world target (game X/Y/Z).
+     *
+     * @throws NavigationException when the movement cannot be issued (or path blocked when a pathfinder is present)
+     */
+    default void walkTo(IWorkflowContext ctx, WorldPoint target) throws NavigationException {
+        throw new NavigationException("walkTo not implemented");
+    }
+
+    /**
      * Sends a short random displacement walk from the current trainer position.
      *
      * @param ctx workflow context with game model / dispatcher

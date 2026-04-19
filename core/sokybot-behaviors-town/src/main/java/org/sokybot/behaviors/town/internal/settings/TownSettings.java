@@ -26,6 +26,10 @@ public final class TownSettings implements ITownSettings {
     private boolean withdrawFromStorageEnabled;
     private boolean depositOverflowToStorage;
     private int storageOpenStaleAfterMs = 30_000;
+    private boolean travelScriptEnabled;
+    private String travelScriptId;
+    private float arrivalToleranceWorldUnits = 1.5f;
+    private long loadScreenStaleAfterMs = 30_000L;
 
     @Override
     public boolean isTownLoopEnabled() {
@@ -141,6 +145,42 @@ public final class TownSettings implements ITownSettings {
     }
 
     @Override
+    public boolean isTravelScriptEnabled() {
+        return travelScriptEnabled;
+    }
+
+    public void setTravelScriptEnabled(boolean travelScriptEnabled) {
+        this.travelScriptEnabled = travelScriptEnabled;
+    }
+
+    @Override
+    public String getTravelScriptId() {
+        return travelScriptId;
+    }
+
+    public void setTravelScriptId(String travelScriptId) {
+        this.travelScriptId = travelScriptId;
+    }
+
+    @Override
+    public float getArrivalToleranceWorldUnits() {
+        return arrivalToleranceWorldUnits;
+    }
+
+    public void setArrivalToleranceWorldUnits(float arrivalToleranceWorldUnits) {
+        this.arrivalToleranceWorldUnits = arrivalToleranceWorldUnits;
+    }
+
+    @Override
+    public long getLoadScreenStaleAfterMs() {
+        return loadScreenStaleAfterMs;
+    }
+
+    public void setLoadScreenStaleAfterMs(long loadScreenStaleAfterMs) {
+        this.loadScreenStaleAfterMs = loadScreenStaleAfterMs;
+    }
+
+    @Override
     public ITownPolicy toPolicy() {
         return TownPolicy.builder()
                 .townLoopEnabled(townLoopEnabled)
@@ -156,6 +196,10 @@ public final class TownSettings implements ITownSettings {
                 .withdrawFromStorageEnabled(withdrawFromStorageEnabled)
                 .depositOverflowToStorage(depositOverflowToStorage)
                 .storageOpenStaleAfterMs(storageOpenStaleAfterMs)
+                .travelScriptEnabled(travelScriptEnabled)
+                .travelScriptId(travelScriptId)
+                .arrivalToleranceWorldUnits(arrivalToleranceWorldUnits)
+                .loadScreenStaleAfterMs(loadScreenStaleAfterMs)
                 .build();
     }
 }

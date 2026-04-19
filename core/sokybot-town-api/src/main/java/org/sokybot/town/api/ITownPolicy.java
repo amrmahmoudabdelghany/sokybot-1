@@ -48,4 +48,21 @@ public interface ITownPolicy {
     default int getStorageOpenStaleAfterMs() {
         return 30_000;
     }
+
+    default boolean isTravelScriptEnabled() {
+        return false;
+    }
+
+    default String getTravelScriptId() {
+        return null;
+    }
+
+    default float getArrivalToleranceWorldUnits() {
+        return 1.5f;
+    }
+
+    /** Max wait for load screen to complete after a teleport ack, before script errors. */
+    default long getLoadScreenStaleAfterMs() {
+        return 30_000L;
+    }
 }

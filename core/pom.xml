@@ -37,5 +37,7 @@
         <module>sokybot-party-coordinator</module>
         <module>sokybot-behaviors-party</module>
         <module>sokybot-storage-api</module>
+        <module>sokybot-scripting-api</module>
+        <module>sokybot-scripting-core</module>
     </modules>
 </project>

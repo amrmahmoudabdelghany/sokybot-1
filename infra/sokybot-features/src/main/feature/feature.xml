@@ -207,6 +207,15 @@
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- SCRIPTING FEATURE: Travel script API + core projection                -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-scripting" version="${project.version}" description="Travel scripting API and script execution projection">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:org.sokybot/sokybot-scripting-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-scripting-core/${project.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- PARTY FEATURE: Party automation API, projections, coordinator, translators, behaviors -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-party" version="${project.version}" description="Party API, coordination, projections, translators, coordinator, and party-cycle behaviors">
@@ -255,6 +264,7 @@
         <feature>sokybot-combat</feature>
         <feature>sokybot-town</feature>
         <feature>sokybot-storage</feature>
+        <feature>sokybot-scripting</feature>
         <feature>sokybot-pet</feature>
         <feature>sokybot-party</feature>
     </feature>

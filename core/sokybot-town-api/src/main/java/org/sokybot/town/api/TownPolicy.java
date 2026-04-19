@@ -23,6 +23,10 @@ public final class TownPolicy implements ITownPolicy {
     private final boolean withdrawFromStorageEnabled;
     private final boolean depositOverflowToStorage;
     private final int storageOpenStaleAfterMs;
+    private final boolean travelScriptEnabled;
+    private final String travelScriptId;
+    private final float arrivalToleranceWorldUnits;
+    private final long loadScreenStaleAfterMs;
 
     private TownPolicy(Builder builder) {
         this.townLoopEnabled = builder.townLoopEnabled;
@@ -38,6 +42,10 @@ public final class TownPolicy implements ITownPolicy {
         this.withdrawFromStorageEnabled = builder.withdrawFromStorageEnabled;
         this.depositOverflowToStorage = builder.depositOverflowToStorage;
         this.storageOpenStaleAfterMs = builder.storageOpenStaleAfterMs;
+        this.travelScriptEnabled = builder.travelScriptEnabled;
+        this.travelScriptId = builder.travelScriptId;
+        this.arrivalToleranceWorldUnits = builder.arrivalToleranceWorldUnits;
+        this.loadScreenStaleAfterMs = builder.loadScreenStaleAfterMs;
     }
 
     public static TownPolicy copyOf(ITownPolicy policy) {
@@ -56,6 +64,10 @@ public final class TownPolicy implements ITownPolicy {
                 .withdrawFromStorageEnabled(policy.isWithdrawFromStorageEnabled())
                 .depositOverflowToStorage(policy.isDepositOverflowToStorage())
                 .storageOpenStaleAfterMs(policy.getStorageOpenStaleAfterMs())
+                .travelScriptEnabled(policy.isTravelScriptEnabled())
+                .travelScriptId(policy.getTravelScriptId())
+                .arrivalToleranceWorldUnits(policy.getArrivalToleranceWorldUnits())
+                .loadScreenStaleAfterMs(policy.getLoadScreenStaleAfterMs())
                 .build();
     }
 
@@ -124,6 +136,26 @@ public final class TownPolicy implements ITownPolicy {
         return storageOpenStaleAfterMs;
     }
 
+    @Override
+    public boolean isTravelScriptEnabled() {
+        return travelScriptEnabled;
+    }
+
+    @Override
+    public String getTravelScriptId() {
+        return travelScriptId;
+    }
+
+    @Override
+    public float getArrivalToleranceWorldUnits() {
+        return arrivalToleranceWorldUnits;
+    }
+
+    @Override
+    public long getLoadScreenStaleAfterMs() {
+        return loadScreenStaleAfterMs;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -142,6 +174,10 @@ public final class TownPolicy implements ITownPolicy {
         private boolean withdrawFromStorageEnabled;
         private boolean depositOverflowToStorage;
         private int storageOpenStaleAfterMs = 30_000;
+        private boolean travelScriptEnabled;
+        private String travelScriptId;
+        private float arrivalToleranceWorldUnits = 1.5f;
+        private long loadScreenStaleAfterMs = 30_000L;
 
         public Builder townLoopEnabled(boolean townLoopEnabled) {
             this.townLoopEnabled = townLoopEnabled;
@@ -215,6 +251,26 @@ public final class TownPolicy implements ITownPolicy {
 
         public Builder storageOpenStaleAfterMs(int storageOpenStaleAfterMs) {
             this.storageOpenStaleAfterMs = storageOpenStaleAfterMs;
+            return this;
+        }
+
+        public Builder travelScriptEnabled(boolean travelScriptEnabled) {
+            this.travelScriptEnabled = travelScriptEnabled;
+            return this;
+        }
+
+        public Builder travelScriptId(String travelScriptId) {
+            this.travelScriptId = travelScriptId;
+            return this;
+        }
+
+        public Builder arrivalToleranceWorldUnits(float arrivalToleranceWorldUnits) {
+            this.arrivalToleranceWorldUnits = arrivalToleranceWorldUnits;
+            return this;
+        }
+
+        public Builder loadScreenStaleAfterMs(long loadScreenStaleAfterMs) {
+            this.loadScreenStaleAfterMs = loadScreenStaleAfterMs;
             return this;
         }
 
