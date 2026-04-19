@@ -26,5 +26,7 @@
         <module>sokybot-trade-coordination-api</module>
         <module>sokybot-trade-coordinator</module>
         <module>sokybot-behaviors-trade</module>
+        <module>sokybot-combat-api</module>
+        <module>sokybot-behaviors-combat</module>
     </modules>
 </project>

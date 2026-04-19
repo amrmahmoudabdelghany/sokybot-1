@@ -135,6 +135,28 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Combat / hunting subsystem (sokybot-combat feature) -->
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-combat-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-combat-projections</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-translators-combat</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.sokybot</groupId>
+            <artifactId>sokybot-behaviors-combat</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Hibernate OSGi Dependencies (needed for assembly resolution) -->
         <dependency>
             <groupId>javax.enterprise</groupId>

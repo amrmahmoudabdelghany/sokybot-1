@@ -20,6 +20,8 @@
         <module>sokybot-translators-builtin</module>
         <module>sokybot-translators-trade</module>
         <module>sokybot-trade-projections</module>
+        <module>sokybot-combat-projections</module>
+        <module>sokybot-translators-combat</module>
         <module>sokybot-game-loader</module>
         <module>sokybot-game-model</module>
         <module>sokybot-game-navigation</module>

@@ -167,6 +167,17 @@
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- COMBAT FEATURE: Combat API, projections, translators, behaviors       -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-combat" version="${project.version}" description="Combat API, tactical projection, translators, and grinding-cycle behaviors">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:org.sokybot/sokybot-combat-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-combat-projections/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-translators-combat/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-behaviors-combat/${project.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- LOGIN RUNTIME FEATURE: Decomposed login protocol/settings/security      -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-login-runtime" version="${project.version}" description="Login protocol, settings, failure policies, security coordinator, and compiled login workflow">
@@ -198,6 +209,7 @@
         <feature>sokybot-core</feature>
         <feature>sokybot-login-runtime</feature>
         <feature>sokybot-trade</feature>
+        <feature>sokybot-combat</feature>
     </feature>
 
 </features>
