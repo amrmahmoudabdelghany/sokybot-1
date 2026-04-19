@@ -30,5 +30,6 @@
         <module>sokybot-behaviors-combat</module>
         <module>sokybot-town-api</module>
         <module>sokybot-behaviors-town</module>
+        <module>sokybot-pet-api</module>
     </modules>
 </project>
