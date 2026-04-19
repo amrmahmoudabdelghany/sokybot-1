@@ -46,6 +46,8 @@ public final class CombatSettings implements ICombatSettings {
     private boolean avoidPartyMobs = true;
     private boolean avoidQuestMobs = true;
     private int recoveryCooldownMs = 15000;
+    private int petHungerThresholdPercent = 20;
+    private int petFoodItemRefId = -1;
     private final LinkedHashSet<Integer> ammoConsumingSkillRefIds = new LinkedHashSet<>();
     private boolean pauseOnEmptyAmmo = true;
 
@@ -306,6 +308,24 @@ public final class CombatSettings implements ICombatSettings {
     }
 
     @Override
+    public int getPetHungerThresholdPercent() {
+        return petHungerThresholdPercent;
+    }
+
+    public void setPetHungerThresholdPercent(int petHungerThresholdPercent) {
+        this.petHungerThresholdPercent = petHungerThresholdPercent;
+    }
+
+    @Override
+    public int getPetFoodItemRefId() {
+        return petFoodItemRefId;
+    }
+
+    public void setPetFoodItemRefId(int petFoodItemRefId) {
+        this.petFoodItemRefId = petFoodItemRefId;
+    }
+
+    @Override
     public Set<Integer> getAmmoConsumingSkillRefIds() {
         return Set.copyOf(ammoConsumingSkillRefIds);
     }
@@ -360,6 +380,8 @@ public final class CombatSettings implements ICombatSettings {
                 .avoidPartyMobs(avoidPartyMobs)
                 .avoidQuestMobs(avoidQuestMobs)
                 .recoveryCooldownMs(recoveryCooldownMs)
+                .petHungerThresholdPercent(petHungerThresholdPercent)
+                .petFoodItemRefId(petFoodItemRefId)
                 .ammoConsumingSkillRefIds(getAmmoConsumingSkillRefIds())
                 .pauseOnEmptyAmmo(pauseOnEmptyAmmo)
                 .build();

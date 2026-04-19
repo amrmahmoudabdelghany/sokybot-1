@@ -133,6 +133,16 @@ public interface ICombatSettings {
         return 15000;
     }
 
+    /** Feed COS pets when normalized fullness (hunger scale 0–1000) is at or below this percent; default {@code 20}. */
+    default int getPetHungerThresholdPercent() {
+        return 20;
+    }
+
+    /** Inventory item ref id for pet food; {@code -1} or non-positive disables feeding. */
+    default int getPetFoodItemRefId() {
+        return -1;
+    }
+
     /** Skill ref ids that consume ammunition when used (bow/crossbow skills). */
     default Set<Integer> getAmmoConsumingSkillRefIds() {
         return Collections.emptySet();

@@ -18,6 +18,9 @@ public final class MonsterRef {
     private final Optional<Integer> firstAttackerEntityId;
     private final Optional<Float> distanceFromTrainingAnchor;
     private final MonsterTier tier;
+    private final float x;
+    private final float y;
+    private final float z;
 
     /**
      * Legacy constructor; {@link #getTier()} defaults to {@link MonsterTier#NORMAL}.
@@ -32,6 +35,14 @@ public final class MonsterRef {
     public MonsterRef(int entityId, int refObjId, int levelOrZero, float distanceToSelf,
             int hpPercentOrNegativeIfUnknown, boolean aggressiveTowardSelf, boolean championOrUnique,
             Optional<Integer> firstAttackerEntityId, Optional<Float> distanceFromTrainingAnchor, MonsterTier tier) {
+        this(entityId, refObjId, levelOrZero, distanceToSelf, hpPercentOrNegativeIfUnknown, aggressiveTowardSelf,
+                championOrUnique, firstAttackerEntityId, distanceFromTrainingAnchor, tier, 0f, 0f, 0f);
+    }
+
+    public MonsterRef(int entityId, int refObjId, int levelOrZero, float distanceToSelf,
+            int hpPercentOrNegativeIfUnknown, boolean aggressiveTowardSelf, boolean championOrUnique,
+            Optional<Integer> firstAttackerEntityId, Optional<Float> distanceFromTrainingAnchor, MonsterTier tier,
+            float x, float y, float z) {
         this.entityId = entityId;
         this.refObjId = refObjId;
         this.levelOrZero = levelOrZero;
@@ -43,6 +54,9 @@ public final class MonsterRef {
         this.distanceFromTrainingAnchor = distanceFromTrainingAnchor != null ? distanceFromTrainingAnchor
                 : Optional.empty();
         this.tier = tier != null ? tier : MonsterTier.UNKNOWN;
+        this.x = x;
+        this.y = y;
+        this.z = z;
     }
 
     public MonsterTier getTier() {
@@ -94,6 +108,18 @@ public final class MonsterRef {
      */
     public Optional<Float> getDistanceFromTrainingAnchor() {
         return distanceFromTrainingAnchor;
+    }
+
+    public float getX() {
+        return x;
+    }
+
+    public float getY() {
+        return y;
+    }
+
+    public float getZ() {
+        return z;
     }
 
     @Override

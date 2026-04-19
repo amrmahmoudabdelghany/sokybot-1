@@ -43,6 +43,8 @@ public final class CombatPolicy implements ICombatPolicy {
     private final boolean avoidPartyMobs;
     private final boolean avoidQuestMobs;
     private final int recoveryCooldownMs;
+    private final int petHungerThresholdPercent;
+    private final int petFoodItemRefId;
     private final Set<Integer> ammoConsumingSkillRefIds;
     private final boolean pauseOnEmptyAmmo;
 
@@ -78,6 +80,8 @@ public final class CombatPolicy implements ICombatPolicy {
         this.avoidPartyMobs = builder.avoidPartyMobs;
         this.avoidQuestMobs = builder.avoidQuestMobs;
         this.recoveryCooldownMs = builder.recoveryCooldownMs;
+        this.petHungerThresholdPercent = builder.petHungerThresholdPercent;
+        this.petFoodItemRefId = builder.petFoodItemRefId;
         this.ammoConsumingSkillRefIds = Collections
                 .unmodifiableSet(new LinkedHashSet<>(builder.ammoConsumingSkillRefIds));
         this.pauseOnEmptyAmmo = builder.pauseOnEmptyAmmo;
@@ -239,6 +243,16 @@ public final class CombatPolicy implements ICombatPolicy {
     }
 
     @Override
+    public int getPetHungerThresholdPercent() {
+        return petHungerThresholdPercent;
+    }
+
+    @Override
+    public int getPetFoodItemRefId() {
+        return petFoodItemRefId;
+    }
+
+    @Override
     public Set<Integer> getAmmoConsumingSkillRefIds() {
         return ammoConsumingSkillRefIds;
     }
@@ -284,6 +298,8 @@ public final class CombatPolicy implements ICombatPolicy {
         private boolean avoidPartyMobs = true;
         private boolean avoidQuestMobs = true;
         private int recoveryCooldownMs = 15000;
+        private int petHungerThresholdPercent = 20;
+        private int petFoodItemRefId = -1;
         private LinkedHashSet<Integer> ammoConsumingSkillRefIds = new LinkedHashSet<>();
         private boolean pauseOnEmptyAmmo = true;
 
@@ -439,6 +455,16 @@ public final class CombatPolicy implements ICombatPolicy {
 
         public Builder recoveryCooldownMs(int recoveryCooldownMs) {
             this.recoveryCooldownMs = recoveryCooldownMs;
+            return this;
+        }
+
+        public Builder petHungerThresholdPercent(int petHungerThresholdPercent) {
+            this.petHungerThresholdPercent = petHungerThresholdPercent;
+            return this;
+        }
+
+        public Builder petFoodItemRefId(int petFoodItemRefId) {
+            this.petFoodItemRefId = petFoodItemRefId;
             return this;
         }
 

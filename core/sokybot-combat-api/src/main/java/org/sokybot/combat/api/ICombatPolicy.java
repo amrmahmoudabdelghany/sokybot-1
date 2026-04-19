@@ -112,6 +112,14 @@ public interface ICombatPolicy {
         return 15000;
     }
 
+    default int getPetHungerThresholdPercent() {
+        return 20;
+    }
+
+    default int getPetFoodItemRefId() {
+        return -1;
+    }
+
     default Set<Integer> getAmmoConsumingSkillRefIds() {
         return Collections.emptySet();
     }

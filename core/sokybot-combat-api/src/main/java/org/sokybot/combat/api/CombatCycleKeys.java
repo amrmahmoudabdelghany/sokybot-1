@@ -19,6 +19,7 @@ public final class CombatCycleKeys {
     public static final String BEHAVIOR_MAINTAIN_BUFFS = "maintainBuffs";
     public static final String BEHAVIOR_ENSURE_IMBUE = "ensureImbue";
     public static final String BEHAVIOR_UNSTUCK = "unstuck";
+    public static final String BEHAVIOR_FEED_PET = "feedPet";
 
     /** Blackboard keys on {@link org.sokybot.engine.api.workflow.IWorkflowContext#getPersistentData()}. */
     public static final String KEY_CURRENT_TARGET_ENTITY_ID = "combat.currentTargetEntityId";
@@ -28,6 +29,7 @@ public final class CombatCycleKeys {
     public static final String KEY_LEASH_ANCHOR_Z = "combat.leashAnchorZ";
     public static final String KEY_LOOT_DEADLINE_MS = "combat.lootDeadlineMs";
     public static final String KEY_RECOVERY_LAST_ACTION_AT_MS = "combat.recoveryLastActionAtMs";
+    public static final String KEY_LAST_PET_FEED_AT_MS = "combat.lastPetFeedAtEpochMs";
     public static final String KEY_SKILL_IN_FLIGHT = "combat.skillInFlight";
     public static final String KEY_COMBAT_PHASE = "combat.phase";
     public static final String KEY_IMBUE_LAST_SKILL_CAST_AT_MS = "combat.imbue.lastSkillCastAtMs";

@@ -60,6 +60,7 @@ bin/
 !.vscode/extensions.json
 *.code-workspace
 
+.cursor/
 ### Vim ###
 *.swp
 *.swo

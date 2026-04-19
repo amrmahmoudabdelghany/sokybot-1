@@ -637,7 +637,7 @@ public final class CombatModelComponent implements ICombatModel {
                     tm.entityId);
             MonsterTier tier = MonsterTierMapping.from(tm.monsterType);
             monsters.add(new MonsterRef(tm.entityId, tm.refObjId, tm.levelOrZero, dist, pct, tm.aggressiveTowardSelf,
-                    tm.championOrUnique(), firstAttacker, distFromAnchor, tier));
+                    tm.championOrUnique(), firstAttacker, distFromAnchor, tier, tm.x, tm.y, tm.z));
         }
 
         List<DroppedItemRef> drops = new ArrayList<>();

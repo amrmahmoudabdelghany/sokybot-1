@@ -47,6 +47,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-navigation-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
         <!-- OSGi Declarative Services annotations -->
         <dependency>
             <groupId>org.osgi</groupId>
