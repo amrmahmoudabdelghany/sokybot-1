@@ -16,6 +16,8 @@ public final class CombatCycleKeys {
     public static final String BEHAVIOR_LOOT = "loot";
     public static final String BEHAVIOR_SEARCH = "search";
     public static final String BEHAVIOR_ENGAGE = "engage";
+    public static final String BEHAVIOR_MAINTAIN_BUFFS = "maintainBuffs";
+    public static final String BEHAVIOR_ENSURE_IMBUE = "ensureImbue";
 
     /** Blackboard keys on {@link org.sokybot.engine.api.workflow.IWorkflowContext#getPersistentData()}. */
     public static final String KEY_CURRENT_TARGET_ENTITY_ID = "combat.currentTargetEntityId";
@@ -27,6 +29,10 @@ public final class CombatCycleKeys {
     public static final String KEY_RECOVERY_LAST_ACTION_AT_MS = "combat.recoveryLastActionAtMs";
     public static final String KEY_SKILL_IN_FLIGHT = "combat.skillInFlight";
     public static final String KEY_COMBAT_PHASE = "combat.phase";
+    public static final String KEY_IMBUE_LAST_SKILL_CAST_AT_MS = "combat.imbue.lastSkillCastAtMs";
+    public static final String KEY_IMBUE_ATTACKS_SINCE_LAST_CAST = "combat.imbue.attacksSinceLastCast";
+    public static final String KEY_WEAPON_CURRENT_LOADOUT = "combat.weapon.currentLoadout";
+    public static final String KEY_WEAPON_PREVIOUS_LOADOUT = "combat.weapon.previousLoadout";
 
     /** Human-oriented phase strings for telemetry / UI. */
     public static final String PHASE_IDLE = "IDLE";

@@ -28,6 +28,15 @@ public final class CombatSettings implements ICombatSettings {
     private final List<Integer> lootItemRefIdWhitelist = new ArrayList<>();
     private final List<Integer> partyMemberEntityIds = new ArrayList<>();
     private boolean returnToTownOnNearDeath;
+    private final List<Integer> imbueSkillRotation = new ArrayList<>();
+    private int imbueRefreshLeadMs = 1500;
+    private int imbueMaxAttacksBetweenCasts;
+    private int mainDamagePrimaryInventorySlot = -1;
+    private int mainDamageSecondaryInventorySlot = -1;
+    private int buffCasterPrimaryInventorySlot = -1;
+    private int buffCasterSecondaryInventorySlot = -1;
+    private int weaponSwapTimeoutMs = 4000;
+    private final List<Integer> buffCasterSkillRotation = new ArrayList<>();
 
     @Override
     public boolean isAutoAttack() {
@@ -150,6 +159,79 @@ public final class CombatSettings implements ICombatSettings {
     }
 
     @Override
+    public List<Integer> getImbueSkillRotation() {
+        return List.copyOf(imbueSkillRotation);
+    }
+
+    @Override
+    public int getImbueRefreshLeadMs() {
+        return imbueRefreshLeadMs;
+    }
+
+    public void setImbueRefreshLeadMs(int imbueRefreshLeadMs) {
+        this.imbueRefreshLeadMs = imbueRefreshLeadMs;
+    }
+
+    @Override
+    public int getImbueMaxAttacksBetweenCasts() {
+        return imbueMaxAttacksBetweenCasts;
+    }
+
+    public void setImbueMaxAttacksBetweenCasts(int imbueMaxAttacksBetweenCasts) {
+        this.imbueMaxAttacksBetweenCasts = imbueMaxAttacksBetweenCasts;
+    }
+
+    @Override
+    public int getMainDamagePrimaryInventorySlot() {
+        return mainDamagePrimaryInventorySlot;
+    }
+
+    public void setMainDamagePrimaryInventorySlot(int mainDamagePrimaryInventorySlot) {
+        this.mainDamagePrimaryInventorySlot = mainDamagePrimaryInventorySlot;
+    }
+
+    @Override
+    public int getMainDamageSecondaryInventorySlot() {
+        return mainDamageSecondaryInventorySlot;
+    }
+
+    public void setMainDamageSecondaryInventorySlot(int mainDamageSecondaryInventorySlot) {
+        this.mainDamageSecondaryInventorySlot = mainDamageSecondaryInventorySlot;
+    }
+
+    @Override
+    public int getBuffCasterPrimaryInventorySlot() {
+        return buffCasterPrimaryInventorySlot;
+    }
+
+    public void setBuffCasterPrimaryInventorySlot(int buffCasterPrimaryInventorySlot) {
+        this.buffCasterPrimaryInventorySlot = buffCasterPrimaryInventorySlot;
+    }
+
+    @Override
+    public int getBuffCasterSecondaryInventorySlot() {
+        return buffCasterSecondaryInventorySlot;
+    }
+
+    public void setBuffCasterSecondaryInventorySlot(int buffCasterSecondaryInventorySlot) {
+        this.buffCasterSecondaryInventorySlot = buffCasterSecondaryInventorySlot;
+    }
+
+    @Override
+    public int getWeaponSwapTimeoutMs() {
+        return weaponSwapTimeoutMs;
+    }
+
+    public void setWeaponSwapTimeoutMs(int weaponSwapTimeoutMs) {
+        this.weaponSwapTimeoutMs = weaponSwapTimeoutMs;
+    }
+
+    @Override
+    public List<Integer> getBuffCasterSkillRotation() {
+        return List.copyOf(buffCasterSkillRotation);
+    }
+
+    @Override
     public ICombatPolicy toPolicy() {
         return CombatPolicy.builder()
                 .hpPotionThresholdPercent(hpPotionThresholdPercent)
@@ -167,6 +249,15 @@ public final class CombatSettings implements ICombatSettings {
                 .lootItemRefIdWhitelist(new ArrayList<>(lootItemRefIdWhitelist))
                 .mobRefIdAllowList(new ArrayList<>(mobRefIdAllowList))
                 .mobRefIdBlockList(new ArrayList<>(mobRefIdBlockList))
+                .imbueSkillRotation(new ArrayList<>(imbueSkillRotation))
+                .imbueRefreshLeadMs(imbueRefreshLeadMs)
+                .imbueMaxAttacksBetweenCasts(imbueMaxAttacksBetweenCasts)
+                .mainDamagePrimaryInventorySlot(mainDamagePrimaryInventorySlot)
+                .mainDamageSecondaryInventorySlot(mainDamageSecondaryInventorySlot)
+                .buffCasterPrimaryInventorySlot(buffCasterPrimaryInventorySlot)
+                .buffCasterSecondaryInventorySlot(buffCasterSecondaryInventorySlot)
+                .weaponSwapTimeoutMs(weaponSwapTimeoutMs)
+                .buffCasterSkillRotation(new ArrayList<>(buffCasterSkillRotation))
                 .build();
     }
 }

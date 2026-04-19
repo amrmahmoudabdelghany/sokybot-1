@@ -4,6 +4,8 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+import org.sokybot.combat.api.ActiveBuff;
+
 /**
  * Mutable per-machine tactical accumulator (projection-owned; not part of {@link org.sokybot.gamemodel.IGameModel}).
  */
@@ -26,6 +28,9 @@ final class MachineCombatState {
 
     /** Skill ref id -> epoch millis when ready. */
     final ConcurrentMap<Integer, Long> skillCooldownReadyAtEpochMs = new ConcurrentHashMap<>();
+
+    /** Storage key is {@code buffId} when non-zero, else {@code skillRefId}. */
+    final ConcurrentMap<Integer, ActiveBuff> activeBuffsById = new ConcurrentHashMap<>();
 
     volatile boolean skillCastInFlight;
     volatile Long berserkActiveUntilEpochMs;

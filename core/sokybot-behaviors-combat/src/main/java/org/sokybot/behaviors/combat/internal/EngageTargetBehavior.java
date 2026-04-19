@@ -1,6 +1,7 @@
 package org.sokybot.behaviors.combat.internal;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.osgi.service.component.annotations.Component;
@@ -83,9 +84,13 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
         int target = a.getTargetEntityId();
         switch (a.getKind()) {
             case AUTO_ATTACK:
+                incrementImbueAttackCounter(context);
                 CombatPackets.sendCharActionAttack(context, target);
                 break;
             case ATTACK_SKILL:
+                incrementImbueAttackCounter(context);
+                CombatPackets.sendSkillCast(context, a.getSkillRefId(), target);
+                break;
             case BUFF:
             case IMBUE:
                 CombatPackets.sendSkillCast(context, a.getSkillRefId(), target);
@@ -151,6 +156,13 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
             return Optional.of(new SkillAction(SkillActionKind.ATTACK_SKILL, skillRef, targetId, readyAt));
         }
         return Optional.empty();
+    }
+
+    private static void incrementImbueAttackCounter(IWorkflowContext context) {
+        Map<String, Object> pd = context.getPersistentData();
+        Object raw = pd.get(CombatCycleKeys.KEY_IMBUE_ATTACKS_SINCE_LAST_CAST);
+        int v = raw instanceof Number ? ((Number) raw).intValue() : 0;
+        pd.put(CombatCycleKeys.KEY_IMBUE_ATTACKS_SINCE_LAST_CAST, Integer.valueOf(v + 1));
     }
 
     private static boolean isTargetAlive(ICombatSnapshot snap, int targetId) {

@@ -1,5 +1,6 @@
 package org.sokybot.combat.api;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -47,4 +48,29 @@ public interface ICombatSnapshot {
 
     /** Berserk / burst window end time; empty if not active. */
     Optional<Long> getBerserkActiveUntilEpochMs();
+
+    /** Active buffs on the local character; empty until projection wiring (Phase 2). */
+    default List<ActiveBuff> getActiveBuffs() {
+        return Collections.emptyList();
+    }
+
+    /** True if a buff with this game buff id is present (not yet expired per snapshot rules). */
+    default boolean hasActiveBuff(int buffId) {
+        for (ActiveBuff b : getActiveBuffs()) {
+            if (b.getBuffId() == buffId) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** True if any active buff is marked {@link ActiveBuff#isImbue() imbue}. */
+    default boolean hasActiveImbue() {
+        for (ActiveBuff b : getActiveBuffs()) {
+            if (b.isImbue()) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

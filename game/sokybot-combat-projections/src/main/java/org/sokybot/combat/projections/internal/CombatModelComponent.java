@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.sokybot.combat.api.ActiveBuff;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
@@ -26,6 +27,9 @@ import org.sokybot.gameevents.dto.MonsterData;
 import org.sokybot.gameevents.dto.PlayerData;
 import org.sokybot.gameevents.dto.ItemData;
 import org.sokybot.gameevents.dto.GamePosition;
+import org.sokybot.gameevents.events.buff.BuffAppliedEvent;
+import org.sokybot.gameevents.events.buff.BuffRemovedEvent;
+import org.sokybot.gameevents.events.character.CharacterBuffLoadedEvent;
 import org.sokybot.gameevents.events.character.CharacterLoadedEvent;
 import org.sokybot.gameevents.events.combat.BerserkConfirmEvent;
 import org.sokybot.gameevents.events.combat.PickupAnimationEvent;
@@ -103,6 +107,9 @@ public final class CombatModelComponent implements ICombatModel {
         subscriptions.add(reactiveEventBus.on(PickupAnimationEvent.class).subscribe(this::onPickupAnimation));
         subscriptions.add(reactiveEventBus.on(BerserkConfirmEvent.class).subscribe(this::onBerserk));
         subscriptions.add(reactiveEventBus.on(LifeStateUpdateEvent.class).subscribe(this::onLifeState));
+        subscriptions.add(reactiveEventBus.on(BuffAppliedEvent.class).subscribe(this::onBuffApplied));
+        subscriptions.add(reactiveEventBus.on(BuffRemovedEvent.class).subscribe(this::onBuffRemoved));
+        subscriptions.add(reactiveEventBus.on(CharacterBuffLoadedEvent.class).subscribe(this::onCharacterBuffLoaded));
 
         log.debug("ICombatModel projection active");
     }
@@ -408,6 +415,64 @@ public final class CombatModelComponent implements ICombatModel {
         st.berserkActiveUntilEpochMs = e.getTimestamp() + BERSERK_WINDOW_GUESS_MS;
     }
 
+    private void onBuffApplied(BuffAppliedEvent e) {
+        String key = normalize(e.getFullName());
+        if (key == null) {
+            return;
+        }
+        MachineCombatState st = stateFor(key);
+        long appliedAt = e.getTimestamp();
+        int buffId = e.getBuffId();
+        int skillRefId = buffId;
+        int storageKey = buffStorageKey(buffId, skillRefId);
+        Integer selfId = st.selfEntityId;
+        boolean fromSelf = selfId != null && e.getCasterId() == selfId.intValue();
+        ActiveBuff buff = ActiveBuff.builder()
+                .buffId(buffId)
+                .skillRefId(skillRefId)
+                .casterEntityId(e.getCasterId())
+                .appliedAtEpochMs(appliedAt)
+                .expiresAtEpochMs(expiresAtEpochMsFromDuration(appliedAt, e.getDuration()))
+                .fromSelf(fromSelf)
+                .imbue(false)
+                .build();
+        st.activeBuffsById.put(storageKey, buff);
+    }
+
+    private void onBuffRemoved(BuffRemovedEvent e) {
+        String key = normalize(e.getFullName());
+        if (key == null) {
+            return;
+        }
+        MachineCombatState st = stateFor(key);
+        int buffId = e.getBuffId();
+        int storageKey = buffStorageKey(buffId, buffId);
+        st.activeBuffsById.remove(storageKey);
+    }
+
+    private void onCharacterBuffLoaded(CharacterBuffLoadedEvent e) {
+        String key = normalize(e.getFullName());
+        if (key == null) {
+            return;
+        }
+        MachineCombatState st = stateFor(key);
+        long appliedAt = e.getTimestamp();
+        int buffId = e.getBuffId();
+        int skillRefId = buffId;
+        int storageKey = buffStorageKey(buffId, skillRefId);
+        int casterId = st.selfEntityId != null ? st.selfEntityId.intValue() : 0;
+        ActiveBuff buff = ActiveBuff.builder()
+                .buffId(buffId)
+                .skillRefId(skillRefId)
+                .casterEntityId(casterId)
+                .appliedAtEpochMs(appliedAt)
+                .expiresAtEpochMs(expiresAtEpochMsFromDuration(appliedAt, e.getDuration()))
+                .fromSelf(true)
+                .imbue(false)
+                .build();
+        st.activeBuffsById.put(storageKey, buff);
+    }
+
     private void onLifeState(LifeStateUpdateEvent e) {
         String key = normalize(e.getFullName());
         if (key == null) {
@@ -470,6 +535,26 @@ public final class CombatModelComponent implements ICombatModel {
         }
     }
 
+    /**
+     * Map key: prefer {@code buffId}; when {@code buffId == 0}, use {@code skillRefId} (events today carry only
+     * buff id).
+     */
+    private static int buffStorageKey(int buffId, int skillRefId) {
+        return buffId != 0 ? buffId : skillRefId;
+    }
+
+    private static long expiresAtEpochMsFromDuration(long appliedAtEpochMs, int durationSeconds) {
+        if (durationSeconds <= 0) {
+            return Long.MAX_VALUE;
+        }
+        return appliedAtEpochMs + durationSeconds * 1000L;
+    }
+
+    private static void removeExpiredBuffs(MachineCombatState st, long nowEpochMs) {
+        st.activeBuffsById.entrySet()
+                .removeIf(en -> en.getValue().getExpiresAtEpochMs() < nowEpochMs);
+    }
+
     private static int hpPercent(int hp, int maxHp) {
         if (maxHp <= 0) {
             return -1;
@@ -478,6 +563,9 @@ public final class CombatModelComponent implements ICombatModel {
     }
 
     private ICombatSnapshot buildSnapshot(String machineFullName, MachineCombatState st) {
+        long now = System.currentTimeMillis();
+        removeExpiredBuffs(st, now);
+
         float[] selfPos = new float[] { st.selfX, st.selfY, st.selfZ };
 
         Optional<float[]> anchorOpt = leashAnchorStore.getAnchor(machineFullName);
@@ -498,7 +586,6 @@ public final class CombatModelComponent implements ICombatModel {
                     tm.championOrUnique(), firstAttacker, distFromAnchor));
         }
 
-        long now = System.currentTimeMillis();
         List<DroppedItemRef> drops = new ArrayList<>();
         for (TacticalLoot l : st.loot.values()) {
             float[] lpos = new float[] { l.x, l.y, l.z };
@@ -511,6 +598,8 @@ public final class CombatModelComponent implements ICombatModel {
         }
 
         Map<Integer, Long> cds = new HashMap<>(st.skillCooldownReadyAtEpochMs);
+
+        List<ActiveBuff> activeBuffs = new ArrayList<>(st.activeBuffsById.values());
 
         return CombatSnapshot.builder(machineFullName)
                 .snapshotEpochMs(now)
@@ -526,6 +615,7 @@ public final class CombatModelComponent implements ICombatModel {
                 .skillCooldownReadyAtEpochMs(cds)
                 .skillCastInFlight(st.skillCastInFlight)
                 .berserkActiveUntilEpochMs(st.berserkActiveUntilEpochMs)
+                .activeBuffs(activeBuffs)
                 .build();
     }
 }

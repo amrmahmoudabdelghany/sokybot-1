@@ -80,6 +80,8 @@
                         <Import-Package>
                             org.sokybot.combat.api;version="[1.0,2)",
                             org.sokybot.commons.event;version="[1.0,2)",
+                            org.sokybot.gameevents.events.buff;version="[1.0,2)",
+                            org.sokybot.gameevents.events.character;version="[1.0,2)",
                             org.osgi.service.component.annotations;version="[1.5,2)",
                             org.slf4j;version="[1.7,2)",
                             reactor.core;version="[3.6,4)",

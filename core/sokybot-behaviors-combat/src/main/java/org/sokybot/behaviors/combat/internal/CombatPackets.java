@@ -1,6 +1,7 @@
 package org.sokybot.behaviors.combat.internal;
 
 import org.sokybot.engine.api.workflow.IWorkflowContext;
+import org.sokybot.gameevents.events.inventory.InventoryOperationEvent;
 import org.sokybot.network.NetworkPeer;
 import org.sokybot.network.packet.ClientOpcode;
 import org.sokybot.network.packet.Encoding;
@@ -10,6 +11,9 @@ import org.sokybot.network.packet.MutablePacket;
  * Client opcodes aligned with {@code sokybot-behaviors-training} combat patterns.
  */
 final class CombatPackets {
+
+    /** Inventory manipulation (paired with server {@code 0xB034} inventory operation ack). */
+    static final int CLIENT_INVENTORY_OPERATION = 0x7034;
 
     /** Inventory item use (server announces {@code 0xB04C} ItemUse). */
     static final int CLIENT_ITEM_USE = 0x704C;
@@ -22,6 +26,22 @@ final class CombatPackets {
     private static final byte CHAR_ACTION_PICKUP = 0x02;
 
     private CombatPackets() {
+    }
+
+    /**
+     * Move items between inventory/equip slots (inventory op uses {@link InventoryOperationEvent#OP_MOVE_SLOTS}).
+     */
+    static void sendInventoryMoveSlot(IWorkflowContext ctx, byte sourceSlot, byte destSlot, short quantity) {
+        MutablePacket packet = MutablePacket.getBuilder(7, CLIENT_INVENTORY_OPERATION)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .put(InventoryOperationEvent.OP_MOVE_SLOTS)
+                .put(sourceSlot)
+                .put(destSlot)
+                .putShort(quantity)
+                .build();
+        ctx.getDispatcher().sendToServer(packet);
     }
 
     static void sendInventoryItemUse(IWorkflowContext ctx, byte slot, int itemRefId) {

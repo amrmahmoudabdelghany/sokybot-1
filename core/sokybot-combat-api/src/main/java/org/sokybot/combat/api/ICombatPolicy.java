@@ -1,5 +1,6 @@
 package org.sokybot.combat.api;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -45,4 +46,40 @@ public interface ICombatPolicy {
     List<Integer> getMobRefIdAllowList();
 
     List<Integer> getMobRefIdBlockList();
+
+    default List<Integer> getImbueSkillRotation() {
+        return Collections.emptyList();
+    }
+
+    default int getImbueRefreshLeadMs() {
+        return 1500;
+    }
+
+    default int getImbueMaxAttacksBetweenCasts() {
+        return 0;
+    }
+
+    default int getMainDamagePrimaryInventorySlot() {
+        return -1;
+    }
+
+    default int getMainDamageSecondaryInventorySlot() {
+        return -1;
+    }
+
+    default int getBuffCasterPrimaryInventorySlot() {
+        return -1;
+    }
+
+    default int getBuffCasterSecondaryInventorySlot() {
+        return -1;
+    }
+
+    default int getWeaponSwapTimeoutMs() {
+        return 4000;
+    }
+
+    default List<Integer> getBuffCasterSkillRotation() {
+        return Collections.emptyList();
+    }
 }

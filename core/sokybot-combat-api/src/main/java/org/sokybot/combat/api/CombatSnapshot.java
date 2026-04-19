@@ -28,6 +28,7 @@ public final class CombatSnapshot implements ICombatSnapshot {
     private final Map<Integer, Long> skillCooldownReadyAtEpochMs;
     private final boolean skillCastInFlight;
     private final Optional<Long> berserkActiveUntilEpochMs;
+    private final List<ActiveBuff> activeBuffs;
 
     private CombatSnapshot(Builder builder) {
         this.machineFullName = Objects.requireNonNull(builder.machineFullName, "machineFullName");
@@ -49,6 +50,8 @@ public final class CombatSnapshot implements ICombatSnapshot {
                 new HashMap<>(Objects.requireNonNull(builder.skillCooldownReadyAtEpochMs, "skillCooldowns")));
         this.skillCastInFlight = builder.skillCastInFlight;
         this.berserkActiveUntilEpochMs = Optional.ofNullable(builder.berserkActiveUntilEpochMs);
+        this.activeBuffs = Collections.unmodifiableList(
+                Objects.requireNonNull(builder.activeBuffs, "activeBuffs"));
     }
 
     @Override
@@ -131,6 +134,11 @@ public final class CombatSnapshot implements ICombatSnapshot {
         return berserkActiveUntilEpochMs;
     }
 
+    @Override
+    public List<ActiveBuff> getActiveBuffs() {
+        return activeBuffs;
+    }
+
     public static Builder builder(String machineFullName) {
         return new Builder(machineFullName);
     }
@@ -152,6 +160,7 @@ public final class CombatSnapshot implements ICombatSnapshot {
         private Map<Integer, Long> skillCooldownReadyAtEpochMs = Collections.emptyMap();
         private boolean skillCastInFlight;
         private Long berserkActiveUntilEpochMs;
+        private List<ActiveBuff> activeBuffs = Collections.emptyList();
 
         private Builder(String machineFullName) {
             this.machineFullName = machineFullName;
@@ -221,6 +230,11 @@ public final class CombatSnapshot implements ICombatSnapshot {
 
         public Builder berserkActiveUntilEpochMs(Long berserkActiveUntilEpochMs) {
             this.berserkActiveUntilEpochMs = berserkActiveUntilEpochMs;
+            return this;
+        }
+
+        public Builder activeBuffs(List<ActiveBuff> activeBuffs) {
+            this.activeBuffs = activeBuffs;
             return this;
         }
 
