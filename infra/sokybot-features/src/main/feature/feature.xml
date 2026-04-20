@@ -251,6 +251,13 @@
         <bundle>mvn:org.sokybot/sokybot-session-solvers-builtin/${project.version}</bundle>
     </feature>
 
+    <feature name="sokybot-social" version="${project.version}" description="Sokybot Social &amp; Alerts">
+        <feature>sokybot-core</feature>
+        <bundle>mvn:org.sokybot/sokybot-social-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-social-projections/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-behaviors-social/${project.version}</bundle>
+    </feature>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- DEV FEATURE: Development and debugging tools (not for production)       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -270,6 +277,7 @@
         <feature>sokybot-core</feature>
         <feature>sokybot-login-runtime</feature>
         <feature>sokybot-session</feature>
+        <feature>sokybot-social</feature>
         <feature>sokybot-trade</feature>
         <feature>sokybot-combat</feature>
         <feature>sokybot-town</feature>

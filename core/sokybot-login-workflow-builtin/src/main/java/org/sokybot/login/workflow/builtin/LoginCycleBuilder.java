@@ -78,6 +78,11 @@ final class LoginCycleBuilder {
                             if (ctx.getDispatcher().isServerConnected()) {
                                 return false;
                             }
+                            long suppressedUntilMs = w.getDeps().engineControl().getAutoReloginSuppressedUntilMs(ctx.getMachineId());
+                            if (System.currentTimeMillis() < suppressedUntilMs) {
+                                w.emitEnginePhase(ctx, "SUPPRESSED", "AutoLoginSuppressed", "Waiting for GM to leave");
+                                return false;
+                            }
                             LoginState.Phase phase = ctx.getGameModel() != null && ctx.getGameModel().getLoginState() != null
                                     ? ctx.getGameModel().getLoginState().getPhase() : null;
                             return phase != LoginState.Phase.LOGIN_SUCCESS && phase != LoginState.Phase.REDIRECTING

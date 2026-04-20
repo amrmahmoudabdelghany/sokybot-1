@@ -49,6 +49,10 @@ final class LoginWorkflowSupport {
         this.deps = deps;
     }
 
+    LoginCycleDeps getDeps() {
+        return deps;
+    }
+
     static final class HostPort {
         final String host;
         final int port;

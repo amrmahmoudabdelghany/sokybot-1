@@ -33,6 +33,8 @@ public final class LoginActuator implements IActuator {
     private ILoginFailureClassifier loginFailureClassifier;
     @Reference
     private ILoginInteractiveCoordinator loginInteractiveCoordinator;
+    @Reference
+    private org.sokybot.engine.api.IEngineControl engineControl;
 
     @Override
     public String getName() {
@@ -64,7 +66,8 @@ public final class LoginActuator implements IActuator {
                 loginSettingsSnapshotter,
                 loginFailureClassifier,
                 loginInteractiveCoordinator,
-                settingsProvider);
+                settingsProvider,
+                engineControl);
         LoginWorkflowSupport support = new LoginWorkflowSupport(deps);
         ICycleDefinition cycle = new LoginCycleBuilder(support).build();
         context.getWorkflowRegistry().registerCycle(cycle);

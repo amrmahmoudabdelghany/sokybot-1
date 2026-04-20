@@ -67,6 +67,15 @@ public class EngineCore implements IEngine {
     // Actuator management
     private final ActuatorRegistry actuatorRegistry;
 
+    // Internal access for EngineControlImpl
+    public CycleController getCycleController() {
+        return cycleController;
+    }
+
+    public IProxyConnection getProxyConnection() {
+        return proxyConnection;
+    }
+
     public EngineCore(String machineId, String groupName, String machineName,
             IProxyConnection proxyConnection, IGameModel gameModel,
             java.util.List<org.sokybot.engine.api.extension.IActuator> actuators,

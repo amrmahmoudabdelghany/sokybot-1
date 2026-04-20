@@ -34,5 +34,6 @@
         <module>sokybot-pk2</module>
         <module>sokybot-pk2-extractor</module>
         <module>sokybot-loader-api</module>
+        <module>sokybot-social-projections</module>
     </modules>
 </project>

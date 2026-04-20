@@ -18,19 +18,26 @@ public final class LoginCycleDeps {
     private final ILoginFailureClassifier loginFailureClassifier;
     private final ILoginInteractiveCoordinator loginInteractiveCoordinator;
     private final ISettingsProvider<LoginSettings> loginSettingsProvider;
+    private final org.sokybot.engine.api.IEngineControl engineControl;
 
     public LoginCycleDeps(
             IGatewayProtocolEmitter gatewayProtocolEmitter,
             ILoginSettingsSnapshotter loginSettingsSnapshotter,
             ILoginFailureClassifier loginFailureClassifier,
             ILoginInteractiveCoordinator loginInteractiveCoordinator,
-            ISettingsProvider<LoginSettings> loginSettingsProvider
+            ISettingsProvider<LoginSettings> loginSettingsProvider,
+            org.sokybot.engine.api.IEngineControl engineControl
     ) {
         this.gatewayProtocolEmitter = Objects.requireNonNull(gatewayProtocolEmitter, "gatewayProtocolEmitter");
         this.loginSettingsSnapshotter = Objects.requireNonNull(loginSettingsSnapshotter, "loginSettingsSnapshotter");
         this.loginFailureClassifier = Objects.requireNonNull(loginFailureClassifier, "loginFailureClassifier");
         this.loginInteractiveCoordinator = Objects.requireNonNull(loginInteractiveCoordinator, "loginInteractiveCoordinator");
         this.loginSettingsProvider = Objects.requireNonNull(loginSettingsProvider, "loginSettingsProvider");
+        this.engineControl = engineControl;
+    }
+
+    public org.sokybot.engine.api.IEngineControl engineControl() {
+        return engineControl;
     }
 
     public IGatewayProtocolEmitter gatewayProtocolEmitter() {
