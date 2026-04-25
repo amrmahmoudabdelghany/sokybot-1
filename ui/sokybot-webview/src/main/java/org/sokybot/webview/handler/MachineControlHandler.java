@@ -37,7 +37,8 @@ import reactor.core.publisher.Mono;
         IRSocketHandler.METHOD_PROPERTY + "=machine.stop",
         IRSocketHandler.METHOD_PROPERTY + "=machine.list",
         IRSocketHandler.METHOD_PROPERTY + "=machine.create",
-        IRSocketHandler.METHOD_PROPERTY + "=machine.initialize"
+        IRSocketHandler.METHOD_PROPERTY + "=machine.initialize",
+        IRSocketHandler.METHOD_PROPERTY + "=machine.settings.read"
 })
 public class MachineControlHandler implements IRSocketHandler {
 
@@ -74,7 +75,14 @@ public class MachineControlHandler implements IRSocketHandler {
 
     @Override
     public String[] getMethods() {
-        return new String[] { "machine.start", "machine.stop", "machine.list", "machine.create", "machine.initialize" };
+        return new String[] {
+                "machine.start",
+                "machine.stop",
+                "machine.list",
+                "machine.create",
+                "machine.initialize",
+                "machine.settings.read"
+        };
     }
 
     @Override
@@ -97,6 +105,8 @@ public class MachineControlHandler implements IRSocketHandler {
                 return handleCreate(request);
             case "machine.initialize":
                 return handleInitialize(request);
+            case "machine.settings.read":
+                return handleSettingsRead(request);
             default:
                 return Mono.just(RSocketResponse.methodNotFound(method));
         }
@@ -217,6 +227,36 @@ public class MachineControlHandler implements IRSocketHandler {
             return Mono.just(RSocketResponse.success(new MachineActionResultDto("created", group + "." + name)));
         } catch (IllegalArgumentException e) {
             return Mono.just(RSocketResponse.invalidParams(e.getMessage()));
+        } catch (Exception e) {
+            return Mono.just(RSocketResponse.internalError(e));
+        }
+    }
+
+    private Mono<RSocketResponse> handleSettingsRead(RSocketRequest request) {
+        org.sokybot.settings.api.ISettingsRegistry localSettingsRegistry = this.settingsRegistry;
+        String machineId = request.getString("machineId");
+        String scope = request.getString("scope");
+
+        if (machineId == null || machineId.isEmpty() || scope == null || scope.isEmpty()) {
+            return Mono.just(RSocketResponse.invalidParams("machineId and scope are required"));
+        }
+        if (localSettingsRegistry == null) {
+            return Mono.just(RSocketResponse.error(
+                    RSocketResponse.ErrorCode.SERVICE_UNAVAILABLE,
+                    "Settings registry not available"));
+        }
+
+        ISokybotContext sokybotCtx = this.sokybotContext;
+        IGroupContext groupCtx = this.groupContext;
+        java.util.Optional<IMachineContext> ctx = findMachine(machineId, sokybotCtx, groupCtx);
+        if (ctx.isEmpty()) {
+            return Mono.just(RSocketResponse.notFound("Machine not found: " + machineId));
+        }
+
+        try {
+            IMachineContext m = ctx.get();
+            Map<String, Object> raw = localSettingsRegistry.readRawSettings(m.getGroupName(), m.getMachineName(), scope);
+            return Mono.just(RSocketResponse.success(raw != null ? raw : Collections.emptyMap()));
         } catch (Exception e) {
             return Mono.just(RSocketResponse.internalError(e));
         }

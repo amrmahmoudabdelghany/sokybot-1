@@ -3,9 +3,12 @@ import { useRSocketService } from './RSocketProvider'
 import { useSokybotStore } from './store'
 import { Layout } from './Layout'
 import { MachineView } from './MachineView'
+import { registerComponentType } from './extensions/registry'
+import { SocialPage } from './extensions/SocialPage'
 import { useExtensionRegistry } from './extensions/ExtensionRegistry'
 import { ExtensionView } from './extensions/ExtensionView'
 import { ErrorBoundary } from './ErrorBoundary'
+import { useSocialAlerts } from './hooks/useSocialAlerts'
 import {
   useMachinesQuery,
   useGroupsQuery,
@@ -14,6 +17,8 @@ import {
 import { extensionUiEventDataSchema } from './schemas/extensionEvents'
 import { Button } from '@sokybot/frontend-shared'
 import './App.css'
+
+registerComponentType('social', SocialPage)
 
 function App() {
   const rsocketService = useRSocketService();
@@ -34,12 +39,21 @@ function App() {
 
   useEffect(() => {
     if (extensionRegistryQuery.data) {
-      setExtensionRegistry(
-        extensionRegistryQuery.data as {
-          pages: Record<string, unknown>;
-          toolbarActions: Record<string, unknown>;
+      const incoming = extensionRegistryQuery.data as {
+        pages: Record<string, unknown>;
+        toolbarActions: Record<string, unknown>;
+      };
+      const currentPages = useSokybotStore.getState().extensionRegistry.pages;
+      const socialPages: Record<string, unknown> = {};
+      Object.keys(currentPages).forEach((pid) => {
+        if (pid.startsWith('social_')) {
+          socialPages[pid] = currentPages[pid];
         }
-      );
+      });
+      setExtensionRegistry({
+        pages: { ...incoming.pages, ...socialPages },
+        toolbarActions: incoming.toolbarActions,
+      });
     }
   }, [extensionRegistryQuery.data, setExtensionRegistry]);
 
@@ -101,6 +115,37 @@ function App() {
     if (!isConnected) return;
     void rsocketService.notifyClientConnected().catch(() => {});
   }, [isConnected, rsocketService]);
+
+  useSocialAlerts(isConnected);
+
+  useEffect(() => {
+    if (!isConnected || machinesQuery.data === undefined) {
+      return;
+    }
+    const machines = machinesQuery.data;
+    const alive = new Set(machines.map((m) => m.machineId));
+    const pages = useSokybotStore.getState().extensionRegistry.pages;
+    Object.keys(pages).forEach((pid) => {
+      if (!pid.startsWith('social_')) {
+        return;
+      }
+      const mid = pid.slice('social_'.length);
+      if (!alive.has(mid)) {
+        removeExtensionPage(pid);
+      }
+    });
+    if (machines.length === 0) {
+      return;
+    }
+    machines.forEach((m) => {
+      addExtensionPage({
+        pageId: `social_${m.machineId}`,
+        title: 'Social',
+        componentType: 'social',
+        props: {},
+      });
+    });
+  }, [isConnected, machinesQuery.data, addExtensionPage, removeExtensionPage]);
 
   useEffect(() => {
     const onVis = () => {

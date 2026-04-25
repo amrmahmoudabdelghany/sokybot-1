@@ -1,8 +1,10 @@
 package org.sokybot.social.projections.internal;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.osgi.service.component.annotations.Activate;
@@ -23,8 +25,8 @@ import org.sokybot.social.api.SocialAlert;
 import org.sokybot.social.api.SocialChannel;
 
 import lombok.extern.slf4j.Slf4j;
-import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
 
 @Component(service = ISocialModel.class, immediate = true)
 @Slf4j
@@ -38,6 +40,11 @@ public class SocialModelComponent implements ISocialModel {
 
     private final ConcurrentHashMap<String, MachineSocialState> states = new ConcurrentHashMap<>();
     private final reactor.core.Disposable.Composite disposables = reactor.core.Disposables.composite();
+
+    private final Sinks.Many<ChatLine> allChatSink =
+            Sinks.many().multicast().onBackpressureBuffer(1024, false);
+    private final Sinks.Many<SocialAlert> allAlertSink =
+            Sinks.many().multicast().onBackpressureBuffer(256, false);
 
     @Activate
     public void activate() {
@@ -55,6 +62,8 @@ public class SocialModelComponent implements ISocialModel {
             s.snapshotSink.tryEmitComplete();
         });
         states.clear();
+        allChatSink.tryEmitComplete();
+        allAlertSink.tryEmitComplete();
     }
 
     private void onChat(ChatMessageEvent event) {
@@ -91,10 +100,12 @@ public class SocialModelComponent implements ISocialModel {
                 if (state.alerts.size() >= 64) state.alerts.pollFirst();
                 state.alerts.addLast(alert);
                 state.alertSink.tryEmitNext(alert);
+                allAlertSink.tryEmitNext(alert);
             }
         }
         
         state.chatSink.tryEmitNext(line);
+        allChatSink.tryEmitNext(line);
         publishSnapshot(machineId, state);
     }
 
@@ -122,6 +133,7 @@ public class SocialModelComponent implements ISocialModel {
                 state.alerts.addLast(alert);
             }
             state.alertSink.tryEmitNext(alert);
+            allAlertSink.tryEmitNext(alert);
             publishSnapshot(machineId, state);
         }
     }
@@ -142,6 +154,7 @@ public class SocialModelComponent implements ISocialModel {
                 if (state.alerts.size() >= 64) state.alerts.pollFirst();
                 state.alerts.addLast(alert);
                 state.alertSink.tryEmitNext(alert);
+                allAlertSink.tryEmitNext(alert);
             }
             publishSnapshot(machineId, state);
         }
@@ -189,5 +202,20 @@ public class SocialModelComponent implements ISocialModel {
     public Flux<ISocialSnapshot> observe(String machineId) {
         return states.computeIfAbsent(machineId, k -> new MachineSocialState()).snapshotSink.asFlux()
             .sample(java.time.Duration.ofMillis(50));
+    }
+
+    @Override
+    public Flux<ChatLine> observeAllChat() {
+        return allChatSink.asFlux();
+    }
+
+    @Override
+    public Flux<SocialAlert> observeAllAlerts() {
+        return allAlertSink.asFlux();
+    }
+
+    @Override
+    public Set<String> knownMachineIds() {
+        return Collections.unmodifiableSet(new HashSet<>(states.keySet()));
     }
 }

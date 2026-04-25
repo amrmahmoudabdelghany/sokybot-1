@@ -36,7 +36,7 @@ export const MachineView: React.FC<MachineViewProps> = ({ machineId }) => {
         });
 
         // Sort tabs: core pages first (inventory, skills, training, env, log), then others
-        const corePageOrder = ['inventory', 'skills', 'training', 'environment', 'log'];
+        const corePageOrder = ['inventory', 'skills', 'training', 'environment', 'log', 'social'];
         machineTabs.sort((a, b) => {
             const aBase = a.split('_')[0].toLowerCase();
             const bBase = b.split('_')[0].toLowerCase();

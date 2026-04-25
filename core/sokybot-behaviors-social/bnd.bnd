@@ -2,5 +2,14 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
-Private-Package: org.sokybot.behaviors.social.*
-Import-Package: reactor.core.publisher;version="[3.6,4)", *;resolution:=optional
+Private-Package: org.sokybot.behaviors.social.settings,org.sokybot.behaviors.social.net,org.sokybot.behaviors.social
+Export-Package: org.sokybot.behaviors.social.webhook
+Import-Package: \
+    java.net.http;version="[11,)", \
+    com.fasterxml.jackson.databind;version="[2.15,3)", \
+    com.fasterxml.jackson.core;version="[2.15,3)", \
+    reactor.core;version="[3.6,4)", \
+    reactor.core.publisher;version="[3.6,4)", \
+    reactor.core.scheduler;version="[3.6,4)", \
+    org.reactivestreams;version="[1.0,2)", \
+    *;resolution:=optional

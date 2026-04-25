@@ -4,7 +4,7 @@ Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
 -dsannotations: *
 -removeheaders: Require-Capability
-Export-Package: org.sokybot.webview,org.sokybot.webview.api,org.sokybot.webview.api.util,org.sokybot.webview.handler
+Export-Package: org.sokybot.webview,org.sokybot.webview.api,org.sokybot.webview.api.util,org.sokybot.webview.api.dto.social,org.sokybot.webview.handler
 Import-Package: \
     io.rsocket.*, \
     io.netty.*, \
@@ -20,6 +20,8 @@ Import-Package: \
     org.sokybot.persistence.*;version="[1.0,2)", \
     org.sokybot.commons.topic;version="[1.0,2)", \
     org.sokybot.commons.*;version="[1.0,2)", \
+    org.sokybot.social.api.*;version="[1.0,2)", \
+    org.sokybot.behaviors.social.webhook;version="[1.0,2)", \
     !io.vertx.*, \
     !javax.annotation.meta, \
     !sun.reflect.*, \

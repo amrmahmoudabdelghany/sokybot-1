@@ -114,7 +114,7 @@ export class RSocketService {
     private readonly requestTtlMs = 5000;
     private readonly maxQueueSize = 200;
     private readonly queueableMethodPrefixes = [
-        'machine.', 'group.', 'workspace.', 'extension.', 'fs.', 'system.', 'character.',
+        'machine.', 'group.', 'workspace.', 'extension.', 'fs.', 'system.', 'character.', 'social.',
     ];
     private readonly activeStreams = new Map<string, () => void>();
     private readonly beforeUnloadHandler = () => this.close();
@@ -735,6 +735,20 @@ export class RSocketService {
     }
 
     /**
+     * Read persisted settings for a machine scope (raw map; shape matches the Java settings bean).
+     */
+    async readMachineSettings(machineId: string, scope: string) {
+        return this.request<Record<string, unknown>>('machine.settings.read', { machineId, scope });
+    }
+
+    /**
+     * Ask the backend to POST a synthetic webhook test alert for the machine.
+     */
+    async sendWebhookTest(machineId: string) {
+        return this.request<{ status: string; machineId: string }>('social.webhook.test', { machineId });
+    }
+
+    /**
      * List all groups.
      */
     async getGroups() {
@@ -848,6 +862,53 @@ export class RSocketService {
             onError,
             { machineId }
         );
+    }
+
+    /**
+     * Live chat stream (per-machine or all machines). Server filters by {@code channels}, {@code includeSelf}, {@code includeGm}.
+     */
+    subscribeToSocialChat(
+        params: {
+            machineId?: string;
+            channels?: SocialChannel[];
+            includeSelf?: boolean;
+            includeGm?: boolean;
+        },
+        onLine: (line: ChatLineDto) => void,
+        onError?: (error: any) => void
+    ): RSocketSubscription {
+        const req: Record<string, unknown> = {};
+        if (params.machineId) {
+            req.machineId = params.machineId;
+        }
+        if (params.channels && params.channels.length > 0) {
+            req.channels = params.channels;
+        }
+        if (params.includeSelf !== undefined) {
+            req.includeSelf = params.includeSelf;
+        }
+        if (params.includeGm !== undefined) {
+            req.includeGm = params.includeGm;
+        }
+        return this.subscribe<ChatLineDto>('social.chat', onLine, onError, req);
+    }
+
+    /**
+     * Social alerts stream (per-machine or all). Optional {@code kinds} filters by alert kind enum names.
+     */
+    subscribeToSocialAlerts(
+        params: { machineId?: string; kinds?: SocialAlertKind[] },
+        onAlert: (a: SocialAlertDto) => void,
+        onError?: (error: any) => void
+    ): RSocketSubscription {
+        const req: Record<string, unknown> = {};
+        if (params.machineId) {
+            req.machineId = params.machineId;
+        }
+        if (params.kinds && params.kinds.length > 0) {
+            req.kinds = params.kinds.join(',');
+        }
+        return this.subscribe<SocialAlertDto>('social.alerts', onAlert, onError, req);
     }
 
     /**
@@ -1034,6 +1095,46 @@ export interface ExtensionEvent {
     type: string;
     data: Record<string, unknown>;
     timestamp: number;
+}
+
+/** Chat channel filter values (align with backend {@code org.sokybot.social.api.SocialChannel}). */
+export type SocialChannel =
+    | 'ALL'
+    | 'PARTY'
+    | 'GUILD'
+    | 'UNION'
+    | 'PRIVATE'
+    | 'STALL'
+    | 'GLOBAL'
+    | 'ACADEMY'
+    | 'NOTICE'
+    | 'UNKNOWN';
+
+/** Alert kind names (align with backend {@code org.sokybot.social.api.SocialAlert.Kind}). */
+export type SocialAlertKind =
+    | 'UNIQUE_SPAWNED'
+    | 'UNIQUE_KILLED'
+    | 'GM_NEARBY'
+    | 'GM_WHISPER'
+    | 'NOTICE_GM_BROADCAST'
+    | 'CUSTOM';
+
+export interface ChatLineDto {
+    machineId: string;
+    timestampEpochMs: number;
+    channel: string;
+    senderName: string;
+    message: string;
+    fromGameMaster: boolean;
+    fromSelf: boolean;
+}
+
+export interface SocialAlertDto {
+    machineId: string;
+    timestampEpochMs: number;
+    kind: string;
+    subject: string;
+    attributes: Record<string, string>;
 }
 
 export interface MachineStatusEvent {

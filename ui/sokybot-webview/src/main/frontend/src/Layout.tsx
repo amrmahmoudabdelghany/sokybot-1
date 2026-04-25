@@ -9,7 +9,7 @@ import { MachineOnboardingSection } from './components/MachineOnboardingSection'
 import { DiagnosticsPanel } from './components/DiagnosticsPanel';
 import { useMachinesQuery, useGroupsQuery, useInvalidateSokybotQueries } from './query/sokybotQueries';
 import { useMachineSeverityStore } from './machines/useMachineSeverityStore';
-import { Plus, Bot, Monitor, Moon, Sun, Maximize, Minimize, Settings, Target, Package, Zap, Globe, FileText, Activity } from 'lucide-react';
+import { Plus, Bot, Monitor, Moon, Sun, Maximize, Minimize, Settings, Target, Package, Zap, Globe, FileText, Activity, MessageCircle } from 'lucide-react';
 import { Button } from '@sokybot/frontend-shared';
 import { cn } from '@sokybot/frontend-shared';
 
@@ -173,7 +173,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
             }
         });
 
-        const corePageOrder = ['inventory', 'skills', 'training', 'environment', 'log'];
+            const corePageOrder = ['inventory', 'skills', 'training', 'environment', 'log', 'social'];
         machineTabs.sort((a, b) => {
             const aBase = a.split('_')[0].toLowerCase();
             const bBase = b.split('_')[0].toLowerCase();
@@ -231,6 +231,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, isBackendConnected }) 
         if (base === 'skills') return <Zap className="h-3 w-3 mr-2" />;
         if (base === 'environment') return <Globe className="h-3 w-3 mr-2" />;
         if (base === 'log') return <FileText className="h-3 w-3 mr-2" />;
+        if (base === 'social') return <MessageCircle className="h-3 w-3 mr-2" />;
         if (base === 'packetsniffer' || base === 'activity') return <Activity className="h-3 w-3 mr-2" />;
         return <div className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 mr-2" />;
     };

@@ -6,6 +6,7 @@ import App from './App.tsx'
 import { ThemeProvider } from './components/theme-provider'
 import { createAppQueryClient } from './query/queryClient'
 import { TooltipProvider } from '@sokybot/frontend-shared'
+import { ToastContainer } from './components/toast/ToastContainer'
 import { RSocketProvider } from './RSocketProvider'
 
 const queryClient = createAppQueryClient()
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')!).render(
             <App />
           </RSocketProvider>
         </QueryClientProvider>
+        <ToastContainer />
       </TooltipProvider>
     </ThemeProvider>
   </StrictMode>,
