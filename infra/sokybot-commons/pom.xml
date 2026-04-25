@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>sokybot-commons</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Sokybot Commons Bundle</name>
     <description>Common utilities and shared code for Sokybot</description>
 
@@ -68,42 +68,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration combine.self="override">
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Export-Package>
-                            org.sokybot.commons,
-                            org.sokybot.commons.jna,
-                            org.sokybot.commons.error,
-                            org.sokybot.commons.health,
-                            org.sokybot.commons.metrics,
-                            org.sokybot.commons.event,
-                            org.sokybot.commons.osgi,
-                            org.sokybot.commons.script,
-                            org.sokybot.commons.lifecycle,
-                            org.sokybot.commons.topic
-                        </Export-Package>
-                        <Private-Package>
-                            org.sokybot.commons.error.internal,
-                            org.sokybot.commons.health.internal,
-                            org.sokybot.commons.metrics.internal,
-                            org.sokybot.commons.event.internal,
-                            org.sokybot.commons.osgi.internal,
-                            org.sokybot.commons.lifecycle.internal
-                        </Private-Package>
-                        <Import-Package>
-                            *;resolution:=optional
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

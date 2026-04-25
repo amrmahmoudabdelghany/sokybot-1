@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-party-api</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Sokybot :: Party API</name>
     <description>SPI and DTOs for party state, policies, and party-cycle behaviors (additive)</description>
 
@@ -36,25 +36,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Export-Package>org.sokybot.party.api</Export-Package>
-                        <Import-Package>
-                            org.sokybot.engine.api.workflow;version="[1.0,2)",
-                            reactor.core;version="[3.6,4)",
-                            reactor.core.publisher;version="[3.6,4)",
-                            *;resolution:=optional
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

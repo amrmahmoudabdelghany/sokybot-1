@@ -12,7 +12,7 @@
 	</parent>
 
 	<artifactId>sokybot-pk2</artifactId>
-	<packaging>bundle</packaging>
+	<packaging>jar</packaging>
 
 	<dependencies>
 

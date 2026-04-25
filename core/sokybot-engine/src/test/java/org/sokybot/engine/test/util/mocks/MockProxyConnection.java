@@ -1,7 +1,8 @@
 package org.sokybot.engine.test.util.mocks;
 
-import org.mockito.Mockito;
+import org.sokybot.network.IPacketObserver;
 import org.sokybot.network.IPacketPublisher;
+import org.sokybot.network.IPacketSubscription;
 import org.sokybot.network.packet.MutablePacket;
 import org.sokybot.proxy.IProxyConnection;
 
@@ -39,7 +40,7 @@ public class MockProxyConnection implements IProxyConnection {
      * Creates a new MockProxyConnection.
      */
     public MockProxyConnection() {
-        this.packetPublisher = Mockito.mock(IPacketPublisher.class);
+        this.packetPublisher = new NoOpPacketPublisher();
     }
 
     /**
@@ -146,5 +147,19 @@ public class MockProxyConnection implements IProxyConnection {
     @Override
     public String getMachineId() {
         return "mock-machine-id";
+    }
+
+    /** No-op IPacketPublisher stub — all subscribe methods return a no-op subscription. */
+    private static class NoOpPacketPublisher implements IPacketPublisher {
+        private static final IPacketSubscription NOOP = () -> {};
+
+        @Override
+        public IPacketSubscription subscribe(int opcode, IPacketObserver observer) { return NOOP; }
+
+        @Override
+        public IPacketSubscription subscribe(IPacketObserver observer, int... opcodes) { return NOOP; }
+
+        @Override
+        public IPacketSubscription subscribeAll(IPacketObserver observer) { return NOOP; }
     }
 }

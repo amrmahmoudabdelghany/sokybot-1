@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-login-settings-builtin</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Sokybot :: Login settings (builtin)</name>
     <description>Runtime login settings snapshot provider and normalization rules</description>
 
@@ -48,31 +48,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration combine.self="override">
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Private-Package>
-                            org.sokybot.login.settings.builtin
-                        </Private-Package>
-                        <Import-Package>
-                            org.sokybot.engine.api.login;version="[1.0,2)",
-                            org.sokybot.engine.api.workflow;version="[1.0,2)",
-                            org.sokybot.settings.api;version="[1.0,2)",
-                            org.osgi.service.component.annotations;version="[1.5,2)",
-                            org.slf4j;version="[1.7,2)",
-                            *;resolution:=optional
-                        </Import-Package>
-                        <_dsannotations>*</_dsannotations>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

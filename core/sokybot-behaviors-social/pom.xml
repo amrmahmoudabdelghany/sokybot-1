@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>sokybot-behaviors-social</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Sokybot :: Behaviors :: Social</name>
     <description>Autonomous social behaviors like auto-reply and GM evasion</description>
 
@@ -74,24 +74,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration combine.self="override">
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Private-Package>org.sokybot.behaviors.social.*</Private-Package>
-                        <Import-Package>
-                            reactor.core.publisher;version="[3.6,4)",
-                            *;resolution:=optional
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

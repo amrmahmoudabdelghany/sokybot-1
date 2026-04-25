@@ -1,7 +1,7 @@
 package org.sokybot.engine.test;
 
-import org.mockito.Mockito;
-import org.osgi.framework.BundleContext;
+
+
 import org.sokybot.engine.core.EngineCore;
 import org.sokybot.engine.api.handler.IEngineEventMediator;
 import org.sokybot.engine.test.util.OSGiTestUtils;
@@ -9,7 +9,7 @@ import org.sokybot.engine.test.util.mocks.MockDispatcher;
 import org.sokybot.engine.test.util.mocks.MockGameModel;
 import org.sokybot.engine.test.util.mocks.MockProxyConnection;
 import org.sokybot.gamemodel.IGameModel;
-import org.sokybot.proxy.IProxyConnection;
+
 
 /**
  * Base class for engine tests.

@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>sokybot-webview</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
 
     <properties>
         <rsocket.version>1.1.4</rsocket.version>
@@ -203,64 +203,6 @@
             </resource>
         </resources>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <version>5.1.9</version>
-                <configuration combine.self="override">
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <_dsannotations>*</_dsannotations>
-                        <_removeheaders>Require-Capability</_removeheaders>
-                        <Export-Package>org.sokybot.webview,org.sokybot.webview.api,org.sokybot.webview.api.util,org.sokybot.webview.handler</Export-Package>
-                        <Import-Package>
-                            io.rsocket.*,
-                            io.netty.*,
-                            reactor.core.*,
-                            reactor.netty.*,
-                            reactor.util.*,
-                            org.reactivestreams.*,
-                            com.fasterxml.jackson.*;version="[2.15,3)",
-                            org.sokybot.runtime.*;version="[1.0,2)",
-                            org.sokybot.engine.api.*;version="[1.0,2)",
-                            org.sokybot.gameevents.*;version="[1.0,2)",
-                            org.sokybot.gamemodel.*;version="[1.0,2)",
-                            org.sokybot.persistence.*;version="[1.0,2)",
-                            org.sokybot.commons.topic;version="[1.0,2)",
-                            org.sokybot.commons.*;version="[1.0,2)",
-                            !io.vertx.*,
-                            !javax.annotation.meta,
-                            !sun.reflect.*,
-                            !jdk.internal.*,
-                            !java.nio.file.spi,
-                            !org.bouncycastle.*,
-                            !sun.security.ssl,
-                            *
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>bundle-manifest</id>
-                        <phase>process-classes</phase>
-                        <goals>
-                            <goal>manifest</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>bundle-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>bundle</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-
             <plugin>
                 <groupId>com.github.eirslett</groupId>
                 <artifactId>frontend-maven-plugin</artifactId>

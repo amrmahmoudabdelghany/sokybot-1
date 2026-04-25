@@ -152,7 +152,7 @@ public class CharacterStateHandler implements IRSocketHandler {
         String failureReasonSnap = null;
         String loginDetailMessage = null;
         Integer queuePosition = null;
-        Integer retryCount = null;
+
         Integer maxRetries = null;
         String lastFailureReason = null;
         Integer configuredClientVersion = null;
@@ -196,7 +196,7 @@ public class CharacterStateHandler implements IRSocketHandler {
             if (LoginState.Phase.DISCONNECTED.equals(phaseEnum) && transportLive) {
                 loginPhase = LoginState.Phase.CONNECTING_GATEWAY.name();
             }
-        } catch (Exception ignored) {
+        } catch (RuntimeException ignored) {
             // Keep safe defaults for UI.
         }
         try {
@@ -231,7 +231,7 @@ public class CharacterStateHandler implements IRSocketHandler {
                     }
                 }
             }
-        } catch (Exception ignored) {
+        } catch (RuntimeException ignored) {
             // optional snapshot
         }
         lastFailureReason = failureReasonSnap;
@@ -247,7 +247,7 @@ public class CharacterStateHandler implements IRSocketHandler {
         state.put("lastFailureReason", lastFailureReason);
         state.put("loginDetailMessage", loginDetailMessage);
         state.put("queuePosition", queuePosition);
-        state.put("retryCount", retryCount);
+        state.put("retryCount", (Integer) null);
         state.put("maxRetries", maxRetries);
         state.put("configuredClientVersion", configuredClientVersion);
         state.put("agentOptions", agentOptions);
@@ -289,7 +289,7 @@ public class CharacterStateHandler implements IRSocketHandler {
                 LoginState.Phase p = ctx.getGameModel().getLoginState().getPhase();
                 return loginPhaseIndicatesActiveSession(p);
             }
-        } catch (Exception ignored) {
+        } catch (RuntimeException ignored) {
             // ignore
         }
         return false;

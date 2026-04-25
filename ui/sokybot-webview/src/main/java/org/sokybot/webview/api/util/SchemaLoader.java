@@ -29,18 +29,16 @@ public class SchemaLoader {
      * @return The loaded and resolved schema as a Map, or null if loading failed
      */
     public static Map<String, Object> loadSchema(String resourcePath, Class<?> clazz) {
-        try {
-            InputStream stream = clazz.getResourceAsStream(resourcePath);
+        try (InputStream stream = clazz.getResourceAsStream(resourcePath)) {
             if (stream != null) {
                 Map<String, Object> schema = mapper.readValue(stream, Map.class);
-                stream.close();
                 
                 // Resolve $ref references
                 resolveReferences(schema, clazz);
                 
                 return schema;
             }
-        } catch (Exception e) {
+        } catch (java.io.IOException | RuntimeException e) {
             System.err.println("Failed to load schema from " + resourcePath + ": " + e.getMessage());
             e.printStackTrace();
         }

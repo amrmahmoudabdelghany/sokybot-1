@@ -1,0 +1,56 @@
+<FindBugsFilter>
+  <!-- @Component / @Reference DS classes are deserialized by SCR, never by Java serialization -->
+  <Match>
+    <Class name="~org\.sokybot\..*"/>
+    <Bug pattern="SE_BAD_FIELD,SE_NO_SERIALVERSIONID,SE_TRANSIENT_FIELD_NOT_RESTORED"/>
+  </Match>
+  <!-- Lombok @Builder / @Data emit synthetic dead stores and self-assignments -->
+  <Match>
+    <Source name="~.*\.java"/>
+    <Bug pattern="DLS_DEAD_LOCAL_STORE,SA_FIELD_SELF_ASSIGNMENT,RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
+    <Method name="~.*Builder\$.*"/>
+  </Match>
+  <!-- DS @Reference fields are written by SCR via reflection; spotbugs sees them as never-written -->
+  <Match>
+    <Bug pattern="UWF_NULL_FIELD,UWF_UNWRITTEN_FIELD,NP_UNWRITTEN_FIELD,UWF_FIELD_NOT_INITIALIZED_IN_CONSTRUCTOR"/>
+    <Field name="~^[a-z].*"/>
+    <Class name="~org\.sokybot\..*"/>
+  </Match>
+  <!-- DS @Reference setters accept external mutable objects by design (SCR injection) -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+    <Method name="~^set.*"/>
+    <Class name="~org\.sokybot\..*"/>
+  </Match>
+  <!-- Framework naming collisions across packages are not confusing in OSGi DS context -->
+  <Match>
+    <Bug pattern="NM_CONFUSING"/>
+    <Class name="~org\.sokybot\..*"/>
+  </Match>
+  <!-- Private inner-class fields used for structural metadata are intentionally unread -->
+  <Match>
+    <Bug pattern="URF_UNREAD_FIELD"/>
+    <Class name="~org\.sokybot\..*\$.*"/>
+  </Match>
+  <!-- Reactor Sinks.Many emission methods return EmitResult by design; ignoring it is the documented pattern -->
+  <Match>
+    <Bug pattern="RV_RETURN_VALUE_IGNORED"/>
+    <Method name="~.*emit.*"/>
+  </Match>
+  <!-- RSocketResponse / RSocketError are JSON serialization DTOs; mutable access is the Jackson contract -->
+  <Match>
+    <Class name="~.*\.api\.RSocketResponse(\$RSocketError)?"/>
+    <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+  </Match>
+  <!-- @Activate(BundleContext) stores the framework-injected context; not a mutable DTO concern -->
+  <Match>
+    <Bug pattern="EI_EXPOSE_REP2"/>
+    <Method name="~^activate.*"/>
+    <Class name="~org\.sokybot\..*"/>
+  </Match>
+  <!-- Defensive null-checks on non-null returns are harmless and intentional for OSGi service safety -->
+  <Match>
+    <Bug pattern="RCN_REDUNDANT_NULLCHECK_OF_NONNULL_VALUE"/>
+    <Class name="~org\.sokybot\..*"/>
+  </Match>
+</FindBugsFilter>

@@ -9,7 +9,7 @@
     </parent>
 
     <artifactId>sokybot-engine</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
 
     <properties>
         <lombok.version>1.18.30</lombok.version>
@@ -148,55 +148,22 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-
-                        <Import-Package>
-                            org.osgi.framework;version="[1.8,2.0)",
-                            org.sokybot.engine.api.*;version="[1.0,2)",
-                            org.sokybot.settings.api;version="[1.0,2)",
-                            org.sokybot.settings.api.*;version="[1.0,2)",
-                            org.sokybot.settings.security;version="[1.0,2)",
-                            org.sokybot.settings;version="[1.0,2)",
-                            org.sokybot.commons;version="[1.0,2)",
-                            org.sokybot.commons.*;version="[1.0,2)",
-                            org.sokybot.network;version="[1.0,2)",
-                            org.sokybot.network.*;version="[1.0,2)",
-                            !org.sokybot.gamemodel.spi,
-                            org.sokybot.gamemodel.*;version="[1.0,2)",
-                            org.sokybot.gameevents.*;version="[1.0,2)",
-                            !javax.swing.*,
-                            !java.awt.*,
-                            *;resolution:=optional
-                        </Import-Package>
-                        <DynamicImport-Package>*</DynamicImport-Package>
-                        <Private-Package>
-                            org.sokybot.engine.internal,
-                            org.sokybot.engine.internal.handler,
-                            org.sokybot.engine.internal.behavior,
-                            org.sokybot.engine.internal.login,
-                            org.sokybot.engine.internal.journal,
-                            org.sokybot.engine.internal.cycle,
-                            org.sokybot.engine.internal.connection,
-                            org.sokybot.machine.*
-                        </Private-Package>
-                        <Export-Package>
-                            org.sokybot.engine.core.*,
-                            org.sokybot.engine.core.workflow.builder,
-                            org.sokybot.engine.plugin,
-                            org.sokybot.engine.scripting
-                        </Export-Package>
-                        <!-- Only Groovy embedded (scripting); Jackson and Atomos from sokybot-jackson / sokybot-platform features -->
-                        <Embed-Dependency>groovy;scope=compile;inline=true</Embed-Dependency>
-                        <Embed-Transitive>true</Embed-Transitive>
-                    </instructions>
-                </configuration>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeArtifactIds>groovy</includeArtifactIds>
+                            <outputDirectory>${project.build.directory}/dependency</outputDirectory>
+                            <stripVersion>true</stripVersion>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

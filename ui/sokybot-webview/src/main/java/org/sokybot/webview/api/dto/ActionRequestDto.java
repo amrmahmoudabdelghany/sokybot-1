@@ -8,9 +8,9 @@ public class ActionRequestDto {
 
     public ActionRequestDto(String action, Map<String, Object> data) {
         this.action = action;
-        this.data = data;
+        this.data = data != null ? new java.util.LinkedHashMap<>(data) : null;
     }
 
     public String action() { return action; }
-    public Map<String, Object> data() { return data; }
+    public Map<String, Object> data() { return data != null ? java.util.Collections.unmodifiableMap(data) : null; }
 }

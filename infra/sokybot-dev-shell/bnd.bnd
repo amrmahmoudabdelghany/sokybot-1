@@ -1,0 +1,6 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Karaf-Commands: org.sokybot.devshell.command
+Import-Package: org.sokybot.engine.api.*;version="[1.0,2.0)", org.sokybot.runtime.*;version="[1.0,2.0)", org.sokybot.proxy.*;version="[1.0,2.0)", org.sokybot.network.packet.*;version="[1.0,2.0)", org.apache.karaf.shell.*;version="[4,5)", *

@@ -1,0 +1,30 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+-dsannotations: *
+-removeheaders: Require-Capability
+Export-Package: org.sokybot.webview,org.sokybot.webview.api,org.sokybot.webview.api.util,org.sokybot.webview.handler
+Import-Package: \
+    io.rsocket.*, \
+    io.netty.*, \
+    reactor.core.*, \
+    reactor.netty.*, \
+    reactor.util.*, \
+    org.reactivestreams.*, \
+    com.fasterxml.jackson.*;version="[2.15,3)", \
+    org.sokybot.runtime.*;version="[1.0,2)", \
+    org.sokybot.engine.api.*;version="[1.0,2)", \
+    org.sokybot.gameevents.*;version="[1.0,2)", \
+    org.sokybot.gamemodel.*;version="[1.0,2)", \
+    org.sokybot.persistence.*;version="[1.0,2)", \
+    org.sokybot.commons.topic;version="[1.0,2)", \
+    org.sokybot.commons.*;version="[1.0,2)", \
+    !io.vertx.*, \
+    !javax.annotation.meta, \
+    !sun.reflect.*, \
+    !jdk.internal.*, \
+    !java.nio.file.spi, \
+    !org.bouncycastle.*, \
+    !sun.security.ssl, \
+    *

@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>sokybot-game-model</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
 
     <dependencies>
         <dependency>
@@ -55,40 +55,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration combine.self="override">
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Export-Package>
-                            org.sokybot.gamemodel,
-                            org.sokybot.gamemodel.model,
-                            org.sokybot.gamemodel.snapshot,
-                            org.sokybot.gamemodel.spec,
-                            org.sokybot.gamemodel.factory,
-                            org.sokybot.gamemodel.spi,
-                            org.sokybot.gamemodel.*
-                        </Export-Package>
-                        <Private-Package>org.sokybot.gamemodel.internal.*</Private-Package>
-                        <Import-Package>
-                            !com.aayushatharva.brotli4j,
-                            !com.aayushatharva.brotli4j.*,
-                            org.sokybot.gameevents,
-                            org.sokybot.gameevents.events.*,
-                            org.sokybot.commons.*,
-                            org.sokybot.settings.*,
-                            org.osgi.*,
-                            *;resolution:=optional
-                        </Import-Package>
-                        <_dsannotations>org.sokybot.gamemodel.*</_dsannotations>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

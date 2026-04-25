@@ -1,0 +1,7 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.commons, org.sokybot.commons.jna, org.sokybot.commons.error, org.sokybot.commons.health, org.sokybot.commons.metrics, org.sokybot.commons.event, org.sokybot.commons.osgi, org.sokybot.commons.script, org.sokybot.commons.lifecycle, org.sokybot.commons.topic
+Private-Package: org.sokybot.commons.error.internal, org.sokybot.commons.health.internal, org.sokybot.commons.metrics.internal, org.sokybot.commons.event.internal, org.sokybot.commons.osgi.internal, org.sokybot.commons.lifecycle.internal
+Import-Package: *;resolution:=optional

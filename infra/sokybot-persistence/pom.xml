@@ -11,7 +11,7 @@
     </parent>
     
     <modelVersion>4.0.0</modelVersion>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     
     <artifactId>sokybot-persistence</artifactId>
     <name>Sokybot Persistence Bundle</name>
@@ -218,37 +218,7 @@
     
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration combine.self="override">
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Export-Package>
-                            org.sokybot.persistence.service,
-                            org.sokybot.persistence.entities,
-                            org.sokybot.persistence.entities.geo,
-                            org.sokybot.persistence.entities.navmesh,
-                            org.sokybot.persistence.config
-                        </Export-Package>
-                        <Private-Package>
-                            org.sokybot.persistence.internal.*,
-                            org.sokybot.persistence
-                        </Private-Package>
-                        <Import-Package>*;resolution:=optional</Import-Package>
-                        <DynamicImport-Package>*</DynamicImport-Package>
-                        <!-- Restrict DS scanning to only our packages -->
-                        <_dsannotations>org.sokybot.persistence.*</_dsannotations>
-                        <!-- Remove osgi.service requirements generated from embedded Hibernate -->
-                        <Provide-Capability>osgi.service;objectClass:List&lt;String&gt;="org.sokybot.persistence.service.IPersistenceContextManager,org.sokybot.persistence.service.IGamePersistenceFactory"</Provide-Capability>
-                        <_removeheaders>Require-Capability</_removeheaders>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

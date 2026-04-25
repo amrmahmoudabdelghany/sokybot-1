@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>sokybot-pk2-extractor</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Sokybot PK2 Extractor Bundle</name>
     <description>Pure extraction library for Silkroad PK2 files - outputs DTOs only, no persistence</description>
 
@@ -82,27 +82,22 @@
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Embed-Dependency>commons-io;scope=compile;inline=true</Embed-Dependency>
-                        <Import-Package>
-                            !org.apache.commons.io.*,
-                            *;resolution:=optional
-                        </Import-Package>
-                        <Export-Package>
-                            org.sokybot.pk2extractor,
-                            org.sokybot.pk2extractor.*
-                        </Export-Package>
-                        <_dsannotations>*</_dsannotations>
-                    </instructions>
-                </configuration>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeArtifactIds>commons-io</includeArtifactIds>
+                            <outputDirectory>${project.build.directory}/dependency</outputDirectory>
+                            <stripVersion>true</stripVersion>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

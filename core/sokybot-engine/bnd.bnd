@@ -1,0 +1,9 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Import-Package: org.osgi.framework;version="[1.8,2.0)", org.sokybot.engine.api.*;version="[1.0,2)", org.sokybot.settings.api;version="[1.0,2)", org.sokybot.settings.api.*;version="[1.0,2)", org.sokybot.settings.security;version="[1.0,2)", org.sokybot.settings;version="[1.0,2)", org.sokybot.commons;version="[1.0,2)", org.sokybot.commons.*;version="[1.0,2)", org.sokybot.network;version="[1.0,2)", org.sokybot.network.*;version="[1.0,2)", !org.sokybot.gamemodel.spi, org.sokybot.gamemodel.*;version="[1.0,2)", org.sokybot.gameevents.*;version="[1.0,2)", !javax.swing.*, !java.awt.*, *;resolution:=optional
+DynamicImport-Package: *
+Private-Package: org.sokybot.engine.internal, org.sokybot.engine.internal.handler, org.sokybot.engine.internal.behavior, org.sokybot.engine.internal.login, org.sokybot.engine.internal.journal, org.sokybot.engine.internal.cycle, org.sokybot.engine.internal.connection, org.sokybot.machine.*
+Export-Package: org.sokybot.engine.core.*, org.sokybot.engine.core.workflow.builder, org.sokybot.engine.plugin, org.sokybot.engine.scripting
+Include-Resource: @${project.build.directory}/dependency/groovy.jar
+-fixupmessages: "Classes found in the wrong directory"; restrict:=error; is:=warning

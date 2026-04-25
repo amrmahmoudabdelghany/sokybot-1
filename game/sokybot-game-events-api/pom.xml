@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-game-events-api</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     
     <dependencies>
         <dependency>
@@ -37,34 +37,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration combine.self="override">
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Export-Package>
-                            org.sokybot.gameevents,
-                            org.sokybot.gameevents.dto,
-                            org.sokybot.gameevents.dto.*,
-                            org.sokybot.gameevents.enums,
-                            org.sokybot.gameevents.enums.*,
-                            org.sokybot.gameevents.events.*,
-                            org.sokybot.gameevents.events.core,
-                            org.sokybot.gameevents.store
-                        </Export-Package>
-                        <Import-Package>
-                            org.sokybot.*,
-                            org.osgi.*,
-                            *;resolution:=optional
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

@@ -1,0 +1,6 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Export-Package: org.sokybot.behaviors.training.api
+Private-Package: org.sokybot.behaviors.training.internal
+Import-Package: org.sokybot.engine.api.behavior;version="[1.0,2)", org.sokybot.engine.api.workflow;version="[1.0,2)", org.sokybot.engine.api;version="[1.0,2)", org.sokybot.gamemodel.*;version="[1.0,2)", org.sokybot.gameevents.*;version="[1.0,2)", org.sokybot.network.*;version="[1.0,2)", org.sokybot.settings.*;version="[1.0,2)", org.osgi.service.component.annotations;version="[1.5,2)", org.slf4j;version="[1.7,2)", *;resolution:=optional

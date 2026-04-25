@@ -38,7 +38,7 @@ public class RSocketRequest {
     }
     
     public Map<String, Object> getParams() {
-        return params;
+        return java.util.Collections.unmodifiableMap(params);
     }
     
     public void setParams(Map<String, Object> params) {
@@ -83,7 +83,7 @@ public class RSocketRequest {
     
     public Boolean getBoolean(String key) {
         Object value = params.get(key);
-        if (value == null) return null;
+        if (value == null) return Boolean.FALSE;
         if (value instanceof Boolean) return (Boolean) value;
         return Boolean.parseBoolean(value.toString());
     }

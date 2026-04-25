@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-scripting-api</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Sokybot :: Scripting API</name>
     <description>Travel script DSL contracts and projections SPI (additive)</description>
 
@@ -42,25 +42,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Export-Package>org.sokybot.scripting.api</Export-Package>
-                        <Import-Package>
-                            org.sokybot.engine.api.workflow;version="[1.0,2)",
-                            org.sokybot.navigation.api;version="[1.0,2)",
-                            reactor.core.publisher;version="[3.6,4)",
-                            *;resolution:=optional
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

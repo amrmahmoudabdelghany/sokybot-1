@@ -1,0 +1,6 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Private-Package: org.sokybot.behaviors.town.internal, org.sokybot.behaviors.town.internal.settings, org.sokybot.behaviors.town.internal.strategies
+Import-Package: org.sokybot.town.api;version="[1.0,2)", org.sokybot.town.projections.api;version="[1.0,2)", org.sokybot.commons.event;version="[1.0,2)", org.sokybot.gameevents.dto;version="[1.0,2)", org.sokybot.gameevents.events.chat;version="[1.0,2)", org.sokybot.gameevents.events.inventory;version="[1.0,2)", org.sokybot.gameevents.events.storage;version="[1.0,2)", org.sokybot.storage.api;version="[1.0,2)", org.sokybot.scripting.api;version="[1.0,2)", org.sokybot.navigation.api;version="[1.0,2)", org.sokybot.engine.api.behavior;version="[1.0,2)", org.sokybot.engine.api.extension;version="[1.0,2)", org.sokybot.engine.api.workflow;version="[1.0,2)", org.sokybot.gamemodel.model;version="[1.0,2)", org.sokybot.network;version="[1.0,2)", org.sokybot.network.packet;version="[1.0,2)", org.sokybot.settings.api;version="[1.0,2)", org.osgi.service.component.annotations;version="[1.5,2)", org.slf4j;version="[1.7,2)", reactor.core;version="[3.6,4)", reactor.core.publisher;version="[3.6,4)", *;resolution:=optional
+-dsannotations: *

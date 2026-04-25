@@ -88,7 +88,7 @@ public class BundleAdminServiceImpl implements IBundleAdminService {
                     status.put("fileExists", Boolean.FALSE);
                     status.put("needsReload", Boolean.FALSE);
                 }
-            } catch (Exception e) {
+            } catch (SecurityException e) {
                 status.put("fileExists", Boolean.FALSE);
                 status.put("needsReload", Boolean.FALSE);
             }

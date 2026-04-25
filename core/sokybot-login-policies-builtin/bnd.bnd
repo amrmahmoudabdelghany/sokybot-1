@@ -1,0 +1,8 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: !org.sokybot.login.policies.builtin
+Private-Package: org.sokybot.login.policies.builtin
+Import-Package: org.sokybot.engine.api.login;version="[1.0,2)", org.sokybot.gamemodel.*;version="[1.0,2)", org.osgi.service.component.annotations;version="[1.5,2)", *;resolution:=optional
+-dsannotations: *

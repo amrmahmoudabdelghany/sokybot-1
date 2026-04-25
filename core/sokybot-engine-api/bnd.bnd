@@ -1,0 +1,6 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.engine, org.sokybot.engine.api, org.sokybot.engine.api.behavior, org.sokybot.engine.api.event, org.sokybot.engine.api.extension, org.sokybot.engine.api.handler, org.sokybot.engine.api.workflow, org.sokybot.engine.api.login, org.sokybot.engine.api.*
+Import-Package: !com.aayushatharva.brotli4j, !com.aayushatharva.brotli4j.*, org.sokybot.proxy.*;version="[1.0,2)", org.sokybot.settings.*;version="[1.0,2)", org.sokybot.gamemodel.*;version="[1.0,2)", *;resolution:=optional

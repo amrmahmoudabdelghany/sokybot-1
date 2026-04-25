@@ -38,7 +38,7 @@
 		<lombok.version>1.18.30</lombok.version>
 
 		<!-- Plugin Versions -->
-		<plugin.bundle.version>5.1.8</plugin.bundle.version>
+		<bnd.version>6.4.0</bnd.version>
 		<maven.compiler.version>3.11.0</maven.compiler.version>
 		<maven.surefire.version>3.2.2</maven.surefire.version>
 		<maven.enforcer.version>3.4.1</maven.enforcer.version>
@@ -207,6 +207,12 @@
 				<artifactId>mockito-junit-jupiter</artifactId>
 				<version>${mockito.version}</version>
 			</dependency>
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-inline</artifactId>
+				<version>${mockito.version}</version>
+				<scope>test</scope>
+			</dependency>
 
 			<!-- Force specific Byte Buddy version for Java 21 compatibility -->
 			<dependency>
@@ -358,9 +364,14 @@
 					<version>${maven.jar.version}</version>
 				</plugin>
 				<plugin>
-					<groupId>org.apache.felix</groupId>
-					<artifactId>maven-bundle-plugin</artifactId>
-					<version>${plugin.bundle.version}</version>
+					<groupId>biz.aQute.bnd</groupId>
+					<artifactId>bnd-maven-plugin</artifactId>
+					<version>${bnd.version}</version>
+				</plugin>
+				<plugin>
+					<groupId>biz.aQute.bnd</groupId>
+					<artifactId>bnd-baseline-maven-plugin</artifactId>
+					<version>${bnd.version}</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -492,8 +503,9 @@
 						<include>**/*Test.java</include>
 						<include>**/*Tests.java</include>
 					</includes>
-					<parallel>methods</parallel>
-					<threadCount>4</threadCount>
+					<forkCount>1C</forkCount>
+					<reuseForks>false</reuseForks>
+					<argLine>@{argLine} -XX:+EnableDynamicAgentLoading</argLine>
 				</configuration>
 			</plugin>
 
@@ -589,7 +601,15 @@
 					<xmlOutput>true</xmlOutput>
 					<spotbugsXmlOutput>true</spotbugsXmlOutput>
 					<failOnError>false</failOnError>
+					<excludeFilterFile>sokybot-spotbugs-exclude.xml</excludeFilterFile>
 				</configuration>
+				<dependencies>
+					<dependency>
+						<groupId>${project.groupId}</groupId>
+						<artifactId>sokybot-build-tools</artifactId>
+						<version>${project.version}</version>
+					</dependency>
+				</dependencies>
 				<executions>
 					<execution>
 						<phase>verify</phase>
@@ -680,10 +700,18 @@
 				</configuration>
 			</plugin>
 
-			<!-- Maven Dependency Plugin - dependency analysis -->
+			<!-- Maven Dependency Plugin - dependency analysis + artifact path resolution -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-dependency-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>resolve-artifact-paths</id>
+						<goals>
+							<goal>properties</goal>
+						</goals>
+					</execution>
+				</executions>
 				<configuration>
 					<ignoredUnusedDeclaredDependencies>
 						<ignoredUnusedDeclaredDependency>org.projectlombok:lombok</ignoredUnusedDeclaredDependency>
@@ -723,26 +751,25 @@
 				</configuration>
 			</plugin>
 
-		<!-- Maven Bundle Plugin - responsible for building OSGi bundle modules -->
-		<!-- 
-		     Default configuration: NO embedding. Bundles should explicitly declare 
-		     what they embed, or use Karaf features for shared dependencies.
-		     
-		     Shared infrastructure (Netty, Reactor, Jackson, RSocket) is provided 
-		     by Karaf features defined in sokybot-features module.
-		-->
 		<plugin>
-			<groupId>org.apache.felix</groupId>
-			<artifactId>maven-bundle-plugin</artifactId>
-			<extensions>true</extensions>
+			<groupId>biz.aQute.bnd</groupId>
+			<artifactId>bnd-maven-plugin</artifactId>
+			<executions>
+				<execution>
+					<id>bnd-process</id>
+					<goals>
+						<goal>bnd-process</goal>
+					</goals>
+				</execution>
+			</executions>
+		</plugin>
+		<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-jar-plugin</artifactId>
 			<configuration>
-				<instructions>
-					<!-- Default: embed compile-scoped dependencies that are not OSGi-aware -->
-					<Embed-Dependency>*;scope=compile;inline=true</Embed-Dependency>
-					<Embed-Transitive>true</Embed-Transitive>
-					<!-- Enable DS annotations by default -->
-					<_dsannotations>*</_dsannotations>
-				</instructions>
+				<archive>
+					<manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+				</archive>
 			</configuration>
 		</plugin>
 
@@ -805,7 +832,6 @@
 				<jacoco.skip>false</jacoco.skip>
 				<checkstyle.skip>false</checkstyle.skip>
 				<pmd.skip>false</pmd.skip>
-				<owasp.skip>true</owasp.skip>
 				<git.skip>false</git.skip>
 			</properties>
 		</profile>

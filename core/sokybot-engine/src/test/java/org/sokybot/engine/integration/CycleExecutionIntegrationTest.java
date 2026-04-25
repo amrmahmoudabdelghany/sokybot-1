@@ -1,24 +1,25 @@
 package org.sokybot.engine.integration;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.BundleException;
-import org.sokybot.engine.api.workflow.ICycleDefinition;
 import org.sokybot.engine.api.workflow.IGuard;
 import org.sokybot.engine.core.EngineCore;
 import org.sokybot.engine.test.EngineTestBase;
 import org.sokybot.engine.test.util.MockActuator;
 import org.sokybot.engine.test.util.WorkflowTestBuilders;
 
-import java.util.concurrent.TimeUnit;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for cycle execution.
  */
+@Execution(ExecutionMode.SAME_THREAD)
 @DisplayName("Cycle Execution Integration Tests")
 class CycleExecutionIntegrationTest extends EngineTestBase {
     
@@ -28,6 +29,16 @@ class CycleExecutionIntegrationTest extends EngineTestBase {
     @Override
     public void setUp() {
         super.setUp();
+    }
+    
+    @AfterEach
+    @Override
+    public void tearDown() {
+        if (engine != null) {
+            engine.stop();
+            engine = null;
+        }
+        super.tearDown();
     }
     
     @Test
@@ -59,8 +70,6 @@ class CycleExecutionIntegrationTest extends EngineTestBase {
         
         // Verify action was executed
         assertTrue(actionBuilder.wasExecuted());
-        
-        engine.stop();
     }
     
     @Test
@@ -101,8 +110,6 @@ class CycleExecutionIntegrationTest extends EngineTestBase {
         // Both actions should be executed (order depends on execution, but both should run)
         // Note: In a real scenario, we'd need to check execution order more carefully
         assertTrue(action1.wasExecuted() || action2.wasExecuted());
-        
-        engine.stop();
     }
     
     @Test
@@ -132,8 +139,6 @@ class CycleExecutionIntegrationTest extends EngineTestBase {
         
         // Action should not be executed because entry guard failed
         assertFalse(actionBuilder.wasExecuted());
-        
-        engine.stop();
     }
     
     @Test
@@ -166,8 +171,6 @@ class CycleExecutionIntegrationTest extends EngineTestBase {
         
         // Action should not be executed because guard failed
         assertFalse(actionBuilder.wasExecuted());
-        
-        engine.stop();
     }
     
     @Test
@@ -201,7 +204,5 @@ class CycleExecutionIntegrationTest extends EngineTestBase {
         // Both actions should be executed (or at least state1)
         // Note: Execution depends on engine timing, but state1 should execute
         assertTrue(state1Action.wasExecuted() || state2Action.wasExecuted());
-        
-        engine.stop();
     }
 }

@@ -1,0 +1,6 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Private-Package: org.sokybot.behaviors.social.*
+Import-Package: reactor.core.publisher;version="[3.6,4)", *;resolution:=optional

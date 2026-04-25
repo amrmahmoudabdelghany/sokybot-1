@@ -440,7 +440,7 @@ public class RSocketServerService {
                 request.setParams((Map<String, Object>) params);
             }
             return request;
-        } catch (Exception e) {
+        } catch (JsonProcessingException | RuntimeException e) {
             logger.debug("Failed to parse request JSON: {}", e.getMessage());
             return null;
         }

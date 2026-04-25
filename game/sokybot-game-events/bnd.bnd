@@ -1,0 +1,9 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.gameevents, org.sokybot.gameevents.events.*, org.sokybot.gameevents.dto, org.sokybot.gameevents.enums, org.sokybot.gameevents.script
+Private-Package: org.sokybot.gameevents.store.internal
+Import-Package: org.sokybot.commons.*;version="[1.0,2)", org.sokybot.gameevents.*;version="[1.0,2)", org.osgi.*, *;resolution:=optional
+Service-Component: OSGI-INF/*.xml
+-dsannotations: *

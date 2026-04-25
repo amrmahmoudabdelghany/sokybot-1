@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>sokybot-http-server</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     
     <name>sokybot-http-server</name>
     <description>Shared Reactor Netty HTTP Server and Router provider</description>
@@ -94,68 +94,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <_dsannotations>*</_dsannotations>
-                        <Export-Package>
-                            org.sokybot.http.server,
-                            org.sokybot.http.server.api,
-                            org.sokybot.http.server.events
-                        </Export-Package>
-                        <_removeheaders>Require-Capability</_removeheaders>
-                        <Import-Package>
-                            <!-- Sun/Oracle internal packages (not available in OSGi) -->
-                            !sun.*,
-                            !com.sun.*,
-                            !com.oracle.svm.*,
-                            !org.graalvm.*,
-                            !jdk.internal.*,
-                            <!-- Optional compression libraries -->
-                            !com.aayushatharva.brotli4j.*,
-                            !com.github.luben.zstd.*,
-                            !com.jcraft.jzlib.*,
-                            !com.ning.compress.*,
-                            !lzma.sdk.*,
-                            !net.jpountz.*,
-                            <!-- Optional protocols and security -->
-                            !org.eclipse.jetty.*,
-                            !com.google.protobuf.*,
-                            !org.conscrypt.*,
-                            !org.bouncycastle.*,
-                            !org.jboss.marshalling.*,
-                            !com.barchart.udt.*,
-                            !gnu.io.*,
-                            !io.netty.internal.tcnative.*,
-                            <!-- Optional logging -->
-                            !org.apache.log4j.*,
-                            !org.apache.logging.log4j.*,
-                            !org.apache.commons.logging.*,
-                            <!-- Optional monitoring -->
-                            !io.micrometer.*,
-                            !io.opentracing.*,
-                            <!-- Other optional -->
-                            !org.apache.tomcat.*,
-                            !com.fasterxml.aalto.*,
-                            !org.codehaus.stax2.*,
-                            !javax.annotation.meta,
-                            !java.nio.file.spi,
-                            <!-- Required -->
-                            org.sokybot.commons.lifecycle;version="[1.0,2)",
-                            org.sokybot.commons.topic;version="[1.0,2)",
-                            com.fasterxml.jackson.*;version="[2.15,3)",
-                            *
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

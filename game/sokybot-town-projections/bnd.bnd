@@ -1,0 +1,7 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Export-Package: org.sokybot.town.projections.api
+Private-Package: org.sokybot.town.projections.internal
+Import-Package: org.sokybot.town.api;version="[1.0,2)", org.sokybot.commons;version="[1.0,2)", org.sokybot.commons.event;version="[1.0,2)", org.sokybot.gameevents.enums;version="[1.0,2)", org.osgi.service.component.annotations;version="[1.5,2)", org.slf4j;version="[1.7,2)", reactor.core;version="[3.6,4)", reactor.core.publisher;version="[3.6,4)", *;resolution:=optional
+-dsannotations: *

@@ -241,7 +241,7 @@ public class MachineStatusHubRegistry implements EventHandler {
         }
     }
 
-    final class MachineStatusHub {
+    static final class MachineStatusHub {
         private final String fullName;
         private final Sinks.Many<Map<String, Object>> sink = Sinks.many().replay().latest();
         private final AtomicBoolean shutdown = new AtomicBoolean(false);

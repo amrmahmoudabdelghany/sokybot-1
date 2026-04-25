@@ -11,7 +11,7 @@
     </parent>
 
     <artifactId>sokybot-game-navigation</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>sokybot-game-navigation</name>
     <description>Game navigation and route finding bundle</description>
 
@@ -79,22 +79,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Import-Package>*;resolution:=optional</Import-Package>
-                        <Export-Package>org.sokybot.game.navigation</Export-Package>
-                        <Private-Package>org.sokybot.game.navigation.internal.*</Private-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

@@ -1,0 +1,8 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.gamemodel, org.sokybot.gamemodel.model, org.sokybot.gamemodel.snapshot, org.sokybot.gamemodel.spec, org.sokybot.gamemodel.factory, org.sokybot.gamemodel.spi, org.sokybot.gamemodel.*
+Private-Package: org.sokybot.gamemodel.internal.*
+Import-Package: !com.aayushatharva.brotli4j, !com.aayushatharva.brotli4j.*, org.sokybot.gameevents, org.sokybot.gameevents.events.*, org.sokybot.commons.*, org.sokybot.settings.*, org.osgi.*, *;resolution:=optional
+-dsannotations: org.sokybot.gamemodel.*

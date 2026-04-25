@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-trade-coordination-api</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Sokybot :: Trade Coordination API</name>
     <description>SPI for cross-bot trade and stall coordination (EngineEvents + ITradeCoordinator)</description>
 
@@ -37,28 +37,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Export-Package>
-                            org.sokybot.trade.coordination.api,
-                            org.sokybot.trade.coordination.event,
-                            org.sokybot.trade.events
-                        </Export-Package>
-                        <Import-Package>
-                            org.sokybot.engine.api;version="[1.0,2)",
-                            org.sokybot.gameevents.events.core;version="[1.0,2)",
-                            *;resolution:=optional
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

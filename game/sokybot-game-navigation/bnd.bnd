@@ -1,0 +1,7 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Import-Package: *;resolution:=optional
+Export-Package: org.sokybot.game.navigation
+Private-Package: org.sokybot.game.navigation.internal.*

@@ -1,0 +1,9 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: !org.sokybot.translators.builtin.gateway
+Private-Package: org.sokybot.translators.builtin.gateway
+Import-Package: org.sokybot.gameevents.*;version="[1.0,2)", org.sokybot.persistence.service;version="[1.0,2)", org.osgi.*, *;resolution:=optional
+Service-Component: OSGI-INF/*.xml
+-dsannotations: *

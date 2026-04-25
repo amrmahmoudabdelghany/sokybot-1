@@ -1,0 +1,10 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Bundle-Activator: org.sokybot.runtime.internal.RuntimeActivator
+Service-Component: OSGI-INF/*.xml
+-dsannotations: *
+Import-Package: org.osgi.framework, org.osgi.framework.launch, org.osgi.service.event, org.sokybot.gameevents.*;version="[1.0,2)", org.sokybot.engine.api.*;version="[1.0,2)", org.sokybot.loader.api.*;version="[1.0,2)", org.sokybot.*, *;resolution:=optional
+Export-Package: org.sokybot.runtime, org.sokybot.runtime.template, org.sokybot.exception
+Private-Package: org.sokybot.runtime.internal.*, org.sokybot.runtime.template.internal

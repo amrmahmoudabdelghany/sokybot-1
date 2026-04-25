@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-trade-coordinator</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>Sokybot :: Trade Coordinator</name>
     <description>OSGi singleton ITradeCoordinator; relays coordination via IEngineEventMediator</description>
 
@@ -48,29 +48,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Private-Package>org.sokybot.trade.coordination.internal</Private-Package>
-                        <Import-Package>
-                            org.sokybot.engine.api;version="[1.0,2)",
-                            org.sokybot.engine.api.handler;version="[1.0,2)",
-                            org.sokybot.trade.coordination.api;version="[1.0,2)",
-                            org.sokybot.trade.coordination.event;version="[1.0,2)",
-                            org.osgi.service.component.annotations;version="[1.5,2)",
-                            org.slf4j;version="[1.7,2)",
-                            *;resolution:=optional
-                        </Import-Package>
-                        <_dsannotations>*</_dsannotations>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>

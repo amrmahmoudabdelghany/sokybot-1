@@ -1,0 +1,6 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.settings.*
+Import-Package: org.sokybot.persistence.*;version="[1.0,2)", *;resolution:=optional

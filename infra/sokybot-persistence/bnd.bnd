@@ -1,0 +1,12 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.persistence.service, org.sokybot.persistence.entities, org.sokybot.persistence.entities.geo, org.sokybot.persistence.entities.navmesh, org.sokybot.persistence.config
+Private-Package: org.sokybot.persistence.internal.*, org.sokybot.persistence
+Import-Package: !., *;resolution:=optional
+DynamicImport-Package: *
+-dsannotations: org.sokybot.persistence.*
+Provide-Capability: osgi.service;objectClass:List<String>="org.sokybot.persistence.service.IPersistenceContextManager,org.sokybot.persistence.service.IGamePersistenceFactory"
+-removeheaders: Require-Capability
+-fixupmessages: "The default package '.' is not permitted by the Import-Package syntax."; restrict:=error; is:=warning

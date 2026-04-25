@@ -1,0 +1,5 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Export-Package: org.sokybot.trade.coordination.api, org.sokybot.trade.coordination.event, org.sokybot.trade.events
+Import-Package: org.sokybot.engine.api;version="[1.0,2)", org.sokybot.gameevents.events.core;version="[1.0,2)", *;resolution:=optional

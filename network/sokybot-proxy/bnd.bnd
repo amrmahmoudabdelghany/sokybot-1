@@ -1,0 +1,7 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.proxy, org.sokybot.proxy.recording, org.sokybot.network, org.sokybot.network.*
+Private-Package: org.sokybot.proxy.internal.*
+Import-Package: org.sokybot.commons.lifecycle;version="[1.0,2)", org.sokybot.security.*;version="[1.0,2)", *;resolution:=optional

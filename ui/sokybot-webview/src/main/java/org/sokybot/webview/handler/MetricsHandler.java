@@ -159,7 +159,7 @@ public class MetricsHandler implements IRSocketHandler {
         Map<String, Object> map = new LinkedHashMap<>();
 
         map.put("name", metric.getName());
-        map.put("type", metric.getType().name().toLowerCase());
+        map.put("type", metric.getType().name().toLowerCase(java.util.Locale.ENGLISH));
         map.put("value", metric.getValue());
 
         if (includeDetails) {

@@ -1,0 +1,9 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Include-Resource: @${project.build.directory}/dependency/commons-io.jar
+Import-Package: !org.apache.commons.io.*, *;resolution:=optional
+Export-Package: org.sokybot.pk2extractor, org.sokybot.pk2extractor.*
+-dsannotations: *
+-fixupmessages: "Classes found in the wrong directory"; restrict:=error; is:=warning

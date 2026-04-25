@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-logging</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>sokybot-logging</name>
     <description>Central logging ring buffer and streaming service for Sokybot (SYSTEM/GROUP/MACHINE).</description>
 
@@ -52,35 +52,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <version>${plugin.bundle.version}</version>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <!-- Generate DS metadata but do NOT add osgi.service Require-Capability
-                             entries for referenced services like LogReaderService. Karaf's log
-                             feature provides the service at runtime, and strict resolver checks
-                             would otherwise fail the sokybot-logging bundle at boot. -->
-                        <_dsannotations-options>norequirements</_dsannotations-options>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Bundle-Description>${project.description}</Bundle-Description>
-                        <Export-Package>
-                            org.sokybot.logging.api
-                        </Export-Package>
-                        <Import-Package>
-                            org.osgi.service.log.*;version="[1.4,2)",
-                            org.osgi.service.component.annotations.*;version="[1.3,2)",
-                            io.projectreactor.core.*;version="[3.5,4)",
-                            org.slf4j.*;version="[1.7,2)",
-                            *
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 

@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>sokybot-combat-projections</artifactId>
-    <packaging>bundle</packaging>
+    <packaging>jar</packaging>
     <name>sokybot-combat-projections</name>
     <description>ICombatModel projection bundle (Phase 2)</description>
 
@@ -72,36 +72,7 @@
 
     <build>
         <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration combine.self="override">
-                    <instructions>
-                        <Bundle-SymbolicName>${project.groupId}.${project.artifactId}</Bundle-SymbolicName>
-                        <Bundle-Name>${project.name}</Bundle-Name>
-                        <Bundle-Version>${project.version}</Bundle-Version>
-                        <Export-Package>org.sokybot.combat.projections.api</Export-Package>
-                        <Private-Package>org.sokybot.combat.projections.internal</Private-Package>
-                        <Import-Package>
-                            org.sokybot.combat.api;version="[1.0,2)",
-                            org.sokybot.navigation.api;version="[1.0,2)",
-                            org.sokybot.commons.event;version="[1.0,2)",
-                            org.sokybot.gameevents.dto;version="[1.0,2)",
-                            org.sokybot.gameevents.events.buff;version="[1.0,2)",
-                            org.sokybot.gameevents.events.character;version="[1.0,2)",
-                            org.sokybot.gameevents.events.entity;version="[1.0,2)",
-                            org.sokybot.gameevents.events.inventory;version="[1.0,2)",
-                            org.osgi.service.component.annotations;version="[1.5,2)",
-                            org.slf4j;version="[1.7,2)",
-                            reactor.core;version="[3.6,4)",
-                            reactor.core.publisher;version="[3.6,4)",
-                            *;resolution:=optional
-                        </Import-Package>
-                        <_dsannotations>*</_dsannotations>
-                    </instructions>
-                </configuration>
-            </plugin>
+            
         </plugins>
     </build>
 </project>
