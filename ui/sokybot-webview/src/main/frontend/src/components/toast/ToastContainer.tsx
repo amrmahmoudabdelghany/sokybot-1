@@ -3,7 +3,16 @@ import { cn } from '@sokybot/frontend-shared';
 import type { Toast } from '../../store/toastStore';
 import { useToastStore } from '../../store/toastStore';
 
-function severityClasses(severity: Toast['severity']): string {
+function severityClasses(severity: Toast['severity'], kind?: string): string {
+    if (kind === 'HIVE_DISPATCHED') {
+        return 'border-yellow-500/60 bg-yellow-950/90 text-yellow-50';
+    }
+    if (kind === 'HIVE_COMPLETED') {
+        return 'border-emerald-500/60 bg-emerald-950/90 text-emerald-50';
+    }
+    if (kind === 'HIVE_ABORTED') {
+        return 'border-red-500/60 bg-red-950/90 text-red-50';
+    }
     switch (severity) {
         case 'error':
             return 'border-red-500/60 bg-red-950/90 text-red-50';
@@ -28,7 +37,7 @@ function ToastItem({ toast }: { toast: Toast }) {
             className={cn(
                 'pointer-events-auto rounded-lg border px-3 py-2 shadow-lg backdrop-blur-sm',
                 'animate-in slide-in-from-right-4 fade-in duration-200',
-                severityClasses(toast.severity)
+                severityClasses(toast.severity, toast.kind)
             )}
         >
             <div className="flex justify-between gap-2">

@@ -23,6 +23,10 @@ import org.sokybot.social.api.ISocialModel;
 import org.sokybot.social.api.ISocialSnapshot;
 import org.sokybot.social.api.SocialAlert;
 import org.sokybot.social.api.SocialChannel;
+import org.sokybot.swarm.api.HuntAbortedEvent;
+import org.sokybot.swarm.api.HuntCompletedEvent;
+import org.sokybot.swarm.api.HuntDispatchedEvent;
+import org.sokybot.swarm.api.ISwarmEventBus;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -38,6 +42,9 @@ public class SocialModelComponent implements ISocialModel {
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     private volatile IGmRecognizer recognizer;
 
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    private volatile ISwarmEventBus swarmBus;
+
     private final ConcurrentHashMap<String, MachineSocialState> states = new ConcurrentHashMap<>();
     private final reactor.core.Disposable.Composite disposables = reactor.core.Disposables.composite();
 
@@ -51,6 +58,72 @@ public class SocialModelComponent implements ISocialModel {
         disposables.add(eventBus.on(ChatMessageEvent.class).subscribe(this::onChat));
         disposables.add(eventBus.on(GameNotifyEvent.class).subscribe(this::onNotify));
         disposables.add(eventBus.on(EntitySpawnEvent.class).subscribe(this::onEntitySpawn));
+        ISwarmEventBus local = swarmBus;
+        if (local != null) {
+            disposables.add(local.observe(HuntDispatchedEvent.class).subscribe(this::onHiveDispatched));
+            disposables.add(local.observe(HuntCompletedEvent.class).subscribe(this::onHiveCompleted));
+            disposables.add(local.observe(HuntAbortedEvent.class).subscribe(this::onHiveAborted));
+        }
+    }
+
+    private void onHiveDispatched(HuntDispatchedEvent event) {
+        String machineId = event.getHunterMachineId();
+        MachineSocialState state = states.computeIfAbsent(machineId, k -> new MachineSocialState());
+        String subject = String.format(
+                "RefId %d at (%.0f, %.0f, %.0f). Dispatching Hunter [%s]. ETA: %ds",
+                event.getTargetRefId(),
+                event.getChosenPosition().getX(),
+                event.getChosenPosition().getY(),
+                event.getChosenPosition().getZ(),
+                event.getHunterMachineId(),
+                Math.max(0L, event.getEtaMs()) / 1000L);
+        SocialAlert alert = new SocialAlert(
+                machineId,
+                event.getTimestampEpochMs(),
+                SocialAlert.Kind.HIVE_DISPATCHED,
+                subject,
+                Map.of(
+                        "huntId", event.getHuntId(),
+                        "hunterMachineId", event.getHunterMachineId(),
+                        "targetRefId", String.valueOf(event.getTargetRefId()),
+                        "etaMs", String.valueOf(event.getEtaMs()),
+                        "x", String.valueOf((int) event.getChosenPosition().getX()),
+                        "y", String.valueOf((int) event.getChosenPosition().getY()),
+                        "z", String.valueOf((int) event.getChosenPosition().getZ())));
+        emitAlert(state, machineId, alert);
+    }
+
+    private void onHiveCompleted(HuntCompletedEvent event) {
+        String machineId = event.getHunterMachineId();
+        MachineSocialState state = states.computeIfAbsent(machineId, k -> new MachineSocialState());
+        SocialAlert alert = new SocialAlert(
+                machineId,
+                event.getTimestampEpochMs(),
+                SocialAlert.Kind.HIVE_COMPLETED,
+                String.format("Hunt %s completed by [%s] for refId %d",
+                        event.getHuntId(), event.getHunterMachineId(), event.getTargetRefId()),
+                Map.of(
+                        "huntId", event.getHuntId(),
+                        "hunterMachineId", event.getHunterMachineId(),
+                        "targetRefId", String.valueOf(event.getTargetRefId())));
+        emitAlert(state, machineId, alert);
+    }
+
+    private void onHiveAborted(HuntAbortedEvent event) {
+        String machineId = event.getHunterMachineId();
+        MachineSocialState state = states.computeIfAbsent(machineId, k -> new MachineSocialState());
+        SocialAlert alert = new SocialAlert(
+                machineId,
+                event.getTimestampEpochMs(),
+                SocialAlert.Kind.HIVE_ABORTED,
+                String.format("Hunt %s aborted for refId %d (%s)",
+                        event.getHuntId(), event.getTargetRefId(), event.getReason().name()),
+                Map.of(
+                        "huntId", event.getHuntId(),
+                        "hunterMachineId", event.getHunterMachineId(),
+                        "targetRefId", String.valueOf(event.getTargetRefId()),
+                        "reason", event.getReason().name()));
+        emitAlert(state, machineId, alert);
     }
 
     @Deactivate
@@ -176,6 +249,18 @@ public class SocialModelComponent implements ISocialModel {
         } catch (IllegalArgumentException e) {
             return SocialChannel.UNKNOWN;
         }
+    }
+
+    private void emitAlert(MachineSocialState state, String machineId, SocialAlert alert) {
+        synchronized (state) {
+            if (state.alerts.size() >= 64) {
+                state.alerts.pollFirst();
+            }
+            state.alerts.addLast(alert);
+        }
+        state.alertSink.tryEmitNext(alert);
+        allAlertSink.tryEmitNext(alert);
+        publishSnapshot(machineId, state);
     }
 
     @Override

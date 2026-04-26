@@ -17,6 +17,7 @@ import org.sokybot.persistence.entities.GameInfo;
 import org.sokybot.persistence.entities.ItemEntity;
 import org.sokybot.persistence.entities.LvlEXP;
 import org.sokybot.persistence.entities.MasteryData;
+import org.sokybot.persistence.entities.MonsterSpawnPointEntity;
 import org.sokybot.persistence.entities.NPCEntity;
 import org.sokybot.persistence.entities.ObjectNavMesh;
 import org.sokybot.persistence.entities.PortalEntity;
@@ -191,6 +192,20 @@ public class GameDataLookupImpl implements IGameDataLookup {
         EntityManager em = emf.createEntityManager();
         try {
             return Optional.ofNullable(em.find(TeleportDestinationEntity.class, destinationRefId));
+        } finally {
+            em.close();
+        }
+    }
+
+    @Override
+    public List<MonsterSpawnPointEntity> findMonsterSpawnPoints(int refId) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            return em.createQuery(
+                    "SELECT m FROM MonsterSpawnPointEntity m WHERE m.refId = :refId ORDER BY m.id ASC",
+                    MonsterSpawnPointEntity.class)
+                    .setParameter("refId", refId)
+                    .getResultList();
         } finally {
             em.close();
         }

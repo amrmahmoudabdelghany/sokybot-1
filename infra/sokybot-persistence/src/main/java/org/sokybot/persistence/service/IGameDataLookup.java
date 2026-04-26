@@ -14,6 +14,7 @@ import org.sokybot.persistence.entities.SectorRef;
 import org.sokybot.persistence.entities.ShopEntity;
 import org.sokybot.persistence.entities.SilkroadType;
 import org.sokybot.persistence.entities.SkillEntity;
+import org.sokybot.persistence.entities.MonsterSpawnPointEntity;
 import org.sokybot.persistence.entities.TeleportDestinationEntity;
 import org.sokybot.persistence.entities.TeleportEntity;
 
@@ -75,6 +76,10 @@ public interface IGameDataLookup {
 
     default Optional<TeleportDestinationEntity> findTeleportDestination(int destinationRefId) {
         return Optional.empty();
+    }
+
+    default List<MonsterSpawnPointEntity> findMonsterSpawnPoints(int refId) {
+        return java.util.Collections.emptyList();
     }
 
     /**

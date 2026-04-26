@@ -7,5 +7,6 @@ public enum SwarmRole {
     NONE,
     FARMER,
     MULE,
+    HUNTER,
     BOTH
 }

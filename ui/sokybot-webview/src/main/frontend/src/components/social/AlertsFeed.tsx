@@ -6,6 +6,15 @@ function kindClass(kind: string): string {
     if (kind.startsWith('GM_') || kind === 'NOTICE_GM_BROADCAST') {
         return 'text-red-400';
     }
+    if (kind.startsWith('HIVE_')) {
+        if (kind === 'HIVE_ABORTED') {
+            return 'text-red-400';
+        }
+        if (kind === 'HIVE_COMPLETED') {
+            return 'text-emerald-400';
+        }
+        return 'text-yellow-300';
+    }
     if (kind.startsWith('UNIQUE_')) {
         return 'text-amber-400';
     }

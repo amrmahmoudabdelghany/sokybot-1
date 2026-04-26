@@ -182,6 +182,12 @@
         <bundle>mvn:org.sokybot/sokybot-topology-core/${project.version}</bundle>
     </feature>
 
+    <feature name="sokybot-hunting" version="${project.version}">
+        <feature>sokybot-swarm</feature>
+        <feature>sokybot-combat</feature>
+        <bundle>mvn:org.sokybot/sokybot-behaviors-hunting/${project.version}</bundle>
+    </feature>
+
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- COMBAT FEATURE: Combat API, projections, translators, behaviors       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -296,6 +302,7 @@
         <feature>sokybot-social</feature>
         <feature>sokybot-trade</feature>
         <feature>sokybot-swarm</feature>
+        <feature>sokybot-hunting</feature>
         <feature>sokybot-combat</feature>
         <feature>sokybot-town</feature>
         <feature>sokybot-storage</feature>

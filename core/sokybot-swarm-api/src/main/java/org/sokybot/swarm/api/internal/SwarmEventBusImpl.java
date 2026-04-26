@@ -43,6 +43,7 @@ public final class SwarmEventBusImpl implements ISwarmEventBus {
 
     private final ConcurrentMap<String, ClaimRecord> claims = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, LogisticsRequestEvent> open = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Integer, Long> announceByRefId = new ConcurrentHashMap<>();
     private final ScheduledExecutorService janitor =
             Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "swarm-bus-janitor");
@@ -68,6 +69,7 @@ public final class SwarmEventBusImpl implements ISwarmEventBus {
         }
         claims.clear();
         open.clear();
+        announceByRefId.clear();
     }
 
     @Override
@@ -156,6 +158,25 @@ public final class SwarmEventBusImpl implements ISwarmEventBus {
             return;
         }
         claims.remove(requestId.trim());
+    }
+
+    @Override
+    public boolean tryAnnounceRefId(int refId, long cooldownMs) {
+        long now = System.currentTimeMillis();
+        long window = Math.max(0L, cooldownMs);
+        for (;;) {
+            Long last = announceByRefId.get(refId);
+            if (last != null && now - last < window) {
+                return false;
+            }
+            if (last == null) {
+                if (announceByRefId.putIfAbsent(refId, now) == null) {
+                    return true;
+                }
+            } else if (announceByRefId.replace(refId, last, now)) {
+                return true;
+            }
+        }
     }
 
     void sweep() {

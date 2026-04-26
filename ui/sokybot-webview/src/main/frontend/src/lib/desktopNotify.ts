@@ -13,6 +13,12 @@ export function titleForAlert(alert: SocialAlertDto): string {
             return 'Unique spawned';
         case 'UNIQUE_KILLED':
             return 'Unique killed';
+        case 'HIVE_DISPATCHED':
+            return 'Hive dispatched';
+        case 'HIVE_COMPLETED':
+            return 'Hive completed';
+        case 'HIVE_ABORTED':
+            return 'Hive aborted';
         default:
             return k ? `Alert: ${k}` : 'Sokybot alert';
     }
@@ -20,7 +26,7 @@ export function titleForAlert(alert: SocialAlertDto): string {
 
 export function shouldDesktopNotify(alert: SocialAlertDto): boolean {
     const k = alert.kind;
-    return k === 'GM_NEARBY' || k === 'GM_WHISPER' || k === 'UNIQUE_SPAWNED';
+    return k === 'GM_NEARBY' || k === 'GM_WHISPER' || k === 'UNIQUE_SPAWNED' || k === 'HIVE_ABORTED';
 }
 
 /**

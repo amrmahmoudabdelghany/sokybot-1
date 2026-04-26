@@ -44,4 +44,11 @@ public interface ISwarmEventBus {
 
     /** Release a claim without completing the job (abort / timeout path). */
     void releaseClaim(String requestId);
+
+    /**
+     * Global radar dedupe gate for refId announcements.
+     *
+     * @return {@code true} when this caller is allowed to publish now
+     */
+    boolean tryAnnounceRefId(int refId, long cooldownMs);
 }

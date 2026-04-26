@@ -4,7 +4,15 @@ import { useRSocketService } from '../../RSocketProvider';
 
 const WEBHOOK_SCOPE = 'webhooks';
 
-const DEFAULT_KINDS = ['GM_NEARBY', 'GM_WHISPER', 'UNIQUE_SPAWNED', 'NOTICE_GM_BROADCAST'];
+const DEFAULT_KINDS = [
+    'GM_NEARBY',
+    'GM_WHISPER',
+    'UNIQUE_SPAWNED',
+    'NOTICE_GM_BROADCAST',
+    'HIVE_DISPATCHED',
+    'HIVE_COMPLETED',
+    'HIVE_ABORTED',
+];
 
 type SinkDraft = {
     id: string;

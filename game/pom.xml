@@ -38,5 +38,6 @@
         <module>sokybot-behaviors-logistics</module>
         <module>sokybot-behaviors-navigation</module>
         <module>sokybot-behaviors-swarm</module>
+        <module>sokybot-behaviors-hunting</module>
     </modules>
 </project>

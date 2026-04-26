@@ -11,7 +11,7 @@ import org.sokybot.network.packet.MutablePacket;
 /**
  * Client opcodes aligned with {@code sokybot-behaviors-training} combat patterns.
  */
-final class CombatPackets {
+public final class CombatPackets {
 
     /** Inventory manipulation (paired with server {@code 0xB034} inventory operation ack). */
     static final int CLIENT_INVENTORY_OPERATION = 0x7034;
@@ -59,7 +59,7 @@ final class CombatPackets {
         ctx.getDispatcher().sendToServer(packet);
     }
 
-    static void sendSelectEntity(IWorkflowContext ctx, int uniqueEntityId) {
+    public static void sendSelectEntity(IWorkflowContext ctx, int uniqueEntityId) {
         MutablePacket packet = MutablePacket.getBuilder(4, ClientOpcode.CHAR_SELECT)
                 .packetEncoding(Encoding.ENCRYPTED)
                 .dataEncoding(Encoding.PLAIN)

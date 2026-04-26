@@ -1,2 +1,3 @@
 Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Private-Package: org.sokybot.social.projections.internal.*
+Import-Package: org.sokybot.swarm.api;version="[1.0,2)", org.sokybot.navigation.api;version="[1.0,2)", *;resolution:=optional

@@ -8,6 +8,15 @@ import { useToastStore } from '../store/toastStore';
 
 function severityForAlert(alert: SocialAlertDto): ToastSeverity {
     const k = alert.kind ?? '';
+    if (k === 'HIVE_ABORTED') {
+        return 'error';
+    }
+    if (k === 'HIVE_DISPATCHED') {
+        return 'warn';
+    }
+    if (k === 'HIVE_COMPLETED') {
+        return 'info';
+    }
     if (k.startsWith('GM_') || k === 'NOTICE_GM_BROADCAST') {
         return 'error';
     }

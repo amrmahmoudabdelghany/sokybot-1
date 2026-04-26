@@ -16,6 +16,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 public final class WebhookPayloadBuilder {
 
     private static final int DISCORD_COLOR_ALERT = 15158332;
+    private static final int DISCORD_COLOR_HIVE_DISPATCHED = 0xD4AF37;
+    private static final int DISCORD_COLOR_HIVE_COMPLETED = 0x2ECC71;
+    private static final int DISCORD_COLOR_HIVE_ABORTED = 0xE74C3C;
 
     private WebhookPayloadBuilder() {
     }
@@ -27,7 +30,7 @@ public final class WebhookPayloadBuilder {
         ObjectNode embed = embeds.addObject();
         embed.put("title", titleFor(alert));
         embed.put("description", bodyDescription(alert));
-        embed.put("color", DISCORD_COLOR_ALERT);
+        embed.put("color", colorFor(alert));
         return mapper.writeValueAsString(root);
     }
 
@@ -50,7 +53,35 @@ public final class WebhookPayloadBuilder {
     }
 
     private static String titleFor(SocialAlert alert) {
-        return alert.getKind() != null ? alert.getKind().name() : "Alert";
+        if (alert.getKind() == null) {
+            return "Alert";
+        }
+        switch (alert.getKind()) {
+            case HIVE_DISPATCHED:
+                return ":dart: HIVE_DISPATCHED";
+            case HIVE_COMPLETED:
+                return ":crossed_swords: HIVE_COMPLETED";
+            case HIVE_ABORTED:
+                return ":x: HIVE_ABORTED";
+            default:
+                return alert.getKind().name();
+        }
+    }
+
+    private static int colorFor(SocialAlert alert) {
+        if (alert.getKind() == null) {
+            return DISCORD_COLOR_ALERT;
+        }
+        switch (alert.getKind()) {
+            case HIVE_DISPATCHED:
+                return DISCORD_COLOR_HIVE_DISPATCHED;
+            case HIVE_COMPLETED:
+                return DISCORD_COLOR_HIVE_COMPLETED;
+            case HIVE_ABORTED:
+                return DISCORD_COLOR_HIVE_ABORTED;
+            default:
+                return DISCORD_COLOR_ALERT;
+        }
     }
 
     private static String bodyDescription(SocialAlert alert) {

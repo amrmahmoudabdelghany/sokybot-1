@@ -2,7 +2,8 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
-Private-Package: org.sokybot.behaviors.swarm.internal, org.sokybot.behaviors.swarm
+Export-Package: org.sokybot.behaviors.swarm.routing
+Private-Package: org.sokybot.behaviors.swarm.internal, org.sokybot.behaviors.swarm, org.sokybot.behaviors.swarm.radar, org.sokybot.behaviors.swarm.hunting
 Import-Package: \
     org.sokybot.behaviors.navigation;version="[1.0,2)", \
     org.sokybot.behaviors.logistics;version="[1.0,2)", \
@@ -17,8 +18,13 @@ Import-Package: \
     org.sokybot.town.projections.api;version="[1.0,2)", \
     org.sokybot.gamemodel;version="[1.0,2)", \
     org.sokybot.gameevents.events.entity;version="[1.0,2)", \
+    org.sokybot.gameevents.events.world;version="[1.0,2)", \
     org.sokybot.commons.event;version="[1.0,2)", \
+    org.sokybot.runtime;version="[1.0,2)", \
     org.sokybot.navigation.api;version="[1.0,2)", \
+    org.sokybot.persistence.entities;version="[1.0,2)", \
+    org.sokybot.persistence.service;version="[1.0,2)", \
+    org.sokybot.settings.api;version="[1.0,2)", \
     org.sokybot.topology.api;version="[1.0,2)", \
     reactor.core;version="[3.6,4)", \
     reactor.core.publisher;version="[3.6,4)", \

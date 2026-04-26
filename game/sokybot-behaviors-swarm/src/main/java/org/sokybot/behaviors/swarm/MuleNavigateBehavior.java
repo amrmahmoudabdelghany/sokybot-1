@@ -1,9 +1,6 @@
 package org.sokybot.behaviors.swarm;
 
-import java.util.Optional;
-
-import org.sokybot.behaviors.navigation.TeleportJumpBehavior;
-import org.sokybot.behaviors.navigation.TeleportJumpKeys;
+import org.sokybot.behaviors.swarm.routing.RouteWalker;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
@@ -23,8 +20,6 @@ import org.sokybot.swarm.api.ISwarmEventBus;
 import org.sokybot.swarm.api.LogisticsAbortedEvent;
 import org.sokybot.topology.api.ITeleportGraph;
 import org.sokybot.topology.api.ITeleportRouter;
-import org.sokybot.topology.api.TeleportEdge;
-import org.sokybot.topology.api.TeleportRoute;
 import org.sokybot.town.api.INpcInteractionFacade;
 import org.sokybot.trade.coordination.api.ITradeCoordinator;
 import org.sokybot.trade.coordination.api.SwarmRole;
@@ -56,7 +51,6 @@ public final class MuleNavigateBehavior implements IBehavior<LogisticsSettings> 
 
     @Reference
     private volatile SwarmJobMonitor jobMonitor;
-    private volatile TeleportRoute cachedRoute;
 
     @Override
     public String id() {
@@ -140,27 +134,19 @@ public final class MuleNavigateBehavior implements IBehavior<LogisticsSettings> 
         }
 
         if (cfg.isCrossRegionEnabled()) {
-            TeleportRoute route = currentRoute(ctx, my, destination);
-            if (route != null && !route.isEmpty()) {
-                int cursor = intFrom(ctx.getPersistentData().get(LogisticsCycleKeys.KEY_ROUTE_CURSOR));
-                if (cursor < route.size()) {
-                    TeleportEdge hop = route.hop(cursor);
-                    BehaviorStatus status = TeleportJumpBehavior.tick(
-                            ctx,
-                            navigator,
-                            npcInteractionFacade,
-                            teleportGraph,
-                            hop,
-                            radius);
-                    TeleportJumpBehavior.Phase phase = phaseFrom(ctx);
-                    if (phase == TeleportJumpBehavior.Phase.COMPLETE) {
-                        ctx.getPersistentData().put(LogisticsCycleKeys.KEY_ROUTE_CURSOR, cursor + 1);
-                        TeleportJumpBehavior.reset(ctx.getPersistentData());
-                    } else if (phase == TeleportJumpBehavior.Phase.FAILED) {
-                        abortJob(ctx, cfg, reqId, LogisticsAbortedEvent.Reason.NAVIGATION_FAILED);
-                    }
-                    return status;
-                }
+            RouteWalker walker = new RouteWalker(navigator, router, teleportGraph, npcInteractionFacade, "logistics");
+            RouteWalker.WalkResult walkResult = walker.tick(ctx, destination, radius);
+            if (walkResult == RouteWalker.WalkResult.ARRIVED) {
+                ctx.getPersistentData().put(LogisticsCycleKeys.SWARM_ARRIVED, Boolean.TRUE);
+                return BehaviorStatus.EXECUTED;
+            }
+            if (walkResult == RouteWalker.WalkResult.FAILED_NAVIGATION
+                    || walkResult == RouteWalker.WalkResult.FAILED_TIMEOUT) {
+                abortJob(ctx, cfg, reqId, LogisticsAbortedEvent.Reason.NAVIGATION_FAILED);
+                return BehaviorStatus.EXECUTED;
+            }
+            if (walkResult == RouteWalker.WalkResult.ROUTING) {
+                return BehaviorStatus.EXECUTED;
             }
         }
         try {
@@ -200,9 +186,9 @@ public final class MuleNavigateBehavior implements IBehavior<LogisticsSettings> 
         ctx.getPersistentData().remove(LogisticsCycleKeys.KEY_ROUTE_CURSOR);
         ctx.getPersistentData().remove(LogisticsCycleKeys.KEY_ROUTE_GENERATION);
         ctx.getPersistentData().remove(LogisticsCycleKeys.KEY_ROUTE_HOP_COUNT);
-        ctx.getPersistentData().remove(TeleportJumpKeys.KEY_HOP_PHASE);
-        ctx.getPersistentData().remove(TeleportJumpKeys.KEY_HOP_STARTED_AT_MS);
-        ctx.getPersistentData().remove(TeleportJumpKeys.KEY_HOP_FUTURE);
+        ctx.getPersistentData().remove("swarm_route_hop_phase");
+        ctx.getPersistentData().remove("swarm_route_hop_started_at_ms");
+        ctx.getPersistentData().remove("swarm_route_hop_future");
     }
 
     private static int intFrom(Object o) {
@@ -215,33 +201,6 @@ public final class MuleNavigateBehavior implements IBehavior<LogisticsSettings> 
     @Override
     public long postDelayMs() {
         return 400L;
-    }
-
-    private TeleportRoute currentRoute(IWorkflowContext ctx, GamePosition from, WorldPoint to) {
-        if (router == null || teleportGraph == null || npcInteractionFacade == null) {
-            return null;
-        }
-        long generation = teleportGraph.generation();
-        long storedGeneration = longFrom(ctx.getPersistentData().get(LogisticsCycleKeys.KEY_ROUTE_GENERATION));
-        boolean timeout = hopTimedOut(ctx);
-        if (cachedRoute == null || generation != storedGeneration || timeout) {
-            Optional<TeleportRoute> recomputed = router.route(
-                    new WorldPoint((int) from.getX(), (int) from.getY(), (int) from.getZ()),
-                    to);
-            cachedRoute = recomputed.orElse(null);
-            if (cachedRoute != null) {
-                ctx.getPersistentData().put(LogisticsCycleKeys.KEY_ROUTE_CURSOR, 0);
-                ctx.getPersistentData().put(LogisticsCycleKeys.KEY_ROUTE_GENERATION, generation);
-                ctx.getPersistentData().put(LogisticsCycleKeys.KEY_ROUTE_HOP_COUNT, cachedRoute.size());
-                TeleportJumpBehavior.reset(ctx.getPersistentData());
-            }
-        }
-        return cachedRoute;
-    }
-
-    private static boolean hopTimedOut(IWorkflowContext ctx) {
-        long started = longFrom(ctx.getPersistentData().get(TeleportJumpKeys.KEY_HOP_STARTED_AT_MS));
-        return started > 0L && System.currentTimeMillis() - started > TeleportJumpKeys.HOP_TIMEOUT_MS;
     }
 
     private static float resolveInteractionRadius(LogisticsSettings cfg) {
@@ -257,22 +216,4 @@ public final class MuleNavigateBehavior implements IBehavior<LogisticsSettings> 
         return dx * dx + dz * dz <= radius * radius;
     }
 
-    private static long longFrom(Object o) {
-        if (o instanceof Number) {
-            return ((Number) o).longValue();
-        }
-        return 0L;
-    }
-
-    private static TeleportJumpBehavior.Phase phaseFrom(IWorkflowContext ctx) {
-        Object raw = ctx.getPersistentData().get(TeleportJumpKeys.KEY_HOP_PHASE);
-        if (raw instanceof String) {
-            try {
-                return TeleportJumpBehavior.Phase.valueOf((String) raw);
-            } catch (IllegalArgumentException ignored) {
-                return TeleportJumpBehavior.Phase.WALKING_TO_NPC;
-            }
-        }
-        return TeleportJumpBehavior.Phase.WALKING_TO_NPC;
-    }
 }

@@ -8,6 +8,9 @@ public final class SocialAlert {
     public enum Kind {
         UNIQUE_SPAWNED,
         UNIQUE_KILLED,
+        HIVE_DISPATCHED,
+        HIVE_COMPLETED,
+        HIVE_ABORTED,
         GM_NEARBY,
         GM_WHISPER,
         NOTICE_GM_BROADCAST,

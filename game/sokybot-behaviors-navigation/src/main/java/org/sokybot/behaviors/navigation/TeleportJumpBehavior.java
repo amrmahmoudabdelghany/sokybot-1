@@ -42,18 +42,32 @@ public final class TeleportJumpBehavior {
             ITeleportGraph teleportGraph,
             TeleportEdge hop,
             float interactionRadius) {
+        return tick(ctx, navigator, npcInteractionFacade, teleportGraph, hop, interactionRadius,
+                TeleportJumpKeys.KEY_HOP_PHASE, TeleportJumpKeys.KEY_HOP_STARTED_AT_MS, TeleportJumpKeys.KEY_HOP_FUTURE);
+    }
+
+    public static BehaviorStatus tick(
+            IWorkflowContext ctx,
+            INavigator navigator,
+            INpcInteractionFacade npcInteractionFacade,
+            ITeleportGraph teleportGraph,
+            TeleportEdge hop,
+            float interactionRadius,
+            String phaseKey,
+            String startedAtKey,
+            String futureKey) {
         Map<String, Object> data = ctx.getPersistentData();
-        Phase phase = phaseFrom(data.get(TeleportJumpKeys.KEY_HOP_PHASE));
+        Phase phase = phaseFrom(data.get(phaseKey));
 
         switch (phase) {
             case WALKING_TO_NPC:
                 Optional<TeleportNode> fromNode = findNode(teleportGraph, hop.getFromNpcRefId());
                 if (!fromNode.isPresent()) {
-                    data.put(TeleportJumpKeys.KEY_HOP_PHASE, Phase.FAILED.name());
+                    data.put(phaseKey, Phase.FAILED.name());
                     return BehaviorStatus.EXECUTED;
                 }
                 if (isWithin(ctx, fromNode.get().getPosition(), interactionRadius)) {
-                    data.put(TeleportJumpKeys.KEY_HOP_PHASE, Phase.TALKING.name());
+                    data.put(phaseKey, Phase.TALKING.name());
                     return BehaviorStatus.EXECUTED;
                 }
                 try {
@@ -61,20 +75,20 @@ public final class TeleportJumpBehavior {
                     return BehaviorStatus.EXECUTED;
                 } catch (NavigationException ex) {
                     log.debug("Teleport hop walk failed: {}", ex.toString());
-                    data.put(TeleportJumpKeys.KEY_HOP_PHASE, Phase.FAILED.name());
+                    data.put(phaseKey, Phase.FAILED.name());
                     return BehaviorStatus.EXECUTED;
                 }
             case TALKING:
                 CompletableFuture<NpcInteractionResult> cf = npcInteractionFacade
                         .teleport(ctx, hop.getFromNpcRefId(), hop.getDestinationRefId());
-                data.put(TeleportJumpKeys.KEY_HOP_FUTURE, cf);
-                data.put(TeleportJumpKeys.KEY_HOP_STARTED_AT_MS, System.currentTimeMillis());
-                data.put(TeleportJumpKeys.KEY_HOP_PHASE, Phase.AWAITING_RESPONSE.name());
+                data.put(futureKey, cf);
+                data.put(startedAtKey, System.currentTimeMillis());
+                data.put(phaseKey, Phase.AWAITING_RESPONSE.name());
                 return BehaviorStatus.EXECUTED;
             case AWAITING_RESPONSE:
-                CompletableFuture<NpcInteractionResult> pending = asFuture(data.get(TeleportJumpKeys.KEY_HOP_FUTURE));
+                CompletableFuture<NpcInteractionResult> pending = asFuture(data.get(futureKey));
                 if (pending == null) {
-                    data.put(TeleportJumpKeys.KEY_HOP_PHASE, Phase.FAILED.name());
+                    data.put(phaseKey, Phase.FAILED.name());
                     return BehaviorStatus.EXECUTED;
                 }
                 if (!pending.isDone()) {
@@ -82,18 +96,18 @@ public final class TeleportJumpBehavior {
                 }
                 NpcInteractionResult result = safeNow(pending);
                 if (result == null || !result.isSuccess()) {
-                    data.put(TeleportJumpKeys.KEY_HOP_PHASE, Phase.FAILED.name());
+                    data.put(phaseKey, Phase.FAILED.name());
                     return BehaviorStatus.EXECUTED;
                 }
-                data.put(TeleportJumpKeys.KEY_HOP_PHASE, Phase.AWAITING_LOAD.name());
+                data.put(phaseKey, Phase.AWAITING_LOAD.name());
                 return BehaviorStatus.EXECUTED;
             case AWAITING_LOAD:
-                CompletableFuture<NpcInteractionResult> loading = asFuture(data.get(TeleportJumpKeys.KEY_HOP_FUTURE));
+                CompletableFuture<NpcInteractionResult> loading = asFuture(data.get(futureKey));
                 if (loading == null || !loading.isDone()) {
                     return BehaviorStatus.EXECUTED;
                 }
                 NpcInteractionResult loaded = safeNow(loading);
-                data.put(TeleportJumpKeys.KEY_HOP_PHASE, loaded != null && loaded.isSuccess()
+                data.put(phaseKey, loaded != null && loaded.isSuccess()
                         ? Phase.COMPLETE.name()
                         : Phase.FAILED.name());
                 return BehaviorStatus.EXECUTED;
@@ -105,9 +119,13 @@ public final class TeleportJumpBehavior {
     }
 
     public static void reset(Map<String, Object> data) {
-        data.remove(TeleportJumpKeys.KEY_HOP_FUTURE);
-        data.remove(TeleportJumpKeys.KEY_HOP_STARTED_AT_MS);
-        data.put(TeleportJumpKeys.KEY_HOP_PHASE, Phase.WALKING_TO_NPC.name());
+        reset(data, TeleportJumpKeys.KEY_HOP_PHASE, TeleportJumpKeys.KEY_HOP_STARTED_AT_MS, TeleportJumpKeys.KEY_HOP_FUTURE);
+    }
+
+    public static void reset(Map<String, Object> data, String phaseKey, String startedAtKey, String futureKey) {
+        data.remove(futureKey);
+        data.remove(startedAtKey);
+        data.put(phaseKey, Phase.WALKING_TO_NPC.name());
     }
 
     private static boolean isWithin(IWorkflowContext ctx, WorldPoint point, float radius) {
