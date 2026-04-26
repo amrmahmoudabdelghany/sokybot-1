@@ -1,0 +1,15 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.behaviors.navigation
+Import-Package: \
+    org.sokybot.engine.api.behavior;version="[1.0,2)", \
+    org.sokybot.engine.api.workflow;version="[1.0,2)", \
+    org.sokybot.gamemodel;version="[1.0,2)", \
+    org.sokybot.gameevents.dto;version="[1.0,2)", \
+    org.sokybot.navigation.api;version="[1.0,2)", \
+    org.sokybot.town.api;version="[1.0,2)", \
+    org.sokybot.topology.api;version="[1.0,2)", \
+    org.slf4j;version="[1.7,2)", \
+    *;resolution:=optional

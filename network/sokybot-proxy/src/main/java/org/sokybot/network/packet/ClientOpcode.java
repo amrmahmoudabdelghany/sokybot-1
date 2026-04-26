@@ -20,5 +20,13 @@ public class ClientOpcode {
 	public static final int CHAR_SKILL_LVL_UP = 0x70A1 ; 
 	public static final int CHAR_MASTERY_LVL_UP = 0x70A2 ; 
 	public static final int CHAR_BESERK = 0x70A7 ; 
+
+	/** Player-to-player exchange / trade (vSRO-style client opcodes). */
+	public static final int EXCHANGE_REQUEST = 0x7081;
+	public static final int EXCHANGE_CONFIRM = 0x7082;
+	public static final int EXCHANGE_ADD_ITEM = 0x7083;
+	public static final int EXCHANGE_APPROVE = 0x7084;
+	public static final int EXCHANGE_CANCEL = 0x7085;
+	public static final int EXCHANGE_FINALIZE = 0x7086;
 	
 }

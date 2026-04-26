@@ -25,9 +25,12 @@
         <module>sokybot-login-workflow-builtin</module>
         <module>sokybot-trade-coordination-api</module>
         <module>sokybot-trade-coordinator</module>
+        <module>sokybot-swarm-api</module>
         <module>sokybot-behaviors-trade</module>
         <module>sokybot-combat-api</module>
         <module>sokybot-navigation-api</module>
+        <module>sokybot-topology-api</module>
+        <module>sokybot-topology-core</module>
         <module>sokybot-behaviors-combat</module>
         <module>sokybot-town-api</module>
         <module>sokybot-behaviors-town</module>

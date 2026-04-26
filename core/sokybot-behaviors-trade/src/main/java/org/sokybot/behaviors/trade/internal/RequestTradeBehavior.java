@@ -1,5 +1,7 @@
 package org.sokybot.behaviors.trade.internal;
 
+import java.util.Optional;
+
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ServiceScope;
 import org.sokybot.behaviors.trade.internal.settings.FarmerTradeSettings;
@@ -37,7 +39,14 @@ public final class RequestTradeBehavior implements IBehavior<FarmerTradeSettings
 
     @Override
     public boolean applies(IWorkflowContext context, FarmerTradeSettings settings) {
-        return settings != null && context.getPersistentData().containsKey(TradeKeys.MULE_MACHINE_ID);
+        if (settings == null || !context.getPersistentData().containsKey(TradeKeys.MULE_MACHINE_ID)) {
+            return false;
+        }
+        Optional<ITradeCoordinator> coord = context.getServiceOptional(ITradeCoordinator.class);
+        if (coord.isPresent() && coord.get().getSwarmSession(context.getMachineId()).isPresent()) {
+            return false;
+        }
+        return true;
     }
 
     @Override

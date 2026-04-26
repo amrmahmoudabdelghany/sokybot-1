@@ -1,0 +1,25 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.behaviors.logistics
+Private-Package: org.sokybot.behaviors.logistics.internal
+Import-Package: \
+    org.sokybot.engine.api.behavior;version="[1.0,2)", \
+    org.sokybot.engine.api.workflow;version="[1.0,2)", \
+    org.sokybot.engine.api.extension;version="[1.0,2)", \
+    org.sokybot.swarm.api;version="[1.0,2)", \
+    org.sokybot.trade.coordination.api;version="[1.0,2)", \
+    org.sokybot.trade.events;version="[1.0,2)", \
+    org.sokybot.town.api;version="[1.0,2)", \
+    org.sokybot.town.projections.api;version="[1.0,2)", \
+    org.sokybot.gamemodel;version="[1.0,2)", \
+    org.sokybot.gameevents.events.core;version="[1.0,2)", \
+    org.sokybot.commons.event;version="[1.0,2)", \
+    org.sokybot.settings.api;version="[1.0,2)", \
+    reactor.core;version="[3.6,4)", \
+    reactor.core.publisher;version="[3.6,4)", \
+    org.osgi.service.component.annotations;version="[1.5,2)", \
+    org.slf4j;version="[1.7,2)", \
+    *;resolution:=optional
+-dsannotations: *

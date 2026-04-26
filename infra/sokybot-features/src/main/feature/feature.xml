@@ -167,6 +167,22 @@
     </feature>
 
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- SWARM FEATURE: JVM-wide swarm logistics bus (Mule Network infrastructure) -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <feature name="sokybot-swarm" version="${project.version}" description="Swarm logistics (Mule Network): bus, trade handshake, farmer/mule behaviors">
+        <feature>sokybot-core</feature>
+        <feature>sokybot-trade</feature>
+        <feature>sokybot-combat</feature>
+        <feature>sokybot-town</feature>
+        <bundle>mvn:org.sokybot/sokybot-swarm-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-behaviors-logistics/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-behaviors-navigation/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-behaviors-swarm/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-topology-api/${project.version}</bundle>
+        <bundle>mvn:org.sokybot/sokybot-topology-core/${project.version}</bundle>
+    </feature>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <!-- COMBAT FEATURE: Combat API, projections, translators, behaviors       -->
     <!-- ═══════════════════════════════════════════════════════════════════════ -->
     <feature name="sokybot-combat" version="${project.version}" description="Combat API, tactical projection, translators, and grinding-cycle behaviors">
@@ -279,6 +295,7 @@
         <feature>sokybot-session</feature>
         <feature>sokybot-social</feature>
         <feature>sokybot-trade</feature>
+        <feature>sokybot-swarm</feature>
         <feature>sokybot-combat</feature>
         <feature>sokybot-town</feature>
         <feature>sokybot-storage</feature>

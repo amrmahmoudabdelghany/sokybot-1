@@ -9,6 +9,34 @@ import java.util.Optional;
 public interface ITradeCoordinator {
 
     /**
+     * Opens a swarm-scoped trade session keyed by the local machine id (additive; default is no-op / false).
+     *
+     * @return {@code true} if a new session was registered
+     */
+    default boolean openSwarmSession(
+            String localMachineId,
+            String partnerMachineId,
+            String requestId,
+            SwarmRole localRole) {
+        return false;
+    }
+
+    default Optional<SwarmSessionState> getSwarmSession(String localMachineId) {
+        return Optional.empty();
+    }
+
+    default void closeSwarmSession(String localMachineId, SwarmSessionResult result) {
+        // no-op
+    }
+
+    /**
+     * Updates phase for an existing swarm session keyed by {@code localMachineId} (additive; default no-op).
+     */
+    default void updateSwarmSessionPhase(String localMachineId, SwarmSessionPhase phase) {
+        // no-op
+    }
+
+    /**
      * Registers a mule bot; returns an opaque ticket id (idempotent replace if same machine re-registers).
      */
     String registerMule(MuleIntent intent);

@@ -12,6 +12,10 @@ import org.sokybot.trade.coordination.api.FarmerProfile;
 import org.sokybot.trade.coordination.api.ITradeCoordinator;
 import org.sokybot.trade.coordination.api.MuleHandle;
 import org.sokybot.trade.coordination.api.MuleIntent;
+import org.sokybot.trade.coordination.api.SwarmRole;
+import org.sokybot.trade.coordination.api.SwarmSessionPhase;
+import org.sokybot.trade.coordination.api.SwarmSessionResult;
+import org.sokybot.trade.coordination.api.SwarmSessionState;
 import org.sokybot.trade.coordination.api.TradeOutcome;
 import org.sokybot.trade.coordination.event.MuleAvailable;
 import org.sokybot.trade.coordination.event.MuleUnavailable;
@@ -42,6 +46,7 @@ public final class TradeCoordinatorComponent implements ITradeCoordinator {
 
     private final Map<String, MuleRegistration> mulesByMachineId = new ConcurrentHashMap<>();
     private final Map<String, TradeSession> sessionsById = new ConcurrentHashMap<>();
+    private final Map<String, SwarmSessionState> swarmSessionsByLocalMachineId = new ConcurrentHashMap<>();
 
     @Activate
     void activate() {
@@ -52,6 +57,7 @@ public final class TradeCoordinatorComponent implements ITradeCoordinator {
     void deactivate() {
         mulesByMachineId.clear();
         sessionsById.clear();
+        swarmSessionsByLocalMachineId.clear();
         log.info("Trade coordinator deactivated");
     }
 
@@ -169,6 +175,51 @@ public final class TradeCoordinatorComponent implements ITradeCoordinator {
         relay(new StallReady(
                 Objects.requireNonNull(machineId, "machineId").trim(),
                 Objects.requireNonNull(stallId, "stallId").trim()));
+    }
+
+    @Override
+    public boolean openSwarmSession(String localMachineId, String partnerMachineId, String requestId, SwarmRole localRole) {
+        Objects.requireNonNull(localRole, "localRole");
+        String local = Objects.requireNonNull(localMachineId, "localMachineId").trim();
+        String partner = Objects.requireNonNull(partnerMachineId, "partnerMachineId").trim();
+        String rid = Objects.requireNonNull(requestId, "requestId").trim();
+        if (local.isEmpty() || partner.isEmpty() || rid.isEmpty()) {
+            return false;
+        }
+        if (local.equals(partner)) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        SwarmSessionState created = new SwarmSessionState(rid, partner, SwarmSessionPhase.FILLING, now, localRole);
+        SwarmSessionState prev = swarmSessionsByLocalMachineId.putIfAbsent(local, created);
+        return prev == null;
+    }
+
+    @Override
+    public void updateSwarmSessionPhase(String localMachineId, SwarmSessionPhase phase) {
+        Objects.requireNonNull(phase, "phase");
+        if (localMachineId == null) {
+            return;
+        }
+        String local = localMachineId.trim();
+        swarmSessionsByLocalMachineId.computeIfPresent(local, (k, s) -> s.withPhase(phase));
+    }
+
+    @Override
+    public Optional<SwarmSessionState> getSwarmSession(String localMachineId) {
+        if (localMachineId == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(swarmSessionsByLocalMachineId.get(localMachineId.trim()));
+    }
+
+    @Override
+    public void closeSwarmSession(String localMachineId, SwarmSessionResult result) {
+        Objects.requireNonNull(result, "result");
+        if (localMachineId == null) {
+            return;
+        }
+        swarmSessionsByLocalMachineId.remove(localMachineId.trim());
     }
 
     private TradeSession requireSession(String sessionId) {

@@ -19,6 +19,7 @@
         <class>org.sokybot.persistence.entities.ShopEntity</class>
         <class>org.sokybot.persistence.entities.SkillEntity</class>
         <class>org.sokybot.persistence.entities.TeleportEntity</class>
+        <class>org.sokybot.persistence.entities.TeleportDestinationEntity</class>
         <class>org.sokybot.persistence.entities.PortalEntity</class>
         <class>org.sokybot.persistence.entities.SectorRef</class>
         <class>org.sokybot.persistence.entities.ObjectNavMesh</class>

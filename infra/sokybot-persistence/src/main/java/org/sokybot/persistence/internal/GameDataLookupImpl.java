@@ -7,7 +7,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 
 import org.sokybot.persistence.entities.DivisionInfo;
@@ -22,6 +24,7 @@ import org.sokybot.persistence.entities.SectorRef;
 import org.sokybot.persistence.entities.ShopEntity;
 import org.sokybot.persistence.entities.SilkroadType;
 import org.sokybot.persistence.entities.SkillEntity;
+import org.sokybot.persistence.entities.TeleportDestinationEntity;
 import org.sokybot.persistence.entities.TeleportEntity;
 import org.sokybot.persistence.internal.extraction.CachedExtractionDecorator;
 import org.sokybot.persistence.internal.extraction.IPk2ExtractionHandler;
@@ -169,6 +172,28 @@ public class GameDataLookupImpl implements IGameDataLookup {
     @Override
     public Optional<TeleportEntity> findTeleport(int refId) {
         return teleportRepository.findById(refId);
+    }
+
+    @Override
+    public Stream<TeleportEntity> findAllTeleports() {
+        EntityManager em = emf.createEntityManager();
+        try {
+            List<TeleportEntity> results = em.createQuery("SELECT t FROM TeleportEntity t", TeleportEntity.class)
+                    .getResultList();
+            return results.stream();
+        } finally {
+            em.close();
+        }
+    }
+
+    @Override
+    public Optional<TeleportDestinationEntity> findTeleportDestination(int destinationRefId) {
+        EntityManager em = emf.createEntityManager();
+        try {
+            return Optional.ofNullable(em.find(TeleportDestinationEntity.class, destinationRefId));
+        } finally {
+            em.close();
+        }
     }
 
     @Override

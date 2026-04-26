@@ -14,6 +14,7 @@ import org.sokybot.persistence.entities.SectorRef;
 import org.sokybot.persistence.entities.ShopEntity;
 import org.sokybot.persistence.entities.SilkroadType;
 import org.sokybot.persistence.entities.SkillEntity;
+import org.sokybot.persistence.entities.TeleportDestinationEntity;
 import org.sokybot.persistence.entities.TeleportEntity;
 
 /**
@@ -67,6 +68,14 @@ public interface IGameDataLookup {
      * Find Teleport entity by refId.
      */
     Optional<TeleportEntity> findTeleport(int refId);
+
+    default java.util.stream.Stream<TeleportEntity> findAllTeleports() {
+        return java.util.stream.Stream.empty();
+    }
+
+    default Optional<TeleportDestinationEntity> findTeleportDestination(int destinationRefId) {
+        return Optional.empty();
+    }
 
     /**
      * Find Portal entity by refId.

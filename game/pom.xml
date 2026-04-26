@@ -35,5 +35,8 @@
         <module>sokybot-pk2-extractor</module>
         <module>sokybot-loader-api</module>
         <module>sokybot-social-projections</module>
+        <module>sokybot-behaviors-logistics</module>
+        <module>sokybot-behaviors-navigation</module>
+        <module>sokybot-behaviors-swarm</module>
     </modules>
 </project>
