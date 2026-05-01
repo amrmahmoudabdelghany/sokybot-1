@@ -47,6 +47,10 @@ public final class CombatPolicy implements ICombatPolicy {
     private final int petFoodItemRefId;
     private final Set<Integer> ammoConsumingSkillRefIds;
     private final boolean pauseOnEmptyAmmo;
+    private final boolean phalanxLeaderEnabled;
+    private final boolean phalanxFollowerEnabled;
+    private final long phalanxStaleEventTimeoutMs;
+    private final float phalanxMaxRangeWorld;
 
     private CombatPolicy(Builder builder) {
         this.hpPotionThresholdPercent = builder.hpPotionThresholdPercent;
@@ -85,6 +89,10 @@ public final class CombatPolicy implements ICombatPolicy {
         this.ammoConsumingSkillRefIds = Collections
                 .unmodifiableSet(new LinkedHashSet<>(builder.ammoConsumingSkillRefIds));
         this.pauseOnEmptyAmmo = builder.pauseOnEmptyAmmo;
+        this.phalanxLeaderEnabled = builder.phalanxLeaderEnabled;
+        this.phalanxFollowerEnabled = builder.phalanxFollowerEnabled;
+        this.phalanxStaleEventTimeoutMs = builder.phalanxStaleEventTimeoutMs;
+        this.phalanxMaxRangeWorld = builder.phalanxMaxRangeWorld;
     }
 
     @Override
@@ -262,6 +270,26 @@ public final class CombatPolicy implements ICombatPolicy {
         return pauseOnEmptyAmmo;
     }
 
+    @Override
+    public boolean isPhalanxLeaderEnabled() {
+        return phalanxLeaderEnabled;
+    }
+
+    @Override
+    public boolean isPhalanxFollowerEnabled() {
+        return phalanxFollowerEnabled;
+    }
+
+    @Override
+    public long getPhalanxStaleEventTimeoutMs() {
+        return phalanxStaleEventTimeoutMs;
+    }
+
+    @Override
+    public float getPhalanxMaxRangeWorld() {
+        return phalanxMaxRangeWorld;
+    }
+
     public static Builder builder() {
         return new Builder();
     }
@@ -302,6 +330,10 @@ public final class CombatPolicy implements ICombatPolicy {
         private int petFoodItemRefId = -1;
         private LinkedHashSet<Integer> ammoConsumingSkillRefIds = new LinkedHashSet<>();
         private boolean pauseOnEmptyAmmo = true;
+        private boolean phalanxLeaderEnabled;
+        private boolean phalanxFollowerEnabled;
+        private long phalanxStaleEventTimeoutMs = 350L;
+        private float phalanxMaxRangeWorld = 100f;
 
         public Builder hpPotionThresholdPercent(int hpPotionThresholdPercent) {
             this.hpPotionThresholdPercent = hpPotionThresholdPercent;
@@ -475,6 +507,26 @@ public final class CombatPolicy implements ICombatPolicy {
 
         public Builder pauseOnEmptyAmmo(boolean pauseOnEmptyAmmo) {
             this.pauseOnEmptyAmmo = pauseOnEmptyAmmo;
+            return this;
+        }
+
+        public Builder phalanxLeaderEnabled(boolean phalanxLeaderEnabled) {
+            this.phalanxLeaderEnabled = phalanxLeaderEnabled;
+            return this;
+        }
+
+        public Builder phalanxFollowerEnabled(boolean phalanxFollowerEnabled) {
+            this.phalanxFollowerEnabled = phalanxFollowerEnabled;
+            return this;
+        }
+
+        public Builder phalanxStaleEventTimeoutMs(long phalanxStaleEventTimeoutMs) {
+            this.phalanxStaleEventTimeoutMs = phalanxStaleEventTimeoutMs;
+            return this;
+        }
+
+        public Builder phalanxMaxRangeWorld(float phalanxMaxRangeWorld) {
+            this.phalanxMaxRangeWorld = phalanxMaxRangeWorld;
             return this;
         }
 

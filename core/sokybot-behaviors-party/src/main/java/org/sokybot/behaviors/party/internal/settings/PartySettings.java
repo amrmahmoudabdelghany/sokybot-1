@@ -24,6 +24,7 @@ public final class PartySettings implements IPartySettings {
     private boolean followLeader;
     private float followDistanceWorld = 25.0f;
     private final List<Integer> buffShareSkillIds = new ArrayList<>();
+    private String leaderMachineFullName = "";
 
     @Override
     public boolean isPartyCycleEnabled() {
@@ -137,6 +138,15 @@ public final class PartySettings implements IPartySettings {
         if (buffShareSkillIds != null) {
             this.buffShareSkillIds.addAll(buffShareSkillIds);
         }
+    }
+
+    @Override
+    public String getLeaderMachineFullName() {
+        return leaderMachineFullName;
+    }
+
+    public void setLeaderMachineFullName(String leaderMachineFullName) {
+        this.leaderMachineFullName = leaderMachineFullName != null ? leaderMachineFullName.trim() : "";
     }
 
     @Override

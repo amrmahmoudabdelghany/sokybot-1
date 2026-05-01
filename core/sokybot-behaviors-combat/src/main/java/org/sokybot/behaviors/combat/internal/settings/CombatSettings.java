@@ -50,6 +50,10 @@ public final class CombatSettings implements ICombatSettings {
     private int petFoodItemRefId = -1;
     private final LinkedHashSet<Integer> ammoConsumingSkillRefIds = new LinkedHashSet<>();
     private boolean pauseOnEmptyAmmo = true;
+    private boolean phalanxLeaderEnabled;
+    private boolean phalanxFollowerEnabled;
+    private long phalanxStaleEventTimeoutMs = 350L;
+    private float phalanxMaxRangeWorld = 100f;
 
     @Override
     public boolean isAutoAttack() {
@@ -346,6 +350,38 @@ public final class CombatSettings implements ICombatSettings {
         this.pauseOnEmptyAmmo = pauseOnEmptyAmmo;
     }
 
+    public boolean isPhalanxLeaderEnabled() {
+        return phalanxLeaderEnabled;
+    }
+
+    public void setPhalanxLeaderEnabled(boolean phalanxLeaderEnabled) {
+        this.phalanxLeaderEnabled = phalanxLeaderEnabled;
+    }
+
+    public boolean isPhalanxFollowerEnabled() {
+        return phalanxFollowerEnabled;
+    }
+
+    public void setPhalanxFollowerEnabled(boolean phalanxFollowerEnabled) {
+        this.phalanxFollowerEnabled = phalanxFollowerEnabled;
+    }
+
+    public long getPhalanxStaleEventTimeoutMs() {
+        return phalanxStaleEventTimeoutMs;
+    }
+
+    public void setPhalanxStaleEventTimeoutMs(long phalanxStaleEventTimeoutMs) {
+        this.phalanxStaleEventTimeoutMs = phalanxStaleEventTimeoutMs;
+    }
+
+    public float getPhalanxMaxRangeWorld() {
+        return phalanxMaxRangeWorld;
+    }
+
+    public void setPhalanxMaxRangeWorld(float phalanxMaxRangeWorld) {
+        this.phalanxMaxRangeWorld = phalanxMaxRangeWorld;
+    }
+
     @Override
     public ICombatPolicy toPolicy() {
         return CombatPolicy.builder()
@@ -384,6 +420,10 @@ public final class CombatSettings implements ICombatSettings {
                 .petFoodItemRefId(petFoodItemRefId)
                 .ammoConsumingSkillRefIds(getAmmoConsumingSkillRefIds())
                 .pauseOnEmptyAmmo(pauseOnEmptyAmmo)
+                .phalanxLeaderEnabled(phalanxLeaderEnabled)
+                .phalanxFollowerEnabled(phalanxFollowerEnabled)
+                .phalanxStaleEventTimeoutMs(phalanxStaleEventTimeoutMs)
+                .phalanxMaxRangeWorld(phalanxMaxRangeWorld)
                 .build();
     }
 }

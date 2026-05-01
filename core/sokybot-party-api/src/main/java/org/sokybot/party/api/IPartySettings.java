@@ -56,6 +56,10 @@ public interface IPartySettings {
         return Collections.emptyList();
     }
 
+    default String getLeaderMachineFullName() {
+        return "";
+    }
+
     /**
      * Derives an {@link IPartyPolicy} from these settings for strategy calls.
      */

@@ -3,6 +3,7 @@ package org.sokybot.behaviors.combat.internal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -14,6 +15,7 @@ import org.sokybot.commons.SilkroadUtils;
 import org.sokybot.combat.api.CombatCycleKeys;
 import org.sokybot.combat.api.IAmmoMonitor;
 import org.sokybot.combat.api.ICombatPolicy;
+import org.sokybot.combat.api.ICombatSettings;
 import org.sokybot.combat.api.ICombatSnapshot;
 import org.sokybot.combat.api.ISkillRotation;
 import org.sokybot.combat.api.MonsterRef;
@@ -24,6 +26,12 @@ import org.sokybot.engine.api.behavior.BehaviorStatus;
 import org.sokybot.engine.api.behavior.IBehavior;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.navigation.api.WorldPoint;
+import org.sokybot.party.api.IPartyModel;
+import org.sokybot.party.api.IPartySnapshot;
+import org.sokybot.party.api.PartyMember;
+import org.sokybot.party.api.PartyRole;
+import org.sokybot.swarm.api.ISwarmEventBus;
+import org.sokybot.swarm.api.SwarmTargetEngagedEvent;
 
 @Component(service = IBehavior.class, immediate = true, scope = ServiceScope.PROTOTYPE)
 public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
@@ -38,6 +46,12 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     private volatile IAmmoMonitor ammoMonitor;
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    private volatile ISwarmEventBus swarmBus;
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    private volatile IPartyModel partyModel;
 
     @Override
     public String id() {
@@ -93,10 +107,12 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
         switch (a.getKind()) {
             case AUTO_ATTACK:
                 incrementImbueAttackCounter(context);
+                broadcastPhalanx(context, settings, snap.get(), a, SwarmTargetEngagedEvent.Kind.AUTO_ATTACK);
                 CombatPackets.sendCharActionAttack(context, target);
                 break;
             case ATTACK_SKILL:
                 incrementImbueAttackCounter(context);
+                broadcastPhalanx(context, settings, snap.get(), a, SwarmTargetEngagedEvent.Kind.ATTACK_SKILL);
                 dispatchSkillCast(context, a, target);
                 break;
             case BUFF:
@@ -187,6 +203,59 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
             }
         }
         return false;
+    }
+
+    private void broadcastPhalanx(IWorkflowContext ctx, ICombatSettings settings, ICombatSnapshot snap, SkillAction a,
+            SwarmTargetEngagedEvent.Kind kind) {
+        ISwarmEventBus bus = swarmBus;
+        IPartyModel pm = partyModel;
+        if (bus == null || !settings.isPhalanxLeaderEnabled() || pm == null) {
+            return;
+        }
+        Optional<IPartySnapshot> partyOpt = pm.snapshot(ctx.getMachineId());
+        if (!partyOpt.isPresent()) {
+            return;
+        }
+        IPartySnapshot party = partyOpt.get();
+        Integer selfEntityId = snap.getSelfEntityId().orElse(null);
+        if (selfEntityId == null) {
+            return;
+        }
+        PartyRole selfRole = PartyRole.UNKNOWN;
+        for (PartyMember m : party.getMembers()) {
+            if (m.getEntityId() == selfEntityId.intValue()) {
+                selfRole = m.getRole();
+                break;
+            }
+        }
+        if (selfRole != PartyRole.LEADER) {
+            return;
+        }
+        MonsterRef target = null;
+        for (MonsterRef m : snap.getNearbyMonsters()) {
+            if (m.getEntityId() == a.getTargetEntityId()) {
+                target = m;
+                break;
+            }
+        }
+        if (target == null) {
+            return;
+        }
+        SwarmTargetEngagedEvent evt = new SwarmTargetEngagedEvent(
+                ctx.getMachineId(),
+                System.currentTimeMillis(),
+                UUID.randomUUID().toString(),
+                kind,
+                target.getEntityId(),
+                target.getRefObjId(),
+                kind == SwarmTargetEngagedEvent.Kind.ATTACK_SKILL ? a.getSkillRefId() : 0,
+                snap.getSelfX(),
+                snap.getSelfY(),
+                snap.getSelfZ(),
+                target.getX(),
+                target.getY(),
+                target.getZ());
+        bus.publish(evt);
     }
 
     private static void dispatchSkillCast(IWorkflowContext context, SkillAction a, int targetUniqueId) {

@@ -69,7 +69,7 @@ public final class CombatPackets {
         ctx.getDispatcher().sendToServer(packet);
     }
 
-    static void sendCharActionAttack(IWorkflowContext ctx, int targetUniqueId) {
+    public static void sendCharActionAttack(IWorkflowContext ctx, int targetUniqueId) {
         MutablePacket packet = MutablePacket.getBuilder(7, ClientOpcode.CHAR_ACTION)
                 .packetEncoding(Encoding.ENCRYPTED)
                 .dataEncoding(Encoding.PLAIN)
@@ -95,7 +95,7 @@ public final class CombatPackets {
         ctx.getDispatcher().sendToServer(packet);
     }
 
-    static void sendSkillCast(IWorkflowContext ctx, int skillRefId, int targetUniqueId) {
+    public static void sendSkillCast(IWorkflowContext ctx, int skillRefId, int targetUniqueId) {
         MutablePacket packet = MutablePacket.getBuilder(10, CLIENT_SKILL_CAST)
                 .packetEncoding(Encoding.ENCRYPTED)
                 .dataEncoding(Encoding.PLAIN)

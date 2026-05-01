@@ -153,6 +153,22 @@ public interface ICombatSettings {
         return true;
     }
 
+    default boolean isPhalanxLeaderEnabled() {
+        return false;
+    }
+
+    default boolean isPhalanxFollowerEnabled() {
+        return false;
+    }
+
+    default long getPhalanxStaleEventTimeoutMs() {
+        return 350L;
+    }
+
+    default float getPhalanxMaxRangeWorld() {
+        return 100f;
+    }
+
     /**
      * Derives an {@link ICombatPolicy} from these settings for strategy calls.
      */
