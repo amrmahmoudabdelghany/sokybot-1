@@ -14,6 +14,7 @@ public final class SocialAlert {
         GM_NEARBY,
         GM_WHISPER,
         NOTICE_GM_BROADCAST,
+        FLEET_ALIGNED,
         CUSTOM
     }
 

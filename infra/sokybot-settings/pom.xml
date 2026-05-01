@@ -14,6 +14,7 @@
 
     <properties>
         <lombok.version>1.18.30</lombok.version>
+        <maven.compiler.release>11</maven.compiler.release>
     </properties>
 
     <dependencies>
@@ -64,6 +65,13 @@
             <version>1.5.1</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.event</artifactId>
+            <version>1.4.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Intentionally no sokybot-swarm-api: would create a Maven reactor cycle (swarm-api -> engine-api -> settings). -->
     </dependencies>
 
     <build>

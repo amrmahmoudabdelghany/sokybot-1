@@ -83,6 +83,13 @@
              <version>${project.version}</version>
              <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>sokybot-settings</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
         
         <!-- Game Navigation for IRuteFinder -->
         <dependency>

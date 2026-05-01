@@ -2,9 +2,16 @@ package org.sokybot.settings.internal;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
+import java.util.Map;
+
 import lombok.extern.slf4j.Slf4j;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
 import org.sokybot.settings.api.IProfileManager;
 import org.sokybot.settings.api.ISettingsProvider;
 import org.sokybot.settings.api.ISettingsRegistry;
@@ -15,7 +22,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -24,15 +30,21 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component(service = IProfileManager.class)
 public class ProfileManagerImpl implements IProfileManager {
-    
+
+    /** OSGi Event Admin topic: profile JSON written to disk (Epic #16). */
+    public static final String TOPIC_PROFILE_SAVED = "org/sokybot/profile/SAVED";
+
     private static final String DATA_DIR = "sokybot-data";
     private static final String SETTINGS_DIR = "settings";
     private static final String PROFILES_DIR = "profiles";
-    
+
     private final ObjectMapper objectMapper = new ObjectMapper();
-    
+
     private ISettingsRegistry settingsRegistry;
-    
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    private volatile EventAdmin eventAdmin;
+
     @Reference
     public void setSettingsRegistry(ISettingsRegistry settingsRegistry) {
         this.settingsRegistry = settingsRegistry;
@@ -60,7 +72,7 @@ public class ProfileManagerImpl implements IProfileManager {
             
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(profileFile, profileData);
             log.info("Saved profile '{}' for group '{}'", profileName, groupName);
-            
+            postProfileSavedEvent(groupName, profileName);
         } catch (Exception e) {
             log.error("Failed to save profile '{}' for group '{}'", profileName, groupName, e);
             throw new RuntimeException("Failed to save profile", e);
@@ -171,15 +183,30 @@ public class ProfileManagerImpl implements IProfileManager {
             
             File profileFile = profileDir.resolve(safeProfile + ".json").toFile();
             Files.write(profileFile.toPath(), json.getBytes());
-            
+
             log.info("Imported profile '{}' to group '{}'", profileName, groupName);
-            
+            postProfileSavedEvent(groupName, profileName);
         } catch (Exception e) {
             log.error("Failed to import profile '{}' to group '{}'", profileName, groupName, e);
             throw new RuntimeException("Failed to import profile", e);
         }
     }
-    
+
+    private void postProfileSavedEvent(String groupName, String profileId) {
+        EventAdmin admin = eventAdmin;
+        if (admin == null) {
+            return;
+        }
+        try {
+            Map<String, Object> props = new HashMap<>();
+            props.put("groupName", groupName);
+            props.put("profileId", profileId);
+            admin.postEvent(new Event(TOPIC_PROFILE_SAVED, props));
+        } catch (Exception e) {
+            log.warn("Failed to post profile SAVED event for group {} profile {}: {}", groupName, profileId, e.getMessage());
+        }
+    }
+
     private String sanitize(String name) {
         return name.replaceAll("[^a-zA-Z0-9.-]", "_");
     }

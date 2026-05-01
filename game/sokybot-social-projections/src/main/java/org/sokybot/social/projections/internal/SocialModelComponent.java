@@ -27,6 +27,7 @@ import org.sokybot.swarm.api.HuntAbortedEvent;
 import org.sokybot.swarm.api.HuntCompletedEvent;
 import org.sokybot.swarm.api.HuntDispatchedEvent;
 import org.sokybot.swarm.api.ISwarmEventBus;
+import org.sokybot.swarm.api.SwarmFleetAlignedEvent;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -63,7 +64,28 @@ public class SocialModelComponent implements ISocialModel {
             disposables.add(local.observe(HuntDispatchedEvent.class).subscribe(this::onHiveDispatched));
             disposables.add(local.observe(HuntCompletedEvent.class).subscribe(this::onHiveCompleted));
             disposables.add(local.observe(HuntAbortedEvent.class).subscribe(this::onHiveAborted));
+            disposables.add(local.observe(SwarmFleetAlignedEvent.class).subscribe(this::onFleetAligned));
         }
+    }
+
+    private void onFleetAligned(SwarmFleetAlignedEvent event) {
+        String machineId = event.getRequesterMachineId();
+        MachineSocialState state = states.computeIfAbsent(machineId, k -> new MachineSocialState());
+        String subject = String.format(
+                "Fleet Aligned: Profile [%s] successfully applied to %d/%d machines.",
+                event.getProfileId(),
+                event.getSuccessCount(),
+                event.getExpectedCount());
+        SocialAlert alert = new SocialAlert(
+                machineId,
+                event.getTimestampEpochMs(),
+                SocialAlert.Kind.FLEET_ALIGNED,
+                subject,
+                Map.of(
+                        "profileId", event.getProfileId(),
+                        "expectedCount", String.valueOf(event.getExpectedCount()),
+                        "successCount", String.valueOf(event.getSuccessCount())));
+        emitAlert(state, machineId, alert);
     }
 
     private void onHiveDispatched(HuntDispatchedEvent event) {

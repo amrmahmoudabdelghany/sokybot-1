@@ -15,7 +15,7 @@ public class WebhookSettings {
     private List<WebhookSinkConfig> sinks = new ArrayList<>();
     private Set<String> enabledAlertKinds = new HashSet<>(Arrays.asList(
             "GM_NEARBY", "GM_WHISPER", "UNIQUE_SPAWNED", "NOTICE_GM_BROADCAST",
-            "HIVE_DISPATCHED", "HIVE_COMPLETED", "HIVE_ABORTED"));
+            "HIVE_DISPATCHED", "HIVE_COMPLETED", "HIVE_ABORTED", "FLEET_ALIGNED"));
     private long dedupeCooldownMs = 60_000L;
     private int requestTimeoutSeconds = 8;
 

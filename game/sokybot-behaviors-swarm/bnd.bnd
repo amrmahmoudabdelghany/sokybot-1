@@ -3,7 +3,7 @@ Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
 Export-Package: org.sokybot.behaviors.swarm.routing
-Private-Package: org.sokybot.behaviors.swarm.internal, org.sokybot.behaviors.swarm, org.sokybot.behaviors.swarm.radar, org.sokybot.behaviors.swarm.hunting
+Private-Package: org.sokybot.behaviors.swarm.internal, org.sokybot.behaviors.swarm, org.sokybot.behaviors.swarm.radar, org.sokybot.behaviors.swarm.hunting, org.sokybot.behaviors.swarm.fleet
 Import-Package: \
     org.sokybot.behaviors.navigation;version="[1.0,2)", \
     org.sokybot.behaviors.logistics;version="[1.0,2)", \
@@ -25,10 +25,15 @@ Import-Package: \
     org.sokybot.persistence.entities;version="[1.0,2)", \
     org.sokybot.persistence.service;version="[1.0,2)", \
     org.sokybot.settings.api;version="[1.0,2)", \
+    org.sokybot.settings.fleet;version="[1.0,2)", \
+    com.fasterxml.jackson.core;version="[2.15,3)", \
+    com.fasterxml.jackson.core.type;version="[2.15,3)", \
+    com.fasterxml.jackson.databind;version="[2.15,3)", \
     org.sokybot.topology.api;version="[1.0,2)", \
     reactor.core;version="[3.6,4)", \
     reactor.core.publisher;version="[3.6,4)", \
     org.osgi.service.component.annotations;version="[1.5,2)", \
+    org.osgi.service.event;version="[1.4,2)", \
     org.slf4j;version="[1.7,2)", \
     *;resolution:=optional
 -dsannotations: *

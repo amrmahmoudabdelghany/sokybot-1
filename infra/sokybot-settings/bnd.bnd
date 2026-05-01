@@ -3,4 +3,4 @@ Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
 Export-Package: org.sokybot.settings.*
-Import-Package: org.sokybot.persistence.*;version="[1.0,2)", *;resolution:=optional
+Import-Package: org.sokybot.persistence.*;version="[1.0,2)", org.osgi.service.event;version="[1.4,2)", *;resolution:=optional

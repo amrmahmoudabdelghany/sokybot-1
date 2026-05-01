@@ -19,6 +19,7 @@ public final class WebhookPayloadBuilder {
     private static final int DISCORD_COLOR_HIVE_DISPATCHED = 0xD4AF37;
     private static final int DISCORD_COLOR_HIVE_COMPLETED = 0x2ECC71;
     private static final int DISCORD_COLOR_HIVE_ABORTED = 0xE74C3C;
+    private static final int DISCORD_COLOR_FLEET_ALIGNED = 0x9B59B6;
 
     private WebhookPayloadBuilder() {
     }
@@ -63,6 +64,8 @@ public final class WebhookPayloadBuilder {
                 return ":crossed_swords: HIVE_COMPLETED";
             case HIVE_ABORTED:
                 return ":x: HIVE_ABORTED";
+            case FLEET_ALIGNED:
+                return ":satellite: FLEET_ALIGNED";
             default:
                 return alert.getKind().name();
         }
@@ -79,6 +82,8 @@ public final class WebhookPayloadBuilder {
                 return DISCORD_COLOR_HIVE_COMPLETED;
             case HIVE_ABORTED:
                 return DISCORD_COLOR_HIVE_ABORTED;
+            case FLEET_ALIGNED:
+                return DISCORD_COLOR_FLEET_ALIGNED;
             default:
                 return DISCORD_COLOR_ALERT;
         }
