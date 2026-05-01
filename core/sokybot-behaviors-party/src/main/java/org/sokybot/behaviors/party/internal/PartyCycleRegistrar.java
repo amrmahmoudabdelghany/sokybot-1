@@ -2,6 +2,7 @@ package org.sokybot.behaviors.party.internal;
 
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.sokybot.behaviors.party.internal.blackhole.BlackHoleAnchorSettings;
 import org.sokybot.behaviors.party.internal.settings.PartySettings;
 import org.sokybot.engine.api.behavior.BehaviorCycleSpec;
 import org.sokybot.engine.api.behavior.IBehaviorCycleAssembler;
@@ -23,6 +24,8 @@ public final class PartyCycleRegistrar implements IActuator {
 
     private static final Logger log = LoggerFactory.getLogger(PartyCycleRegistrar.class);
 
+    private static final String BLACK_HOLE_SCOPE = "blackHole";
+
     @Reference
     private IBehaviorCycleAssembler behaviorCycleAssembler;
 
@@ -40,6 +43,9 @@ public final class PartyCycleRegistrar implements IActuator {
         }
         if (!registry.getRegisteredScopes().contains("party")) {
             registry.register("party", PartySettings.class, PartySettings::new);
+        }
+        if (!registry.getRegisteredScopes().contains(BLACK_HOLE_SCOPE)) {
+            registry.register(BLACK_HOLE_SCOPE, BlackHoleAnchorSettings.class, BlackHoleAnchorSettings::new);
         }
         ISettingsProvider<PartySettings> provider = registry.getProvider(
                 context.getGroupName(),

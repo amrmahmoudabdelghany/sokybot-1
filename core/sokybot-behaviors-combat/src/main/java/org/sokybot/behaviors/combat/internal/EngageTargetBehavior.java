@@ -31,6 +31,7 @@ import org.sokybot.party.api.IPartySnapshot;
 import org.sokybot.party.api.PartyMember;
 import org.sokybot.party.api.PartyRole;
 import org.sokybot.swarm.api.ISwarmEventBus;
+import org.sokybot.swarm.api.SwarmLureBlackboardKeys;
 import org.sokybot.swarm.api.SwarmTargetEngagedEvent;
 
 @Component(service = IBehavior.class, immediate = true, scope = ServiceScope.PROTOTYPE)
@@ -75,6 +76,10 @@ public final class EngageTargetBehavior implements IBehavior<CombatSettings> {
 
     @Override
     public boolean applies(IWorkflowContext context, CombatSettings settings) {
+        if (Boolean.TRUE.equals(
+                context.getPersistentData().getOrDefault(SwarmLureBlackboardKeys.KEY_ANCHOR_SUPPRESS_ENGAGE, Boolean.FALSE))) {
+            return false;
+        }
         Optional<ICombatSnapshot> snap = combatModel.snapshot(context.getMachineId());
         if (!snap.isPresent() || settings == null) {
             return false;
