@@ -3,6 +3,7 @@ package org.sokybot.behaviors.party.internal;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.sokybot.behaviors.party.internal.blackhole.BlackHoleAnchorSettings;
+import org.sokybot.party.api.caravan.CaravanFormationSettings;
 import org.sokybot.behaviors.party.internal.settings.PartySettings;
 import org.sokybot.party.api.PartyMatrixSettings;
 import org.sokybot.engine.api.behavior.BehaviorCycleSpec;
@@ -29,6 +30,8 @@ public final class PartyCycleRegistrar implements IActuator {
 
     private static final String PARTY_MATRIX_SCOPE = "party-matrix";
 
+    private static final String CARAVAN_SCOPE = "caravan";
+
     @Reference
     private IBehaviorCycleAssembler behaviorCycleAssembler;
 
@@ -52,6 +55,9 @@ public final class PartyCycleRegistrar implements IActuator {
         }
         if (!registry.getRegisteredScopes().contains(PARTY_MATRIX_SCOPE)) {
             registry.register(PARTY_MATRIX_SCOPE, PartyMatrixSettings.class, PartyMatrixSettings::new);
+        }
+        if (!registry.getRegisteredScopes().contains(CARAVAN_SCOPE)) {
+            registry.register(CARAVAN_SCOPE, CaravanFormationSettings.class, CaravanFormationSettings::new);
         }
         ISettingsProvider<PartySettings> provider = registry.getProvider(
                 context.getGroupName(),
