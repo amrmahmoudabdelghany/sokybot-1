@@ -2,7 +2,7 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
-Export-Package: org.sokybot.swarm.api
+Export-Package: org.sokybot.swarm.api;version="${project.version}", org.sokybot.swarm.api.sentinel;version="${project.version}"
 Private-Package: org.sokybot.swarm.api.internal
 -dsannotations: *
 Import-Package: \
