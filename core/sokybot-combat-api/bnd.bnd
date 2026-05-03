@@ -1,5 +1,5 @@
 Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
-Export-Package: org.sokybot.combat.api
+Export-Package: org.sokybot.combat.api;version="${project.version}", org.sokybot.combat.api.shapeshifter;version="${project.version}"
 Import-Package: org.sokybot.engine.api.workflow;version="[1.0,2)", org.sokybot.navigation.api;version="[1.0,2)", *;resolution:=optional

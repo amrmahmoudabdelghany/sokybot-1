@@ -2,11 +2,12 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
-Export-Package: org.sokybot.swarm.api;version="${project.version}", org.sokybot.swarm.api.sentinel;version="${project.version}"
+Export-Package: org.sokybot.swarm.api;version="${project.version}", org.sokybot.swarm.api.sentinel;version="${project.version}", org.sokybot.swarm.api.symphony;version="${project.version}", org.sokybot.swarm.api.shapeshifter;version="${project.version}", org.sokybot.swarm.api.quartermaster;version="${project.version}"
 Private-Package: org.sokybot.swarm.api.internal
 -dsannotations: *
 Import-Package: \
     org.sokybot.commons.event;version="[1.0,2)", \
+    org.sokybot.party.api.shapeshifter;version="[1.0,2)", \
     org.sokybot.navigation.api;version="[1.0,2)", \
     reactor.core;version="[3.6,4)", \
     reactor.core.publisher;version="[3.6,4)", \

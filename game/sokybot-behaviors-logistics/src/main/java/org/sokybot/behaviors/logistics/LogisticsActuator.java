@@ -8,13 +8,14 @@ import org.sokybot.engine.api.extension.IActuator;
 import org.sokybot.engine.api.extension.IActuatorContext;
 import org.sokybot.engine.api.workflow.ICycleDefinition;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
+import org.sokybot.behaviors.logistics.internal.settings.quartermaster.QuartermasterSettings;
 import org.sokybot.settings.api.ISettingsProvider;
 import org.sokybot.settings.api.ISettingsRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Registers {@code logistics} settings scope and the {@value LogisticsCycleKeys#CYCLE_NAME} workflow cycle.
+ * Registers {@code logistics} and {@code quartermaster} settings scopes and the {@value LogisticsCycleKeys#CYCLE_NAME} workflow cycle.
  */
 @Component(service = IActuator.class, immediate = true)
 public final class LogisticsActuator implements IActuator {
@@ -34,9 +35,15 @@ public final class LogisticsActuator implements IActuator {
         ISettingsRegistry registry = context.getService(ISettingsRegistry.class);
         if (registry == null) {
             log.warn("Logistics: ISettingsRegistry unavailable; scope not registered");
-        } else if (!registry.getRegisteredScopes().contains("logistics")) {
-            registry.register("logistics", LogisticsSettings.class, LogisticsSettings::new);
-            log.info("Registered 'logistics' settings scope");
+        } else {
+            if (!registry.getRegisteredScopes().contains("logistics")) {
+                registry.register("logistics", LogisticsSettings.class, LogisticsSettings::new);
+                log.info("Registered 'logistics' settings scope");
+            }
+            if (!registry.getRegisteredScopes().contains("quartermaster")) {
+                registry.register("quartermaster", QuartermasterSettings.class, QuartermasterSettings::new);
+                log.info("Registered 'quartermaster' settings scope");
+            }
         }
 
         ISettingsProvider<LogisticsSettings> provider = registry == null

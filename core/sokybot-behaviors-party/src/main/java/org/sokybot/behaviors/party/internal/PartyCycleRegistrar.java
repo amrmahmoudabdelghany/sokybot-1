@@ -5,6 +5,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.sokybot.behaviors.party.internal.blackhole.BlackHoleAnchorSettings;
 import org.sokybot.party.api.caravan.CaravanFormationSettings;
 import org.sokybot.behaviors.party.internal.settings.PartySettings;
+import org.sokybot.behaviors.party.internal.settings.shapeshifter.ShapeshifterSettings;
 import org.sokybot.party.api.PartyMatrixSettings;
 import org.sokybot.engine.api.behavior.BehaviorCycleSpec;
 import org.sokybot.engine.api.behavior.IBehaviorCycleAssembler;
@@ -32,6 +33,8 @@ public final class PartyCycleRegistrar implements IActuator {
 
     private static final String CARAVAN_SCOPE = "caravan";
 
+    private static final String SHAPESHIFTER_SCOPE = "shapeshifter";
+
     @Reference
     private IBehaviorCycleAssembler behaviorCycleAssembler;
 
@@ -58,6 +61,9 @@ public final class PartyCycleRegistrar implements IActuator {
         }
         if (!registry.getRegisteredScopes().contains(CARAVAN_SCOPE)) {
             registry.register(CARAVAN_SCOPE, CaravanFormationSettings.class, CaravanFormationSettings::new);
+        }
+        if (!registry.getRegisteredScopes().contains(SHAPESHIFTER_SCOPE)) {
+            registry.register(SHAPESHIFTER_SCOPE, ShapeshifterSettings.class, ShapeshifterSettings::new);
         }
         ISettingsProvider<PartySettings> provider = registry.getProvider(
                 context.getGroupName(),

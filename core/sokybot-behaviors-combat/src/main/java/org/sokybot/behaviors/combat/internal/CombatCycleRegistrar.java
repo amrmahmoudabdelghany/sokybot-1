@@ -8,6 +8,7 @@ import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.sokybot.behaviors.combat.internal.settings.CombatSettings;
 import org.sokybot.behaviors.combat.internal.settings.SentinelSettings;
+import org.sokybot.behaviors.combat.internal.settings.symphony.SymphonyComboSettings;
 import org.sokybot.combat.api.CombatCycleKeys;
 import org.sokybot.combat.api.ILeashAnchorStore;
 import org.sokybot.town.api.IIntentArbiter;
@@ -59,6 +60,9 @@ public final class CombatCycleRegistrar implements IActuator {
         }
         if (!registry.getRegisteredScopes().contains("sentinel")) {
             registry.register("sentinel", SentinelSettings.class, SentinelSettings::new);
+        }
+        if (!registry.getRegisteredScopes().contains("symphony")) {
+            registry.register("symphony", SymphonyComboSettings.class, SymphonyComboSettings::new);
         }
         ISettingsProvider<CombatSettings> provider = registry.getProvider(
                 context.getGroupName(),

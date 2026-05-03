@@ -35,7 +35,7 @@ public final class CombatPackets {
     /**
      * Move items between inventory/equip slots (inventory op uses {@link InventoryOperationEvent#OP_MOVE_SLOTS}).
      */
-    static void sendInventoryMoveSlot(IWorkflowContext ctx, byte sourceSlot, byte destSlot, short quantity) {
+    public static void sendInventoryMoveSlot(IWorkflowContext ctx, byte sourceSlot, byte destSlot, short quantity) {
         MutablePacket packet = MutablePacket.getBuilder(7, CLIENT_INVENTORY_OPERATION)
                 .packetEncoding(Encoding.ENCRYPTED)
                 .dataEncoding(Encoding.PLAIN)

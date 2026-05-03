@@ -30,6 +30,12 @@ public final class LogisticsCycleKeys {
     public static final String KEY_ROUTE_GENERATION = "swarm_route_generation";
     public static final String KEY_ROUTE_HOP_COUNT = "swarm_route_hop_count";
 
+    /** Epic #15: active storage dump session id (see {@code StorageDumpBehavior}). */
+    public static final String KEY_STORAGE_DUMP_SESSION_ID = "logistics_storage_dump_session_id";
+
+    /** Epic #15: when {@code KEY_STORAGE_DUMP_PHASE} entered WAIT, wall-clock ms. */
+    public static final String KEY_STORAGE_DUMP_WAIT_AT_MS = "logistics_storage_dump_wait_at_ms";
+
     private LogisticsCycleKeys() {
     }
 }

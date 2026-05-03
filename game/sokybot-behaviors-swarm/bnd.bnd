@@ -3,22 +3,30 @@ Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
 Export-Package: org.sokybot.behaviors.swarm.routing
-Private-Package: org.sokybot.behaviors.swarm.internal, org.sokybot.behaviors.swarm, org.sokybot.behaviors.swarm.radar, org.sokybot.behaviors.swarm.hunting, org.sokybot.behaviors.swarm.fleet, org.sokybot.behaviors.swarm.roster, org.sokybot.behaviors.swarm.caravan, org.sokybot.behaviors.swarm.treasury, org.sokybot.behaviors.swarm.sentinel
+Private-Package: org.sokybot.behaviors.swarm.internal, org.sokybot.behaviors.swarm, org.sokybot.behaviors.swarm.radar, org.sokybot.behaviors.swarm.hunting, org.sokybot.behaviors.swarm.fleet, org.sokybot.behaviors.swarm.roster, org.sokybot.behaviors.swarm.caravan, org.sokybot.behaviors.swarm.treasury, org.sokybot.behaviors.swarm.sentinel, org.sokybot.behaviors.swarm.symphony, org.sokybot.behaviors.swarm.shapeshifter
 Import-Package: \
     org.sokybot.behaviors.navigation;version="[1.0,2)", \
     org.sokybot.behaviors.logistics;version="[1.0,2)", \
     org.sokybot.behaviors.trade.packets;version="[1.0,2)", \
+    org.sokybot.engine;version="[1.0,2)", \
+    org.sokybot.engine.api;version="[1.0,2)", \
     org.sokybot.engine.api.behavior;version="[1.0,2)", \
     org.sokybot.engine.api.workflow;version="[1.0,2)", \
     org.sokybot.swarm.api;version="[1.0,2)", \
     org.sokybot.swarm.api.sentinel;version="[1.0,2)", \
+    org.sokybot.swarm.api.symphony;version="[1.0,2)", \
+    org.sokybot.swarm.api.shapeshifter;version="[1.0,2)", \
     org.sokybot.trade.coordination.api;version="[1.0,2)", \
     org.sokybot.trade.events;version="[1.0,2)", \
     org.sokybot.trade.projections.api;version="[1.0,2)", \
     org.sokybot.town.api;version="[1.0,2)", \
     org.sokybot.town.projections.api;version="[1.0,2)", \
     org.sokybot.gamemodel;version="[1.0,2)", \
+    org.sokybot.gamemodel.model;version="[1.0,2)", \
     org.sokybot.gameevents.events.entity;version="[1.0,2)", \
+    org.sokybot.gameevents.events.buff;version="[1.0,2)", \
+    org.sokybot.gameevents.events.skill;version="[1.0,2)", \
+    org.sokybot.gameevents.dto;version="[1.0,2)", \
     org.sokybot.gameevents.events.world;version="[1.0,2)", \
     org.sokybot.commons.event;version="[1.0,2)", \
     org.sokybot.runtime;version="[1.0,2)", \
@@ -28,13 +36,15 @@ Import-Package: \
     org.sokybot.settings.api;version="[1.0,2)", \
     org.sokybot.settings.fleet;version="[1.0,2)", \
     org.sokybot.party.api;version="[1.0,2)", \
+    org.sokybot.party.api.shapeshifter;version="[1.0,2)", \
     org.sokybot.party.api.caravan;version="[1.0,2)", \
     org.sokybot.party.coordination.api;version="[1.0,2)", \
     org.sokybot.combat.api;version="[1.0,2)", \
+    org.sokybot.combat.api.shapeshifter;version="[1.0,2)", \
     org.sokybot.combat.projections.api;version="[1.0,2)", \
     org.sokybot.behaviors.combat.internal.settings;version="[1.0,2)", \
-    org.sokybot.engine;version="[1.0,2)", \
-    org.sokybot.engine.api.workflow;version="[1.0,2)", \
+    org.sokybot.behaviors.combat.internal.settings.symphony;version="[1.0,2)", \
+    org.sokybot.behaviors.party.internal.settings.shapeshifter;version="[1.0,2)", \
     com.fasterxml.jackson.core;version="[2.15,3)", \
     com.fasterxml.jackson.core.type;version="[2.15,3)", \
     com.fasterxml.jackson.databind;version="[2.15,3)", \
