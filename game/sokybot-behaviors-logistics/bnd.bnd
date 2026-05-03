@@ -3,16 +3,21 @@ Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
 Export-Package: org.sokybot.behaviors.logistics
-Private-Package: org.sokybot.behaviors.logistics.internal, org.sokybot.behaviors.logistics.internal.quartermaster, org.sokybot.behaviors.logistics.internal.settings.quartermaster, org.sokybot.behaviors.logistics.quartermaster
+Private-Package: org.sokybot.behaviors.logistics.internal, org.sokybot.behaviors.logistics.internal.quartermaster, org.sokybot.behaviors.logistics.internal.settings.quartermaster, org.sokybot.behaviors.logistics.quartermaster, org.sokybot.behaviors.logistics.router
 Import-Package: \
     org.sokybot.storage.api;version="[1.0,2)", \
     org.sokybot.engine;version="[1.0,2)", \
     org.sokybot.engine.api.behavior;version="[1.0,2)", \
     org.sokybot.engine.api.workflow;version="[1.0,2)", \
     org.sokybot.engine.api.extension;version="[1.0,2)", \
+    org.sokybot.network;version="[1.0,2)", \
+    org.sokybot.network.packet;version="[1.0,2)", \
     org.sokybot.runtime;version="[1.0,2)", \
     org.sokybot.swarm.api;version="[1.0,2)", \
+    org.sokybot.swarm.api.router;version="[1.0,2)", \
     org.sokybot.swarm.api.quartermaster;version="[1.0,2)", \
+    org.sokybot.router.api;version="[1.0,2)", \
+    org.sokybot.router.domain;version="[1.0,2)", \
     org.sokybot.trade.coordination.api;version="[1.0,2)", \
     org.sokybot.trade.events;version="[1.0,2)", \
     org.sokybot.town.api;version="[1.0,2)", \

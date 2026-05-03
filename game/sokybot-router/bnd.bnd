@@ -1,0 +1,22 @@
+Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
+Bundle-Name: ${project.name}
+Bundle-Version: ${project.version}
+Bundle-Description: ${project.description}
+Export-Package: org.sokybot.router.domain;version="${project.version}", org.sokybot.router.api;version="${project.version}"
+Private-Package: org.sokybot.router.constraints, org.sokybot.router.solver
+Import-Package: \
+    ai.timefold.solver.core.api.domain.*;version="[1.14,2)", \
+    ai.timefold.solver.core.api.score.*;version="[1.14,2)", \
+    ai.timefold.solver.core.api.score.stream.*;version="[1.14,2)", \
+    ai.timefold.solver.core.api.solver;version="[1.14,2)", \
+    ai.timefold.solver.core.api.solver.*;version="[1.14,2)", \
+    ai.timefold.solver.core.config.solver;version="[1.14,2)", \
+    ai.timefold.solver.core.config.solver.*;version="[1.14,2)", \
+    ai.timefold.solver.core.config.solver.termination;version="[1.14,2)", \
+    org.slf4j;version="[1.7,2)", \
+    reactor.core;version="[3.6,4)", \
+    reactor.core.publisher;version="[3.6,4)", \
+    reactor.core.scheduler;version="[3.6,4)", \
+    org.osgi.service.component.annotations;version="[1.5,2)", \
+    *;resolution:=optional
+-dsannotations: *
