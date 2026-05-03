@@ -17,6 +17,12 @@ public final class PartyCycleKeys {
     public static final String BEHAVIOR_BUFF_PARTY = "partyBuff";
     public static final String BEHAVIOR_FOLLOW_LEADER = "partyFollowLeader";
 
+    /** Epic #17: recruit walks to swarm rally point during party cycle. */
+    public static final String BEHAVIOR_ROSTER_RALLY_PARTY = "party.rosterRally";
+
+    /** Epic #17: leader auto-invite when recruit is in matrix proximity. */
+    public static final String BEHAVIOR_ROSTER_LEADER_INVITE = "party.rosterLeaderInvite";
+
     /**
      * Blackboard keys on {@link org.sokybot.engine.api.workflow.IWorkflowContext#getPersistentData()}.
      */

@@ -98,6 +98,16 @@ public final class PartyDirectoryComponent implements IPartyDirectory {
         return Optional.empty();
     }
 
+    @Override
+    public Optional<String> resolveMachineForCharacterName(String characterName) {
+        String key = normalize(characterName);
+        if (key == null) {
+            return Optional.empty();
+        }
+        String machine = machineByCharacterName.get(key);
+        return machine == null ? Optional.empty() : Optional.of(machine);
+    }
+
     private void onCharacterLoaded(CharacterLoadedEvent event) {
         String machine = normalize(event.getFullName());
         String character = normalize(event.getCharacterName());

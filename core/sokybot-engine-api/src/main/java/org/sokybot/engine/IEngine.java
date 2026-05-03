@@ -1,8 +1,11 @@
 package org.sokybot.engine;
 
+import java.util.Optional;
+
 import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.EngineEvent;
 import org.sokybot.engine.api.event.Wake;
+import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.api.IDispatcher;
 
@@ -90,6 +93,13 @@ public interface IEngine extends AutoCloseable {
      * @return The dispatcher
      */
     IDispatcher getDispatcher();
+
+    /**
+     * Workflow blackboard for integrations (e.g. cross-cutting dispatch wiring). Default: not exposed.
+     */
+    default Optional<IWorkflowContext> optionalWorkflowContext() {
+        return Optional.empty();
+    }
 
     /**
      * Gets the group name.

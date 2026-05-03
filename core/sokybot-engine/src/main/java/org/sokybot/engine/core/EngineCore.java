@@ -6,6 +6,7 @@ import org.sokybot.engine.api.EngineState;
 import org.sokybot.engine.api.event.Wake;
 import org.sokybot.engine.api.handler.IEngineEventHandler;
 import org.sokybot.engine.api.handler.IEngineEventMediator;
+import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.engine.api.workflow.IWorkflowRegistry;
 import org.sokybot.engine.core.dispatcher.DispatcherImpl;
 import org.sokybot.engine.core.execution.ParentCycleExecutor;
@@ -28,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -317,6 +319,11 @@ public class EngineCore implements IEngine {
     @Override
     public DispatcherImpl getDispatcher() {
         return dispatcher;
+    }
+
+    @Override
+    public Optional<IWorkflowContext> optionalWorkflowContext() {
+        return Optional.of(workflowContext);
     }
 
     /**
