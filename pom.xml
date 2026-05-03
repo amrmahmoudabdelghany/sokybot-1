@@ -36,6 +36,8 @@
 		<dependency.slf4j-api.version>${slf4j.version}</dependency.slf4j-api.version>
 		<jackson.version>2.15.2</jackson.version>
 		<lombok.version>1.18.30</lombok.version>
+		<!-- Epic #23 War Room: Timefold constraint solver -->
+		<timefold.solver.version>1.14.0</timefold.solver.version>
 
 		<!-- Plugin Versions -->
 		<bnd.version>6.4.0</bnd.version>
@@ -123,6 +125,12 @@
 				<version>${reactor-bom.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>ai.timefold.solver</groupId>
+				<artifactId>timefold-solver-core</artifactId>
+				<version>${timefold.solver.version}</version>
 			</dependency>
 
 

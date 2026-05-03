@@ -17,6 +17,9 @@ final class PartyPackets {
     /** Party invite by character name (RSBot/vSRO-style client opcode). */
     static final int CLIENT_PARTY_INVITE = 0x7060;
 
+    /** Leave current party (placeholder opcode; tune per shard if needed). */
+    public static final int CLIENT_PARTY_LEAVE = 0x7061;
+
     /**
      * Party invite response / accept-decline (project uses the same opcode family as server notification
      * {@code 0x3080}; tune per shard if the client uses a different request opcode).
@@ -30,6 +33,21 @@ final class PartyPackets {
     private static final int CLIENT_CHAR_MOVEMENT = ClientOpcode.CHAR_MOVEMENT;
 
     private PartyPackets() {
+    }
+
+    /**
+     * Sends an empty client party-leave packet (Epic #23 War Room execution).
+     */
+    public static void sendPartyLeave(IWorkflowContext ctx) {
+        if (ctx == null) {
+            return;
+        }
+        MutablePacket packet = MutablePacket.getBuilder(0, CLIENT_PARTY_LEAVE)
+                .packetEncoding(Encoding.ENCRYPTED)
+                .dataEncoding(Encoding.PLAIN)
+                .packetSource(NetworkPeer.BOT)
+                .build();
+        ctx.getDispatcher().sendToServer(packet);
     }
 
     static void sendInvite(IWorkflowContext ctx, String characterName) {

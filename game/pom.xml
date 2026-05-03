@@ -39,5 +39,6 @@
         <module>sokybot-behaviors-navigation</module>
         <module>sokybot-behaviors-swarm</module>
         <module>sokybot-behaviors-hunting</module>
+        <module>sokybot-war-room</module>
     </modules>
 </project>

@@ -3,7 +3,7 @@ Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
 Export-Package: org.sokybot.behaviors.swarm.routing
-Private-Package: org.sokybot.behaviors.swarm.internal, org.sokybot.behaviors.swarm, org.sokybot.behaviors.swarm.radar, org.sokybot.behaviors.swarm.hunting, org.sokybot.behaviors.swarm.fleet, org.sokybot.behaviors.swarm.roster, org.sokybot.behaviors.swarm.caravan, org.sokybot.behaviors.swarm.treasury, org.sokybot.behaviors.swarm.sentinel, org.sokybot.behaviors.swarm.symphony, org.sokybot.behaviors.swarm.shapeshifter
+Private-Package: org.sokybot.behaviors.swarm.internal, org.sokybot.behaviors.swarm, org.sokybot.behaviors.swarm.radar, org.sokybot.behaviors.swarm.hunting, org.sokybot.behaviors.swarm.fleet, org.sokybot.behaviors.swarm.roster, org.sokybot.behaviors.swarm.caravan, org.sokybot.behaviors.swarm.treasury, org.sokybot.behaviors.swarm.sentinel, org.sokybot.behaviors.swarm.symphony, org.sokybot.behaviors.swarm.shapeshifter, org.sokybot.behaviors.swarm.warroom
 Import-Package: \
     org.sokybot.behaviors.navigation;version="[1.0,2)", \
     org.sokybot.behaviors.logistics;version="[1.0,2)", \
@@ -13,6 +13,9 @@ Import-Package: \
     org.sokybot.engine.api.behavior;version="[1.0,2)", \
     org.sokybot.engine.api.workflow;version="[1.0,2)", \
     org.sokybot.swarm.api;version="[1.0,2)", \
+    org.sokybot.swarm.api.warroom;version="[1.0,2)", \
+    org.sokybot.warroom.api;version="[1.0,2)", \
+    org.sokybot.warroom.domain;version="[1.0,2)", \
     org.sokybot.swarm.api.sentinel;version="[1.0,2)", \
     org.sokybot.swarm.api.symphony;version="[1.0,2)", \
     org.sokybot.swarm.api.shapeshifter;version="[1.0,2)", \
