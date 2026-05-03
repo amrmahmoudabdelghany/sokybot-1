@@ -35,4 +35,7 @@ public class LogisticsSettings {
 
     /** Mule-side: max time from claim to exchange completion before abort. */
     private long jobTimeoutMs = 120_000L;
+
+    /** Treasury Mesh (Epic #19): baseline inventory targets and distress tuning. */
+    private ResourceBaselineSettings treasuryBaseline = new ResourceBaselineSettings();
 }
