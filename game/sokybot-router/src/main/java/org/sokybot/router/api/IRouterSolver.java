@@ -9,5 +9,8 @@ import reactor.core.publisher.Mono;
  */
 public interface IRouterSolver {
 
-    Mono<RouterPlan> calculateFieldLogistics(List<LogisticsBotDto> bots, List<LogisticsItemDto> items);
+    Mono<RouterPlan> calculateFieldLogistics(
+            List<LogisticsBotDto> bots,
+            List<LogisticsItemDto> items,
+            RouterPlan previousPlan);
 }

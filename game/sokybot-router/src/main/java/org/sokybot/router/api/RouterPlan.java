@@ -1,5 +1,6 @@
 package org.sokybot.router.api;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -8,7 +9,9 @@ import java.util.Objects;
 /**
  * Immutable router outcome: designated mule and proposed trades.
  */
-public final class RouterPlan {
+public final class RouterPlan implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String muleMachineId;
     private final List<TradeMoveDto> trades;

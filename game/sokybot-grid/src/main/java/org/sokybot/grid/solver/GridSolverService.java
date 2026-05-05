@@ -2,6 +2,7 @@ package org.sokybot.grid.solver;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +74,7 @@ public final class GridSolverService implements IGridSolver {
     }
 
     @Override
-    public Mono<GridPlan> calculateOptimalFormation(List<GridBotDto> bots, List<GridNodeDto> nodes) {
+    public Mono<GridPlan> calculateOptimalFormation(List<GridBotDto> bots, List<GridNodeDto> nodes, GridPlan previousPlan) {
         SolverManager<GridSolution, UUID> mgr = solverManager;
         if (mgr == null) {
             return Mono.error(new IllegalStateException("GridSolverService: SolverManager not available"));
@@ -81,17 +82,20 @@ public final class GridSolverService implements IGridSolver {
         Objects.requireNonNull(bots, "bots");
         Objects.requireNonNull(nodes, "nodes");
 
-        return Mono.fromCallable(() -> solveBlocking(mgr, bots, nodes)).subscribeOn(Schedulers.boundedElastic());
+        return Mono.fromCallable(() -> solveBlocking(mgr, bots, nodes, previousPlan))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     private static GridPlan solveBlocking(
             SolverManager<GridSolution, UUID> mgr,
             List<GridBotDto> bots,
-            List<GridNodeDto> nodes) {
+            List<GridNodeDto> nodes,
+            GridPlan previousPlan) {
         GridSolution initialSolution = new GridSolution();
         initialSolution.setBotList(mapBotsFromDtos(bots));
         initialSolution.setNodeList(mapNodesFromDtos(nodes));
         initialSolution.setScore(HardSoftScore.ZERO);
+        applyWarmStart(initialSolution, previousPlan);
 
         UUID problemId = UUID.randomUUID();
         SolverJob<GridSolution, UUID> solverJob = mgr.solve(problemId, initialSolution);
@@ -105,6 +109,37 @@ public final class GridSolverService implements IGridSolver {
             throw new IllegalStateException("Grid solving failed or was interrupted", e);
         }
         return toGridPlan(solution);
+    }
+
+    private static void applyWarmStart(GridSolution initialSolution, GridPlan previousPlan) {
+        if (previousPlan == null || previousPlan.getBotAssignments() == null) {
+            return;
+        }
+        Map<String, GridNodeDto> assignments = previousPlan.getBotAssignments();
+        List<GridBotEntity> botList = initialSolution.getBotList();
+        List<GridNode> nodeList = initialSolution.getNodeList();
+        if (botList == null || nodeList == null) {
+            return;
+        }
+        Map<String, GridNode> nodeById = new HashMap<>();
+        for (GridNode node : nodeList) {
+            if (node != null && node.getNodeId() != null) {
+                nodeById.put(node.getNodeId(), node);
+            }
+        }
+        for (GridBotEntity bot : botList) {
+            if (bot == null || bot.getMachineId() == null) {
+                continue;
+            }
+            GridNodeDto prevNodeDto = assignments.get(bot.getMachineId());
+            if (prevNodeDto == null) {
+                continue;
+            }
+            GridNode matchingNode = nodeById.get(prevNodeDto.getNodeId());
+            if (matchingNode != null) {
+                bot.setAssignedNode(matchingNode);
+            }
+        }
     }
 
     private static List<GridBotEntity> mapBotsFromDtos(List<GridBotDto> dtos) {

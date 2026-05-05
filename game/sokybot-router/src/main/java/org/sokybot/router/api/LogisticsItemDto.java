@@ -1,11 +1,14 @@
 package org.sokybot.router.api;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Router logistics input: one inventory stack (no Timefold types).
  */
-public final class LogisticsItemDto {
+public final class LogisticsItemDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String uniqueItemId;
     private final int slotsTaken;

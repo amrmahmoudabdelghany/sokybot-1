@@ -73,7 +73,10 @@ public final class RouterSolverService implements IRouterSolver {
     }
 
     @Override
-    public Mono<RouterPlan> calculateFieldLogistics(List<LogisticsBotDto> bots, List<LogisticsItemDto> items) {
+    public Mono<RouterPlan> calculateFieldLogistics(
+            List<LogisticsBotDto> bots,
+            List<LogisticsItemDto> items,
+            RouterPlan previousPlan) {
         SolverManager<RouterSolution, UUID> mgr = solverManager;
         if (mgr == null) {
             return Mono.error(new IllegalStateException("RouterSolverService: SolverManager not available"));
@@ -81,18 +84,21 @@ public final class RouterSolverService implements IRouterSolver {
         Objects.requireNonNull(bots, "bots");
         Objects.requireNonNull(items, "items");
 
-        return Mono.fromCallable(() -> solveBlocking(mgr, bots, items)).subscribeOn(Schedulers.boundedElastic());
+        return Mono.fromCallable(() -> solveBlocking(mgr, bots, items, previousPlan))
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     private static RouterPlan solveBlocking(
             SolverManager<RouterSolution, UUID> mgr,
             List<LogisticsBotDto> bots,
-            List<LogisticsItemDto> items) {
+            List<LogisticsItemDto> items,
+            RouterPlan previousPlan) {
         RouterSolution initialSolution = new RouterSolution();
         initialSolution.setBotList(mapBotsFromDtos(bots));
         initialSolution.setItemList(mapItemsFromDtos(items));
         initialSolution.setBooleanList(Arrays.asList(Boolean.TRUE, Boolean.FALSE));
         initialSolution.setScore(HardSoftScore.ZERO);
+        applyMuleWarmStart(initialSolution, previousPlan);
 
         UUID problemId = UUID.randomUUID();
         SolverJob<RouterSolution, UUID> solverJob = mgr.solve(problemId, initialSolution);
@@ -107,6 +113,27 @@ public final class RouterSolverService implements IRouterSolver {
             throw new IllegalStateException("Router solving failed or was interrupted", cause);
         }
         return toRouterPlan(solution);
+    }
+
+    private static void applyMuleWarmStart(RouterSolution initialSolution, RouterPlan previousPlan) {
+        if (previousPlan == null || previousPlan.getMuleMachineId() == null) {
+            return;
+        }
+        String muleId = previousPlan.getMuleMachineId();
+        List<SwarmBotEntity> botList = initialSolution.getBotList();
+        if (botList == null) {
+            return;
+        }
+        for (SwarmBotEntity bot : botList) {
+            if (bot == null) {
+                continue;
+            }
+            if (Objects.equals(muleId, bot.getMachineId())) {
+                bot.setIsMule(Boolean.TRUE);
+            } else {
+                bot.setIsMule(Boolean.FALSE);
+            }
+        }
     }
 
     private static List<SwarmBotEntity> mapBotsFromDtos(List<LogisticsBotDto> dtos) {

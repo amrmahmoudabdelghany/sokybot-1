@@ -9,5 +9,5 @@ import reactor.core.publisher.Mono;
  */
 public interface IGridSolver {
 
-    Mono<GridPlan> calculateOptimalFormation(List<GridBotDto> bots, List<GridNodeDto> nodes);
+    Mono<GridPlan> calculateOptimalFormation(List<GridBotDto> bots, List<GridNodeDto> nodes, GridPlan previousPlan);
 }

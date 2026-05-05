@@ -1,5 +1,10 @@
 package org.sokybot.behaviors.logistics.router;
 
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -45,6 +50,10 @@ public final class RouterOrchestrator {
 
     private static final String REQUESTER = "router-orchestrator";
 
+    private static final Path PLAN_FILE = Paths.get("sokybot-data", "router-plan.ser");
+
+    private volatile RouterPlan lastPlan;
+
     @Reference
     private ISwarmEventBus swarmEventBus;
 
@@ -61,6 +70,13 @@ public final class RouterOrchestrator {
 
     @Activate
     void activate() {
+        if (Files.exists(PLAN_FILE)) {
+            try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(PLAN_FILE))) {
+                lastPlan = (RouterPlan) ois.readObject();
+            } catch (Exception e) {
+                log.warn("Failed to load previous router plan", e);
+            }
+        }
         ISwarmEventBus bus = swarmEventBus;
         if (bus == null) {
             log.warn("RouterOrchestrator: ISwarmEventBus unavailable");
@@ -138,10 +154,21 @@ public final class RouterOrchestrator {
             return;
         }
 
-        solver.calculateFieldLogistics(bots, items)
+        RouterPlan previousPlan = lastPlan;
+        solver.calculateFieldLogistics(bots, items, previousPlan)
                 .doOnError(err -> log.warn("RouterOrchestrator: solver failed: {}", err.toString()))
                 .subscribe(
                         plan -> {
+                            lastPlan = plan;
+                            try {
+                                Files.createDirectories(PLAN_FILE.getParent());
+                                try (ObjectOutputStream oos =
+                                        new ObjectOutputStream(Files.newOutputStream(PLAN_FILE))) {
+                                    oos.writeObject(plan);
+                                }
+                            } catch (Exception e) {
+                                log.error("Failed to save router plan", e);
+                            }
                             try {
                                 publishRouterOutcome(bus, ctx, town, event, plan);
                             } catch (Exception ex) {

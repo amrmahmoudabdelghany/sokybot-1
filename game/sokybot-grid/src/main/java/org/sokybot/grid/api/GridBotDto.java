@@ -1,11 +1,14 @@
 package org.sokybot.grid.api;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Hunting Grid solver input for one bot (no Timefold types).
  */
-public final class GridBotDto {
+public final class GridBotDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String machineId;
     private final double attackRange;

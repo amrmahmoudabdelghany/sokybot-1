@@ -1,5 +1,10 @@
 package org.sokybot.behaviors.swarm.grid;
 
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +37,7 @@ import org.sokybot.town.projections.api.ITownModel;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -50,6 +56,10 @@ public final class GridOrchestrator {
 
     private static final int NODE_COUNT = 30;
 
+    private static final Path GRID_PLAN_FILE = Paths.get("sokybot-data", "grid-plan.ser");
+
+    private volatile GridPlan lastGridPlan;
+
     @Reference
     private ISwarmEventBus swarmEventBus;
 
@@ -66,6 +76,13 @@ public final class GridOrchestrator {
 
     @Activate
     void activate() {
+        if (Files.exists(GRID_PLAN_FILE)) {
+            try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(GRID_PLAN_FILE))) {
+                lastGridPlan = (GridPlan) ois.readObject();
+            } catch (Exception e) {
+                log.warn("Failed to load previous grid plan", e);
+            }
+        }
         timerDisposable = Flux.interval(Duration.ofSeconds(60)).subscribe(this::calculateGrid);
     }
 
@@ -155,16 +172,28 @@ public final class GridOrchestrator {
                     }
 
                     final long tickVal = tick != null ? tick.longValue() : -1L;
-                    solver.calculateOptimalFormation(bots, nodes)
-                            .subscribe(
-                                    plan -> {
-                                        try {
-                                            publishFormation(bus, plan, tickVal);
-                                        } catch (Exception ex) {
-                                            log.warn("GridOrchestrator: publish failed: {}", ex.getMessage());
-                                        }
-                                    },
-                                    err -> log.error("GridOrchestrator: solver failed: {}", err.toString()));
+                    GridPlan previousPlanSnapshot = lastGridPlan;
+                    Mono<GridPlan> formationMono =
+                            solver.calculateOptimalFormation(bots, nodes, previousPlanSnapshot);
+                    formationMono.subscribe(
+                            plan -> {
+                                lastGridPlan = plan;
+                                try {
+                                    Files.createDirectories(GRID_PLAN_FILE.getParent());
+                                    try (ObjectOutputStream oos =
+                                            new ObjectOutputStream(Files.newOutputStream(GRID_PLAN_FILE))) {
+                                        oos.writeObject(plan);
+                                    }
+                                } catch (Exception e) {
+                                    log.error("Failed to save grid plan", e);
+                                }
+                                try {
+                                    publishFormation(bus, plan, tickVal);
+                                } catch (Exception ex) {
+                                    log.warn("GridOrchestrator: publish failed: {}", ex.getMessage());
+                                }
+                            },
+                            err -> log.error("GridOrchestrator: solver failed: {}", err.toString()));
                 }
             } catch (Exception ex) {
                 log.warn("GridOrchestrator: group iteration failed: {}", ex.getMessage());

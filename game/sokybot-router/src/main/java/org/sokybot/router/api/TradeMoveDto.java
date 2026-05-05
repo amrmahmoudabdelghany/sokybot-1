@@ -1,11 +1,14 @@
 package org.sokybot.router.api;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * One cross-bot item move proposed by the router solver (ACL output).
  */
-public final class TradeMoveDto {
+public final class TradeMoveDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String fromMachineId;
     private final String toMachineId;

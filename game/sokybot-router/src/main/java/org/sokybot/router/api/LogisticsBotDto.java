@@ -1,11 +1,14 @@
 package org.sokybot.router.api;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Router logistics input: one bot carrying capacity (no Timefold types).
  */
-public final class LogisticsBotDto {
+public final class LogisticsBotDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String machineId;
     private final int maxCapacity;

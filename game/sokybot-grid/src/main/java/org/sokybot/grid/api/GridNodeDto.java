@@ -1,11 +1,14 @@
 package org.sokybot.grid.api;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 /**
  * Hunting Grid solver input for one discrete node (no Timefold types).
  */
-public final class GridNodeDto {
+public final class GridNodeDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String nodeId;
     private final double x;

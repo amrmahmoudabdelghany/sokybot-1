@@ -1,5 +1,6 @@
 package org.sokybot.grid.api;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -8,7 +9,9 @@ import java.util.Objects;
 /**
  * Immutable grid assignment: machine id → assigned hold node.
  */
-public final class GridPlan {
+public final class GridPlan implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final Map<String, GridNodeDto> botAssignments;
 
