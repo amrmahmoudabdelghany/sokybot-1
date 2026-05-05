@@ -41,5 +41,6 @@
         <module>sokybot-behaviors-hunting</module>
         <module>sokybot-war-room</module>
         <module>sokybot-router</module>
+        <module>sokybot-grid</module>
     </modules>
 </project>
