@@ -9,5 +9,8 @@ import reactor.core.publisher.Mono;
  */
 public interface IWarRoomSolver {
 
-    Mono<WarRoomPlan> calculateOptimalRoster(List<SwarmBotDto> availableBots, int numberOfParties);
+    Mono<WarRoomPlan> calculateOptimalRoster(
+            List<SwarmBotDto> availableBots,
+            int numberOfParties,
+            WarRoomPlan previousPlan);
 }

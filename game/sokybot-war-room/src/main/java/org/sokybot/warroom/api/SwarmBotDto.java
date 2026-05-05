@@ -1,5 +1,6 @@
 package org.sokybot.warroom.api;
 
+import java.io.Serializable;
 import java.util.Objects;
 
 import org.sokybot.party.api.shapeshifter.SwarmTacticalRole;
@@ -7,7 +8,9 @@ import org.sokybot.party.api.shapeshifter.SwarmTacticalRole;
 /**
  * Transport shape for War Room roster input (no Timefold / planning annotations).
  */
-public final class SwarmBotDto {
+public final class SwarmBotDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final String machineId;
     private final int level;

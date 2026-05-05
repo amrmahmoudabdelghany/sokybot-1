@@ -1,5 +1,10 @@
 package org.sokybot.behaviors.swarm.warroom;
 
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -43,6 +48,10 @@ public final class WarRoomOrchestrator {
 
     private static final String REQUESTER = "war-room";
 
+    private static final Path PLAN_FILE = Paths.get("sokybot-data", "warroom-plan.ser");
+
+    private volatile WarRoomPlan lastPlan;
+
     @Reference
     private ISwarmEventBus swarmEventBus;
 
@@ -56,6 +65,13 @@ public final class WarRoomOrchestrator {
 
     @Activate
     void activate() {
+        if (Files.exists(PLAN_FILE)) {
+            try (ObjectInputStream ois = new ObjectInputStream(Files.newInputStream(PLAN_FILE))) {
+                lastPlan = (WarRoomPlan) ois.readObject();
+            } catch (Exception e) {
+                log.warn("Failed to load previous plan", e);
+            }
+        }
         ISwarmEventBus bus = swarmEventBus;
         if (bus == null) {
             log.warn("WarRoomOrchestrator: ISwarmEventBus unavailable");
@@ -142,11 +158,22 @@ public final class WarRoomOrchestrator {
 
         int numberOfParties = Math.max(1, (int) Math.ceil(botDtos.size() / 8.0));
 
-        solver.calculateOptimalRoster(botDtos, numberOfParties)
+        WarRoomPlan previousPlan = lastPlan;
+        solver.calculateOptimalRoster(botDtos, numberOfParties, previousPlan)
                 .doOnError(err -> log.warn("WarRoomOrchestrator: solver failed: {}", err.toString()))
                 .onErrorResume(err -> Mono.empty())
                 .subscribe(
                         plan -> {
+                            lastPlan = plan;
+                            try {
+                                Files.createDirectories(PLAN_FILE.getParent());
+                                try (ObjectOutputStream oos =
+                                        new ObjectOutputStream(Files.newOutputStream(PLAN_FILE))) {
+                                    oos.writeObject(plan);
+                                }
+                            } catch (Exception e) {
+                                log.error("Failed to save plan", e);
+                            }
                             try {
                                 publishPartyCommands(bus, plan);
                             } catch (Exception ex) {

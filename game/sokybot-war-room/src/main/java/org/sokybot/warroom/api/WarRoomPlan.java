@@ -1,5 +1,6 @@
 package org.sokybot.warroom.api;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -10,7 +11,9 @@ import java.util.Objects;
 /**
  * Party roster result: each leader maps to the machine ids in that party (including the leader).
  */
-public final class WarRoomPlan {
+public final class WarRoomPlan implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private final Map<String, List<String>> partyAssignments;
 

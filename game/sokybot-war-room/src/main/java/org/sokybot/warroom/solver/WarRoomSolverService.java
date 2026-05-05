@@ -73,7 +73,10 @@ public final class WarRoomSolverService implements IWarRoomSolver {
     }
 
     @Override
-    public Mono<WarRoomPlan> calculateOptimalRoster(List<SwarmBotDto> availableBots, int numberOfParties) {
+    public Mono<WarRoomPlan> calculateOptimalRoster(
+            List<SwarmBotDto> availableBots,
+            int numberOfParties,
+            WarRoomPlan previousPlan) {
         SolverManager<PartyRosterSolution, UUID> mgr = solverManager;
         if (mgr == null) {
             return Mono.error(new IllegalStateException("WarRoomSolverService: SolverManager not available"));
@@ -83,15 +86,17 @@ public final class WarRoomSolverService implements IWarRoomSolver {
         }
         Objects.requireNonNull(availableBots, "availableBots");
 
-        return Mono.fromCallable(() -> solveBlocking(mgr, availableBots, numberOfParties))
+        return Mono.fromCallable(() -> solveBlocking(mgr, availableBots, numberOfParties, previousPlan))
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
     private static WarRoomPlan solveBlocking(
             SolverManager<PartyRosterSolution, UUID> mgr,
             List<SwarmBotDto> availableBots,
-            int numberOfParties) {
+            int numberOfParties,
+            WarRoomPlan previousPlan) {
         PartyRosterSolution initialSolution = buildInitialSolution(availableBots, numberOfParties);
+        applyWarmStart(initialSolution, previousPlan);
         UUID problemId = UUID.randomUUID();
         SolverJob<PartyRosterSolution, UUID> solverJob = mgr.solve(problemId, initialSolution);
         PartyRosterSolution solution;
@@ -162,6 +167,50 @@ public final class WarRoomSolverService implements IWarRoomSolver {
         initialSolution.setBotList(mapDtosToEntities(availableBots));
         initialSolution.setScore(HardSoftScore.ZERO);
         return initialSolution;
+    }
+
+    /**
+     * Assigns parties from a persisted plan so Timefold sees a feasible partial solution (warm start).
+     */
+    private static void applyWarmStart(PartyRosterSolution initialSolution, WarRoomPlan previousPlan) {
+        if (previousPlan == null) {
+            return;
+        }
+        Map<String, List<String>> assignments = previousPlan.getPartyAssignments();
+        if (assignments == null || assignments.isEmpty()) {
+            return;
+        }
+        List<WarRoomParty> parties = initialSolution.getPartyList();
+        List<SwarmBotEntity> bots = initialSolution.getBotList();
+        if (parties == null || parties.isEmpty() || bots == null || bots.isEmpty()) {
+            return;
+        }
+        Map<String, SwarmBotEntity> botByMachineId = new HashMap<>();
+        for (SwarmBotEntity bot : bots) {
+            if (bot != null && bot.getMachineId() != null) {
+                botByMachineId.put(bot.getMachineId(), bot);
+            }
+        }
+        int partyIndex = 0;
+        for (Map.Entry<String, List<String>> entry : assignments.entrySet()) {
+            if (partyIndex >= parties.size()) {
+                break;
+            }
+            WarRoomParty party = parties.get(partyIndex);
+            List<String> memberIds = entry.getValue();
+            if (memberIds != null) {
+                for (String memberId : memberIds) {
+                    if (memberId == null) {
+                        continue;
+                    }
+                    SwarmBotEntity entity = botByMachineId.get(memberId);
+                    if (entity != null) {
+                        entity.setAssignedParty(party);
+                    }
+                }
+            }
+            partyIndex++;
+        }
     }
 
     private static List<SwarmBotEntity> mapDtosToEntities(List<SwarmBotDto> dtos) {
