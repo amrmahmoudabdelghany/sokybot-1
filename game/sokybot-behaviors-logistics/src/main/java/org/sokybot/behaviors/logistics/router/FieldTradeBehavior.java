@@ -3,6 +3,7 @@ package org.sokybot.behaviors.logistics.router;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -28,16 +29,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Epic #24 Phase 4: placeholder execution for router-emitted peer trades (logistics cycle).
+ * Epic #24 Phase 4: rate-limited trade handshake for router-emitted peer trades (logistics cycle).
  */
 @Component(service = IBehavior.class, immediate = true, scope = ServiceScope.PROTOTYPE, property = "order=3")
 public final class FieldTradeBehavior implements IBehavior<LogisticsSettings> {
 
     private static final Logger log = LoggerFactory.getLogger(FieldTradeBehavior.class);
 
+    private static final long ACTION_EPSILON_MS = 1000L;
+    private static final long AWAIT_TIMEOUT_MS = 10_000L;
+
     /** Shared across prototype {@link IBehavior} instances for the same swarm-wide trade queue. */
-    private static final ConcurrentHashMap<String, SwarmTradeCommandEvent> pendingTrades =
-            new ConcurrentHashMap<>();
+    private static final ConcurrentMap<String, ActiveTradeState> pendingTrades = new ConcurrentHashMap<>();
 
     private static volatile ISokybotContext activeSokybotContext;
 
@@ -50,6 +53,60 @@ public final class FieldTradeBehavior implements IBehavior<LogisticsSettings> {
     private static final Object BUS_LOCK = new Object();
 
     private static final String BEHAVIOR_ID = "logistics.fieldTradeRouter";
+
+    private static final class ActiveTradeState {
+        volatile SwarmTradeCommandEvent command;
+        volatile TradeProtocolState state;
+        volatile long lastActionTimeMs;
+
+        ActiveTradeState(SwarmTradeCommandEvent command, TradeProtocolState state, long lastActionTimeMs) {
+            this.command = command;
+            this.state = state;
+            this.lastActionTimeMs = lastActionTimeMs;
+        }
+    }
+
+    /**
+     * Called from inbound {@link org.sokybot.gameevents.events.core.IPacketTranslator}s (trade server opcodes).
+     */
+    static void notifyInboundTradeOpcode(String machineFullName, int opcode) {
+        TradeProtocolState newState = mapInboundOpcode(opcode);
+        if (newState == null) {
+            return;
+        }
+        for (Map.Entry<String, ActiveTradeState> e : pendingTrades.entrySet()) {
+            ActiveTradeState ats = e.getValue();
+            if (ats == null || ats.command == null) {
+                continue;
+            }
+            SwarmTradeCommandEvent cmd = ats.command;
+            if (!Objects.equals(machineFullName, cmd.getFromMachineId())
+                    && !Objects.equals(machineFullName, cmd.getToMachineId())) {
+                continue;
+            }
+            pendingTrades.computeIfPresent(e.getKey(), (id, cur) -> {
+                cur.state = newState;
+                cur.lastActionTimeMs = System.currentTimeMillis();
+                return cur;
+            });
+            return;
+        }
+    }
+
+    private static TradeProtocolState mapInboundOpcode(int opcode) {
+        switch (opcode) {
+            case 0xB081:
+                return TradeProtocolState.ADDING_ITEM;
+            case 0xB082:
+                return TradeProtocolState.CONFIRMING;
+            case 0xB083:
+                return TradeProtocolState.APPROVING;
+            case 0xB084:
+                return TradeProtocolState.DONE;
+            default:
+                return null;
+        }
+    }
 
     @Reference
     private ISwarmEventBus swarmEventBus;
@@ -118,7 +175,9 @@ public final class FieldTradeBehavior implements IBehavior<LogisticsSettings> {
                     if (m != null && m.isRunning()) {
                         String id = m.fullName();
                         if (Objects.equals(id, from) || Objects.equals(id, to)) {
-                            pendingTrades.put(event.getTradeSessionId(), event);
+                            pendingTrades.put(
+                                    event.getTradeSessionId(),
+                                    new ActiveTradeState(event, TradeProtocolState.INIT, 0L));
                             return;
                         }
                     }
@@ -155,8 +214,10 @@ public final class FieldTradeBehavior implements IBehavior<LogisticsSettings> {
             return false;
         }
         String me = context.getMachineId();
-        for (SwarmTradeCommandEvent t : pendingTrades.values()) {
-            if (t != null && (Objects.equals(me, t.getFromMachineId()) || Objects.equals(me, t.getToMachineId()))) {
+        for (ActiveTradeState ats : pendingTrades.values()) {
+            if (ats != null
+                    && ats.command != null
+                    && Objects.equals(me, ats.command.getFromMachineId())) {
                 return true;
             }
         }
@@ -166,31 +227,98 @@ public final class FieldTradeBehavior implements IBehavior<LogisticsSettings> {
     @Override
     public BehaviorStatus execute(IWorkflowContext context, LogisticsSettings settings) {
         String me = context.getMachineId();
-        Iterator<Map.Entry<String, SwarmTradeCommandEvent>> it = pendingTrades.entrySet().iterator();
+        long now = System.currentTimeMillis();
+        Iterator<Map.Entry<String, ActiveTradeState>> it = pendingTrades.entrySet().iterator();
         while (it.hasNext()) {
-            Map.Entry<String, SwarmTradeCommandEvent> en = it.next();
-            SwarmTradeCommandEvent trade = en.getValue();
-            if (trade == null) {
+            Map.Entry<String, ActiveTradeState> en = it.next();
+            String sessionId = en.getKey();
+            ActiveTradeState ats = en.getValue();
+            if (ats == null || ats.command == null) {
                 it.remove();
                 continue;
             }
-            if (!Objects.equals(me, trade.getFromMachineId()) && !Objects.equals(me, trade.getToMachineId())) {
+            SwarmTradeCommandEvent trade = ats.command;
+            if (!Objects.equals(me, trade.getFromMachineId())) {
                 continue;
             }
-            context.log(
-                    "INFO",
-                    "Executing trade: {} from {} to {}",
-                    trade.getUniqueItemId(),
-                    trade.getFromMachineId(),
-                    trade.getToMachineId());
-            if (!RouterTradePackets.sendTradeRequest(context, trade.getTargetCharacterName())) {
+
+            TradeProtocolState st = ats.state;
+
+            if (st != TradeProtocolState.INIT && (now - ats.lastActionTimeMs <= ACTION_EPSILON_MS)) {
                 return BehaviorStatus.SKIPPED;
             }
-            RouterTradePackets.sendTradeAddItem(context, (byte) trade.getSlotIndex());
-            RouterTradePackets.sendTradeConfirm(context);
-            RouterTradePackets.sendTradeApprove(context);
-            it.remove();
-            return BehaviorStatus.EXECUTED;
+
+            switch (st) {
+                case DONE:
+                case ABORTED:
+                    pendingTrades.remove(sessionId);
+                    return BehaviorStatus.SKIPPED;
+
+                case AWAITING_ACCEPT:
+                case AWAITING_ITEM_ECHO:
+                case AWAITING_CONFIRM:
+                case AWAITING_APPROVE:
+                    if (now - ats.lastActionTimeMs > AWAIT_TIMEOUT_MS) {
+                        pendingTrades.computeIfPresent(sessionId, (id, cur) -> {
+                            cur.state = TradeProtocolState.ABORTED;
+                            cur.lastActionTimeMs = now;
+                            return cur;
+                        });
+                    }
+                    return BehaviorStatus.SKIPPED;
+
+                case INIT:
+                    context.log(
+                            "INFO",
+                            "Trade handshake INIT: {} from {} to {}",
+                            trade.getUniqueItemId(),
+                            trade.getFromMachineId(),
+                            trade.getToMachineId());
+                    if (!RouterTradePackets.sendTradeRequest(context, trade.getTargetCharacterName())) {
+                        pendingTrades.computeIfPresent(sessionId, (id, cur) -> {
+                            cur.state = TradeProtocolState.ABORTED;
+                            cur.lastActionTimeMs = now;
+                            return cur;
+                        });
+                        return BehaviorStatus.EXECUTED;
+                    }
+                    pendingTrades.computeIfPresent(sessionId, (id, cur) -> {
+                        cur.state = TradeProtocolState.AWAITING_ACCEPT;
+                        cur.lastActionTimeMs = now;
+                        return cur;
+                    });
+                    return BehaviorStatus.EXECUTED;
+
+                case ADDING_ITEM:
+                    RouterTradePackets.sendTradeAddItem(context, (byte) trade.getSlotIndex());
+                    pendingTrades.computeIfPresent(sessionId, (id, cur) -> {
+                        cur.state = TradeProtocolState.AWAITING_ITEM_ECHO;
+                        cur.lastActionTimeMs = now;
+                        return cur;
+                    });
+                    return BehaviorStatus.EXECUTED;
+
+                case CONFIRMING:
+                    RouterTradePackets.sendTradeConfirm(context);
+                    pendingTrades.computeIfPresent(sessionId, (id, cur) -> {
+                        cur.state = TradeProtocolState.AWAITING_CONFIRM;
+                        cur.lastActionTimeMs = now;
+                        return cur;
+                    });
+                    return BehaviorStatus.EXECUTED;
+
+                case APPROVING:
+                    RouterTradePackets.sendTradeApprove(context);
+                    pendingTrades.computeIfPresent(sessionId, (id, cur) -> {
+                        cur.state = TradeProtocolState.AWAITING_APPROVE;
+                        cur.lastActionTimeMs = now;
+                        return cur;
+                    });
+                    return BehaviorStatus.EXECUTED;
+
+                default:
+                    return BehaviorStatus.SKIPPED;
+            }
         }
         return BehaviorStatus.SKIPPED;
     }

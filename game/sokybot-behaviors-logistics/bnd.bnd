@@ -22,6 +22,7 @@ Import-Package: \
     org.sokybot.town.api;version="[1.0,2)", \
     org.sokybot.town.projections.api;version="[1.0,2)", \
     org.sokybot.gamemodel;version="[1.0,2)", \
+    org.sokybot.gameevents;version="[1.0,2)", \
     org.sokybot.gameevents.events.core;version="[1.0,2)", \
     org.sokybot.commons.event;version="[1.0,2)", \
     org.sokybot.settings.api;version="[1.0,2)", \
