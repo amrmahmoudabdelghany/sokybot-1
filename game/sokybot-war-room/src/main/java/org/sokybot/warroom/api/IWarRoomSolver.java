@@ -2,9 +2,6 @@ package org.sokybot.warroom.api;
 
 import java.util.List;
 
-import org.sokybot.warroom.domain.PartyRosterSolution;
-import org.sokybot.warroom.domain.SwarmBotEntity;
-
 import reactor.core.publisher.Mono;
 
 /**
@@ -12,5 +9,5 @@ import reactor.core.publisher.Mono;
  */
 public interface IWarRoomSolver {
 
-    Mono<PartyRosterSolution> calculateOptimalRoster(List<SwarmBotEntity> availableBots, int numberOfParties);
+    Mono<WarRoomPlan> calculateOptimalRoster(List<SwarmBotDto> availableBots, int numberOfParties);
 }

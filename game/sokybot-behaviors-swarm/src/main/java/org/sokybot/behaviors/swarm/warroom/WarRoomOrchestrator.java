@@ -1,9 +1,9 @@
 package org.sokybot.behaviors.swarm.warroom;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,9 +24,8 @@ import org.sokybot.swarm.api.ISwarmEventBus;
 import org.sokybot.swarm.api.warroom.SwarmPartyCommandEvent;
 import org.sokybot.swarm.api.warroom.SwarmWarRoomTriggerEvent;
 import org.sokybot.warroom.api.IWarRoomSolver;
-import org.sokybot.warroom.domain.PartyRosterSolution;
-import org.sokybot.warroom.domain.SwarmBotEntity;
-import org.sokybot.warroom.domain.WarRoomParty;
+import org.sokybot.warroom.api.SwarmBotDto;
+import org.sokybot.warroom.api.WarRoomPlan;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Mono;
@@ -121,12 +120,12 @@ public final class WarRoomOrchestrator {
             return;
         }
 
-        List<SwarmBotEntity> botEntities = new ArrayList<>();
+        List<SwarmBotDto> botDtos = new ArrayList<>();
         for (IMachineContext machine : running) {
             try {
-                SwarmBotEntity entity = mapMachineToEntity(machine);
-                if (entity != null) {
-                    botEntities.add(entity);
+                SwarmBotDto dto = mapMachineToDto(machine);
+                if (dto != null) {
+                    botDtos.add(dto);
                 }
             } catch (Exception ex) {
                 log.warn(
@@ -136,20 +135,20 @@ public final class WarRoomOrchestrator {
             }
         }
 
-        if (botEntities.isEmpty()) {
+        if (botDtos.isEmpty()) {
             log.debug("WarRoomOrchestrator: no bots mapped for {}", swarmGroupId);
             return;
         }
 
-        int numberOfParties = Math.max(1, (int) Math.ceil(botEntities.size() / 8.0));
+        int numberOfParties = Math.max(1, (int) Math.ceil(botDtos.size() / 8.0));
 
-        solver.calculateOptimalRoster(botEntities, numberOfParties)
+        solver.calculateOptimalRoster(botDtos, numberOfParties)
                 .doOnError(err -> log.warn("WarRoomOrchestrator: solver failed: {}", err.toString()))
                 .onErrorResume(err -> Mono.empty())
                 .subscribe(
-                        solution -> {
+                        plan -> {
                             try {
-                                publishPartyCommands(bus, solution);
+                                publishPartyCommands(bus, plan);
                             } catch (Exception ex) {
                                 log.warn("WarRoomOrchestrator: publish failed: {}", ex.getMessage());
                             }
@@ -157,7 +156,7 @@ public final class WarRoomOrchestrator {
                         err -> log.warn("WarRoomOrchestrator: solver subscribe error: {}", err.toString()));
     }
 
-    private static SwarmBotEntity mapMachineToEntity(IMachineContext machine) {
+    private static SwarmBotDto mapMachineToDto(IMachineContext machine) {
         String machineId = machine.fullName();
         int level = 1;
         try {
@@ -200,54 +199,27 @@ public final class WarRoomOrchestrator {
             role = SwarmTacticalRole.DPS;
         }
 
-        SwarmBotEntity e = new SwarmBotEntity();
-        e.setMachineId(machineId);
-        e.setLevel(level);
-        e.setRole(role);
-        e.setDpsScore(level * 10);
-        e.setAssignedParty(null);
-        return e;
+        return new SwarmBotDto(machineId, level, role, level * 10);
     }
 
-    private void publishPartyCommands(ISwarmEventBus bus, PartyRosterSolution solution) {
-        if (solution == null || bus == null) {
+    private void publishPartyCommands(ISwarmEventBus bus, WarRoomPlan plan) {
+        if (plan == null || bus == null) {
             return;
         }
-        List<WarRoomParty> parties = solution.getPartyList();
-        List<SwarmBotEntity> bots = solution.getBotList();
-        if (parties == null || bots == null) {
+        Map<String, List<String>> assignments = plan.getPartyAssignments();
+        if (assignments == null || assignments.isEmpty()) {
             return;
         }
 
         long ts = System.currentTimeMillis();
-        for (WarRoomParty party : parties) {
-            if (party == null) {
+        for (Map.Entry<String, List<String>> entry : assignments.entrySet()) {
+            String leaderId = entry.getKey();
+            List<String> members = entry.getValue();
+            if (leaderId == null || members == null) {
                 continue;
             }
-            String partyId = party.getId();
-            List<SwarmBotEntity> inParty = new ArrayList<>();
-            for (SwarmBotEntity bot : bots) {
-                if (bot == null) {
-                    continue;
-                }
-                WarRoomParty assigned = bot.getAssignedParty();
-                if (assigned != null && Objects.equals(partyId, assigned.getId())) {
-                    inParty.add(bot);
-                }
-            }
-            if (inParty.isEmpty()) {
-                continue;
-            }
-            SwarmBotEntity leader = inParty.stream()
-                    .max(Comparator.comparingInt(SwarmBotEntity::getLevel)
-                            .thenComparing(SwarmBotEntity::getMachineId))
-                    .orElse(null);
-            if (leader == null) {
-                continue;
-            }
-
-            for (SwarmBotEntity bot : inParty) {
-                if (Objects.equals(bot.getMachineId(), leader.getMachineId())) {
+            for (String memberId : members) {
+                if (memberId == null || memberId.equals(leaderId)) {
                     continue;
                 }
                 String reqId = UUID.randomUUID().toString();
@@ -255,14 +227,14 @@ public final class WarRoomOrchestrator {
                         REQUESTER,
                         ts,
                         reqId,
-                        bot.getMachineId(),
-                        leader.getMachineId());
+                        memberId,
+                        leaderId);
                 try {
                     bus.publish(cmd);
                 } catch (Exception ex) {
                     log.warn(
                             "WarRoomOrchestrator: publish SwarmPartyCommandEvent failed for {}: {}",
-                            bot.getMachineId(),
+                            memberId,
                             ex.getMessage());
                 }
             }

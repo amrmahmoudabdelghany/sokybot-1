@@ -2,7 +2,10 @@ package org.sokybot.warroom.solver;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -11,6 +14,8 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.sokybot.warroom.api.IWarRoomSolver;
+import org.sokybot.warroom.api.SwarmBotDto;
+import org.sokybot.warroom.api.WarRoomPlan;
 import org.sokybot.warroom.constraints.PartyRosterConstraintProvider;
 import org.sokybot.warroom.domain.PartyRosterSolution;
 import org.sokybot.warroom.domain.SwarmBotEntity;
@@ -68,7 +73,7 @@ public final class WarRoomSolverService implements IWarRoomSolver {
     }
 
     @Override
-    public Mono<PartyRosterSolution> calculateOptimalRoster(List<SwarmBotEntity> availableBots, int numberOfParties) {
+    public Mono<WarRoomPlan> calculateOptimalRoster(List<SwarmBotDto> availableBots, int numberOfParties) {
         SolverManager<PartyRosterSolution, UUID> mgr = solverManager;
         if (mgr == null) {
             return Mono.error(new IllegalStateException("WarRoomSolverService: SolverManager not available"));
@@ -82,15 +87,16 @@ public final class WarRoomSolverService implements IWarRoomSolver {
                 .subscribeOn(Schedulers.boundedElastic());
     }
 
-    private static PartyRosterSolution solveBlocking(
+    private static WarRoomPlan solveBlocking(
             SolverManager<PartyRosterSolution, UUID> mgr,
-            List<SwarmBotEntity> availableBots,
+            List<SwarmBotDto> availableBots,
             int numberOfParties) {
         PartyRosterSolution initialSolution = buildInitialSolution(availableBots, numberOfParties);
         UUID problemId = UUID.randomUUID();
         SolverJob<PartyRosterSolution, UUID> solverJob = mgr.solve(problemId, initialSolution);
+        PartyRosterSolution solution;
         try {
-            return solverJob.getFinalBestSolution();
+            solution = solverJob.getFinalBestSolution();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("War Room solve interrupted", ex);
@@ -98,17 +104,80 @@ public final class WarRoomSolverService implements IWarRoomSolver {
             Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
             throw new IllegalStateException("War Room solve failed", cause);
         }
+        return toWarRoomPlan(solution);
     }
 
-    private static PartyRosterSolution buildInitialSolution(List<SwarmBotEntity> availableBots, int numberOfParties) {
+    private static WarRoomPlan toWarRoomPlan(PartyRosterSolution solution) {
+        if (solution == null) {
+            return new WarRoomPlan(new HashMap<>());
+        }
+        List<WarRoomParty> parties = solution.getPartyList();
+        List<SwarmBotEntity> bots = solution.getBotList();
+        if (parties == null || bots == null) {
+            return new WarRoomPlan(new HashMap<>());
+        }
+
+        Map<String, List<String>> assignments = new HashMap<>();
+        for (WarRoomParty party : parties) {
+            if (party == null) {
+                continue;
+            }
+            String partyId = party.getId();
+            List<SwarmBotEntity> inParty = new ArrayList<>();
+            for (SwarmBotEntity bot : bots) {
+                if (bot == null) {
+                    continue;
+                }
+                WarRoomParty assigned = bot.getAssignedParty();
+                if (assigned != null && Objects.equals(partyId, assigned.getId())) {
+                    inParty.add(bot);
+                }
+            }
+            if (inParty.isEmpty()) {
+                continue;
+            }
+            SwarmBotEntity leader = inParty.stream()
+                    .max(Comparator.comparingInt(SwarmBotEntity::getLevel)
+                            .thenComparing(SwarmBotEntity::getMachineId))
+                    .orElse(null);
+            if (leader == null) {
+                continue;
+            }
+            List<String> memberIds = new ArrayList<>();
+            for (SwarmBotEntity b : inParty) {
+                memberIds.add(b.getMachineId());
+            }
+            assignments.put(leader.getMachineId(), memberIds);
+        }
+        return new WarRoomPlan(assignments);
+    }
+
+    private static PartyRosterSolution buildInitialSolution(List<SwarmBotDto> availableBots, int numberOfParties) {
         List<WarRoomParty> parties = new ArrayList<>(numberOfParties);
         for (int i = 1; i <= numberOfParties; i++) {
             parties.add(new WarRoomParty("party_" + i, 8));
         }
         PartyRosterSolution initialSolution = new PartyRosterSolution();
         initialSolution.setPartyList(parties);
-        initialSolution.setBotList(new ArrayList<>(availableBots));
+        initialSolution.setBotList(mapDtosToEntities(availableBots));
         initialSolution.setScore(HardSoftScore.ZERO);
         return initialSolution;
+    }
+
+    private static List<SwarmBotEntity> mapDtosToEntities(List<SwarmBotDto> dtos) {
+        List<SwarmBotEntity> entities = new ArrayList<>();
+        for (SwarmBotDto dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            SwarmBotEntity e = new SwarmBotEntity();
+            e.setMachineId(dto.getMachineId());
+            e.setLevel(dto.getLevel());
+            e.setRole(dto.getRole());
+            e.setDpsScore(dto.getDpsScore());
+            e.setAssignedParty(null);
+            entities.add(e);
+        }
+        return entities;
     }
 }
