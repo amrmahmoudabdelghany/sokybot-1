@@ -19,6 +19,15 @@ public class FieldItemEntity {
 
     private String originalBotMachineId;
 
+    /** Inventory slot index from {@link org.sokybot.town.api.ItemStackSnapshot#getSlotIndex()}. */
+    private int slotIndex;
+
+    /** Stack quantity from inventory snapshot. */
+    private int stackQuantity;
+
+    /** Item reference id from inventory snapshot. */
+    private int itemRefId;
+
     @PlanningVariable(valueRangeProviderRefs = "botRange")
     private SwarmBotEntity assignedBot;
 
@@ -68,6 +77,30 @@ public class FieldItemEntity {
 
     public void setOriginalBotMachineId(String originalBotMachineId) {
         this.originalBotMachineId = originalBotMachineId;
+    }
+
+    public int getSlotIndex() {
+        return slotIndex;
+    }
+
+    public void setSlotIndex(int slotIndex) {
+        this.slotIndex = slotIndex;
+    }
+
+    public int getStackQuantity() {
+        return stackQuantity;
+    }
+
+    public void setStackQuantity(int stackQuantity) {
+        this.stackQuantity = stackQuantity;
+    }
+
+    public int getItemRefId() {
+        return itemRefId;
+    }
+
+    public void setItemRefId(int itemRefId) {
+        this.itemRefId = itemRefId;
     }
 
     public SwarmBotEntity getAssignedBot() {

@@ -90,6 +90,7 @@ public final class FormationHoldBehavior implements IBehavior<CombatSettings> {
             if (d != null && !d.isDisposed()) {
                 d.dispose();
             }
+            pendingCommands.clear();
         }
     }
 
@@ -172,6 +173,7 @@ public final class FormationHoldBehavior implements IBehavior<CombatSettings> {
         if (distance > HOLD_EPSILON) {
             try {
                 nav.walkTo(context, new WorldPoint((float) evt.getHoldX(), (float) evt.getHoldY(), pos.getZ()));
+                pendingCommands.remove(machineId);
             } catch (NavigationException ex) {
                 log.debug("FormationHoldBehavior walkTo: {}", ex.getMessage());
                 return BehaviorStatus.SKIPPED;

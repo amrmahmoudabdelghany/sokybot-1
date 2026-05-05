@@ -14,6 +14,8 @@ public final class SwarmTradeCommandEvent extends SwarmEvent {
     private final String uniqueItemId;
     private final int itemRefId;
     private final int quantity;
+    private final int slotIndex;
+    private final String targetCharacterName;
     private final String tradeSessionId;
 
     public SwarmTradeCommandEvent(
@@ -25,11 +27,14 @@ public final class SwarmTradeCommandEvent extends SwarmEvent {
             String uniqueItemId,
             int itemRefId,
             int quantity,
+            int slotIndex,
+            String targetCharacterName,
             String tradeSessionId) {
         super(requesterMachineId, timestampEpochMs, requestId);
         Objects.requireNonNull(fromMachineId, "fromMachineId");
         Objects.requireNonNull(toMachineId, "toMachineId");
         Objects.requireNonNull(uniqueItemId, "uniqueItemId");
+        Objects.requireNonNull(targetCharacterName, "targetCharacterName");
         Objects.requireNonNull(tradeSessionId, "tradeSessionId");
         if (fromMachineId.trim().isEmpty()) {
             throw new IllegalArgumentException("fromMachineId must not be blank");
@@ -46,11 +51,20 @@ public final class SwarmTradeCommandEvent extends SwarmEvent {
         if (quantity <= 0) {
             throw new IllegalArgumentException("quantity must be positive");
         }
+        if (slotIndex < 0 || slotIndex > 255) {
+            throw new IllegalArgumentException("slotIndex must fit in a byte (0–255)");
+        }
+        String resolvedTargetName = targetCharacterName.trim();
+        if (resolvedTargetName.isEmpty()) {
+            throw new IllegalArgumentException("targetCharacterName must not be blank");
+        }
         this.fromMachineId = fromMachineId.trim();
         this.toMachineId = toMachineId.trim();
         this.uniqueItemId = uniqueItemId.trim();
         this.itemRefId = itemRefId;
         this.quantity = quantity;
+        this.slotIndex = slotIndex;
+        this.targetCharacterName = resolvedTargetName;
         this.tradeSessionId = tradeSessionId.trim();
     }
 
@@ -72,6 +86,14 @@ public final class SwarmTradeCommandEvent extends SwarmEvent {
 
     public int getQuantity() {
         return quantity;
+    }
+
+    public int getSlotIndex() {
+        return slotIndex;
+    }
+
+    public String getTargetCharacterName() {
+        return targetCharacterName;
     }
 
     public String getTradeSessionId() {

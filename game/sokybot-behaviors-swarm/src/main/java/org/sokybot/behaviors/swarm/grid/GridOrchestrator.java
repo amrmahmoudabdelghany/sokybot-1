@@ -87,86 +87,92 @@ public final class GridOrchestrator {
                 return;
             }
 
-            List<IMachineContext> running = new ArrayList<>();
             try {
                 for (IGroupContext g : ctx.getGroups()) {
                     if (g == null) {
                         continue;
                     }
-                    for (IMachineContext m : g.getMachines()) {
-                        if (m != null && m.isRunning()) {
-                            running.add(m);
+                    List<IMachineContext> runningMachines = new ArrayList<>();
+                    try {
+                        for (IMachineContext m : g.getMachines()) {
+                            if (m != null && m.isRunning()) {
+                                runningMachines.add(m);
+                            }
+                        }
+                    } catch (Exception ex) {
+                        log.warn("GridOrchestrator: enumerate machines in group {}: {}", g.name(), ex.getMessage());
+                        continue;
+                    }
+
+                    if (runningMachines.size() < 2) {
+                        continue;
+                    }
+
+                    IMachineContext leader = pickLeader(runningMachines);
+                    if (leader == null) {
+                        continue;
+                    }
+
+                    double leaderX;
+                    double leaderY;
+                    try {
+                        double[] xy = resolveLeaderXY(leader, town);
+                        leaderX = xy[0];
+                        leaderY = xy[1];
+                    } catch (Exception ex) {
+                        log.warn("GridOrchestrator: leader position unavailable (group {}): {}", g.name(), ex.getMessage());
+                        continue;
+                    }
+
+                    String groupKey = g.name() != null ? g.name().trim() : "group";
+                    List<GridNode> nodes = new ArrayList<>(NODE_COUNT);
+                    for (int i = 0; i < NODE_COUNT; i++) {
+                        double angle = i * (Math.PI * 2) / NODE_COUNT;
+                        double x = leaderX + NODE_RADIUS * Math.cos(angle);
+                        double y = leaderY + NODE_RADIUS * Math.sin(angle);
+                        GridNode node = new GridNode();
+                        node.setNodeId(groupKey + "-grid-node-" + i);
+                        node.setX(x);
+                        node.setY(y);
+                        nodes.add(node);
+                    }
+
+                    String leaderId = leader.fullName();
+                    List<GridBotEntity> bots = new ArrayList<>();
+                    for (IMachineContext machine : runningMachines) {
+                        try {
+                            GridBotEntity bot = mapMachineToEntity(machine, Objects.equals(machine.fullName(), leaderId));
+                            if (bot != null) {
+                                bots.add(bot);
+                            }
+                        } catch (Exception ex) {
+                            log.warn(
+                                    "GridOrchestrator: skip machine {}: {}",
+                                    machine != null ? machine.fullName() : "?",
+                                    ex.getMessage());
                         }
                     }
-                }
-            } catch (Exception ex) {
-                log.warn("GridOrchestrator: enumerate machines failed: {}", ex.getMessage());
-                return;
-            }
 
-            if (running.size() < 2) {
-                return;
-            }
-
-            IMachineContext leader = pickLeader(running);
-            if (leader == null) {
-                return;
-            }
-
-            double leaderX;
-            double leaderY;
-            try {
-                double[] xy = resolveLeaderXY(leader, town);
-                leaderX = xy[0];
-                leaderY = xy[1];
-            } catch (Exception ex) {
-                log.warn("GridOrchestrator: leader position unavailable: {}", ex.getMessage());
-                return;
-            }
-
-            List<GridNode> nodes = new ArrayList<>(NODE_COUNT);
-            for (int i = 0; i < NODE_COUNT; i++) {
-                double angle = i * (Math.PI * 2) / NODE_COUNT;
-                double x = leaderX + NODE_RADIUS * Math.cos(angle);
-                double y = leaderY + NODE_RADIUS * Math.sin(angle);
-                GridNode node = new GridNode();
-                node.setNodeId("grid-node-" + i);
-                node.setX(x);
-                node.setY(y);
-                nodes.add(node);
-            }
-
-            String leaderId = leader.fullName();
-            List<GridBotEntity> bots = new ArrayList<>();
-            for (IMachineContext machine : running) {
-                try {
-                    GridBotEntity bot = mapMachineToEntity(machine, Objects.equals(machine.fullName(), leaderId));
-                    if (bot != null) {
-                        bots.add(bot);
+                    if (bots.isEmpty()) {
+                        continue;
                     }
-                } catch (Exception ex) {
-                    log.warn(
-                            "GridOrchestrator: skip machine {}: {}",
-                            machine != null ? machine.fullName() : "?",
-                            ex.getMessage());
-                }
-            }
 
-            if (bots.isEmpty()) {
+                    final long tickVal = tick != null ? tick.longValue() : -1L;
+                    solver.calculateOptimalFormation(bots, nodes)
+                            .subscribe(
+                                    solution -> {
+                                        try {
+                                            publishFormation(bus, solution, tickVal);
+                                        } catch (Exception ex) {
+                                            log.warn("GridOrchestrator: publish failed: {}", ex.getMessage());
+                                        }
+                                    },
+                                    err -> log.error("GridOrchestrator: solver failed: {}", err.toString()));
+                }
+            } catch (Exception ex) {
+                log.warn("GridOrchestrator: group iteration failed: {}", ex.getMessage());
                 return;
             }
-
-            final long tickVal = tick != null ? tick.longValue() : -1L;
-            solver.calculateOptimalFormation(bots, nodes)
-                    .subscribe(
-                            solution -> {
-                                try {
-                                    publishFormation(bus, solution, tickVal);
-                                } catch (Exception ex) {
-                                    log.warn("GridOrchestrator: publish failed: {}", ex.getMessage());
-                                }
-                            },
-                            err -> log.error("GridOrchestrator: solver failed: {}", err.toString()));
         } catch (Exception ex) {
             log.warn("GridOrchestrator: calculateGrid failed: {}", ex.toString());
         }

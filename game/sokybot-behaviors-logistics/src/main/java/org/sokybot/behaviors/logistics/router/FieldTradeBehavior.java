@@ -95,6 +95,7 @@ public final class FieldTradeBehavior implements IBehavior<LogisticsSettings> {
             if (d != null && !d.isDisposed()) {
                 d.dispose();
             }
+            pendingTrades.clear();
         }
     }
 
@@ -182,8 +183,8 @@ public final class FieldTradeBehavior implements IBehavior<LogisticsSettings> {
                     trade.getUniqueItemId(),
                     trade.getFromMachineId(),
                     trade.getToMachineId());
-            RouterTradePackets.sendTradeRequest(context, "");
-            RouterTradePackets.sendTradeAddItem(context, (byte) 0);
+            RouterTradePackets.sendTradeRequest(context, trade.getTargetCharacterName());
+            RouterTradePackets.sendTradeAddItem(context, (byte) trade.getSlotIndex());
             RouterTradePackets.sendTradeConfirm(context);
             it.remove();
             return BehaviorStatus.EXECUTED;

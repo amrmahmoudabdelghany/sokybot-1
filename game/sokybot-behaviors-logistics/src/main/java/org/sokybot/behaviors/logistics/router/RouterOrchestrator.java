@@ -3,12 +3,16 @@ package org.sokybot.behaviors.logistics.router;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
+import org.sokybot.engine.IEngine;
+import org.sokybot.engine.api.workflow.IWorkflowContext;
+import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.router.api.IRouterSolver;
 import org.sokybot.router.domain.FieldItemEntity;
 import org.sokybot.router.domain.RouterSolution;
@@ -138,7 +142,7 @@ public final class RouterOrchestrator {
                 .subscribe(
                         solution -> {
                             try {
-                                publishRouterOutcome(bus, event, solution);
+                                publishRouterOutcome(bus, ctx, town, event, solution);
                             } catch (Exception ex) {
                                 log.warn("RouterOrchestrator: publish outcome failed: {}", ex.getMessage());
                             }
@@ -188,6 +192,9 @@ public final class RouterOrchestrator {
             int qty = stack.getQuantity();
             item.setGoldValue(qty > 0 ? (long) qty * 10L : 100L);
             item.setOriginalBotMachineId(fullName);
+            item.setSlotIndex(stack.getSlotIndex());
+            item.setStackQuantity(stack.getQuantity());
+            item.setItemRefId(stack.getItemRefId());
             item.setAssignedBot(null);
             items.add(item);
         }
@@ -195,6 +202,8 @@ public final class RouterOrchestrator {
 
     private void publishRouterOutcome(
             ISwarmEventBus bus,
+            ISokybotContext sokybotContext,
+            ITownModel townModel,
             SwarmInventoryCriticalEvent trigger,
             RouterSolution solution) {
         if (solution == null || bus == null) {
@@ -240,6 +249,21 @@ public final class RouterOrchestrator {
             if (from.equals(to)) {
                 continue;
             }
+            try {
+                if (townModel != null && !townModel.snapshot(to).isPresent()) {
+                    log.debug("RouterOrchestrator: skip trade — no town snapshot for {}", to);
+                    continue;
+                }
+            } catch (Exception ex) {
+                log.warn("RouterOrchestrator: town lookup for {} failed: {}", to, ex.getMessage());
+                continue;
+            }
+            String targetCharacterName = resolveTrainerCharacterName(sokybotContext, to);
+            if (targetCharacterName.isEmpty()) {
+                log.warn("RouterOrchestrator: skip trade — could not resolve character name for {}", to);
+                continue;
+            }
+            int qty = item.getStackQuantity() > 0 ? item.getStackQuantity() : 1;
             SwarmTradeCommandEvent trade = new SwarmTradeCommandEvent(
                     REQUESTER,
                     ts,
@@ -247,10 +271,47 @@ public final class RouterOrchestrator {
                     from,
                     to,
                     item.getUniqueItemId(),
-                    0,
-                    1,
+                    item.getItemRefId(),
+                    qty,
+                    item.getSlotIndex(),
+                    targetCharacterName,
                     UUID.randomUUID().toString());
             bus.publish(trade);
         }
+    }
+
+    private static String resolveTrainerCharacterName(ISokybotContext ctx, String machineFullName) {
+        if (ctx == null || machineFullName == null || machineFullName.isEmpty()) {
+            return "";
+        }
+        try {
+            for (IGroupContext g : ctx.getGroups()) {
+                if (g == null) {
+                    continue;
+                }
+                for (IMachineContext m : g.getMachines()) {
+                    if (m == null || !machineFullName.equals(m.fullName())) {
+                        continue;
+                    }
+                    IEngine engine = m.getEngine();
+                    if (engine == null) {
+                        continue;
+                    }
+                    Optional<IWorkflowContext> wctx = engine.optionalWorkflowContext();
+                    if (!wctx.isPresent()) {
+                        continue;
+                    }
+                    IGameModel gm = wctx.get().getGameModel();
+                    if (gm == null || gm.getTrainer() == null) {
+                        continue;
+                    }
+                    String name = gm.getTrainer().getName();
+                    return name != null ? name.trim() : "";
+                }
+            }
+        } catch (Exception ex) {
+            return "";
+        }
+        return "";
     }
 }

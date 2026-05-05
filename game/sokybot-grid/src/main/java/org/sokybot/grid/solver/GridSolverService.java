@@ -56,9 +56,14 @@ public final class GridSolverService implements IGridSolver {
 
     @Deactivate
     void deactivate() {
-        if (solverManager != null) {
-            solverManager.close();
-            solverManager = null;
+        SolverManager<GridSolution, UUID> mgr = solverManager;
+        solverManager = null;
+        if (mgr != null) {
+            try {
+                mgr.close();
+            } catch (RuntimeException ex) {
+                log.debug("Error closing solver", ex);
+            }
         }
     }
 
