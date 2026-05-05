@@ -2,7 +2,9 @@ package org.sokybot.grid.solver;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -10,6 +12,9 @@ import java.util.concurrent.ExecutionException;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
+import org.sokybot.grid.api.GridBotDto;
+import org.sokybot.grid.api.GridNodeDto;
+import org.sokybot.grid.api.GridPlan;
 import org.sokybot.grid.api.IGridSolver;
 import org.sokybot.grid.constraints.GridConstraintProvider;
 import org.sokybot.grid.domain.GridBotEntity;
@@ -68,7 +73,7 @@ public final class GridSolverService implements IGridSolver {
     }
 
     @Override
-    public Mono<GridSolution> calculateOptimalFormation(List<GridBotEntity> bots, List<GridNode> nodes) {
+    public Mono<GridPlan> calculateOptimalFormation(List<GridBotDto> bots, List<GridNodeDto> nodes) {
         SolverManager<GridSolution, UUID> mgr = solverManager;
         if (mgr == null) {
             return Mono.error(new IllegalStateException("GridSolverService: SolverManager not available"));
@@ -79,24 +84,74 @@ public final class GridSolverService implements IGridSolver {
         return Mono.fromCallable(() -> solveBlocking(mgr, bots, nodes)).subscribeOn(Schedulers.boundedElastic());
     }
 
-    private static GridSolution solveBlocking(
+    private static GridPlan solveBlocking(
             SolverManager<GridSolution, UUID> mgr,
-            List<GridBotEntity> bots,
-            List<GridNode> nodes) {
+            List<GridBotDto> bots,
+            List<GridNodeDto> nodes) {
         GridSolution initialSolution = new GridSolution();
-        initialSolution.setBotList(new ArrayList<>(bots));
-        initialSolution.setNodeList(new ArrayList<>(nodes));
+        initialSolution.setBotList(mapBotsFromDtos(bots));
+        initialSolution.setNodeList(mapNodesFromDtos(nodes));
         initialSolution.setScore(HardSoftScore.ZERO);
 
         UUID problemId = UUID.randomUUID();
         SolverJob<GridSolution, UUID> solverJob = mgr.solve(problemId, initialSolution);
+        GridSolution solution;
         try {
-            return solverJob.getFinalBestSolution();
+            solution = solverJob.getFinalBestSolution();
         } catch (ExecutionException | InterruptedException e) {
             if (e instanceof InterruptedException) {
                 Thread.currentThread().interrupt();
             }
             throw new IllegalStateException("Grid solving failed or was interrupted", e);
         }
+        return toGridPlan(solution);
+    }
+
+    private static List<GridBotEntity> mapBotsFromDtos(List<GridBotDto> dtos) {
+        List<GridBotEntity> entities = new ArrayList<>();
+        for (GridBotDto dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            GridBotEntity e = new GridBotEntity();
+            e.setMachineId(dto.getMachineId());
+            e.setAttackRange(dto.getAttackRange());
+            e.setBuffer(dto.isBuffer());
+            e.setAssignedNode(null);
+            entities.add(e);
+        }
+        return entities;
+    }
+
+    private static List<GridNode> mapNodesFromDtos(List<GridNodeDto> dtos) {
+        List<GridNode> nodes = new ArrayList<>();
+        for (GridNodeDto dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            GridNode n = new GridNode();
+            n.setNodeId(dto.getNodeId());
+            n.setX(dto.getX());
+            n.setY(dto.getY());
+            nodes.add(n);
+        }
+        return nodes;
+    }
+
+    private static GridPlan toGridPlan(GridSolution solution) {
+        Map<String, GridNodeDto> assignments = new LinkedHashMap<>();
+        if (solution == null || solution.getBotList() == null) {
+            return new GridPlan(assignments);
+        }
+        for (GridBotEntity bot : solution.getBotList()) {
+            if (bot == null || bot.getAssignedNode() == null) {
+                continue;
+            }
+            GridNode n = bot.getAssignedNode();
+            assignments.put(
+                    bot.getMachineId(),
+                    new GridNodeDto(n.getNodeId(), n.getX(), n.getY()));
+        }
+        return new GridPlan(assignments);
     }
 }

@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,10 +17,10 @@ import org.sokybot.engine.IEngine;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.gameevents.enums.JobType;
 import org.sokybot.gamemodel.IGameModel;
+import org.sokybot.grid.api.GridBotDto;
+import org.sokybot.grid.api.GridNodeDto;
+import org.sokybot.grid.api.GridPlan;
 import org.sokybot.grid.api.IGridSolver;
-import org.sokybot.grid.domain.GridBotEntity;
-import org.sokybot.grid.domain.GridNode;
-import org.sokybot.grid.domain.GridSolution;
 import org.sokybot.party.api.shapeshifter.SwarmTacticalRole;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
@@ -125,23 +126,19 @@ public final class GridOrchestrator {
                     }
 
                     String groupKey = g.name() != null ? g.name().trim() : "group";
-                    List<GridNode> nodes = new ArrayList<>(NODE_COUNT);
+                    List<GridNodeDto> nodes = new ArrayList<>(NODE_COUNT);
                     for (int i = 0; i < NODE_COUNT; i++) {
                         double angle = i * (Math.PI * 2) / NODE_COUNT;
                         double x = leaderX + NODE_RADIUS * Math.cos(angle);
                         double y = leaderY + NODE_RADIUS * Math.sin(angle);
-                        GridNode node = new GridNode();
-                        node.setNodeId(groupKey + "-grid-node-" + i);
-                        node.setX(x);
-                        node.setY(y);
-                        nodes.add(node);
+                        nodes.add(new GridNodeDto(groupKey + "-grid-node-" + i, x, y));
                     }
 
                     String leaderId = leader.fullName();
-                    List<GridBotEntity> bots = new ArrayList<>();
+                    List<GridBotDto> bots = new ArrayList<>();
                     for (IMachineContext machine : runningMachines) {
                         try {
-                            GridBotEntity bot = mapMachineToEntity(machine, Objects.equals(machine.fullName(), leaderId));
+                            GridBotDto bot = mapMachineToDto(machine, Objects.equals(machine.fullName(), leaderId));
                             if (bot != null) {
                                 bots.add(bot);
                             }
@@ -160,9 +157,9 @@ public final class GridOrchestrator {
                     final long tickVal = tick != null ? tick.longValue() : -1L;
                     solver.calculateOptimalFormation(bots, nodes)
                             .subscribe(
-                                    solution -> {
+                                    plan -> {
                                         try {
-                                            publishFormation(bus, solution, tickVal);
+                                            publishFormation(bus, plan, tickVal);
                                         } catch (Exception ex) {
                                             log.warn("GridOrchestrator: publish failed: {}", ex.getMessage());
                                         }
@@ -248,7 +245,7 @@ public final class GridOrchestrator {
         throw new IllegalStateException("no leader coordinates");
     }
 
-    private static GridBotEntity mapMachineToEntity(IMachineContext machine, boolean isLeaderBufferSlot) {
+    private static GridBotDto mapMachineToDto(IMachineContext machine, boolean isLeaderBufferSlot) {
         String machineId = machine.fullName();
         double attackRange = 15.0;
         try {
@@ -269,30 +266,23 @@ public final class GridOrchestrator {
             attackRange = 15.0;
         }
 
-        GridBotEntity bot = new GridBotEntity();
-        bot.setMachineId(machineId);
-        bot.setAttackRange(attackRange);
-        bot.setBuffer(isLeaderBufferSlot);
-        bot.setAssignedNode(null);
-        return bot;
+        return new GridBotDto(machineId, attackRange, isLeaderBufferSlot);
     }
 
-    private void publishFormation(ISwarmEventBus bus, GridSolution solution, long tick) {
-        if (solution == null || bus == null) {
+    private void publishFormation(ISwarmEventBus bus, GridPlan plan, long tick) {
+        if (plan == null || bus == null) {
             return;
         }
-        List<GridBotEntity> bots = solution.getBotList();
-        if (bots == null) {
+        Map<String, GridNodeDto> assignments = plan.getBotAssignments();
+        if (assignments == null || assignments.isEmpty()) {
             return;
         }
         long ts = System.currentTimeMillis();
         String formationSuffix = "grid-" + tick;
-        for (GridBotEntity bot : bots) {
-            if (bot == null) {
-                continue;
-            }
-            GridNode node = bot.getAssignedNode();
-            if (node == null) {
+        for (Map.Entry<String, GridNodeDto> en : assignments.entrySet()) {
+            String machineId = en.getKey();
+            GridNodeDto node = en.getValue();
+            if (machineId == null || node == null) {
                 continue;
             }
             String reqId = UUID.randomUUID().toString();
@@ -300,7 +290,7 @@ public final class GridOrchestrator {
                     REQUESTER,
                     ts,
                     reqId,
-                    bot.getMachineId(),
+                    machineId,
                     node.getX(),
                     node.getY(),
                     formationSuffix);
@@ -309,7 +299,7 @@ public final class GridOrchestrator {
             } catch (Exception ex) {
                 log.warn(
                         "GridOrchestrator: publish SwarmFormationCommandEvent failed for {}: {}",
-                        bot.getMachineId(),
+                        machineId,
                         ex.getMessage());
             }
         }

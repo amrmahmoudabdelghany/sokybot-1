@@ -17,7 +17,6 @@ Import-Package: \
     org.sokybot.swarm.api.router;version="[1.0,2)", \
     org.sokybot.swarm.api.quartermaster;version="[1.0,2)", \
     org.sokybot.router.api;version="[1.0,2)", \
-    org.sokybot.router.domain;version="[1.0,2)", \
     org.sokybot.trade.coordination.api;version="[1.0,2)", \
     org.sokybot.trade.events;version="[1.0,2)", \
     org.sokybot.town.api;version="[1.0,2)", \

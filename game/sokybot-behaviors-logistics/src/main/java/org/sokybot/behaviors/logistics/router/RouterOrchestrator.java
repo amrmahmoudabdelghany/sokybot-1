@@ -14,9 +14,10 @@ import org.sokybot.engine.IEngine;
 import org.sokybot.engine.api.workflow.IWorkflowContext;
 import org.sokybot.gamemodel.IGameModel;
 import org.sokybot.router.api.IRouterSolver;
-import org.sokybot.router.domain.FieldItemEntity;
-import org.sokybot.router.domain.RouterSolution;
-import org.sokybot.router.domain.SwarmBotEntity;
+import org.sokybot.router.api.LogisticsBotDto;
+import org.sokybot.router.api.LogisticsItemDto;
+import org.sokybot.router.api.RouterPlan;
+import org.sokybot.router.api.TradeMoveDto;
 import org.sokybot.runtime.IGroupContext;
 import org.sokybot.runtime.IMachineContext;
 import org.sokybot.runtime.ISokybotContext;
@@ -110,8 +111,8 @@ public final class RouterOrchestrator {
             return;
         }
 
-        List<SwarmBotEntity> bots = new ArrayList<>();
-        List<FieldItemEntity> items = new ArrayList<>();
+        List<LogisticsBotDto> bots = new ArrayList<>();
+        List<LogisticsItemDto> items = new ArrayList<>();
 
         try {
             for (IMachineContext machine : group.getMachines()) {
@@ -140,9 +141,9 @@ public final class RouterOrchestrator {
         solver.calculateFieldLogistics(bots, items)
                 .doOnError(err -> log.warn("RouterOrchestrator: solver failed: {}", err.toString()))
                 .subscribe(
-                        solution -> {
+                        plan -> {
                             try {
-                                publishRouterOutcome(bus, ctx, town, event, solution);
+                                publishRouterOutcome(bus, ctx, town, event, plan);
                             } catch (Exception ex) {
                                 log.warn("RouterOrchestrator: publish outcome failed: {}", ex.getMessage());
                             }
@@ -153,8 +154,8 @@ public final class RouterOrchestrator {
     private static void mapMachineInventory(
             IMachineContext machine,
             ITownModel townModel,
-            List<SwarmBotEntity> bots,
-            List<FieldItemEntity> items) {
+            List<LogisticsBotDto> bots,
+            List<LogisticsItemDto> items) {
         String fullName = machine.fullName();
         IInventorySnapshot inv = null;
         try {
@@ -169,11 +170,7 @@ public final class RouterOrchestrator {
             throw new IllegalStateException("missing inventory snapshot");
         }
 
-        SwarmBotEntity bot = new SwarmBotEntity();
-        bot.setMachineId(fullName);
-        bot.setMaxCapacity(inv.getTotalSlots());
-        bot.setIsMule(null);
-        bots.add(bot);
+        bots.add(new LogisticsBotDto(fullName, inv.getTotalSlots()));
 
         List<ItemStackSnapshot> stacks = inv.listStacks();
         if (stacks == null) {
@@ -186,17 +183,16 @@ public final class RouterOrchestrator {
             if (stack.getQuantity() <= 0 || stack.getItemRefId() == 0) {
                 continue;
             }
-            FieldItemEntity item = new FieldItemEntity();
-            item.setUniqueItemId(fullName + "_" + stack.getSlotIndex());
-            item.setSlotsTaken(1);
             int qty = stack.getQuantity();
-            item.setGoldValue(qty > 0 ? (long) qty * 10L : 100L);
-            item.setOriginalBotMachineId(fullName);
-            item.setSlotIndex(stack.getSlotIndex());
-            item.setStackQuantity(stack.getQuantity());
-            item.setItemRefId(stack.getItemRefId());
-            item.setAssignedBot(null);
-            items.add(item);
+            long goldValue = qty > 0 ? (long) qty * 10L : 100L;
+            items.add(new LogisticsItemDto(
+                    fullName + "_" + stack.getSlotIndex(),
+                    1,
+                    goldValue,
+                    fullName,
+                    stack.getSlotIndex(),
+                    stack.getQuantity(),
+                    stack.getItemRefId()));
         }
     }
 
@@ -205,50 +201,34 @@ public final class RouterOrchestrator {
             ISokybotContext sokybotContext,
             ITownModel townModel,
             SwarmInventoryCriticalEvent trigger,
-            RouterSolution solution) {
-        if (solution == null || bus == null) {
+            RouterPlan plan) {
+        if (plan == null || bus == null) {
             return;
         }
         long ts = System.currentTimeMillis();
         String swarmGroupId = trigger.getSwarmGroupId();
 
-        List<SwarmBotEntity> botList = solution.getBotList();
-        if (botList != null) {
-            SwarmBotEntity mule = null;
-            for (SwarmBotEntity b : botList) {
-                if (b != null && Boolean.TRUE.equals(b.getIsMule())) {
-                    mule = b;
-                    break;
-                }
-            }
-            if (mule != null && mule.getMachineId() != null && !mule.getMachineId().isEmpty()) {
-                SwarmMuleDispatchEvent muleEv = new SwarmMuleDispatchEvent(
-                        REQUESTER,
-                        ts,
-                        UUID.randomUUID().toString(),
-                        mule.getMachineId(),
-                        swarmGroupId,
-                        "Router logistics optimized");
-                bus.publish(muleEv);
-            }
+        String muleId = plan.getMuleMachineId();
+        if (muleId != null && !muleId.isEmpty()) {
+            SwarmMuleDispatchEvent muleEv = new SwarmMuleDispatchEvent(
+                    REQUESTER,
+                    ts,
+                    UUID.randomUUID().toString(),
+                    muleId,
+                    swarmGroupId,
+                    "Router logistics optimized");
+            bus.publish(muleEv);
         }
 
-        List<FieldItemEntity> itemList = solution.getItemList();
-        if (itemList == null) {
+        List<TradeMoveDto> trades = plan.getTrades();
+        if (trades == null || trades.isEmpty()) {
             return;
         }
-        for (FieldItemEntity item : itemList) {
-            if (item == null || item.getAssignedBot() == null) {
+        for (TradeMoveDto move : trades) {
+            if (move == null) {
                 continue;
             }
-            String from = item.getOriginalBotMachineId();
-            String to = item.getAssignedBot().getMachineId();
-            if (from == null || to == null) {
-                continue;
-            }
-            if (from.equals(to)) {
-                continue;
-            }
+            String to = move.getToMachineId();
             try {
                 if (townModel != null && !townModel.snapshot(to).isPresent()) {
                     log.debug("RouterOrchestrator: skip trade — no town snapshot for {}", to);
@@ -263,17 +243,17 @@ public final class RouterOrchestrator {
                 log.warn("RouterOrchestrator: skip trade — could not resolve character name for {}", to);
                 continue;
             }
-            int qty = item.getStackQuantity() > 0 ? item.getStackQuantity() : 1;
+            int qty = move.getStackQuantity() > 0 ? move.getStackQuantity() : 1;
             SwarmTradeCommandEvent trade = new SwarmTradeCommandEvent(
                     REQUESTER,
                     ts,
                     UUID.randomUUID().toString(),
-                    from,
+                    move.getFromMachineId(),
                     to,
-                    item.getUniqueItemId(),
-                    item.getItemRefId(),
+                    move.getUniqueItemId(),
+                    move.getItemRefId(),
                     qty,
-                    item.getSlotIndex(),
+                    move.getSlotIndex(),
                     targetCharacterName,
                     UUID.randomUUID().toString());
             bus.publish(trade);

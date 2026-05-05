@@ -2,8 +2,8 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
-Export-Package: org.sokybot.grid.domain;version="${project.version}", org.sokybot.grid.api;version="${project.version}"
-Private-Package: org.sokybot.grid.constraints, org.sokybot.grid.solver
+Export-Package: org.sokybot.grid.api;version="${project.version}"
+Private-Package: org.sokybot.grid.constraints, org.sokybot.grid.solver, org.sokybot.grid.domain
 Import-Package: \
     ai.timefold.solver.core.api.domain.*;version="[1.14,2)", \
     ai.timefold.solver.core.api.score.*;version="[1.14,2)", \

@@ -12,6 +12,10 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 import org.sokybot.router.api.IRouterSolver;
+import org.sokybot.router.api.LogisticsBotDto;
+import org.sokybot.router.api.LogisticsItemDto;
+import org.sokybot.router.api.RouterPlan;
+import org.sokybot.router.api.TradeMoveDto;
 import org.sokybot.router.constraints.RouterConstraintProvider;
 import org.sokybot.router.domain.FieldItemEntity;
 import org.sokybot.router.domain.RouterSolution;
@@ -69,7 +73,7 @@ public final class RouterSolverService implements IRouterSolver {
     }
 
     @Override
-    public Mono<RouterSolution> calculateFieldLogistics(List<SwarmBotEntity> bots, List<FieldItemEntity> items) {
+    public Mono<RouterPlan> calculateFieldLogistics(List<LogisticsBotDto> bots, List<LogisticsItemDto> items) {
         SolverManager<RouterSolution, UUID> mgr = solverManager;
         if (mgr == null) {
             return Mono.error(new IllegalStateException("RouterSolverService: SolverManager not available"));
@@ -80,20 +84,21 @@ public final class RouterSolverService implements IRouterSolver {
         return Mono.fromCallable(() -> solveBlocking(mgr, bots, items)).subscribeOn(Schedulers.boundedElastic());
     }
 
-    private static RouterSolution solveBlocking(
+    private static RouterPlan solveBlocking(
             SolverManager<RouterSolution, UUID> mgr,
-            List<SwarmBotEntity> bots,
-            List<FieldItemEntity> items) {
+            List<LogisticsBotDto> bots,
+            List<LogisticsItemDto> items) {
         RouterSolution initialSolution = new RouterSolution();
-        initialSolution.setBotList(new ArrayList<>(bots));
-        initialSolution.setItemList(new ArrayList<>(items));
+        initialSolution.setBotList(mapBotsFromDtos(bots));
+        initialSolution.setItemList(mapItemsFromDtos(items));
         initialSolution.setBooleanList(Arrays.asList(Boolean.TRUE, Boolean.FALSE));
         initialSolution.setScore(HardSoftScore.ZERO);
 
         UUID problemId = UUID.randomUUID();
         SolverJob<RouterSolution, UUID> solverJob = mgr.solve(problemId, initialSolution);
+        RouterSolution solution;
         try {
-            return solverJob.getFinalBestSolution();
+            solution = solverJob.getFinalBestSolution();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("Router solving failed or was interrupted", ex);
@@ -101,5 +106,87 @@ public final class RouterSolverService implements IRouterSolver {
             Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
             throw new IllegalStateException("Router solving failed or was interrupted", cause);
         }
+        return toRouterPlan(solution);
+    }
+
+    private static List<SwarmBotEntity> mapBotsFromDtos(List<LogisticsBotDto> dtos) {
+        List<SwarmBotEntity> entities = new ArrayList<>();
+        for (LogisticsBotDto dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            SwarmBotEntity e = new SwarmBotEntity();
+            e.setMachineId(dto.getMachineId());
+            e.setMaxCapacity(dto.getMaxCapacity());
+            e.setIsMule(null);
+            entities.add(e);
+        }
+        return entities;
+    }
+
+    private static List<FieldItemEntity> mapItemsFromDtos(List<LogisticsItemDto> dtos) {
+        List<FieldItemEntity> entities = new ArrayList<>();
+        for (LogisticsItemDto dto : dtos) {
+            if (dto == null) {
+                continue;
+            }
+            FieldItemEntity e = new FieldItemEntity();
+            e.setUniqueItemId(dto.getUniqueItemId());
+            e.setSlotsTaken(dto.getSlotsTaken());
+            e.setGoldValue(dto.getGoldValue());
+            e.setOriginalBotMachineId(dto.getOriginalBotMachineId());
+            e.setSlotIndex(dto.getSlotIndex());
+            e.setStackQuantity(dto.getStackQuantity());
+            e.setItemRefId(dto.getItemRefId());
+            e.setAssignedBot(null);
+            entities.add(e);
+        }
+        return entities;
+    }
+
+    private static RouterPlan toRouterPlan(RouterSolution solution) {
+        if (solution == null) {
+            return new RouterPlan(null, new ArrayList<>());
+        }
+        String muleMachineId = null;
+        List<SwarmBotEntity> botList = solution.getBotList();
+        if (botList != null) {
+            for (SwarmBotEntity b : botList) {
+                if (b != null && Boolean.TRUE.equals(b.getIsMule())) {
+                    String id = b.getMachineId();
+                    if (id != null && !id.isEmpty()) {
+                        muleMachineId = id;
+                    }
+                    break;
+                }
+            }
+        }
+
+        List<TradeMoveDto> trades = new ArrayList<>();
+        List<FieldItemEntity> itemList = solution.getItemList();
+        if (itemList != null) {
+            for (FieldItemEntity item : itemList) {
+                if (item == null || item.getAssignedBot() == null) {
+                    continue;
+                }
+                String from = item.getOriginalBotMachineId();
+                SwarmBotEntity assigned = item.getAssignedBot();
+                String to = assigned.getMachineId();
+                if (from == null || to == null) {
+                    continue;
+                }
+                if (from.equals(to)) {
+                    continue;
+                }
+                trades.add(new TradeMoveDto(
+                        from,
+                        to,
+                        item.getUniqueItemId(),
+                        item.getSlotIndex(),
+                        item.getStackQuantity(),
+                        item.getItemRefId()));
+            }
+        }
+        return new RouterPlan(muleMachineId, trades);
     }
 }

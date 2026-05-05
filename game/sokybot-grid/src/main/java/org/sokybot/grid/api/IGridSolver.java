@@ -2,10 +2,6 @@ package org.sokybot.grid.api;
 
 import java.util.List;
 
-import org.sokybot.grid.domain.GridBotEntity;
-import org.sokybot.grid.domain.GridNode;
-import org.sokybot.grid.domain.GridSolution;
-
 import reactor.core.publisher.Mono;
 
 /**
@@ -13,5 +9,5 @@ import reactor.core.publisher.Mono;
  */
 public interface IGridSolver {
 
-    Mono<GridSolution> calculateOptimalFormation(List<GridBotEntity> bots, List<GridNode> nodes);
+    Mono<GridPlan> calculateOptimalFormation(List<GridBotDto> bots, List<GridNodeDto> nodes);
 }

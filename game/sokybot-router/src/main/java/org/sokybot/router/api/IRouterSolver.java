@@ -2,10 +2,6 @@ package org.sokybot.router.api;
 
 import java.util.List;
 
-import org.sokybot.router.domain.FieldItemEntity;
-import org.sokybot.router.domain.RouterSolution;
-import org.sokybot.router.domain.SwarmBotEntity;
-
 import reactor.core.publisher.Mono;
 
 /**
@@ -13,5 +9,5 @@ import reactor.core.publisher.Mono;
  */
 public interface IRouterSolver {
 
-    Mono<RouterSolution> calculateFieldLogistics(List<SwarmBotEntity> bots, List<FieldItemEntity> items);
+    Mono<RouterPlan> calculateFieldLogistics(List<LogisticsBotDto> bots, List<LogisticsItemDto> items);
 }

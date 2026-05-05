@@ -183,9 +183,12 @@ public final class FieldTradeBehavior implements IBehavior<LogisticsSettings> {
                     trade.getUniqueItemId(),
                     trade.getFromMachineId(),
                     trade.getToMachineId());
-            RouterTradePackets.sendTradeRequest(context, trade.getTargetCharacterName());
+            if (!RouterTradePackets.sendTradeRequest(context, trade.getTargetCharacterName())) {
+                return BehaviorStatus.SKIPPED;
+            }
             RouterTradePackets.sendTradeAddItem(context, (byte) trade.getSlotIndex());
             RouterTradePackets.sendTradeConfirm(context);
+            RouterTradePackets.sendTradeApprove(context);
             it.remove();
             return BehaviorStatus.EXECUTED;
         }

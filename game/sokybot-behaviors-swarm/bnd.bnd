@@ -16,7 +16,6 @@ Import-Package: \
     org.sokybot.swarm.api.warroom;version="[1.0,2)", \
     org.sokybot.warroom.api;version="[1.0,2)", \
     org.sokybot.grid.api;version="[1.0,2)", \
-    org.sokybot.grid.domain;version="[1.0,2)", \
     org.sokybot.swarm.api.sentinel;version="[1.0,2)", \
     org.sokybot.swarm.api.symphony;version="[1.0,2)", \
     org.sokybot.swarm.api.shapeshifter;version="[1.0,2)", \
