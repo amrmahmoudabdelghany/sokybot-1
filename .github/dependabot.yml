@@ -59,7 +59,7 @@ updates:
 
   # npm dependencies (for frontend modules)
   - package-ecosystem: "npm"
-    directory: "/sokybot-webview/src/main/frontend"
+    directory: "/ui/sokybot-webview/src/main/frontend"
     schedule:
       interval: "weekly"
       day: "monday"

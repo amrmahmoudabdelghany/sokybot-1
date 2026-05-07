@@ -9,54 +9,43 @@ on:
     # Run security scan weekly on Sundays at 2 AM UTC
     - cron: '0 2 * * 0'
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
           java-version: '11'
           distribution: 'temurin'
           cache: 'maven'
-      
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2-
-      
-      - name: Build with Maven
+          node-version: '20.10.0'
+          cache: 'npm'
+          cache-dependency-path: 'ui/**/package-lock.json'
+
+      - name: Build, test, and generate reports
         env:
           VITE_UI_BUILD_ID: ${{ github.sha }}
-        run: ./mvnw clean install -P ci
-      
-      - name: Generate test reports
-        if: always()
-        run: ./mvnw surefire-report:report
-      
-      - name: Generate JaCoCo coverage report
-        if: always()
-        run: ./mvnw jacoco:report
-      
-      - name: Generate SpotBugs report
-        if: always()
-        run: ./mvnw spotbugs:spotbugs
-      
-      - name: Generate Checkstyle report
-        if: always()
-        run: ./mvnw checkstyle:checkstyle
-      
-      - name: Generate PMD report
-        if: always()
-        run: ./mvnw pmd:pmd
-      
+        run: >
+          ./mvnw -fae -P ci verify
+          surefire-report:report-only
+          jacoco:report
+          spotbugs:spotbugs
+          checkstyle:checkstyle
+          pmd:pmd
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,14 +53,27 @@ jobs:
           name: test-results
           path: |
             **/target/surefire-reports
+            **/target/failsafe-reports
             **/target/site/jacoco
             **/target/spotbugsXml.xml
             **/target/checkstyle-result.xml
             **/target/pmd.xml
           retention-days: 30
-      
-      - name: Upload coverage to Codecov
+          if-no-files-found: warn
+
+      - name: Upload SBOM
         if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            target/bom.json
+            target/bom.xml
+          retention-days: 90
+          if-no-files-found: warn
+
+      - name: Upload coverage to Codecov
+        if: always() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
         uses: codecov/codecov-action@v4
         with:
           files: ./**/target/site/jacoco/jacoco.xml
@@ -82,26 +84,18 @@ jobs:
     runs-on: ubuntu-latest
     # Run security check only on main/master branches and weekly
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'schedule'
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
           java-version: '11'
           distribution: 'temurin'
           cache: 'maven'
-      
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2-
-      
+
       - name: Cache NVD database
         uses: actions/cache@v4
         with:
@@ -109,11 +103,10 @@ jobs:
           key: ${{ runner.os }}-owasp-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-owasp-
-      
+
       - name: Run OWASP Dependency Check
-        run: ./mvnw dependency-check:aggregate -P security
-        continue-on-error: true
-      
+        run: ./mvnw -fae dependency-check:aggregate -P security
+
       - name: Upload OWASP report
         if: always()
         uses: actions/upload-artifact@v4
@@ -122,7 +115,8 @@ jobs:
           path: |
             target/dependency-check-report.*
           retention-days: 30
-      
+          if-no-files-found: warn
+
       - name: Analyze dependencies
-        run: ./mvnw dependency:analyze -DignoreNonCompile=true
+        run: ./mvnw -fae dependency:analyze -DignoreNonCompile=true
         continue-on-error: true

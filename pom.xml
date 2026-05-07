@@ -9,8 +9,8 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<maven.compiler.source>21</maven.compiler.source>
-		<maven.compiler.target>21</maven.compiler.target>
+		<maven.compiler.source>11</maven.compiler.source>
+		<maven.compiler.target>11</maven.compiler.target>
 
 		<!-- Dependency Versions - Updated to latest stable versions -->
 		<jna.version>5.13.0</jna.version>
@@ -75,7 +75,7 @@
 
 		<!-- Desktop Packaging -->
 		<maven.assembly.version>3.6.0</maven.assembly.version>
-		<jre.version>21</jre.version>
+		<jre.version>11</jre.version>
 		<app.name>Sokybot</app.name>
 		<app.main.class>org.apache.karaf.main.Main</app.main.class>
 
@@ -123,6 +123,14 @@
 				<groupId>io.projectreactor</groupId>
 				<artifactId>reactor-bom</artifactId>
 				<version>${reactor-bom.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.mockito</groupId>
+				<artifactId>mockito-bom</artifactId>
+				<version>${mockito.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -204,35 +212,8 @@
 				<version>${junit-jupiter.version}</version>
 			</dependency>
 
-			<!-- Mockito - Updated and standardized -->
-			<dependency>
-				<groupId>org.mockito</groupId>
-				<artifactId>mockito-core</artifactId>
-				<version>${mockito.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.mockito</groupId>
-				<artifactId>mockito-junit-jupiter</artifactId>
-				<version>${mockito.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.mockito</groupId>
-				<artifactId>mockito-inline</artifactId>
-				<version>${mockito.version}</version>
-				<scope>test</scope>
-			</dependency>
+			<!-- Mockito and Byte Buddy versions managed by mockito-bom imported above -->
 
-			<!-- Force specific Byte Buddy version for Java 21 compatibility -->
-			<dependency>
-				<groupId>net.bytebuddy</groupId>
-				<artifactId>byte-buddy</artifactId>
-				<version>1.14.12</version>
-			</dependency>
-			<dependency>
-				<groupId>net.bytebuddy</groupId>
-				<artifactId>byte-buddy-agent</artifactId>
-				<version>1.14.12</version>
-			</dependency>
 
 			<!-- Commons Libraries - Updated versions -->
 			<dependency>
@@ -455,8 +436,6 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
 				<configuration>
-					<source>11</source>
-					<target>11</target>
 					<useIncrementalCompilation>${maven.compiler.useIncrementalCompilation}</useIncrementalCompilation>
 					<annotationProcessorPaths>
 						<path>
@@ -484,7 +463,7 @@
 									<version>3.6.0</version>
 								</requireMavenVersion>
 								<requireJavaVersion>
-									<version>21</version>
+									<version>11</version>
 								</requireJavaVersion>
 								<!-- Dependency convergence - warn only for legacy codebase -->
 								<dependencyConvergence>
@@ -513,7 +492,7 @@
 					</includes>
 					<forkCount>1C</forkCount>
 					<reuseForks>false</reuseForks>
-					<argLine>@{argLine} -XX:+EnableDynamicAgentLoading</argLine>
+					<argLine>@{argLine}</argLine>
 				</configuration>
 			</plugin>
 
@@ -829,11 +808,12 @@
 			</properties>
 		</profile>
 
-		<!-- CI profile - runs all tests and quality checks -->
+		<!-- CI profile - runs unit + integration tests and all quality checks -->
 		<profile>
 			<id>ci</id>
 			<properties>
 				<skipTests>false</skipTests>
+				<skipITs>false</skipITs>
 				<maven.test.skip>false</maven.test.skip>
 				<!-- Enable all quality checks in CI -->
 				<spotbugs.skip>false</spotbugs.skip>
@@ -842,6 +822,50 @@
 				<pmd.skip>false</pmd.skip>
 				<git.skip>false</git.skip>
 			</properties>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-failsafe-plugin</artifactId>
+						<version>${maven.failsafe.version}</version>
+						<executions>
+							<execution>
+								<id>integration-tests</id>
+								<goals>
+									<goal>integration-test</goal>
+									<goal>verify</goal>
+								</goals>
+								<configuration>
+									<includes>
+										<include>**/*IT.java</include>
+										<include>**/*IntegrationTest.java</include>
+									</includes>
+									<parallel>classes</parallel>
+									<threadCount>2</threadCount>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+					<plugin>
+						<groupId>org.cyclonedx</groupId>
+						<artifactId>cyclonedx-maven-plugin</artifactId>
+						<version>2.7.11</version>
+						<executions>
+							<execution>
+								<id>cyclonedx-aggregate</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>makeAggregateBom</goal>
+								</goals>
+								<configuration>
+									<outputFormat>json</outputFormat>
+									<outputName>bom</outputName>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
 		</profile>
 
 		<!-- Security profile - runs OWASP dependency check (slow, use sparingly) -->
@@ -873,66 +897,6 @@
 				</plugins>
 			</build>
 		</profile>
-		<profile>
-			<id>prod</id>
-			<modules>
-				<module>${project.artifactId}-api</module>
-				<module>${project.artifactId}-security</module>
-				<module>${project.artifactId}-game-loader</module>
-				<module>${project.artifactId}-pk2</module>
-				<module>${project.artifactId}-packet-sniffer</module>
-
-			</modules>
-
-			<build>
-
-
-				<plugins>
-
-
-					<plugin>
-						<groupId>org.apache.felix</groupId>
-						<artifactId>maven-bundle-plugin</artifactId>
-						<inherited>true</inherited>
-						<extensions>true</extensions>
-						<configuration>
-
-							<buildDirectory>
-								${maven.multiModuleProjectDirectory}/Sokybot-${project.version}/system
-							</buildDirectory>
-
-						</configuration>
-					</plugin>
-
-					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-resources-plugin</artifactId>
-						<version>${maven.resources.version}</version>
-						<executions>
-							<execution>
-								<id>copy-resources</id>
-								<phase>install</phase>
-								<goals>
-									<goal>copy-resources</goal>
-								</goals>
-								<configuration>
-									<outputDirectory>${basedir}/Sokybot-${project.version}/system</outputDirectory>
-									<resources>
-										<resource>
-											<directory>${basedir}/sokybot-static-resources/sokybot-osgi-platform</directory>
-											<exclude>org.apache.felix.fileinstall-3.6.4.jar</exclude>
-											<filtering>true</filtering>
-										</resource>
-									</resources>
-								</configuration>
-							</execution>
-						</executions>
-					</plugin>
-
-				</plugins>
-			</build>
-		</profile>
-
 		<!-- Release profile - for production releases with optimizations -->
 		<profile>
 			<id>release</id>
