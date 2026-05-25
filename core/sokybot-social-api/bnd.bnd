@@ -1,2 +1,2 @@
 Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
-Export-Package: org.sokybot.social.api
+Export-Package: org.sokybot.social.api;version="${project.version}"

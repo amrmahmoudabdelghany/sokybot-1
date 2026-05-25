@@ -2,5 +2,5 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
-Export-Package: org.sokybot.session.api
+Export-Package: org.sokybot.session.api;version="${project.version}"
 Import-Package: org.sokybot.engine.api.login;version="[1.0,2)", reactor.core.publisher;version="[3.6,4)", *;resolution:=optional

@@ -2,4 +2,4 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
-Export-Package: org.sokybot.loader
+Export-Package: org.sokybot.loader;version="${project.version}"

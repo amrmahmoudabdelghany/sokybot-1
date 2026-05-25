@@ -2,5 +2,5 @@ Bundle-SymbolicName: ${project.groupId}.${project.artifactId}
 Bundle-Name: ${project.name}
 Bundle-Version: ${project.version}
 Bundle-Description: ${project.description}
-Export-Package: org.sokybot.gameevents, org.sokybot.gameevents.dto, org.sokybot.gameevents.dto.*, org.sokybot.gameevents.enums, org.sokybot.gameevents.enums.*, org.sokybot.gameevents.events.*, org.sokybot.gameevents.events.core, org.sokybot.gameevents.store
+Export-Package: org.sokybot.gameevents;version="${project.version}", org.sokybot.gameevents.dto;version="${project.version}", org.sokybot.gameevents.dto.*;version="${project.version}", org.sokybot.gameevents.enums;version="${project.version}", org.sokybot.gameevents.enums.*;version="${project.version}", org.sokybot.gameevents.events.*;version="${project.version}", org.sokybot.gameevents.events.core;version="${project.version}", org.sokybot.gameevents.store;version="${project.version}"
 Import-Package: org.sokybot.*, org.osgi.*, *;resolution:=optional
